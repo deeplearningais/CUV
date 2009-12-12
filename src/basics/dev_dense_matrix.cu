@@ -1,12 +1,11 @@
-#include <stdexcept>
+#include <cuv_general.hpp>
 
-#include <cuda.h>
 #include <dev_dense_matrix.hpp>
 
 #define DDM0 template<class __value_type, class __mem_layout, class __index_type> \
 	dev_dense_matrix<__value_type,__mem_layout, __index_type>
-#define DDM(X) template<class __value_type, class __mem_layout, class __index_type> \
-	X dev_dense_matrix<__value_type,__mem_layout, __index_type>
+#define DDM(RETURN_TYPE) template<class __value_type, class __mem_layout, class __index_type> \
+	RETURN_TYPE dev_dense_matrix<__value_type,__mem_layout, __index_type>
 
 
 
@@ -17,25 +16,27 @@ namespace cuv{
 	 *
 	 */
 	DDM0::dev_dense_matrix(const index_type& h, const index_type& w)
-	: dense_matrix(h,w) { alloc(); }
+	: base_type(h,w) { alloc(); }
 
-	DDM0::dev_dense_matrix(const index_type& h, const index_type& w, value_type* p, const bool& is_view)
-	: dense_matrix(h,w,p,is_view) {}
+	DDM0 ::dev_dense_matrix(const index_type& h, const index_type& w, value_type* p, const bool& is_view)
+	: base_type(h,w,p,is_view) {}
 
-	DDM(void)::alloc(const index_type& h, const index_type& w){
-		cudaMalloc( (void**)&m_ptr, memsize() );
+	template<class __value_type, class __mem_layout, class __index_type> 
+	void dev_dense_matrix<__value_type,__mem_layout, __index_type>::alloc(){
+	/*DDM(void)::alloc(){*/
+		cudaMalloc( (void**)& this->m_ptr, this->memsize() );
 		cudaError_t err = cudaGetLastError();
 		if (err != cudaSuccess) throw std::runtime_error("Device memory allocation failed");
 		checkCudaError("allocation");
 	}
 
-	DDM0::~dev_dense_matrix(){
+	DDM0 ::~dev_dense_matrix(){
 	  dealloc();
 	}
 	DDM(void)::dealloc(){
-	  if(m_ptr && !m_is_view){
-		  cutilSafeCall(cudaFree(m_ptr));
-			m_ptr = NULL;
+	  if(this->m_ptr && ! this->m_is_view){
+		  cutilSafeCall(cudaFree(this->m_ptr));
+			this->m_ptr = NULL;
 		}
 	}
 

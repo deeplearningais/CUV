@@ -17,8 +17,8 @@ namespace cuv{
 			{
 			}
 		  inline index_type w()const  { return m_width;                }
-			inline index_type h()const  { return m_height;               }
-			inline index_type n()const  { return w()*h();                }
+		  inline index_type h()const  { return m_height;               }
+		  inline index_type n()const  { return w()*h();                }
 	};
 }
 
