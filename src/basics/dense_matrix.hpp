@@ -3,7 +3,7 @@
 #include <matrix.hpp>
 
 namespace cuv{
-  struct memory_layout_tag{};
+	struct memory_layout_tag{};
 	struct column_major : public memory_layout_tag{};
 	struct row_major    : public memory_layout_tag{};
 
@@ -13,9 +13,9 @@ namespace cuv{
 	  public:
 		  typedef __mem_layout                       memory_layout;
 		  typedef matrix<__value_type, __index_type> base_type;
-		  using typename matrix<__value_type, __index_type>::value_type;
-		  using typename matrix<__value_type, __index_type>::index_type;
-		private:
+		  typedef typename matrix<__value_type, __index_type>::value_type value_type;
+		  typedef typename matrix<__value_type, __index_type>::index_type index_type;
+		protected:
 		  value_type* m_ptr;
 		  bool        m_is_view;
 		public:

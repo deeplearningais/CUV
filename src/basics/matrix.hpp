@@ -8,7 +8,7 @@ namespace cuv{
 	  public:
 		  typedef __value_type value_type;
 		  typedef __index_type index_type;
-	  private:
+	  protected:
 		  index_type m_width;
 		  index_type m_height;
 		public:

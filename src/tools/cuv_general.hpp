@@ -1,13 +1,14 @@
-#include <stdexcept>
-#include <cuda.h>
-#include <cutil_inline.h>
 
-void checkCudaError(const char *msg)
-{
-	cudaError_t err = cudaGetLastError();
-	if( cudaSuccess != err) 
-	{
-		throw std::runtime_error(std::string(msg) + cudaGetErrorString(err) );
-	}                         
+#ifndef __CUV_GENERAL_HPP__
+#define __CUV_GENERAL_HPP__
+
+#define cuvSafeCall(X)  \
+  if(1){ X; checkCudaError(#X); } 
+
+namespace cuv{
+	void checkCudaError(const char *msg);
+	void initCUDA(int dev=0);
+	void exitCUDA();
 }
 
+#endif /* __CUV_GENERAL_HPP__ */

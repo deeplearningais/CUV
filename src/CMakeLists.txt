@@ -28,12 +28,26 @@ ELSE(CUDA_SHARED)
 ENDIF(CUDA_SHARED)
 
 FIND_PACKAGE(CUDA)
-FIND_PACKAGE(CxxTest)
+#FIND_PACKAGE(CxxTest)
+
+
+# ---------- Find Boost Headers/Libraries -----------------------
+SET (Boost_FIND_REQUIRED TRUE)
+SET (Boost_FIND_QUIETLY TRUE)
+set (Boost_USE_MULTITHREADED TRUE)
+set (Boost_USE_STATIC_LIBS TRUE)
+SET (Boost_ADDITIONAL_VERSIONS "1.39" "1.39.0")
+FIND_PACKAGE( Boost 1.37 COMPONENTS date_time unit_test_framework REQUIRED )
+INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
+LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 
 CUDA_INCLUDE_DIRECTORIES( ${CUDA_CUT_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}  tools )
 INCLUDE_DIRECTORIES(      ${CUDA_CUT_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS}         tools )
 
+ENABLE_TESTING()
+add_subdirectory(tools)
 add_subdirectory(basics)
+add_subdirectory(tests)
 
 CUDA_BUILD_CLEAN_TARGET()
 
