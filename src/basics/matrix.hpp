@@ -16,6 +16,10 @@ namespace cuv{
 			: m_width(w), m_height(h)
 			{
 			}
+		  inline void resize(const index_type& h, const index_type& w){
+			  m_width=w;
+			  m_height=h;
+		  }
 		  inline index_type w()const  { return m_width;                }
 		  inline index_type h()const  { return m_height;               }
 		  inline index_type n()const  { return w()*h();                }

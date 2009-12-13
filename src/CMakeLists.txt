@@ -47,6 +47,7 @@ INCLUDE_DIRECTORIES(      ${CUDA_CUT_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS}         t
 ENABLE_TESTING()
 add_subdirectory(tools)
 add_subdirectory(basics)
+add_subdirectory(convert)
 add_subdirectory(tests)
 
 CUDA_BUILD_CLEAN_TARGET()

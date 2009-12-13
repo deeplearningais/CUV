@@ -7,6 +7,7 @@ namespace cuv{
 	class dev_dense_matrix
 	:        public dense_matrix<__value_type, __mem_layout, __index_type>{
 		public:
+		  typedef __mem_layout        memory_layout;
 		  typedef dense_matrix<__value_type, __mem_layout, __index_type>        base_type;
 		  typedef typename matrix<__value_type,__index_type>::value_type        value_type;
 		  typedef typename matrix<__value_type,__index_type>::index_type        index_type;
@@ -22,6 +23,13 @@ namespace cuv{
 		  }
 		  dev_dense_matrix(const index_type& h, const index_type& w);
 		  dev_dense_matrix(const index_type& h, const index_type& w, value_type* p, const bool& is_view);
+		  dev_dense_matrix<value_type,memory_layout,index_type>& 
+		  operator=(dev_dense_matrix<value_type,memory_layout,index_type>& o){
+			  if(this==&o) return *this;
+			  dealloc();
+			  (dense_matrix<value_type,memory_layout,index_type>&) (*this)  = (dense_matrix<value_type,memory_layout,index_type>&) o; // copy width, height
+			  return *this;
+		  }
 		  ~dev_dense_matrix();
 		  void alloc();
 		  void dealloc();

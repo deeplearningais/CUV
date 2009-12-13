@@ -23,6 +23,13 @@ namespace cuv{
 			// life cycle
 			host_dense_matrix(const index_type& h, const index_type& w) : base_type(h,w) { alloc(); }
 			host_dense_matrix(const index_type& h, const index_type& w, value_type* p, const bool& is_view) : base_type(h,w,p,is_view) {}
+			host_dense_matrix<value_type,memory_layout,index_type>& 
+			operator=(host_dense_matrix<value_type,memory_layout,index_type>& o){
+				if(this==&o) return *this;
+				dealloc();
+				(dense_matrix<value_type,memory_layout,index_type>&) (*this)  = (dense_matrix<value_type,memory_layout,index_type>&) o; // copy width, height
+				return *this;
+			}
 			~host_dense_matrix();
 			void dealloc();
 			void alloc();
@@ -71,7 +78,7 @@ namespace cuv{
 
 	template<class V, class M, class I>
 	const typename matrix<V,I>::value_type&
-	host_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j)    const{ creturn (*this)(i,j,memory_layout()); }
+	host_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j)    const{ return (*this)(i,j,memory_layout()); }
 
 	template<class V, class M, class I>
 	typename matrix<V,I>::value_type&
@@ -83,7 +90,7 @@ namespace cuv{
 
 	template<class V, class M, class I>
 	typename matrix<V,I>::value_type&
-	host_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j)    { creturn (*this)(i,j,memory_layout()); }
+	host_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j)    { return (*this)(i,j,memory_layout()); }
 
 }
 
