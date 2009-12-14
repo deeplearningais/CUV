@@ -12,8 +12,12 @@ TARGET_LINK_LIBRARIES( test_convert cuv_basics cuv_tools cuv_convert)
 ADD_EXECUTABLE( test_vec_op vec_op.cpp )
 TARGET_LINK_LIBRARIES( test_vec_op cuv_basics cuv_tools cuv_convert cuv_vector_ops)
 
+ADD_EXECUTABLE( test_random random.cpp )
+TARGET_LINK_LIBRARIES( test_random cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_random)
+
 
 ADD_TEST( basics  "${CMAKE_BINARY_DIR}/tests/test_basic" )
 ADD_TEST( convert "${CMAKE_BINARY_DIR}/tests/test_convert" )
 ADD_TEST( vec_op "${CMAKE_BINARY_DIR}/tests/test_vec_op" )
+ADD_TEST( random "${CMAKE_BINARY_DIR}/tests/test_random" )
 

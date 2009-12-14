@@ -49,6 +49,7 @@ add_subdirectory(tools)
 add_subdirectory(basics)
 add_subdirectory(vector_ops)
 add_subdirectory(convert)
+add_subdirectory(random)
 add_subdirectory(tests)
 
 CUDA_BUILD_CLEAN_TARGET()
