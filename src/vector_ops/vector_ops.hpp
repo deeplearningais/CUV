@@ -17,19 +17,23 @@ namespace cuv{
 		SF_SUBLIN,
 		SF_ENERG,
 		SF_INV,
-		SF_SQRT
+		SF_SQRT,
+		SF_NEGATE,
 
 		SF_ADD,
+		SF_SUBTRACT,
 		SF_MULT,
 		SF_DIV
 	};
 
 
   template<class __vector_type>
-	apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf);
+  void
+  apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf);
 
   template<class __vector_type, class __value_type>
-	apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& param);
+  void
+  apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& param);
 
 
 } // cuv
