@@ -103,21 +103,25 @@ namespace cuv{
 				}
 		};
 
-	// Matrix Conversion
-	template void convert<dev_dense_matrix<float,column_major>,         host_dense_matrix<float,row_major> >
-		(                 dev_dense_matrix<float,column_major>&,  const host_dense_matrix<float,row_major>&);
-	template void convert<dev_dense_matrix<float,row_major>,            host_dense_matrix<float,column_major> >
-		(                 dev_dense_matrix<float,row_major>&,     const host_dense_matrix<float,column_major>&);
-	template void convert<host_dense_matrix<float,column_major>,        dev_dense_matrix<float,row_major> >
-		(                 host_dense_matrix<float,column_major>&, const dev_dense_matrix<float,row_major>&);
-	template void convert<host_dense_matrix<float,row_major>,           dev_dense_matrix<float,column_major> >
-		(                 host_dense_matrix<float,row_major>&,    const dev_dense_matrix<float,column_major>&);
+#define CONV_VEC(X) \
+	template void convert<dev_vector<X>,          host_vector<X> > \
+		(                 dev_vector<X>&,   const host_vector<X>&); \
+	template void convert<host_vector<X>,          dev_vector<X> > \
+		(                 host_vector<X>&,   const dev_vector<X>&);
 
-	// Vector Conversion (implicitly instantiated by matrix conversions already, included for completeness)
-	template void convert<host_vector<float>,           dev_vector<float> >
-		(                 host_vector<float>&,    const dev_vector<float>&);
-	template void convert<dev_vector<float>,           host_vector<float> >
-		(                 dev_vector<float>&,    const host_vector<float>&);
+#define CONV_INST(X,Y,Z) \
+	template void convert<dev_dense_matrix<X,Y>,          host_dense_matrix<X,Z> > \
+		(                 dev_dense_matrix<X,Y>&,   const host_dense_matrix<X,Z>&); \
+	template void convert<host_dense_matrix<X,Y>,         dev_dense_matrix<X,Z> > \
+		(                 host_dense_matrix<X,Y>&,  const dev_dense_matrix<X,Z>&);
+
+CONV_INST(float,column_major,row_major);
+CONV_INST(float,row_major,   column_major);
+CONV_INST(unsigned char,column_major,row_major);
+CONV_INST(unsigned char,row_major,   column_major);
+
+CONV_VEC(float);
+CONV_VEC(unsigned char);
 
 
 } // namespace cuv
