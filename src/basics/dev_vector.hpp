@@ -19,6 +19,7 @@ class dev_vector
 		:   base_type(s) { alloc(); }
 		dev_vector(size_t s, value_type* p, bool is_view)
 		:   base_type(s,p,is_view) { alloc(); }
+		value_type operator[](size_t t);
 		virtual void alloc();
 		virtual void dealloc();
 };

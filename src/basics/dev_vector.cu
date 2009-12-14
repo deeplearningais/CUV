@@ -2,12 +2,20 @@
 #include <stdexcept>
 #include <cuda.h>
 #include <cutil_inline.h>
+
+#include <thrust/device_ptr.h>
+
 #include <cuv_general.hpp>
 
 #include "dev_vector.hpp"
 
 namespace cuv{
 
+template<class V,class I>
+V dev_vector<V,I>::operator[](size_t idx){
+	thrust::device_ptr<value_type> ptr(this->ptr());
+	return (value_type) *(ptr+idx);
+}
 template<class V,class I>
 void
 dev_vector<V,I>::alloc(){
