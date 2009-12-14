@@ -99,6 +99,20 @@ BOOST_AUTO_TEST_CASE( vec_ops_0ary1 )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( vec_ops_norms )
+{
+	sequence(v);
+	float f1 = norm1(v), f1_ = 0;
+	float f2 = norm2(v), f2_ = 0;
+	for(int i=0;i<256;i++){
+		f2_ += v[i]*v[i];
+		f1_ += fabs(v[i]);
+	}
+	f2_ = sqrt(f2_);
+	BOOST_CHECK_EQUAL(f1,f1_);
+	BOOST_CHECK_EQUAL(f2,f2_);
+}
+
 
 
 BOOST_AUTO_TEST_SUITE_END()

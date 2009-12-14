@@ -5,6 +5,7 @@
 #include <thrust/device_free.h>
 #include <thrust/device_vector.h>
 #include <thrust/sequence.h>
+#include <thrust/transform_reduce.h>
 
 #include <cuv_general.hpp>
 
@@ -25,7 +26,7 @@ struct uf_exact_exp{  __device__ __host__   T operator()(const T& t)const{ retur
 template<class T>
 struct uf_log{  __device__ __host__         T operator()(const T& t)      const{ return log(t);    } };
 template<class T>
-struct uf_sign{  __device__ __host__        T operator()(const T& t)      const{ return sgn(t);    } };
+struct uf_sign{  __device__ __host__        T operator()(const T& t)      const{ return sgn((float)t);    } };
 template<class T>
 struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+__expf(-t));    } };
 template<class T>
@@ -46,6 +47,8 @@ template<class T>
 struct uf_inv{  __device__  __host__        T operator()(const T& t)      const{ return ((T)1)/(t+((T)0.00000001)); } };
 template<class T>
 struct uf_sqrt{  __device__  __host__       T operator()(const T& t)      const{ return sqrt(t); } };
+template<class T>
+struct uf_abs{  __device__  __host__       T operator()(const T& t)      const{ return fabs(t); } };
 
 template<class T, class binary_functor>
 struct uf_base_op{
@@ -263,29 +266,62 @@ struct apply_scalar_functor_impl{
 	}
 };
 
+template<class __vector_type>
+float
+norm2(__vector_type& v){
+	typedef typename __vector_type::value_type value_type;
+	thrust::device_ptr<value_type> v_ptr(v.ptr());
+	float init=0;
+	return  std::sqrt( thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_square<float>(), init, bf_plus<float,value_type>()) );
+}
+template<class __vector_type>
+float
+norm1(__vector_type& v){
+	typedef typename __vector_type::value_type value_type;
+	thrust::device_ptr<value_type> v_ptr(v.ptr());
+	float init=0;
+	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_abs<float>(), init, bf_plus<float,value_type>());
+}
+
 
 #define SIMPLE_0(X) \
-	template void apply_0ary_functor< X >(X&, const NullaryFunctor&); \
-	template void apply_0ary_functor< X, float>(X&, const NullaryFunctor&, const float& param); \
-	template void apply_0ary_functor< X, int>  (X&, const NullaryFunctor&, const int& param); 
+	template void apply_0ary_functor< X >(X&, const NullaryFunctor&);
+
+#define SIMPLE_01(X,P) \
+	template void apply_0ary_functor< X, P>(X&, const NullaryFunctor&, const P& param);
 
 #define SIMPLE_1(X) \
-	template void apply_scalar_functor< X >(X&, const ScalarFunctor&); \
-	template void apply_scalar_functor< X, float>(X&, const ScalarFunctor&,const float&); \
-	template void apply_scalar_functor< X, int>(X&, const ScalarFunctor&,const int&);
+	template void apply_scalar_functor< X >(X&, const ScalarFunctor&);
+#define SIMPLE_11(X,P) \
+	template void apply_scalar_functor< X, P>(X&, const ScalarFunctor&,const P&);
 
 #define SIMPLE_2(X,Y) \
-	template void apply_binary_functor<X,Y      >(X&, Y&, const BinaryFunctor&); \
-	template void apply_binary_functor<X,Y,float>(X&, Y&, const BinaryFunctor&,  const float&); \
-	template void apply_binary_functor<X,Y,  int>(X&, Y&, const BinaryFunctor&,  const int&); \
-	template void apply_binary_functor<X,Y,float>(X&, Y&, const BinaryFunctor&,  const float&, const float&); \
-	template void apply_binary_functor<X,Y,  int>(X&, Y&, const BinaryFunctor&,  const int&, const int&);
+	template void apply_binary_functor<X,Y  >(X&, Y&, const BinaryFunctor&);
+#define SIMPLE_21(X,Y,P) \
+	template void apply_binary_functor<X,Y,P>(X&, Y&, const BinaryFunctor&,  const P&); \
+	template void apply_binary_functor<X,Y,P>(X&, Y&, const BinaryFunctor&,  const P&, const P&);
 
-	SIMPLE_0(dev_vector<float>); 
-	SIMPLE_0(host_vector<float>); 
-	SIMPLE_1(dev_vector<float>); 
-	SIMPLE_1(host_vector<float>); 
-	SIMPLE_2(dev_vector<float>, dev_vector<float>); 
-	SIMPLE_2(host_vector<float>, dev_vector<float>);
+#define SIMPLE_NORM(X) \
+	template float norm1<X>(X&); \
+	template float norm2<X>(X&);
+
+
+#define SIMPLE_INSTANTIATOR(X) \
+	SIMPLE_0( X );             \
+	SIMPLE_1( X );             \
+	SIMPLE_2( X, X );          \
+    SIMPLE_NORM( X );
+
+#define SIMPLE_INSTANTIATOR1(X, P) \
+	SIMPLE_01( X, P );             \
+	SIMPLE_11( X, P );             \
+	SIMPLE_21( X, X, P );          
+
+SIMPLE_INSTANTIATOR( dev_vector<float> );
+SIMPLE_INSTANTIATOR1( dev_vector<float>, float );
+SIMPLE_INSTANTIATOR1( dev_vector<float>, int );
+
+SIMPLE_INSTANTIATOR( dev_vector<unsigned char> );
+SIMPLE_INSTANTIATOR1( dev_vector<unsigned char>, unsigned char );
 
 } // cuv

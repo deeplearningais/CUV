@@ -20,6 +20,7 @@ namespace cuv{
 		SF_INV,
 		SF_SQRT,
 		SF_NEGATE,
+		SF_ABS,
 
 		// with param
 		SF_ADD,
@@ -113,6 +114,14 @@ namespace cuv{
   void copy(__vector_type& dst, __vector_type& src){
 	  apply_binary_functor(dst,src,BF_COPY);
   }
+
+
+  /*
+   * reductions
+   *
+   */
+  template<class __vector_type1> float norm2(__vector_type1& v);
+  template<class __vector_type1> float norm1(__vector_type1& v);
 
 
 } // cuv
