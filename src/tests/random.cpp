@@ -13,9 +13,10 @@ using namespace cuv;
 struct Fix{
 	dev_vector<float> v;
 	Fix()
-		:v(4096)
+		:v(8092) // needs large sample number.
 	{
 		//initCUDA(1);
+		initialize_mersenne_twister_seeds();
 	}
 	~Fix(){
 		//exitCUDA();
