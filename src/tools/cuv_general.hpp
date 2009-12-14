@@ -3,10 +3,10 @@
 #define __CUV_GENERAL_HPP__
 
 #define cuvSafeCall(X)  \
-  if(1){ X; checkCudaError(#X); } 
+  if(1){ X; cuv::checkCudaError(#X); } 
 
 #define cuvAssert(X)  \
-  if(!X){ cuvAssertFailed(#X); } 
+  if(!X){ cuv::cuvAssertFailed(#X); } 
 
 namespace cuv{
 	void cuvAssertFailed(const char *msg);
