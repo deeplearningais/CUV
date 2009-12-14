@@ -6,6 +6,7 @@ include_directories(
         ${CMAKE_SOURCE_DIR}/basics
         ${CMAKE_SOURCE_DIR}/convert
         ${CMAKE_SOURCE_DIR}/vector_ops
+        ${CMAKE_SOURCE_DIR}/random
         ${PYTHON_INCLUDE_PATH} 
         /usr/local/lib/python2.6/dist-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/include
         )
