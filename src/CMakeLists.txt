@@ -35,7 +35,7 @@ FIND_PACKAGE(CUDA)
 SET (Boost_FIND_REQUIRED TRUE)
 SET (Boost_FIND_QUIETLY TRUE)
 set (Boost_USE_MULTITHREADED TRUE)
-set (Boost_USE_STATIC_LIBS TRUE)
+set (Boost_USE_STATIC_LIBS FALSE)
 SET (Boost_ADDITIONAL_VERSIONS "1.39" "1.39.0")
 FIND_PACKAGE( Boost 1.37 COMPONENTS date_time unit_test_framework REQUIRED )
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
@@ -50,7 +50,9 @@ add_subdirectory(basics)
 add_subdirectory(vector_ops)
 add_subdirectory(convert)
 add_subdirectory(random)
+
 add_subdirectory(tests)
+add_subdirectory(python_bindings)
 
 CUDA_BUILD_CLEAN_TARGET()
 
