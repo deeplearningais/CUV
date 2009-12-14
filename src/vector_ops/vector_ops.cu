@@ -6,6 +6,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/sequence.h>
 #include <thrust/transform_reduce.h>
+#include <thrust/generate.h>
 
 #include <cuv_general.hpp>
 
@@ -70,6 +71,8 @@ template<class T, class U>
 struct bf_multiplies{  __device__  __host__       T operator()(const T& t, const U& u)      const{ return  t * (T)u; } };
 template<class T, class U>
 struct bf_divides{  __device__  __host__       T operator()(const T& t, const U& u)      const{ return  t / (T)u; } };
+template<class T, class U>
+struct bf_minus_squared{  __device__  __host__       T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
 
 template<class T, class U>
 struct bf_axpy{  
@@ -136,6 +139,9 @@ apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf){
 	switch(nf){
 		case NF_SEQ:
 			thrust::sequence(dst_ptr,dst_ptr+v.size());break;
+		/*case NF_RND_UNIFORM:*/
+		/*    thrust::experimental::random::minstd_rand rng(13);*/
+		/*    thrust::generate(dst_ptr,dst_ptr+v.size(),thrust::experimental::random::uniform_real_distribution<float>(0.f,1.f));break;*/
 		default:
 			cuvAssert(false);
 	}
@@ -282,6 +288,23 @@ norm1(__vector_type& v){
 	float init=0;
 	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_abs<float>(), init, bf_plus<float,value_type>());
 }
+template<class __vector_type>
+float
+mean(__vector_type& v){
+	typedef typename __vector_type::value_type value_type;
+	thrust::device_ptr<value_type> v_ptr(v.ptr());
+	float init=0;
+	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,value_type>()) / (float)v.size();
+}
+template<class __vector_type>
+float
+var(__vector_type& v){
+	typedef typename __vector_type::value_type value_type;
+	thrust::device_ptr<value_type> v_ptr(v.ptr());
+	float init=0;
+	float m = mean(v);
+	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_base_op<float, bf_minus_squared<float,value_type> >(m), init, bf_plus<float,value_type>()) / (float)v.size();
+}
 
 
 #define SIMPLE_0(X) \
@@ -303,7 +326,9 @@ norm1(__vector_type& v){
 
 #define SIMPLE_NORM(X) \
 	template float norm1<X>(X&); \
-	template float norm2<X>(X&);
+	template float norm2<X>(X&); \
+	template float mean<X>(X&);  \
+	template float var<X>(X&); 
 
 
 #define SIMPLE_INSTANTIATOR(X) \

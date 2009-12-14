@@ -45,7 +45,8 @@ namespace cuv{
 
   enum NullaryFunctor{
 	  NF_FILL,
-	  NF_SEQ
+	  NF_SEQ,
+	  NF_RND_UNIFORM
   };
 
   /*
@@ -122,6 +123,8 @@ namespace cuv{
    */
   template<class __vector_type1> float norm2(__vector_type1& v);
   template<class __vector_type1> float norm1(__vector_type1& v);
+  template<class __vector_type1> float mean(__vector_type1& v);
+  template<class __vector_type1> float var(__vector_type1& v);
 
 
 } // cuv
