@@ -72,7 +72,7 @@ struct bf_multiplies{  __device__  __host__       T operator()(const T& t, const
 template<class T, class U>
 struct bf_divides{  __device__  __host__       T operator()(const T& t, const U& u)      const{ return  t / (T)u; } };
 template<class T, class U>
-struct bf_minus_squared{  __device__  __host__       T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
+struct bf_squared_diff{  __device__  __host__       T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
 
 template<class T, class U>
 struct bf_axpy{  
@@ -139,9 +139,6 @@ apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf){
 	switch(nf){
 		case NF_SEQ:
 			thrust::sequence(dst_ptr,dst_ptr+v.size());break;
-		/*case NF_RND_UNIFORM:*/
-		/*    thrust::experimental::random::minstd_rand rng(13);*/
-		/*    thrust::generate(dst_ptr,dst_ptr+v.size(),thrust::experimental::random::uniform_real_distribution<float>(0.f,1.f));break;*/
 		default:
 			cuvAssert(false);
 	}
@@ -303,7 +300,7 @@ var(__vector_type& v){
 	thrust::device_ptr<value_type> v_ptr(v.ptr());
 	float init=0;
 	float m = mean(v);
-	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_base_op<float, bf_minus_squared<float,value_type> >(m), init, bf_plus<float,value_type>()) / (float)v.size();
+	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_base_op<float, bf_squared_diff<float,value_type> >(m), init, bf_plus<float,value_type>()) / (float)v.size();
 }
 
 

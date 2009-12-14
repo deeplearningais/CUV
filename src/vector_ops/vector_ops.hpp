@@ -45,8 +45,7 @@ namespace cuv{
 
   enum NullaryFunctor{
 	  NF_FILL,
-	  NF_SEQ,
-	  NF_RND_UNIFORM
+	  NF_SEQ
   };
 
   /*
