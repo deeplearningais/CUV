@@ -7,6 +7,11 @@
 
 namespace cuv{
 	using namespace std;
+	void cuvAssertFailed(const char *msg){
+			cout << "cuvAssert failed: " << msg <<endl;
+			abort();
+			throw std::runtime_error(std::string(msg));
+	}
 	void checkCudaError(const char *msg)
 	{
 		cudaError_t err = cudaGetLastError();

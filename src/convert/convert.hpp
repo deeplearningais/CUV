@@ -7,9 +7,6 @@
 
 namespace cuv{
 
-	template<class Dst,class Src>
-	struct convert_impl;
-
 	template<class Dst, class Src>
 	void convert(Dst& dst, const Src& src);
 }

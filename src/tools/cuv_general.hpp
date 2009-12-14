@@ -5,7 +5,11 @@
 #define cuvSafeCall(X)  \
   if(1){ X; checkCudaError(#X); } 
 
+#define cuvAssert(X)  \
+  if(!X){ cuvAssertFailed(#X); } 
+
 namespace cuv{
+	void cuvAssertFailed(const char *msg);
 	void checkCudaError(const char *msg);
 	void initCUDA(int dev=0);
 	void exitCUDA();

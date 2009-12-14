@@ -21,14 +21,20 @@ struct Fix{
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 
-BOOST_AUTO_TEST_CASE( create_dev_plain )
+BOOST_AUTO_TEST_CASE( convert_pushpull )
 {
 	dev_dense_matrix<float,column_major> dfc(32,16);
 	host_dense_matrix<float,row_major>  hfr(16,32);
 	dev_dense_matrix<float,row_major> dfr(32,16);
 	host_dense_matrix<float,column_major>  hfc(16,32);
+
+	// dfc <--> hfr
 	convert(dfc, hfr);
 	convert(hfr, dfc);
+
+	// dfr <--> hfc
+	convert(dfr, hfc);
+	convert(hfc, dfr);
 }
 
 BOOST_AUTO_TEST_CASE( create_dev_plain2 )

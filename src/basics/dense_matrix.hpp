@@ -1,6 +1,8 @@
 #ifndef __DENSE_MATRIX_HPP__
 #define __DENSE_MATRIX_HPP__
+#include <vector.hpp>
 #include <matrix.hpp>
+#include <cuv_general.hpp>
 
 namespace cuv{
 	struct memory_layout_tag{};
@@ -16,26 +18,33 @@ namespace cuv{
 		  typedef typename matrix<__value_type, __index_type>::value_type value_type;
 		  typedef typename matrix<__value_type, __index_type>::index_type index_type;
 		protected:
-		  value_type* m_ptr;
-		  bool        m_is_view;
+		  vector* m_vec;
 		public:
-			inline size_t memsize()const{ return this->n()*sizeof(value_type); }
-			inline const value_type* ptr()const { return m_ptr; }
-			inline       value_type* ptr()      { return m_ptr; }
+			inline size_t memsize()       const { cuvAssert(m_vec); return m_vec->memsize(); }
+			inline const value_type* ptr()const { cuvAssert(m_vec); return m_vec->ptr(); }
+			inline       value_type* ptr()      { cuvAssert(m_vec); return m_vec->ptr(); }
+			inline const value_type& vec()const { return *m_vec; }
+			inline       value_type& vec()      { return *m_vec; }
+			virtual void alloc()=0;
+			virtual void dealloc(){
+				if(m_vec)
+					delete m_vec;
+				m_vec = NULL;
+			};
+			virtual ~dense_matrix(){ dealloc(); }
 			dense_matrix(const index_type& h, const index_type& w)
-				: base_type(h,w), m_ptr(NULL), m_is_view(false) {}
-			dense_matrix(const index_type& h, const index_type& w, value_type* p, const bool& is_view)
-				: base_type(h,w), m_ptr(p), m_is_view(is_view) {}
+				: base_type(h,w), m_vec(NULL){ alloc(); }
+			dense_matrix(const index_type& h, const index_type& w, vector* p)
+				: base_type(h,w), m_vec(p){}
 
 			dense_matrix<value_type, memory_layout, index_type>& 
 				operator=(dense_matrix<value_type, memory_layout, index_type>& o){
 					if(this == &o)
 						return *this;
+				  this->dealloc();
 					(matrix<value_type,index_type>&) (*this)  = (matrix<value_type,index_type>&) o; // copy width, height
-					m_ptr       = o.ptr();
-					m_is_view   = o.m_is_view;
-					if(! o.m_is_view )
-						o.m_ptr = NULL;                // transfer ownership of memory
+					m_vec   = o.vec();
+					o.m_vec = NULL;                // transfer ownership of memory
 					return *this;
 				}
 	};
