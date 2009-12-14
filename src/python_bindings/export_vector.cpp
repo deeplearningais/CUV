@@ -27,6 +27,13 @@ export_vector_common(const char* name){
 		;
 }
 
+template <class T>
+void
+export_vector_conversion(){
+	def("convert", (void(*)(dev_vector<T>&,const host_vector<T>&)) cuv::convert);
+	def("convert", (void(*)(host_vector<T>&,const dev_vector<T>&)) cuv::convert);
+}
+
 void export_vector(){
 	export_vector_common<dev_vector<float> >("dev_vector_float");
 	export_vector_common<host_vector<float> >("host_vector_float");
@@ -34,10 +41,7 @@ void export_vector(){
 	export_vector_common<dev_vector<unsigned char> >("dev_vector_uc");
 	export_vector_common<host_vector<unsigned char> >("host_vector_uc");
 
-	def("convert", (void(*)(dev_vector<float>&,const host_vector<float>&)) cuv::convert);
-	def("convert", (void(*)(host_vector<float>&,const dev_vector<float>&)) cuv::convert);
-
-	def("convert", (void(*)(dev_vector<unsigned char>&,const host_vector<unsigned char>&)) cuv::convert);
-	def("convert", (void(*)(host_vector<unsigned char>&,const dev_vector<unsigned char>&)) cuv::convert);
+	export_vector_conversion<float>();
+	export_vector_conversion<unsigned char>();
 }
 
