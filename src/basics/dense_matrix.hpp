@@ -18,14 +18,14 @@ namespace cuv{
 		  typedef typename matrix<__value_type, __index_type>::value_type value_type;
 		  typedef typename matrix<__value_type, __index_type>::index_type index_type;
 		protected:
-		  vector* m_vec;
+		  vector<value_type,index_type>* m_vec;
 		public:
 			inline size_t memsize()       const { cuvAssert(m_vec); return m_vec->memsize(); }
 			inline const value_type* ptr()const { cuvAssert(m_vec); return m_vec->ptr(); }
 			inline       value_type* ptr()      { cuvAssert(m_vec); return m_vec->ptr(); }
-			inline const value_type& vec()const { return *m_vec; }
-			inline       value_type& vec()      { return *m_vec; }
-			virtual void alloc()=0;
+			inline const vector<value_type,index_type>* vec()const { return m_vec; }
+			inline       vector<value_type,index_type>* vec()      { return m_vec; }
+			virtual void alloc(){};
 			virtual void dealloc(){
 				if(m_vec)
 					delete m_vec;
@@ -34,7 +34,7 @@ namespace cuv{
 			virtual ~dense_matrix(){ dealloc(); }
 			dense_matrix(const index_type& h, const index_type& w)
 				: base_type(h,w), m_vec(NULL){ alloc(); }
-			dense_matrix(const index_type& h, const index_type& w, vector* p)
+			dense_matrix(const index_type& h, const index_type& w, vector<value_type,index_type>* p)
 				: base_type(h,w), m_vec(p){}
 
 			dense_matrix<value_type, memory_layout, index_type>& 

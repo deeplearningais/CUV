@@ -70,15 +70,13 @@ namespace cuv{
 		};
 
 
-#define CONVERT_INSTANTIATOR(M1,M2,N1,N2) \
-		M1 N1; M2 N2; \
-		convert( N1, N2 );
+#define CONVERT_INSTANTIATOR(M1,M2) if(1){ typedef M1 A; typedef M2 B; A a; B b; convert( a, b ); }
 
 	namespace{
 		struct instantiator{
 			instantiator(){
-				CONVERT_INSTANTIATOR((dev_dense_matrix<float,column_major>),(host_dense_matrix<float,row_major>),    dfc, hfr);
-				CONVERT_INSTANTIATOR((dev_dense_matrix<float,row_major>),   (host_dense_matrix<float,column_major>), dfr, hfc);
+				if(1){ dev_dense_matrix<float,column_major> a(16,16); host_dense_matrix<float,row_major> b(16,16); convert(a,b);  convert(b,a);}
+				if(1){ dev_dense_matrix<float,row_major>    a(16,16); host_dense_matrix<float,column_major> b(16,16); convert(a,b); convert(b,a);}
 			}
 		} inst;
 	}

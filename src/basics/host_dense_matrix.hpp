@@ -5,7 +5,7 @@
 #include <host_vector.hpp>
 
 namespace cuv{
-	template<class __value_type, class __mem_layout=cuv::column_major, class __index_type=int>
+	template<class __value_type, class __mem_layout=cuv::column_major, class __index_type=unsigned int>
 	class host_dense_matrix 
 	:        public dense_matrix<__value_type, __mem_layout, __index_type>{
 	  public:
@@ -23,8 +23,8 @@ namespace cuv{
 		  inline       value_type& operator()(const index_type& i, const index_type& j, const row_major& x)    ;
 	  public:
 			// life cycle
-			host_dense_matrix(const index_type& h, const index_type& w) : base_type(h,w) {}
-			host_dense_matrix(const index_type& h, const index_type& w, value_type* p, const bool& is_view) : base_type(h,w,p,is_view) {}
+			host_dense_matrix(const index_type& h, const index_type& w) : base_type(h,w) { alloc(); }
+			host_dense_matrix(const index_type& h, const index_type& w, host_vector<value_type,index_type>* p) : base_type(h,w,p) { alloc(); }
 			host_dense_matrix<value_type,memory_layout,index_type>& 
 			operator=(host_dense_matrix<value_type,memory_layout,index_type>& o){
 				if(this==&o) return *this;
@@ -32,6 +32,9 @@ namespace cuv{
 				return *this;
 			}
 			virtual void alloc();
+
+			inline const host_vector<value_type,index_type>* vec()const { return (host_vector<value_type,index_type>*)m_vec; }
+			inline       host_vector<value_type,index_type>* vec()      { return (host_vector<value_type,index_type>*)m_vec; }
 
 			// element access
 		  inline const value_type& operator()(const index_type& i, const index_type& j) const;
@@ -44,7 +47,7 @@ namespace cuv{
 	 */
 	template<class V, class M, class I>
 	void
-	host_dense_matrix<V,M,I>::alloc() { m_ptr = new host_vector(this->n()); }
+	host_dense_matrix<V,M,I>::alloc() { m_vec = new host_vector<value_type,index_type>(this->n()); }
 
 
 	/*

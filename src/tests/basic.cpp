@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE( create_dev_plain )
 BOOST_AUTO_TEST_CASE( create_dev_view )
 {
 	dev_dense_matrix<float> m(16,16);
-	dev_dense_matrix<float> m2(16,16,m.ptr(), true);
+	dev_dense_matrix<float> m2(16,16,new dev_vector<float>(m.n(), m.ptr(), true));
 }
 
 BOOST_AUTO_TEST_CASE( create_dev_from_mat )
@@ -40,8 +40,7 @@ BOOST_AUTO_TEST_CASE( create_dev_from_mat )
 BOOST_AUTO_TEST_CASE( create_host )
 {
 	host_dense_matrix<float> m(16,16);
-	host_dense_matrix<float> m2(16,16);
-	host_dense_matrix<float> m3(16,16,m.ptr(), true);
+	host_dense_matrix<float> m2(16,16,new host_vector<float>(m.n(),m.ptr(),true));
 }
 
 

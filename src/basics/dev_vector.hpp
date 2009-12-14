@@ -5,7 +5,7 @@
 
 namespace cuv{
 
-template<class __value_type, class __index_type>
+template<class __value_type, class __index_type=unsigned int>
 class dev_vector
 :    public vector<__value_type, __index_type>
 {
@@ -16,9 +16,9 @@ class dev_vector
 		using base_type::m_ptr;
 	public:
 		dev_vector(size_t s)
-		:   base_type(s) { }
+		:   base_type(s) { alloc(); }
 		dev_vector(size_t s, value_type* p, bool is_view)
-		:   base_type(s,p,is_view) { }
+		:   base_type(s,p,is_view) { alloc(); }
 		virtual void alloc();
 		virtual void dealloc();
 };

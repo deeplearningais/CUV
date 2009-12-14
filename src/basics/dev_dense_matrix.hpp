@@ -1,9 +1,10 @@
 #ifndef __D_DENSE_MATRIX_H__
 #define __D_DENSE_MATRIX_H__
 #include <dense_matrix.hpp>
+#include <dev_vector.hpp>
 
 namespace cuv{
-	template<class __value_type, class __mem_layout=cuv::column_major, class __index_type=int>
+	template<class __value_type, class __mem_layout=cuv::column_major, class __index_type=unsigned int>
 	class dev_dense_matrix
 	:        public dense_matrix<__value_type, __mem_layout, __index_type>{
 		public:
@@ -23,10 +24,10 @@ namespace cuv{
 		  }
 
 		  dev_dense_matrix(const index_type& h, const index_type& w)
-			:  base_type(h,w) { }
+			:  base_type(h,w) { alloc(); }
 
-		  dev_dense_matrix(const index_type& h, const index_type& w, value_type* p, const bool& is_view)
-			:  base_type(h,w,p,is_view) { }
+		  dev_dense_matrix(const index_type& h, const index_type& w, vector<value_type,index_type>* p)
+			:  base_type(h,w,p) { alloc(); }
 
 		  dev_dense_matrix<value_type,memory_layout,index_type>& 
 		  operator=(dev_dense_matrix<value_type,memory_layout,index_type>& o){
@@ -34,7 +35,10 @@ namespace cuv{
 			  (dense_matrix<value_type,memory_layout,index_type>&) (*this)  = (dense_matrix<value_type,memory_layout,index_type>&) o; // copy width, height
 			  return *this;
 		  }
-		  virtual void alloc(){   m_vec = new dev_vector<value_type,index_type>(this->n());
+		  virtual void alloc(){   m_vec = new dev_vector<value_type,index_type>(this->n());}
+
+		  inline const dev_vector<value_type,index_type>* vec()const { return (dev_vector<value_type,index_type>*)m_vec; }
+		  inline       dev_vector<value_type,index_type>* vec()      { return (dev_vector<value_type,index_type>*)m_vec; }
 	};
 }
 
