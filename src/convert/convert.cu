@@ -13,66 +13,6 @@ namespace cuv{
 
 	template<class Dst, class Src>
 		struct convert_impl{
-
-			/*
-			 * Matrix Conversion
-			 */
-
-			// host (row-major) --> dev (col-major) 
-			template<class __value_type, class __index_type>
-				static void
-				convert(        dev_dense_matrix <__value_type,  column_major,  __index_type>& dst, 
-						const host_dense_matrix<__value_type,  row_major, __index_type>& src){
-					if(        dst.h() != src.w()
-							|| dst.w() != src.h()){
-
-						dev_dense_matrix<__value_type,column_major,__index_type> d(src.w(),src.h());
-						dst = d;
-					}
-					convert(*dst.vec(), *src.vec());
-				}
-
-			// dev (col-major) --> host (row-major) 
-			template<class __value_type, class __index_type>
-				static void
-				convert(        host_dense_matrix<__value_type,  row_major,  __index_type>& dst, 
-						const dev_dense_matrix<__value_type,  column_major, __index_type>& src){
-					if(        dst.h() != src.w()
-							|| dst.w() != src.h()){
-						host_dense_matrix<__value_type,row_major,__index_type> h(src.w(),src.h());
-						dst = h;
-					}
-					convert(*dst.vec(), *src.vec());
-				}
-
-			// host (col-major) --> dev (row-major) 
-			template<class __value_type, class __index_type>
-				static void
-				convert(        dev_dense_matrix <__value_type,  row_major,  __index_type>& dst, 
-						const host_dense_matrix<__value_type,  column_major, __index_type>& src){
-					if(        dst.h() != src.w()
-							|| dst.w() != src.h()){
-
-						dev_dense_matrix<__value_type,row_major,__index_type> d(src.w(),src.h());
-						dst = d;
-					}
-					convert(*dst.vec(), *src.vec());
-				}
-
-			// dev (row-major) --> host (col-major) 
-			template<class __value_type, class __index_type>
-				static void
-				convert(        host_dense_matrix<__value_type,  column_major,  __index_type>& dst, 
-						const dev_dense_matrix<__value_type,  row_major, __index_type>& src){
-					if(        dst.h() != src.w()
-							|| dst.w() != src.h()){
-						host_dense_matrix<__value_type,column_major,__index_type> h(src.w(),src.h());
-						dst = h;
-					}
-					convert(*dst.vec(), *src.vec());
-				}
-
-
 			/*
 			 * Vector Conversion
 			 */
@@ -101,6 +41,66 @@ namespace cuv{
 					}
 					cuvSafeCall(cudaMemcpy(dst.ptr(),src.ptr(),dst.memsize(),cudaMemcpyDeviceToHost));
 				}
+
+			/*
+			 * Matrix Conversion
+			 */
+
+			// host (row-major) --> dev (col-major) 
+			template<class __value_type, class __index_type>
+				static void
+				convert(        dev_dense_matrix <__value_type,  column_major,  __index_type>& dst, 
+						const host_dense_matrix<__value_type,  row_major, __index_type>& src){
+					if(        dst.h() != src.w()
+							|| dst.w() != src.h()){
+
+						dev_dense_matrix<__value_type,column_major,__index_type> d(src.w(),src.h());
+						dst = d;
+					}
+					convert(dst.vec(), src.vec());
+				}
+
+			// dev (col-major) --> host (row-major) 
+			template<class __value_type, class __index_type>
+				static void
+				convert(        host_dense_matrix<__value_type,  row_major,  __index_type>& dst, 
+						const dev_dense_matrix<__value_type,  column_major, __index_type>& src){
+					if(        dst.h() != src.w()
+							|| dst.w() != src.h()){
+						host_dense_matrix<__value_type,row_major,__index_type> h(src.w(),src.h());
+						dst = h;
+					}
+					convert(dst.vec(), src.vec());
+				}
+
+			// host (col-major) --> dev (row-major) 
+			template<class __value_type, class __index_type>
+				static void
+				convert(        dev_dense_matrix <__value_type,  row_major,  __index_type>& dst, 
+						const host_dense_matrix<__value_type,  column_major, __index_type>& src){
+					if(        dst.h() != src.w()
+							|| dst.w() != src.h()){
+
+						dev_dense_matrix<__value_type,row_major,__index_type> d(src.w(),src.h());
+						dst = d;
+					}
+					convert(dst.vec(), src.vec());
+				}
+
+			// dev (row-major) --> host (col-major) 
+			template<class __value_type, class __index_type>
+				static void
+				convert(        host_dense_matrix<__value_type,  column_major,  __index_type>& dst, 
+						const dev_dense_matrix<__value_type,  row_major, __index_type>& src){
+					if(        dst.h() != src.w()
+							|| dst.w() != src.h()){
+						host_dense_matrix<__value_type,column_major,__index_type> h(src.w(),src.h());
+						dst = h;
+					}
+					convert(dst.vec(), src.vec());
+				}
+
+
 		};
 
 #define CONV_VEC(X) \
