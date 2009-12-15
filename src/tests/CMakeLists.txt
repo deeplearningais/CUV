@@ -16,8 +16,12 @@ ADD_EXECUTABLE( test_random random.cpp )
 TARGET_LINK_LIBRARIES( test_random cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_random)
 
 
+
 ADD_TEST( basics  "${CMAKE_BINARY_DIR}/tests/test_basic" )
 ADD_TEST( convert "${CMAKE_BINARY_DIR}/tests/test_convert" )
 ADD_TEST( vec_op "${CMAKE_BINARY_DIR}/tests/test_vec_op" )
 ADD_TEST( random "${CMAKE_BINARY_DIR}/tests/test_random" )
+
+SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
+ADD_TEST( load_py sh -c "python -c 'import cuv_python as cp'" )
 

@@ -159,12 +159,13 @@ struct rnd_normal {
 		__shared__ MersenneTwisterState mtState;
 		unsigned int thrOffset = blockIdx.x * blockDim.x + threadIdx.x;
 		MersenneTwisterInitialize(mtState, thrOffset);
-		float u1 = float(MersenneTwisterGenerate(mtState, thrOffset)) / 4294967295.0f;
-		float u2 = float(MersenneTwisterGenerate(mtState, thrOffset)) / 4294967295.0f;
-		BoxMuller(u1, u2); //transform uniform into two independent standard normals
+		value_type u;
+		u.x = float(MersenneTwisterGenerate(mtState, thrOffset)) / 4294967295.0f;
+		u.y = float(MersenneTwisterGenerate(mtState, thrOffset)) / 4294967295.0f;
+		BoxMuller(u.x, u.y); //transform uniform into two independent standard normals
 		/*u1 = u1 * __expf( sigma); oder so*/
 		/*u2 = u2 * __expf( sigma); oder so*/
-		return u1; // TODO: this is SLOWWW
+		return u; // TODO: this is SLOWWW
 	}
 };
 
@@ -195,7 +196,7 @@ namespace cuv{
 		thrust::generate(p, p+v.size(), rnd_uniform<float>(0.f,1.f));
 	}
 	void fill_rnd_normal(dev_vector<float>& v){
-		thrust::device_ptr<float> p(v.ptr());
-		thrust::generate(p, p+v.size(), rnd_normal<float>());
+		thrust::device_ptr<float2> p((float2*)v.ptr());
+		thrust::generate(p, p+v.size(), rnd_normal<float2>());
 	}
 } // cuv
