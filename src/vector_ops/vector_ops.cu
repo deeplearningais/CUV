@@ -17,11 +17,29 @@
 
 #define sgn(a) (copysign(1.f,a))
 
+/*
+ * USE_THRUST_LAUNCHER:
+ * thrust has an overhead for looking up the correct block/grid-size for threads.
+ * this overhead goes away for matrices of about 784*2048 for very simple linear kernels,
+ * then they are better on bigcuda1.
+ *
+ */
+#define USE_THRUST_LAUNCHER 1 
+
+
 using namespace cuv;
 using namespace std;
 
+template<class T, class M>
+struct memspace_cuv2thrustptr                          { typedef T* ptr_type; };
 template<class T>
-struct uf_exp{  __host__ __device__         T operator()(const T& t)const{ return __expf(t);    } };
+struct memspace_cuv2thrustptr<T,cuv::host_memory_space>{ typedef T* ptr_type; };
+template<class T>
+struct memspace_cuv2thrustptr<T,cuv::dev_memory_space> { typedef thrust::device_ptr<T> ptr_type; };
+
+template<class T>
+/*struct uf_exp{  __host__ __device__         T operator()(const T& t)const{ return __expf(t);    } };*/
+struct uf_exp{  __host__ __device__         T operator()(const T& t)const{ return exp(t);    } };
 template<class T>
 struct uf_exact_exp{  __device__ __host__   T operator()(const T& t)const{ return exp(t);    } };
 template<class T>
@@ -29,7 +47,8 @@ struct uf_log{  __device__ __host__         T operator()(const T& t)      const{
 template<class T>
 struct uf_sign{  __device__ __host__        T operator()(const T& t)      const{ return sgn((float)t);    } };
 template<class T>
-struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+__expf(-t));    } };
+/*struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+__expf(-t));    } };*/
+struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+exp(-t));    } };
 template<class T>
 struct uf_exact_sigm{  __device__  __host__ T operator()(const T& t)      const{ return ((T)1)/(((T)1)+exp(-t));    } };
 template<class T>
@@ -94,6 +113,22 @@ struct bf_axpby{
 	__device__  __host__       T operator()(const T& t, const U& u) const{ return  a*t + b*((T)u); } 
 };
 
+#if ! USE_THRUST_LAUNCHER
+template<class unary_functor, class value_type, class index_type>
+__global__
+void unary_functor_kernel(value_type* dst, value_type* src, index_type n, unary_functor uf){
+	const unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+	const unsigned int off = __mul24(blockDim.x , gridDim.x);
+	for (unsigned int i = idx; i < n; i += off)
+		dst[i] = uf(src[i]);
+}
+
+void setLinearGridAndThreads(dim3& blocks, dim3& threads, size_t len, int threads_per_block=512){
+	const int padded_len=(int)ceil((float)len/threads_per_block)*threads_per_block;
+	blocks = dim3(min(512,padded_len/threads_per_block),1,1);
+	threads = dim3(threads_per_block,1,1);
+}
+#endif
 
 template<class unary_functor, class value_type, class index_type>
 void launch_unary_kernel(
@@ -104,9 +139,17 @@ void launch_unary_kernel(
 	 cuvAssert(src.ptr());
 	 cuvAssert(dst.size() == src.size());
 
+
+#if ! USE_THRUST_LAUNCHER
+	 dim3 blocks, threads;
+	 setLinearGridAndThreads(blocks,threads,dst.size());
+	 unary_functor_kernel<<<blocks,threads>>>(dst.ptr(),src.ptr(),dst.size(),uf);
+#else
 	 thrust::device_ptr<value_type> dst_ptr(dst.ptr());
 	 thrust::device_ptr<value_type> src_ptr(src.ptr());
 	 thrust::transform(src_ptr,src_ptr+src.size(),dst_ptr,uf);
+#endif
+
 	 cuvSafeCall(cudaThreadSynchronize());
 }
 
@@ -134,15 +177,15 @@ void
 apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf){
 	 cuvAssert(v.ptr());
 	 typedef typename __vector_type::value_type value_type;
-
-	 thrust::device_ptr<value_type> dst_ptr(v.ptr());
-	switch(nf){
-		case NF_SEQ:
-			thrust::sequence(dst_ptr,dst_ptr+v.size());break;
-		default:
-			cuvAssert(false);
-	}
-	cuvSafeCall(cudaThreadSynchronize());
+	 typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	 ptr_type dst_ptr(v.ptr());
+	 switch(nf){
+		 case NF_SEQ:
+			 thrust::sequence(dst_ptr,dst_ptr+v.size());break;
+		 default:
+			 cuvAssert(false);
+	 }
+	 cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<class __vector_type, class __value_type>
@@ -151,7 +194,8 @@ apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf, const __value_typ
 	 cuvAssert(v.ptr());
 
 	 typedef typename __vector_type::value_type value_type;
-	 thrust::device_ptr<value_type> dst_ptr(v.ptr());
+	 typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	 ptr_type dst_ptr(v.ptr());
 	 switch(nf){
 		 case NF_FILL:
 			 thrust::fill(dst_ptr,dst_ptr + v.size(), (value_type)param); break;
@@ -189,8 +233,10 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 	cuvAssert(v.size() == w.size());
 	typedef typename __vector_type1::value_type V1;
 	typedef typename __vector_type2::value_type V2;
-	thrust::device_ptr<V1> v_ptr ( v.ptr() );
-	thrust::device_ptr<V2> w_ptr ( w.ptr() );
+	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memspace_type>::ptr_type ptr_type1;
+	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memspace_type>::ptr_type ptr_type2;
+	ptr_type1 v_ptr(v.ptr());
+	ptr_type2 w_ptr(w.ptr());
 	switch(sf){
 		case BF_ADD:      thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_plus<V1,V2>()); break;
 		case BF_SUBTRACT: thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_minus<V1,V2>()); break;
@@ -207,8 +253,10 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 	cuvAssert(v.size() == w.size());
 	typedef typename __vector_type1::value_type V1;
 	typedef typename __vector_type2::value_type V2;
-	thrust::device_ptr<V1> v_ptr ( v.ptr() );
-	thrust::device_ptr<V2> w_ptr ( w.ptr() );
+	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memspace_type>::ptr_type ptr_type1;
+	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memspace_type>::ptr_type ptr_type2;
+	ptr_type1 v_ptr(v.ptr());
+	ptr_type2 w_ptr(w.ptr());
 	switch(sf){
 		case BF_AXPY:     thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_axpy<V1,V2>(param)); break;
 		case BF_XPBY:     thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_xpby<V1,V2>(param)); break;
@@ -222,12 +270,15 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 	cuvAssert(v.size() == w.size());
 	typedef typename __vector_type1::value_type V1;
 	typedef typename __vector_type2::value_type V2;
-	thrust::device_ptr<V1> v_ptr ( v.ptr() );
-	thrust::device_ptr<V2> w_ptr ( w.ptr() );
+	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memspace_type>::ptr_type ptr_type1;
+	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memspace_type>::ptr_type ptr_type2;
+	ptr_type1 v_ptr(v.ptr());
+	ptr_type2 w_ptr(w.ptr());
 	switch(sf){
 		case BF_AXPBY:     thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_axpby<V1,V2>(param,param2)); break;
 		default: cuvAssert(false);
 	}
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<class __vector_type>
@@ -273,7 +324,8 @@ template<class __vector_type>
 float
 norm2(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	thrust::device_ptr<value_type> v_ptr(v.ptr());
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	ptr_type v_ptr(v.ptr());
 	float init=0;
 	return  std::sqrt( thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_square<float>(), init, bf_plus<float,value_type>()) );
 }
@@ -281,7 +333,8 @@ template<class __vector_type>
 float
 norm1(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	thrust::device_ptr<value_type> v_ptr(v.ptr());
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	ptr_type v_ptr(v.ptr());
 	float init=0;
 	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_abs<float>(), init, bf_plus<float,value_type>());
 }
@@ -289,7 +342,8 @@ template<class __vector_type>
 float
 mean(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	thrust::device_ptr<value_type> v_ptr(v.ptr());
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	ptr_type v_ptr(v.ptr());
 	float init=0;
 	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,value_type>()) / (float)v.size();
 }
@@ -297,7 +351,8 @@ template<class __vector_type>
 float
 var(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	thrust::device_ptr<value_type> v_ptr(v.ptr());
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	ptr_type v_ptr(v.ptr());
 	float init=0;
 	float m = mean(v);
 	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_base_op<float, bf_squared_diff<float,value_type> >(m), init, bf_plus<float,value_type>()) / (float)v.size();

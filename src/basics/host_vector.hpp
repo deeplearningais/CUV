@@ -1,6 +1,7 @@
 #ifndef __HOST_VECTOR_HPP__
 #define __HOST_VECTOR_HPP__
 
+#include <cuv_general.hpp>
 #include "vector.hpp"
 
 namespace cuv{
@@ -10,9 +11,10 @@ class host_vector
 :    public vector<__value_type, __index_type>
 {
   public:
-	  typedef __value_type value_type;
-	  typedef __index_type index_type;
+	  typedef __value_type                       value_type;
+	  typedef __index_type                       index_type;
 	  typedef vector<__value_type, __index_type> base_type;
+	  typedef host_memory_space                  memspace_type;
 	  using base_type::m_ptr;
 	  using base_type::m_is_view;
 	public:

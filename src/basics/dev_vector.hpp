@@ -1,6 +1,7 @@
 #ifndef __DEV_VECTOR_HPP__
 #define __DEV_VECTOR_HPP__
 
+#include <cuv_general.hpp>
 #include "vector.hpp"
 
 namespace cuv{
@@ -10,10 +11,11 @@ class dev_vector
 :    public vector<__value_type, __index_type>
 {
   public:
-	  typedef __value_type value_type;
-		typedef __index_type index_type;
-		typedef vector<__value_type, __index_type> base_type;
-		using base_type::m_ptr;
+	  typedef __value_type                       value_type;
+	  typedef __index_type                       index_type;
+	  typedef vector<__value_type, __index_type> base_type;
+	  typedef dev_memory_space                   memspace_type;
+	  using base_type::m_ptr;
 	public:
 		dev_vector(size_t s)
 		:   base_type(s) { alloc(); }
