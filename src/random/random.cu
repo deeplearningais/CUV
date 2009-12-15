@@ -71,7 +71,7 @@ __device__ unsigned int MersenneTwisterGenerate(MersenneTwisterState &state, uns
 	return x;
 }
  
-#define TWISTER_WARM_UP 0
+#define TWISTER_WARM_UP 1
  
 __device__ void MersenneTwisterInitialize(MersenneTwisterState &state, unsigned int threadID) {
 	state.mt[0] = MT[threadID].seed;
@@ -91,35 +91,6 @@ __device__ void MersenneTwisterInitialize(MersenneTwisterState &state, unsigned 
  
 }
  
-// 
-__global__ void TestMersenneTwister(float *outArr, int nNumbers) {
-	unsigned int tid = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
- 
-	MersenneTwisterState mtState;
-	MersenneTwisterInitialize(mtState, tid);
- 
-	for(int i = tid; i < nNumbers; i += __mul24(blockDim.x, gridDim.x)) {
-		// Make a floating-point number between 0...1 from integer 0...UINT_MAX.
-		outArr[i] = float(MersenneTwisterGenerate(mtState, tid)) / 4294967295.0f;
-	}
-}
- 
- 
-// Generates random numbers on the GPU
-void GenerateRandomNumbers(float *randomNumbers, int nRandomNumbers) {
-	// Read offline-generated initial configuration file.
-	float *randomNumbersDev;
-	cuvSafeCall(cudaMalloc((void **)&randomNumbersDev, sizeof(float) * nRandomNumbers));
- 
-	dim3 threads(512, 1);
-	dim3 grid(MT_RNG_COUNT / 512, 1, 1);
- 
-	TestMersenneTwister<<<grid, threads>>>(randomNumbersDev, nRandomNumbers);
- 
-	cuvSafeCall(cudaMemcpy(randomNumbers, randomNumbersDev, sizeof(float) * nRandomNumbers, cudaMemcpyDeviceToHost));
-	cuvSafeCall(cudaFree(randomNumbersDev));
-}
-// End Mersenne Twister Code
  
 //Box Muller transform
 #define PI 3.14159265358979f
@@ -165,7 +136,7 @@ struct rnd_normal {
 		BoxMuller(u.x, u.y); //transform uniform into two independent standard normals
 		/*u1 = u1 * __expf( sigma); oder so*/
 		/*u2 = u2 * __expf( sigma); oder so*/
-		return u; // TODO: this is SLOWWW
+		return u; 
 	}
 };
 
@@ -175,8 +146,11 @@ namespace cuv{
 		mt_struct_stripped *mtStripped = new mt_struct_stripped[MT_RNG_COUNT];
 
 		FILE *datFile = fopen("MersenneTwister.dat", "rb");
-		assert(datFile);
-		assert(fread(mtStripped, sizeof(mt_struct_stripped) * MT_RNG_COUNT, 1, datFile));
+		if(!datFile){
+			cuvAssert(datFile);
+		}
+		bool ret = fread(mtStripped, sizeof(mt_struct_stripped) * MT_RNG_COUNT, 1, datFile);
+		assert(ret);
 		fclose(datFile);
 
 		// Seed the structure with low-quality random numbers. Twisters will need "warming up"
@@ -192,10 +166,12 @@ namespace cuv{
 	}
 
 	void fill_rnd_uniform(dev_vector<float>& v){
+		cuvAssert(v.ptr());
 		thrust::device_ptr<float> p(v.ptr());
 		thrust::generate(p, p+v.size(), rnd_uniform<float>(0.f,1.f));
 	}
 	void fill_rnd_normal(dev_vector<float>& v){
+		cuvAssert(v.ptr());
 		thrust::device_ptr<float2> p((float2*)v.ptr());
 		thrust::generate(p, p+v.size(), rnd_normal<float2>());
 	}
