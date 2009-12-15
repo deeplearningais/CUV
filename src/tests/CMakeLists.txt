@@ -23,5 +23,5 @@ ADD_TEST( vec_op "${CMAKE_BINARY_DIR}/tests/test_vec_op" )
 ADD_TEST( random "${CMAKE_BINARY_DIR}/tests/test_random" )
 
 SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
-ADD_TEST( load_py sh -c "python -c 'import cuv_python as cp'" )
+ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/python_bindings python -c 'import cuv_python as cp'" )
 
