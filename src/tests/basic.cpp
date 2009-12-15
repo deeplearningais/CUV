@@ -9,10 +9,8 @@ using namespace cuv;
 
 struct Fix{
 	Fix(){
-		initCUDA(1);
 	}
 	~Fix(){
-		exitCUDA();
 	}
 };
 
