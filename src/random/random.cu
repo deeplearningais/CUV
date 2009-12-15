@@ -16,6 +16,171 @@
 
 #include <cuv_general.hpp>
 #include <dev_vector.hpp>
+
+
+// Old RNG 
+
+/*__global__ void kSeedRandom(unsigned int* rndMults, unsigned long long* rndWords, unsigned int seed) {*/
+/*    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;*/
+        
+/*    // The initial x is the seed and the initial carry is 1*/
+/*    unsigned long long rndWord = ((unsigned long long)seed << 32) + 1;*/
+/*    const unsigned int rndMult = rndMults[idx]; */
+    /*
+     * Run the chain for a few steps so that all the streams have a chance
+     * to differentiate. They start out generating similar random numbers
+     * because all the multipliers are similar. 
+     */
+/*    for(unsigned int i = 0; i < NUM_RND_BURNIN; i++) {*/
+/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
+/*    }*/
+/*    rndWords[idx] = rndWord;*/
+/*}  */
+
+/*__global__ void kRandomUniform(unsigned int* rndMults, unsigned long long* rndWords, float* gData, unsigned int numElements) {*/
+/*    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;*/
+/*    unsigned long long rndWord = rndWords[idx]; */
+/*    const unsigned int rndMult = rndMults[idx];*/
+   
+/*    for(unsigned int i = idx; i < numElements; i += NUM_RND_STREAMS) {*/
+/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
+/*        gData[i] = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
+/*    }*/
+/*    rndWords[idx] = rndWord;*/
+/*}       */
+
+/*
+ * TODO: modify to take mean/stdev 
+ */     
+/*__global__ void kRandomGaussian(unsigned int* rndMults, unsigned long long* rndWords, float* gData, unsigned int numElements) {*/
+/*    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;*/
+/*    unsigned long long rndWord = rndWords[idx];*/
+/*    const unsigned int rndMult = rndMults[idx];*/
+
+/*    float rnd1, rnd2, R, T;*/
+/*    for(unsigned int i = idx; i < numElements; i += 2*NUM_RND_STREAMS) {*/
+/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
+/*        rnd1 = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
+/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
+/*        rnd2 = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
+/*        T = 2 * M_PI * rnd2;*/
+/*        R = sqrtf(-2 * __logf(rnd1));*/
+/*        gData[i] = R * __cosf(T);*/
+/*        if (i + NUM_RND_STREAMS < numElements)*/
+/*            gData[i + NUM_RND_STREAMS] = R * __sinf(T);*/
+/*    }*/
+/*    rndWords[idx] = rndWord;*/
+/*}*/
+
+/*  
+ * TODO: modify to take mean
+ */     
+/*__global__ void kAddGaussianNoise(unsigned int* rndMults, unsigned long long* rndWords, float* gData, float stdev, unsigned int numElements) {*/
+/*    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;*/
+/*    unsigned long long rndWord = rndWords[idx];*/
+/*    const unsigned int rndMult = rndMults[idx];*/
+        
+/*    float rnd1, rnd2, R, T;*/
+/*    for(unsigned int i = idx; i < numElements; i += 2*NUM_RND_STREAMS) {*/
+/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
+/*        rnd1 = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
+/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
+/*        rnd2 = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
+/*        T = 2 * M_PI * rnd2;*/
+/*        R = sqrtf(-2 * __logf(rnd1));*/
+/*        gData[i] += stdev * R * __cosf(T);*/
+/*        if (i + NUM_RND_STREAMS < numElements)*/
+/*            gData[i + NUM_RND_STREAMS] += stdev * R * __sinf(T);*/
+/*    }*/
+/*    rndWords[idx] = rndWord;*/
+/*}*/
+
+
+
+/*template<class T>*/
+/*void MatrixTools<T>::init_RNG(unsigned int seed, const char* fn) {*/
+/*    assert(!sRndInitialized);*/
+/*    std::ifstream inFile;*/
+/*    inFile.open(fn);*/
+/*    if(!inFile) {*/
+/*        std::cerr << "Unable to open file " << RND_MULTIPLIERS_FILE << std::endl;*/
+/*        exit(EXIT_FAILURE);*/
+/*    }*/
+    
+/*    int numRead = 0;*/
+/*    unsigned int mult;*/
+/*    shRndMults = new unsigned int[NUM_RND_STREAMS];*/
+/*    while(numRead < NUM_RND_STREAMS) {*/
+/*        if(!(inFile >> mult)) {*/
+/*            std::cerr << "Not enough numbers in file " << RND_MULTIPLIERS_FILE << std::endl;*/
+/*            exit(EXIT_FAILURE);*/
+/*        }*/
+/*        shRndMults[numRead] = mult;*/
+/*        numRead++;*/
+/*    }*/
+/*    inFile.close();*/
+
+/*    cutilSafeCall(cudaMalloc((void **)&sdRndMults,   NUM_RND_STREAMS * sizeof(unsigned int)));*/
+/*    cutilSafeCall(cudaMalloc((void **)&sdRndWords,   NUM_RND_STREAMS * sizeof(unsigned long long)));*/
+/*    cutilSafeCall(cudaMemcpy(sdRndMults, shRndMults, NUM_RND_STREAMS * sizeof(unsigned int), cudaMemcpyHostToDevice));*/
+
+/*    kSeedRandom<<<NUM_RND_BLOCKS, NUM_RND_THREADS_PER_BLOCK>>>(sdRndMults, sdRndWords, seed);*/
+/*    cutilSafeCall(cudaThreadSynchronize());*/
+/*    checkCudaError("Kernel execution failed");*/
+/*    sRndInitialized = true;*/
+/*}*/
+
+/*template<class T>*/
+/*void MatrixTools<T>::init_rnd_uniform(T& m) {*/
+/*    assert(sRndInitialized);*/
+/*    assert(m.getDev());*/
+/*    kRandomUniform<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(sdRndMults, sdRndWords, m.getDev(),m.n());*/
+/*    cutilSafeCall(cudaThreadSynchronize());*/
+/*    checkCudaError("Kernel execution failed");*/
+/*}*/
+/*template<class T>*/
+/*void MatrixTools<T>::init_rnd_gaussian(T& m) {*/
+/*    assert(sRndInitialized);*/
+/*    assert(m.getDev());*/
+/*    kRandomGaussian<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(sdRndMults, sdRndWords, m.getDev(),m.n());*/
+/*    cutilSafeCall(cudaThreadSynchronize());*/
+/*    checkCudaError("Kernel execution failed");*/
+/*}*/
+
+/*template<class T>*/
+/*void MatrixTools<T>::add_gaussian_noise(T& m, float stddev) {*/
+/*    assert(sRndInitialized);*/
+/*    assert(m.getDev());*/
+/*    assert(m.n() % 2 == 0);*/
+/*    kAddGaussianNoise<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(sdRndMults, sdRndWords, m.getDev(),stddev,m.n());*/
+/*    cutilSafeCall(cudaThreadSynchronize());*/
+/*    checkCudaError("Kernel execution failed");*/
+/*}*/
+
+/*template<class T>*/
+/*__global__ void kBinarizeProbs(unsigned int* rndMults, unsigned long long* rndWords, T *gData, unsigned int numElements) {*/
+/*    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;*/
+/*    unsigned long long rndWord = rndWords[idx];*/
+/*    const unsigned int rndMult = rndMults[idx];*/
+
+/*    for(unsigned int i = idx; i < numElements; i += NUM_RND_STREAMS) {*/
+/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
+/*        gData[i] = gData[i] > (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
+/*    }*/
+/*    rndWords[idx] = rndWord;*/
+/*}*/
+
+/*template<class T>*/
+/*void MatrixTools<T>::binarize_probs(T& m) {*/
+/*    assert(sRndInitialized);*/
+/*    assert(m.getDev());*/
+/*    kBinarizeProbs<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(sdRndMults, sdRndWords, m.getDev(),m.n());*/
+/*    cutilSafeCall(cudaThreadSynchronize());*/
+/*    checkCudaError("Kernel execution failed");*/
+/*}*/
+
+
+// New RNG
  
 #define MT_MM     9
 #define MT_NN     19
@@ -71,7 +236,7 @@ __device__ unsigned int MersenneTwisterGenerate(MersenneTwisterState &state, uns
 	return x;
 }
  
-#define TWISTER_WARM_UP 1
+#define TWISTER_WARM_UP 0
  
 __device__ void MersenneTwisterInitialize(MersenneTwisterState &state, unsigned int threadID) {
 	state.mt[0] = MT[threadID].seed;
@@ -113,11 +278,14 @@ struct rnd_uniform{
 		m_vmax(vmax) { }
  
 	__device__
-	value_type operator()() const {
-		__shared__ MersenneTwisterState mtState;
-		unsigned int thrOffset = blockIdx.x * blockDim.x + threadIdx.x;
-		MersenneTwisterInitialize(mtState, thrOffset);
-		return value_type(MersenneTwisterGenerate(mtState, thrOffset)) / 4294967295.0f;
+	void operator()(value_type* dst, const int& n) const {
+		unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+		if( idx >= n ) return;
+		/*__shared__ MersenneTwisterState mtState;*/
+		MersenneTwisterState mtState;
+		MersenneTwisterInitialize(mtState, idx);
+		for(int i=idx; i<n; i += __mul24(blockDim.x , gridDim.x))
+			 dst[i] = value_type(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
 	}
 };
 
@@ -126,17 +294,21 @@ struct rnd_normal {
 	rnd_normal() { }
  
 	__device__
-	value_type operator()() const {
-		__shared__ MersenneTwisterState mtState;
-		unsigned int thrOffset = blockIdx.x * blockDim.x + threadIdx.x;
-		MersenneTwisterInitialize(mtState, thrOffset);
-		value_type u;
-		u.x = float(MersenneTwisterGenerate(mtState, thrOffset)) / 4294967295.0f;
-		u.y = float(MersenneTwisterGenerate(mtState, thrOffset)) / 4294967295.0f;
-		BoxMuller(u.x, u.y); //transform uniform into two independent standard normals
-		/*u1 = u1 * __expf( sigma); oder so*/
-		/*u2 = u2 * __expf( sigma); oder so*/
-		return u; 
+		void 
+	operator()(value_type* dst, const int& n) const {
+		unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+		if( idx >= n ) return;
+		/*__shared__ MersenneTwisterState mtState;*/
+		MersenneTwisterState mtState;
+		MersenneTwisterInitialize(mtState, idx);
+		for(int i=idx; i<n; i += __mul24(blockDim.x , gridDim.x)){
+			 float x = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
+			 float y = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
+			 BoxMuller(x, y); //transform uniform into two independent standard normals
+			 /*u1 = u1 * __expf( sigma); oder so*/
+			 /*u2 = u2 * __expf( sigma); oder so*/
+			 dst[idx] = make_float2(x,y);
+		}
 	}
 };
 
@@ -162,17 +334,35 @@ namespace cuv{
 
 		// Upload the initial configurations to the GPU.
 		cuvSafeCall(cudaMemcpyToSymbol(MT, mtStripped, sizeof(mt_struct_stripped) * MT_RNG_COUNT, 0, cudaMemcpyHostToDevice));
+		cuvSafeCall(cudaThreadSynchronize());
 		delete[] mtStripped;
 	}
 
+	__global__ void kRndUniform(float* dst,int n, rnd_uniform<float> rng){ rng(dst,n); }
+	__global__ void kRndNormal (float2* dst,int n, rnd_normal<float2> rng){ rng(dst,n); }
 	void fill_rnd_uniform(dev_vector<float>& v){
 		cuvAssert(v.ptr());
-		thrust::device_ptr<float> p(v.ptr());
-		thrust::generate(p, p+v.size(), rnd_uniform<float>(0.f,1.f));
+		/*thrust::device_ptr<float> p(v.ptr());*/
+		/*thrust::generate(p, p+v.size(), rnd_uniform<float>(0.f,1.f));*/
+
+		rnd_uniform<float> rng(0.f,1.f);
+		dim3 threads(512,1);
+		/*dim3 grid(MT_RNG_COUNT/512,1,1);*/
+		dim3 grid(MT_RNG_COUNT/512,1,1);
+		kRndUniform<<<grid,threads>>>(v.ptr(),v.size(),rng);
+
+		cuvSafeCall(cudaThreadSynchronize());
 	}
 	void fill_rnd_normal(dev_vector<float>& v){
 		cuvAssert(v.ptr());
-		thrust::device_ptr<float2> p((float2*)v.ptr());
-		thrust::generate(p, p+v.size(), rnd_normal<float2>());
+		cuvAssert((v.size()%2) == 0);
+		/*thrust::device_ptr<float2> p((float2*)v.ptr());*/
+		/*thrust::generate(p, p+v.size(), rnd_normal<float2>());*/
+
+		rnd_normal<float2> rng;
+		dim3 threads(512,1);
+		dim3 grid(MT_RNG_COUNT/512,1,1);
+		kRndNormal<<<grid,threads>>>((float2*)v.ptr(),v.size()/2,rng);
+		cuvSafeCall(cudaThreadSynchronize());
 	}
 } // cuv
