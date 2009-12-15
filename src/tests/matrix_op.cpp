@@ -10,8 +10,10 @@ using namespace cuv;
 
 struct Fix{
 	dev_dense_matrix<float> v,w;
+	dev_dense_matrix<float> x,z;
 	Fix()
 	:   v(256,256),w(256,256)
+	,   x(256,256),z(256,256)
 	{
 	}
 	~Fix(){
@@ -26,6 +28,8 @@ BOOST_AUTO_TEST_CASE( vec_ops_unary1 )
 {
 	apply_scalar_functor(v, SF_EXP);
 	apply_scalar_functor(v, SF_EXACT_EXP);
+	apply_scalar_functor(x, SF_EXP);
+	apply_scalar_functor(x, SF_EXACT_EXP);
 }
 
 BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
