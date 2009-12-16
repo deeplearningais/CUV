@@ -38,6 +38,7 @@ namespace cuv{
 			cuvAssert(dst.ptr());
 
 			cublasSgemm(transA, transB, m, n, k1, factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), res_is_vec ? dst.n() : dst.h());
+			cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
 		}
 
 	template<>

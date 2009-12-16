@@ -123,6 +123,8 @@ BOOST_AUTO_TEST_CASE( mat_op_mm )
 {
 	sequence(v.vec());
 	sequence(w.vec());
+	sequence(x.vec());
+	sequence(z.vec());
 	prod(u,v,w,'n','t');
 	prod(r,x,z,'n','t');
 
