@@ -28,6 +28,12 @@ namespace cuv{
 	}
 	void initCUDA(int dev){
 		cutilSafeCall(cudaSetDevice(dev));
+		cudaDeviceProp prop;
+		cudaGetDeviceProperties(&prop, 0);
+		bool canHostmap = prop.canMapHostMemory;
+		if(canHostmap){
+			cutilSafeCall(cudaSetDeviceFlags(cudaDeviceMapHost));
+		}
 	}
 	void exitCUDA(){
 		cudaThreadExit();

@@ -338,16 +338,13 @@ namespace cuv{
 		delete[] mtStripped;
 	}
 
-	__global__ void kRndUniform(float* dst,int n, rnd_uniform<float> rng){ rng(dst,n); }
+	__global__ void kRndUniform(float* dst, int n, rnd_uniform<float> rng){ rng(dst,n); }
 	__global__ void kRndNormal (float2* dst,int n, rnd_normal<float2> rng){ rng(dst,n); }
 	void fill_rnd_uniform(dev_vector<float>& v){
 		cuvAssert(v.ptr());
-		/*thrust::device_ptr<float> p(v.ptr());*/
-		/*thrust::generate(p, p+v.size(), rnd_uniform<float>(0.f,1.f));*/
 
 		rnd_uniform<float> rng(0.f,1.f);
 		dim3 threads(512,1);
-		/*dim3 grid(MT_RNG_COUNT/512,1,1);*/
 		dim3 grid(MT_RNG_COUNT/512,1,1);
 		kRndUniform<<<grid,threads>>>(v.ptr(),v.size(),rng);
 
@@ -356,9 +353,6 @@ namespace cuv{
 	void fill_rnd_normal(dev_vector<float>& v){
 		cuvAssert(v.ptr());
 		cuvAssert((v.size()%2) == 0);
-		/*thrust::device_ptr<float2> p((float2*)v.ptr());*/
-		/*thrust::generate(p, p+v.size(), rnd_normal<float2>());*/
-
 		rnd_normal<float2> rng;
 		dim3 threads(512,1);
 		dim3 grid(MT_RNG_COUNT/512,1,1);
