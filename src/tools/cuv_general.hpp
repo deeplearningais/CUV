@@ -6,7 +6,7 @@
   if(1){ X; cuv::checkCudaError(#X); } 
 
 #define cuvAssert(X)  \
-  if(!X){ cuv::cuvAssertFailed(#X); } 
+  if(!(X)){ cuv::cuvAssertFailed(#X); } 
 
 namespace cuv{
 	struct memory_space{};
