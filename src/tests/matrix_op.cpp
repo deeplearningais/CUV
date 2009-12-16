@@ -1,19 +1,21 @@
 #define BOOST_TEST_MODULE example
 #include <boost/test/included/unit_test.hpp>
+#include <boost/test/floating_point_comparison.hpp>
 
 #include <cuv_general.hpp>
 #include <dev_dense_matrix.hpp>
 #include <host_dense_matrix.hpp>
+#include <convert.hpp>
 #include <matrix_ops.hpp>
 
 using namespace cuv;
 
 struct Fix{
-	dev_dense_matrix<float> v,w;
-	dev_dense_matrix<float> x,z;
+	dev_dense_matrix<float> u,v,w;
+	host_dense_matrix<float> r,x,z;
 	Fix()
-	:   v(256,256),w(256,256)
-	,   x(256,256),z(256,256)
+	:   u(256,256),v(256,256),w(256,256)
+	,   r(256,256),x(256,256),z(256,256)
 	{
 	}
 	~Fix(){
@@ -115,6 +117,22 @@ BOOST_AUTO_TEST_CASE( vec_ops_norms )
 	f2_ = sqrt(f2_);
 	BOOST_CHECK_EQUAL(f1,f1_);
 	BOOST_CHECK_EQUAL(f2,f2_);
+}
+
+BOOST_AUTO_TEST_CASE( mat_op_mm )
+{
+	sequence(v.vec());
+	sequence(w.vec());
+	prod(u,v,w,'n','t');
+	prod(r,x,z,'n','t');
+
+	host_dense_matrix<float> u2(u.h(), u.w());
+	convert(u2,u);
+	for(int i=0;i<256;i++){
+		for(int j=0;j<256;j++){
+			BOOST_CHECK_CLOSE( u2(i,j), r(i,j), 0.01 );
+		}
+	}
 }
 
 

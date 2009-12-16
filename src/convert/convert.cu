@@ -2,17 +2,7 @@
 
 namespace cuv{
 
-	template<class Dst,class Src>
-		struct convert_impl;
-
-	template<class Dst, class Src>
-		void convert(Dst& dst, const Src& src)
-		{
-			convert_impl<Dst,Src>::convert(dst,src);
-		};
-
-	template<class Dst, class Src>
-		struct convert_impl{
+		namespace convert_impl{
 			/*
 			 * Vector Conversion
 			 */
@@ -100,7 +90,69 @@ namespace cuv{
 					convert(dst.vec(), src.vec());
 				}
 
+			/*
+			 * Simple copying
+			 *
+			 */
 
+			// dev (col-major) --> host (col-major) 
+			template<class __value_type, class __index_type>
+				static void
+				convert(        host_dense_matrix<__value_type,  column_major, __index_type>& dst, 
+						const    dev_dense_matrix<__value_type,  column_major, __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()){
+						host_dense_matrix<__value_type,column_major,__index_type> h(src.h(),src.w());
+						dst = h;
+					}
+					convert(dst.vec(), src.vec());
+				}
+
+			// dev (col-major) --> host (col-major) 
+			template<class __value_type, class __index_type>
+				static void
+				convert(         dev_dense_matrix<__value_type,  column_major, __index_type>& dst, 
+						const   host_dense_matrix<__value_type,  column_major, __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()){
+						dev_dense_matrix<__value_type,column_major,__index_type> h(src.h(),src.w());
+						dst = h;
+					}
+					convert(dst.vec(), src.vec());
+				}
+
+			// dev (row-major) --> host (row-major) 
+			template<class __value_type, class __index_type>
+				static void
+				convert(        host_dense_matrix<__value_type,  row_major,  __index_type>& dst, 
+						const dev_dense_matrix<__value_type,  row_major, __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()){
+						host_dense_matrix<__value_type,row_major,__index_type> h(src.h(),src.w());
+						dst = h;
+					}
+					convert(dst.vec(), src.vec());
+				}
+
+			// dev (row-major) --> host (row-major) 
+			template<class __value_type, class __index_type>
+				static void
+				convert(         dev_dense_matrix<__value_type,  row_major,  __index_type>& dst, 
+						const host_dense_matrix<__value_type,  row_major, __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()){
+						dev_dense_matrix<__value_type,row_major,__index_type> h(src.h(),src.w());
+						dst = h;
+					}
+					convert(dst.vec(), src.vec());
+				}
+
+
+		};
+	template<class Dst, class Src>
+		void convert(Dst& dst, const Src& src)
+		{
+			convert_impl::convert<typename Dst::value_type, typename Dst::index_type>(dst,src); // hmm the compiler should deduce template args, but it fails to do so.
 		};
 
 #define CONV_VEC(X) \
@@ -115,10 +167,15 @@ namespace cuv{
 	template void convert<host_dense_matrix<X,Y>,         dev_dense_matrix<X,Z> > \
 		(                 host_dense_matrix<X,Y>&,  const dev_dense_matrix<X,Z>&);
 
+CONV_INST(float,column_major,column_major);
 CONV_INST(float,column_major,row_major);
 CONV_INST(float,row_major,   column_major);
+CONV_INST(float,row_major,   row_major);
+
+CONV_INST(unsigned char,column_major,column_major);
 CONV_INST(unsigned char,column_major,row_major);
 CONV_INST(unsigned char,row_major,   column_major);
+CONV_INST(unsigned char,row_major,   row_major);
 
 CONV_VEC(float);
 CONV_VEC(unsigned char);

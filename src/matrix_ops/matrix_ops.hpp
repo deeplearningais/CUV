@@ -94,6 +94,14 @@ namespace cuv{
   template<class V,class M, class I> float var(host_dense_matrix<V,M,I>& v)  {return var(v.vec());}
 
 
+  /*
+   * BLAS3 stuff
+   *
+   */
+  template<class __matrix_type>
+	  void prod(__matrix_type& dst, __matrix_type& A, __matrix_type& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
+
+
 } // cuv
 
 #endif

@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 2.6 FATAL_ERROR )
 
-PROJECT(CUDA CXX C)
+PROJECT(CUDA Fortran CXX C)
 SET(CMAKE_MODULE_PATH  ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules )
 
 INCLUDE(InstallRequiredSystemLibraries)
@@ -48,6 +48,7 @@ ENABLE_TESTING()
 add_subdirectory(tools)
 add_subdirectory(basics)
 add_subdirectory(vector_ops)
+add_subdirectory(matrix_ops)
 add_subdirectory(convert)
 add_subdirectory(random)
 
