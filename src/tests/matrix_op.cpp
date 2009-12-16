@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_binary2 )
 BOOST_AUTO_TEST_CASE( vec_ops_copy )
 {
 	// generate data
-	sequence(w.vec());
+	sequence(w);
 
 	// copy data from v to w
 	copy(v,w);
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_copy )
 
 BOOST_AUTO_TEST_CASE( vec_ops_unary_add )
 {
-	sequence(v.vec());
+	sequence(v);
 	apply_scalar_functor(v,SF_ADD,3.8f);
 	for(int i=0;i<256;i++){
 		BOOST_CHECK_EQUAL(v.vec()[i], i+3.8f);
@@ -121,10 +121,10 @@ BOOST_AUTO_TEST_CASE( vec_ops_norms )
 
 BOOST_AUTO_TEST_CASE( mat_op_mm )
 {
-	sequence(v.vec());
-	sequence(w.vec());
-	sequence(x.vec());
-	sequence(z.vec());
+	sequence(v);     apply_scalar_functor(v, SF_MULT, 0.01f);
+	sequence(w);     apply_scalar_functor(w, SF_MULT, 0.01f);
+	sequence(x);     apply_scalar_functor(x, SF_MULT, 0.01f);
+	sequence(z);     apply_scalar_functor(z, SF_MULT, 0.01f);
 	prod(u,v,w,'n','t');
 	prod(r,x,z,'n','t');
 

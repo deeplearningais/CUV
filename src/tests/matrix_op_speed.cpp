@@ -39,12 +39,12 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 
 struct Fix{
-	static const int n = 1024; 
-	dev_dense_matrix<float>  v,w;
-	host_dense_matrix<float> x,z;
+	static const int n = 4098; 
+	dev_dense_matrix<float>  u,v,w;
+	host_dense_matrix<float> r,x,z;
 	Fix()
-	:   v(n,n),w(n,n)
-	,   x(n,n),z(n,n)
+	:   u(n,n),v(n,n),w(n,n)
+	,   r(n,n),x(n,n),z(n,n)
 	{
 		//MEASURE_TIME("warmup", apply_scalar_functor(v, SF_EXP), 100);
 	}
@@ -62,8 +62,8 @@ BOOST_AUTO_TEST_CASE( vec_xpby )
 	sequence(w);
 	sequence(x);
 	sequence(z);
-	MEASURE_TIME(dev,  prod(v,v,w, 'n','t'), 10);
-	MEASURE_TIME(host, prod(x,x,z, 'n','t'), 10);
+	MEASURE_TIME(dev,  prod(u,v,w, 'n','t'), 10);
+	MEASURE_TIME(host, prod(r,x,z, 'n','t'), 10);
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
