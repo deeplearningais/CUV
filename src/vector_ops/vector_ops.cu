@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cublas.h>
 
 #include <thrust/device_ptr.h>
 #include <thrust/device_malloc.h>
@@ -9,6 +10,7 @@
 #include <thrust/generate.h>
 
 #include <cuv_general.hpp>
+#include <cutil_inline.h>
 
 #include <dev_vector.hpp>
 #include <host_vector.hpp>
@@ -24,14 +26,14 @@
  * then they are better on bigcuda1.
  *
  */
-#define USE_THRUST_LAUNCHER 1 
+#define USE_THRUST_LAUNCHER 0 
 
 
 using namespace cuv;
 using namespace std;
 
 template<class T, class M>
-struct memspace_cuv2thrustptr                          { typedef T* ptr_type; };
+struct memspace_cuv2thrustptr                          { typedef thrust::device_ptr<T> ptr_type; };
 template<class T>
 struct memspace_cuv2thrustptr<T,cuv::host_memory_space>{ typedef T* ptr_type; };
 template<class T>
@@ -123,6 +125,15 @@ void unary_functor_kernel(value_type* dst, value_type* src, index_type n, unary_
 		dst[i] = uf(src[i]);
 }
 
+template<class binary_functor, class value_type, class value_type2, class index_type>
+__global__
+void binary_functor_kernel(value_type* dst, value_type* src, value_type2* src2, index_type n, binary_functor bf){
+	const unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+	const unsigned int off = __mul24(blockDim.x , gridDim.x);
+	for (unsigned int i = idx; i < n; i += off)
+		dst[i] = bf(src[i],src2[i]);
+}
+
 void setLinearGridAndThreads(dim3& blocks, dim3& threads, size_t len, int threads_per_block=512){
 	const int padded_len=(int)ceil((float)len/threads_per_block)*threads_per_block;
 	blocks = dim3(min(512,padded_len/threads_per_block),1,1);
@@ -139,11 +150,10 @@ void launch_unary_kernel(
 	 cuvAssert(src.ptr());
 	 cuvAssert(dst.size() == src.size());
 
-
 #if ! USE_THRUST_LAUNCHER
 	 dim3 blocks, threads;
 	 setLinearGridAndThreads(blocks,threads,dst.size());
-	 unary_functor_kernel<<<blocks,threads>>>(dst.ptr(),src.ptr(),dst.size(),uf);
+	 unary_functor_kernel<<<blocks,threads>>>(dst.ptr(),src.ptr(),dst.size(),uf); //     180 ms
 #else
 	 thrust::device_ptr<value_type> dst_ptr(dst.ptr());
 	 thrust::device_ptr<value_type> src_ptr(src.ptr());
@@ -163,6 +173,40 @@ void launch_unary_kernel(
 	 cuvAssert(dst.size() == src.size());
 	 for(size_t i=0;i<dst.size();i++)
 	   dst[i] = uf(src[i]);
+}
+
+template<class binary_functor, class V1, class V2, class index_type>
+void launch_binary_kernel(
+   cuv::dev_vector<V1, index_type>& v,
+   cuv::dev_vector<V2, index_type>& w, 
+	 binary_functor bf){
+	 cuvAssert(v.ptr());
+	 cuvAssert(w.ptr());
+	 cuvAssert(v.size() == w.size());
+
+#if ! USE_THRUST_LAUNCHER
+	 dim3 blocks, threads;
+	 setLinearGridAndThreads(blocks,threads,v.size());
+	 binary_functor_kernel<<<blocks,threads>>>(v.ptr(),v.ptr(),w.ptr(),v.size(),bf); 
+#else
+	 thrust::device_ptr<V1> v_ptr(v.ptr());
+	 thrust::device_ptr<V2> w_ptr(w.ptr());
+	 thrust::transform(v_ptr,v_ptr+v.size(),w_ptr,bf);
+#endif
+
+	 cuvSafeCall(cudaThreadSynchronize());
+}
+
+template<class binary_functor, class V1, class V2, class index_type>
+void launch_binary_kernel(
+   cuv::host_vector<V1, index_type>& dst,
+   cuv::host_vector<V2, index_type>& src, 
+	 binary_functor uf){
+	 cuvAssert(src.ptr());
+	 cuvAssert(dst.ptr());
+	 cuvAssert(dst.size() == src.size());
+	 for(size_t i=0;i<dst.size();i++)
+	   dst[i] = uf(dst[i],src[i]);
 }
 
 namespace cuv{
@@ -237,6 +281,7 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memspace_type>::ptr_type ptr_type2;
 	ptr_type1 v_ptr(v.ptr());
 	ptr_type2 w_ptr(w.ptr());
+#if USE_THRUST_LAUNCHER 
 	switch(sf){
 		case BF_ADD:      thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_plus<V1,V2>()); break;
 		case BF_SUBTRACT: thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_minus<V1,V2>()); break;
@@ -245,6 +290,19 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 		case BF_COPY:     thrust::copy(w_ptr, w_ptr+v.size(), v_ptr); break;
 		default: cuvAssert(false);
 	}
+#else
+	dim3 blocks, threads;
+	setLinearGridAndThreads(blocks,threads,v.size());
+	switch(sf){
+		case BF_ADD:      launch_binary_kernel(v,w,bf_plus<V1,V2>()); break;
+		case BF_SUBTRACT: launch_binary_kernel(v,w,bf_minus<V1,V2>()); break;
+		case BF_MULT:     launch_binary_kernel(v,w,bf_multiplies<V1,V2>()); break;
+		case BF_DIV:      launch_binary_kernel(v,w,bf_divides<V1,V2>()); break;
+		case BF_COPY:     thrust::copy(w_ptr, w_ptr+v.size(), v_ptr); break;
+		default: cuvAssert(false);
+	}
+#endif
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<class __vector_type1, class __vector_type2, class __value_type>
@@ -257,11 +315,23 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memspace_type>::ptr_type ptr_type2;
 	ptr_type1 v_ptr(v.ptr());
 	ptr_type2 w_ptr(w.ptr());
+#if USE_THRUST_LAUNCHER
 	switch(sf){
 		case BF_AXPY:     thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_axpy<V1,V2>(param)); break;
 		case BF_XPBY:     thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_xpby<V1,V2>(param)); break;
+		/*case BF_XPBY:     cublasSaxpy(v.size(), param, (float*)w.ptr(), 1, (float*)v.ptr(), 1) ; break;*/
 		default: cuvAssert(false);
 	}
+#else
+	dim3 blocks, threads;
+	setLinearGridAndThreads(blocks,threads,v.size());
+	switch(sf){
+		case BF_AXPY:     launch_binary_kernel(v,w,bf_axpy<V1,V2>(param)); break;
+		case BF_XPBY:     launch_binary_kernel(v,w,bf_xpby<V1,V2>(param)); break;
+		default: cuvAssert(false);
+	}
+#endif
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<class __vector_type1, class __vector_type2, class __value_type>
@@ -274,10 +344,19 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memspace_type>::ptr_type ptr_type2;
 	ptr_type1 v_ptr(v.ptr());
 	ptr_type2 w_ptr(w.ptr());
+#if USE_THRUST_LAUNCHER
 	switch(sf){
 		case BF_AXPBY:     thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_axpby<V1,V2>(param,param2)); break;
 		default: cuvAssert(false);
 	}
+#else
+	dim3 blocks, threads;
+	setLinearGridAndThreads(blocks,threads,v.size());
+	switch(sf){
+		case BF_AXPBY:     launch_binary_kernel(v,w,bf_axpby<V1,V2>(param,param2)); break;
+		default: cuvAssert(false);
+	}
+#endif
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
