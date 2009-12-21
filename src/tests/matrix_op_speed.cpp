@@ -68,24 +68,5 @@ BOOST_AUTO_TEST_CASE( mat_prod )
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
-BOOST_AUTO_TEST_CASE( mat_rprop )
-{
-	dev_dense_matrix<signed char> dW_old(n,n);
-	dev_dense_matrix<float>       dW(n,n);
-	dev_dense_matrix<float>       rate(n,n);
-	dev_dense_matrix<signed char> h_dW_old(n,n);
-	dev_dense_matrix<float>       h_dW(n,n);
-	dev_dense_matrix<float>       h_rate(n,n);
-	sequence(dW);           apply_scalar_functor(dW, SF_ADD, -10.f);
-	sequence(dW_old);
-	fill(rate.vec(), 1.f);
-	sequence(h_dW);         apply_scalar_functor(dW, SF_ADD, -10.f);
-	sequence(h_dW_old);
-	fill(h_rate.vec(), 1.f);
-
-	MEASURE_TIME(dev,  cuv::rprop(dW,dW_old,rate), 10);
-	MEASURE_TIME(host, cuv::rprop(h_dW,h_dW_old,h_rate), 10);
-	printf("Speedup: %3.4f\n", host/dev);
-}
 
 BOOST_AUTO_TEST_SUITE_END()

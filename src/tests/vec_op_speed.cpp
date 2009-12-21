@@ -8,6 +8,7 @@
 #include <vector_ops.hpp>
 #include <timing.hpp>
 #include <random.hpp>
+#include <vector_ops/rprop.hpp>
 
 using namespace cuv;
 
@@ -104,6 +105,42 @@ BOOST_AUTO_TEST_CASE( vec_add )
 	sequence(z);
 	MEASURE_TIME(dev, apply_binary_functor(v,w, BF_ADD), 1000);
 	MEASURE_TIME(host, apply_binary_functor(x,z, BF_ADD), 1000);
+	printf("Speedup: %3.4f\n", host/dev);
+}
+
+
+BOOST_AUTO_TEST_CASE( vec_rprop )
+{
+	dev_vector<signed char> dW_old(n);
+	dev_vector<float>       dW(n);
+	dev_vector<float>       W(n);
+	dev_vector<float>       rate(n);
+	host_vector<signed char> h_dW_old(n);
+	host_vector<float>       h_W(n);
+	host_vector<float>       h_dW(n);
+	host_vector<float>       h_rate(n);
+	sequence(dW);           apply_scalar_functor(dW, SF_ADD, -10.f);
+	sequence(dW_old);
+	fill(rate, 1.f);
+	sequence(h_dW);         apply_scalar_functor(dW, SF_ADD, -10.f);
+	sequence(h_dW_old);
+	fill(h_rate, 1.f);
+
+	MEASURE_TIME(dev,  cuv::rprop(W,dW,dW_old,rate), 10);
+	MEASURE_TIME(host, cuv::rprop(h_W,h_dW,h_dW_old,h_rate), 10);
+	printf("Speedup: %3.4f\n", host/dev);
+}
+
+
+BOOST_AUTO_TEST_CASE( vec_lswd )
+{
+	dev_vector<float>       dW(n);
+	dev_vector<float>       W(n);
+	host_vector<float>       h_W(n);
+	host_vector<float>       h_dW(n);
+
+	MEASURE_TIME(dev,  cuv::learn_step_weight_decay(W,dW,1.f,0.05f), 10);
+	MEASURE_TIME(host, cuv::learn_step_weight_decay(h_W,h_dW,1.f,0.05f), 10);
 	printf("Speedup: %3.4f\n", host/dev);
 }
 

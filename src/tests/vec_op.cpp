@@ -6,6 +6,7 @@
 #include <dev_dense_matrix.hpp>
 #include <host_dense_matrix.hpp>
 #include <vector_ops.hpp>
+#include <vector_ops/rprop.hpp>
 
 using namespace cuv;
 
@@ -115,6 +116,30 @@ BOOST_AUTO_TEST_CASE( vec_ops_norms )
 	BOOST_CHECK_CLOSE(f2,f2_,0.1f);
 }
 
+BOOST_AUTO_TEST_CASE( vec_rprop )
+{
+	dev_vector<signed char> dW_old(N);
+	dev_vector<float>       W(N);
+	dev_vector<float>       dW(N);
+	dev_vector<float>       rate(N);
+	sequence(dW);           apply_scalar_functor(dW, SF_ADD, -10.f);
+	sequence(dW_old);
+	fill(rate, 1.f);
+	rprop(W,dW,dW_old,rate);
+
+	host_vector<signed char> h_dW_old(N);
+	host_vector<float>       h_W(N);
+	host_vector<float>       h_dW(N);
+	host_vector<float>       h_rate(N);
+	sequence(h_dW);         apply_scalar_functor(dW, SF_ADD, -10.f);
+	sequence(h_dW_old);
+	fill(h_rate, 1.f);
+	rprop(h_W,h_dW,h_dW_old,h_rate);
+
+	for(int i=0;i<N;i++){
+		BOOST_CHECK_CLOSE(rate[0],h_rate[0],0.01f);
+	}
+}
 
 
 BOOST_AUTO_TEST_SUITE_END()

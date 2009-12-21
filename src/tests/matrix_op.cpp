@@ -122,28 +122,6 @@ BOOST_AUTO_TEST_CASE( vec_ops_norms )
 	BOOST_CHECK_CLOSE(f2,f2_,0.01f);
 }
 
-BOOST_AUTO_TEST_CASE( vec_rprop )
-{
-	dev_dense_matrix<signed char> dW_old(n,n);
-	dev_dense_matrix<float>       dW(n,n);
-	dev_dense_matrix<float>       rate(n,n);
-	sequence(dW);           apply_scalar_functor(dW, SF_ADD, -10.f);
-	sequence(dW_old);
-	fill(rate.vec(), 1.f);
-	rprop(dW,dW_old,rate);
-
-	dev_dense_matrix<signed char> h_dW_old(n,n);
-	dev_dense_matrix<float>       h_dW(n,n);
-	dev_dense_matrix<float>       h_rate(n,n);
-	sequence(h_dW);         apply_scalar_functor(dW, SF_ADD, -10.f);
-	sequence(h_dW_old);
-	fill(h_rate.vec(), 1.f);
-	rprop(h_dW,h_dW_old,h_rate);
-
-	for(int i=0;i<N;i++){
-		BOOST_CHECK_CLOSE(rate.vec()[0],h_rate.vec()[0],0.01f);
-	}
-}
 
 BOOST_AUTO_TEST_CASE( mat_op_mm )
 {
