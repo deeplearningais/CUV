@@ -34,6 +34,11 @@ class host_vector
 		}
 };
 
+template<class V, class I>
+struct vector_traits<host_vector<V,I> >{
+	typedef dev_memory_space memory_space_type;
+};
+
 } // cuv
 
 #endif

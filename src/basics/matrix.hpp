@@ -2,6 +2,11 @@
 #define __MATRIX_HPP__
 
 namespace cuv{
+	template<class T>
+	struct matrix_traits{
+		typedef memory_space memory_space_type;
+	};
+
 	template<class __value_type, class __index_type>
   class matrix
 	{

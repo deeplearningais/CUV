@@ -107,6 +107,11 @@ namespace cuv{
 	typename matrix<V,I>::value_type&
 	host_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j)    { return (*this)(i,j,memory_layout()); }
 
+	template<class V, class M, class I>
+		struct matrix_traits<host_dense_matrix<V,M,I> >{
+			typedef host_memory_space memory_space_type;
+		};
+
 }
 
 #endif /* __MATRIX_H__ */

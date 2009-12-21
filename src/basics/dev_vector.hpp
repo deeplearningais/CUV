@@ -26,6 +26,11 @@ class dev_vector
 		virtual void dealloc();
 };
 
+template<class V, class I>
+struct vector_traits<dev_vector<V,I> >{
+	typedef dev_memory_space memory_space_type;
+};
+
 } // cuv
 
 #endif

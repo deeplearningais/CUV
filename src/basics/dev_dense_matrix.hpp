@@ -56,6 +56,11 @@ namespace cuv{
 			  m_vec = NULL;
 		  };
 	};
+
+	template<class V, class M, class I>
+		struct matrix_traits<dev_dense_matrix<V,M,I> >{
+			typedef dev_memory_space memory_space_type;
+		};
 }
 
 #endif
