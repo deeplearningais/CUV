@@ -13,13 +13,13 @@ __global__ void rprop_kernel(T*W, T* dW, O* dW_old, T* rate, int n) {
 	const unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
 	int off = __mul24(blockDim.x , gridDim.x);
 	for (unsigned int i = idx; i < n; i += off){
-		O sn = sgn(dW[i]);
+		O sn = (O)sgn(dW[i]);
 		O s  = dW_old[i] * sn;
 		T dwn,rn=(T)0, r=rate[i];
 
 		if ( s > 0) {
 			rn = min( ETA_P * r, DELTA_MAX );
-			dwn = sn * r;
+			dwn = sn * rn;
 		}
 		else if ( s < 0) {
 			rn = max( ETA_M * r, DELTA_MIN);
@@ -64,23 +64,23 @@ namespace cuv{
 		for (unsigned int i = 0; i < dW.size(); i++){
 			O sn = (O)sgn(dW[i]);
 			O s  = dW_old[i] * sn;
-			V dwn,rn=0;
+			V dwn,rn=(V)0, r = rate[i];
 
 			if (s > 0) {
-				rate[i] = min( ETA_P * rate[i] , DELTA_MAX );
-				dwn = sn * rate[i];
+				rn = min( ETA_P * r , DELTA_MAX );
+				dwn = sn * rn;
 			}
 			else if (s < 0) {
-				rate[i] = max( ETA_M * rate[i], DELTA_MIN);
+				rn = max( ETA_M * r, DELTA_MIN);
 				dwn = 0;
 			}   
 			else {
-				dwn = sn * rate[i];
+				dwn = sn * r;
 			}
 			/*__synchthreads();*/
 			rate[i]   = rn;
 			dW_old[i] = (O)sgn(dwn);
-			W[i]     += dW[i];
+			W[i]     += dwn;
 		}
 	}
 

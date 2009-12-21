@@ -122,8 +122,9 @@ BOOST_AUTO_TEST_CASE( vec_rprop )
 	dev_vector<float>       W(N);
 	dev_vector<float>       dW(N);
 	dev_vector<float>       rate(N);
-	sequence(dW);           apply_scalar_functor(dW, SF_ADD, -10.f);
-	sequence(dW_old);
+	fill(W,0.f);
+	sequence(dW);           apply_scalar_functor(dW, SF_ADD, -256.f);
+	sequence(dW_old);       
 	fill(rate, 1.f);
 	rprop(W,dW,dW_old,rate);
 
@@ -131,13 +132,15 @@ BOOST_AUTO_TEST_CASE( vec_rprop )
 	host_vector<float>       h_W(N);
 	host_vector<float>       h_dW(N);
 	host_vector<float>       h_rate(N);
-	sequence(h_dW);         apply_scalar_functor(dW, SF_ADD, -10.f);
-	sequence(h_dW_old);
+	fill(h_W,0.f);
+	sequence(h_dW);         apply_scalar_functor(h_dW, SF_ADD, -256.f);
+	sequence(h_dW_old);     
 	fill(h_rate, 1.f);
 	rprop(h_W,h_dW,h_dW_old,h_rate);
 
 	for(int i=0;i<N;i++){
-		BOOST_CHECK_CLOSE(rate[0],h_rate[0],0.01f);
+		BOOST_CHECK_CLOSE(rate[i],h_rate[i],0.01f);
+		BOOST_CHECK_CLOSE(W[i],h_W[i],0.01f);
 	}
 }
 
