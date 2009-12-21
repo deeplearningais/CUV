@@ -65,11 +65,22 @@ namespace cuv{
 			cuvAssert(B.ptr() != NULL);
 			cuvAssert(dst.ptr());
 
+#if 1 /* CBLAS */
 			cblas_sgemm(
-					CblasColMajor,
-					CVT_TRANSPOSE(transA),
-					CVT_TRANSPOSE(transB), m, n, k1, 
-					factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), res_is_vec ? dst.n() : dst.h());
+				   CblasColMajor,
+				   CVT_TRANSPOSE(transA),
+				   CVT_TRANSPOSE(transB), m, n, k1,
+				   factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), res_is_vec ? dst.n() : dst.h());
+#else /* naive */
+			for(int i=0; i<A.h();i++)
+				for(int j=0; j<B.w(); j++){
+					float f=0;
+					for(int k=0;k<A.w();k++){
+						f += A(i,k)*B(k,j);
+					}
+					dst(i,j) = f;
+				}
+#endif
 		}
 
 	template<>
