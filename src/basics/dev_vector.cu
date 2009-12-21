@@ -33,5 +33,6 @@ dev_vector<V,I>::dealloc(){
 
 template class dev_vector<float>;
 template class dev_vector<unsigned char>;
+template class dev_vector<signed char>;
 
 }

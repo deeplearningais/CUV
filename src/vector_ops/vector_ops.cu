@@ -478,11 +478,15 @@ SIMPLE_INSTANTIATOR1( dev_vector<float>, float );
 SIMPLE_INSTANTIATOR1( dev_vector<float>, int );
 SIMPLE_INSTANTIATOR( dev_vector<unsigned char> );
 SIMPLE_INSTANTIATOR1( dev_vector<unsigned char>, unsigned char );
+SIMPLE_INSTANTIATOR( dev_vector<signed char> );
+SIMPLE_INSTANTIATOR1( dev_vector<signed char>, unsigned char );
 
 SIMPLE_INSTANTIATOR( host_vector<float> );
 SIMPLE_INSTANTIATOR1( host_vector<float>, float );
 SIMPLE_INSTANTIATOR1( host_vector<float>, int );
 SIMPLE_INSTANTIATOR( host_vector<unsigned char> );
 SIMPLE_INSTANTIATOR1( host_vector<unsigned char>, unsigned char );
+SIMPLE_INSTANTIATOR( host_vector<signed char> );
+SIMPLE_INSTANTIATOR1( host_vector<signed char>, signed char );
 
 } // cuv

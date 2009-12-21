@@ -7,15 +7,18 @@
 #include <host_dense_matrix.hpp>
 #include <convert.hpp>
 #include <matrix_ops.hpp>
+#include <matrix_ops/rprop.hpp>
 
 using namespace cuv;
 
 struct Fix{
+	static const int n=256;
+	static const int N=n*n;
 	dev_dense_matrix<float> u,v,w;
 	host_dense_matrix<float> r,x,z;
 	Fix()
-	:   u(256,256),v(256,256),w(256,256)
-	,   r(256,256),x(256,256),z(256,256)
+	:   u(n,n),v(n,n),w(n,n)
+	,   r(n,n),x(n,n),z(n,n)
 	{
 	}
 	~Fix(){
@@ -39,11 +42,11 @@ BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
 	sequence(v.vec());
 	sequence(w.vec());
 	apply_scalar_functor(v,SF_ADD,1);
-	for(int i=0;i<256;i++){
+	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v.vec()[i], i + 1);
 	}
 	apply_binary_functor(v,w, BF_ADD);
-	for(int i=0;i<256;i++){
+	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v.vec()[i], i + i + 1);
 	}
 }
@@ -60,7 +63,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_copy )
 
 	// copy data from v to w
 	copy(v,w);
-	for(int i=0;i<256;i++){
+	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v.vec()[i],w.vec()[i]);
 	}
 }
@@ -69,7 +72,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_unary_add )
 {
 	sequence(v);
 	apply_scalar_functor(v,SF_ADD,3.8f);
-	for(int i=0;i<256;i++){
+	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v.vec()[i], i+3.8f);
 	}
 }
@@ -84,7 +87,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_axpby )
 
 	// copy data from v to w
 	apply_binary_functor(v,w,BF_AXPBY, 2.f,3.f);
-	for(int i=0;i<256;i++){
+	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v.vec()[i], 2*(i+1) + 3*i );
 	}
 }
@@ -94,13 +97,13 @@ BOOST_AUTO_TEST_CASE( vec_ops_0ary1 )
 {
 	// test sequence
 	sequence(v.vec());
-	for(int i=0;i<256;i++){
+	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v.vec()[i], i);
 	}
 
 	// test fill
 	fill(w.vec(),1);
-	for(int i=0;i<256;i++){
+	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(w.vec()[i], 1);
 	}
 }
@@ -110,13 +113,36 @@ BOOST_AUTO_TEST_CASE( vec_ops_norms )
 	sequence(v.vec());
 	float f1 = norm1(v), f1_ = 0;
 	float f2 = norm2(v), f2_ = 0;
-	for(int i=0;i<256;i++){
+	for(int i=0;i<N;i++){
 		f2_ += v.vec()[i]*v.vec()[i];
 		f1_ += fabs(v.vec()[i]);
 	}
 	f2_ = sqrt(f2_);
-	BOOST_CHECK_EQUAL(f1,f1_);
-	BOOST_CHECK_EQUAL(f2,f2_);
+	BOOST_CHECK_CLOSE(f1,f1_,0.01f);
+	BOOST_CHECK_CLOSE(f2,f2_,0.01f);
+}
+
+BOOST_AUTO_TEST_CASE( vec_rprop )
+{
+	dev_dense_matrix<signed char> dW_old(n,n);
+	dev_dense_matrix<float>       dW(n,n);
+	dev_dense_matrix<float>       rate(n,n);
+	sequence(dW);           apply_scalar_functor(dW, SF_ADD, -10.f);
+	sequence(dW_old);
+	fill(rate.vec(), 1.f);
+	rprop(dW,dW_old,rate);
+
+	dev_dense_matrix<signed char> h_dW_old(n,n);
+	dev_dense_matrix<float>       h_dW(n,n);
+	dev_dense_matrix<float>       h_rate(n,n);
+	sequence(h_dW);         apply_scalar_functor(dW, SF_ADD, -10.f);
+	sequence(h_dW_old);
+	fill(h_rate.vec(), 1.f);
+	rprop(h_dW,h_dW_old,h_rate);
+
+	for(int i=0;i<N;i++){
+		BOOST_CHECK_CLOSE(rate.vec()[0],h_rate.vec()[0],0.01f);
+	}
 }
 
 BOOST_AUTO_TEST_CASE( mat_op_mm )

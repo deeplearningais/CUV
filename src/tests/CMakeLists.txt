@@ -4,6 +4,7 @@ INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/convert )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/vector_ops )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/matrix_ops )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/random )
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR} )
 
 ADD_EXECUTABLE( test_basic basic.cpp )
 TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools )
@@ -20,8 +21,8 @@ TARGET_LINK_LIBRARIES( test_vec_op_speed cuv_basics cuv_tools cuv_convert cuv_ve
 ADD_EXECUTABLE( test_mat_op matrix_op.cpp )
 TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
 
-ADD_EXECUTABLE( test_matrix_op_speed matrix_op_speed.cpp )
-TARGET_LINK_LIBRARIES( test_matrix_op_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+ADD_EXECUTABLE( test_mat_op_speed matrix_op_speed.cpp )
+TARGET_LINK_LIBRARIES( test_mat_op_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
 
 ADD_EXECUTABLE( test_random random.cpp )
 TARGET_LINK_LIBRARIES( test_random cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_random)
