@@ -58,11 +58,14 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( vec_rnd )
 {
-	MEASURE_TIME(rnd_normal, fill_rnd_normal(v), 100);
-
 	MEASURE_TIME(rnd_uniform,      fill_rnd_uniform(v), 100);
-	MEASURE_TIME(rnd_uniform_host, float f=0;for(int k=0;k<n;k++) f+=((float)rand()/RAND_MAX); , 100);
+	MEASURE_TIME(rnd_uniform_host, fill_rnd_uniform(x) , 100);
 	printf("Speedup: %3.4f\n", rnd_uniform_host/rnd_uniform);
+
+	MEASURE_TIME(rnd_normal,      fill_rnd_normal(v), 100);
+	MEASURE_TIME(rnd_normal_host, fill_rnd_normal(x) , 100);
+
+	printf("Speedup: %3.4f\n", rnd_normal_host/rnd_normal);
 }
 
 BOOST_AUTO_TEST_CASE( vec_ops_exp )

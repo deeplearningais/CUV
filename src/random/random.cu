@@ -1,9 +1,15 @@
+#include <boost/random/linear_congruential.hpp>
+#include <boost/random/normal_distribution.hpp>
+#include <boost/random/variate_generator.hpp>
+#include <boost/random.hpp>
+
 #include <cuda.h>
 #include <cutil_inline.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <thrust/device_ptr.h>
 #include <thrust/generate.h>
+
  
 #include <thrust/transform_reduce.h>
 
@@ -16,6 +22,8 @@
 
 #include <cuv_general.hpp>
 #include <dev_vector.hpp>
+#include <host_vector.hpp>
+#include "random.hpp"
 
 
 // Old RNG 
@@ -355,6 +363,8 @@ namespace cuv{
 	__global__ void kBinarize  (float* dst,int n, binarize<float> rng)    { rng(dst,n); }
 	__global__ void kRndUniform(float* dst, int n, rnd_uniform<float> rng){ rng(dst,n); }
 	__global__ void kRndNormal (float2* dst,int n, rnd_normal<float2> rng){ rng(dst,n); }
+
+	template<>
 	void rnd_binarize(dev_vector<float>& v){
 		cuvAssert(v.ptr());
 
@@ -364,6 +374,21 @@ namespace cuv{
 		kBinarize<<<grid,threads>>>(v.ptr(),v.size(),rng);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
+	template<>
+	void rnd_binarize(host_vector<float>& v){
+	   cuvAssert(v.ptr());
+	   host_vector<float>::value_type* ptr = v.ptr();
+	   for(int i=0;i<v.size();i++)
+		   *ptr++ = ((float)rand()/RAND_MAX) > *ptr;
+	}
+	template<>
+	void fill_rnd_uniform(host_vector<float>& v){
+	   cuvAssert(v.ptr());
+	   host_vector<float>::value_type* ptr = v.ptr();
+	   for(int i=0;i<v.size();i++)
+		   *ptr++ = ((float)rand()/RAND_MAX);
+	}
+	template<>
 	void fill_rnd_uniform(dev_vector<float>& v){
 		cuvAssert(v.ptr());
 
@@ -374,6 +399,18 @@ namespace cuv{
 
 		cuvSafeCall(cudaThreadSynchronize());
 	}
+	template<>
+	void fill_rnd_normal(host_vector<float>& v){
+	   cuvAssert(v.ptr());
+	   host_vector<float>::value_type* ptr = v.ptr();
+	   typedef boost::mt19937 rng_type;
+	   rng_type rng;
+	   boost::normal_distribution<float> nd;
+	   boost::variate_generator<rng_type, boost::normal_distribution<float> > die(rng, nd);
+	   for(int i=0;i<v.size();i++)
+		   *ptr++ = die();
+	}
+	template<>
 	void fill_rnd_normal(dev_vector<float>& v){
 		cuvAssert(v.ptr());
 		cuvAssert((v.size()%2) == 0);
