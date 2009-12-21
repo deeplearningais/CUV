@@ -171,8 +171,10 @@ void launch_unary_kernel(
 	 cuvAssert(src.ptr());
 	 cuvAssert(dst.ptr());
 	 cuvAssert(dst.size() == src.size());
+	 value_type* dst_ptr = dst.ptr();
+	 value_type* src_ptr = src.ptr();
 	 for(size_t i=0;i<dst.size();i++)
-	   dst[i] = uf(src[i]);
+	   *dst_ptr++ = uf( *src_ptr++ );
 }
 
 template<class binary_functor, class V1, class V2, class index_type>
@@ -205,8 +207,10 @@ void launch_binary_kernel(
 	 cuvAssert(src.ptr());
 	 cuvAssert(dst.ptr());
 	 cuvAssert(dst.size() == src.size());
+	 V1* dst_ptr = dst.ptr();
+	 V2* src_ptr = src.ptr();
 	 for(size_t i=0;i<dst.size();i++)
-	   dst[i] = uf(dst[i],src[i]);
+	   *dst_ptr++ = uf(*dst_ptr,*src_ptr++);
 }
 
 namespace cuv{
