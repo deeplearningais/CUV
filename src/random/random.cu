@@ -269,6 +269,20 @@ void BoxMuller(float &u1, float &u2){
 }
  
 template<class value_type>
+struct binarize{
+	__device__
+	void operator()(value_type* dst, const int& n) const {
+		unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+		if( idx >= n ) return;
+		/*__shared__ MersenneTwisterState mtState;*/
+		MersenneTwisterState mtState;
+		MersenneTwisterInitialize(mtState, idx);
+		for(int i=idx; i<n; i += __mul24(blockDim.x , gridDim.x))
+			 dst[i] = ((value_type(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f) > 0.5f);
+	}
+};
+
+template<class value_type>
 struct rnd_uniform{
 	const value_type m_vmin;
 	const value_type m_vmax;
@@ -338,8 +352,18 @@ namespace cuv{
 		delete[] mtStripped;
 	}
 
+	__global__ void kBinarize  (float* dst,int n, binarize<float> rng)    { rng(dst,n); }
 	__global__ void kRndUniform(float* dst, int n, rnd_uniform<float> rng){ rng(dst,n); }
 	__global__ void kRndNormal (float2* dst,int n, rnd_normal<float2> rng){ rng(dst,n); }
+	void rnd_binarize(dev_vector<float>& v){
+		cuvAssert(v.ptr());
+
+		binarize<float> rng;
+		dim3 threads(512,1);
+		dim3 grid(MT_RNG_COUNT/512,1,1);
+		kBinarize<<<grid,threads>>>(v.ptr(),v.size(),rng);
+		cuvSafeCall(cudaThreadSynchronize());
+	}
 	void fill_rnd_uniform(dev_vector<float>& v){
 		cuvAssert(v.ptr());
 

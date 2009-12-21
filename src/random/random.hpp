@@ -6,6 +6,7 @@
 namespace cuv{
 
 	void fill_rnd_uniform(dev_vector<float>&);
+	void rnd_binarize(dev_vector<float>&);
 	void fill_rnd_normal(dev_vector<float>&);
 	void initialize_mersenne_twister_seeds();
 

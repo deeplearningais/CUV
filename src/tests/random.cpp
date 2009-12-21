@@ -12,8 +12,9 @@ using namespace cuv;
 
 struct Fix{
 	dev_vector<float> v;
+	static const int n = 8092;
 	Fix()
-		:v(8092) // needs large sample number.
+		:v(n) // needs large sample number.
 	{
 		//initCUDA(1);
 		initialize_mersenne_twister_seeds();
@@ -40,6 +41,16 @@ BOOST_AUTO_TEST_CASE( random_normal )
 	float std = std::sqrt(var(v));
 	BOOST_CHECK_SMALL( m, 0.02f );
 	BOOST_CHECK_SMALL( std-1.f, 0.01f );
+}
+BOOST_AUTO_TEST_CASE( binarize )
+{
+	fill_rnd_normal(v);
+	rnd_binarize(v);
+	float m   = mean(v);
+	BOOST_CHECK_SMALL( m, 0.5f );
+	for(int i = 0; i < n; ++ i) {
+		BOOST_CHECK( v[i] == 0  || v[i] == 1 );
+	}
 }
 
 
