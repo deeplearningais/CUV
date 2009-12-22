@@ -21,15 +21,24 @@ class vector{
 	  size_t      m_size;
 	
 	public:
+	  /*
+	   * Member Access
+	   */
 	  inline const value_type* ptr()const{ return m_ptr;  }
 	  inline       value_type* ptr()     { return m_ptr;  }
 	  inline size_t size() const         { return m_size; }
+	  inline size_t memsize()       const{ return size() * sizeof(value_type); }
+	  /*
+	   * Construction
+	   */
 	  vector(size_t s):m_ptr(NULL),m_is_view(false),m_size(s) { alloc(); }
 	  vector(size_t s,value_type* p, bool is_view):m_ptr(p),m_is_view(is_view),m_size(s) {}
-	  inline size_t memsize()       const{ return size() * sizeof(value_type); }
-	  virtual ~vector(){ dealloc(); }
-	  virtual  void alloc(){};
-	  virtual  void dealloc(){};
+	  ~vector(){ dealloc(); }
+	  /*
+	   * Memory Management
+	   */
+	  void alloc(){};
+	  void dealloc(){};
 };
 
 };

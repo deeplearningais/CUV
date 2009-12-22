@@ -18,7 +18,15 @@ namespace cuv{
 		  using matrix<__value_type, __index_type>::m_height;
 		protected:
 		  vec_type* m_vec;
+		private:
+		  inline const value_type operator()(const index_type& i, const index_type& j, const column_major& x) const;
+		  inline const value_type operator()(const index_type& i, const index_type& j, const row_major& x)    const;
+		  inline       value_type operator()(const index_type& i, const index_type& j, const column_major& x) ;
+		  inline       value_type operator()(const index_type& i, const index_type& j, const row_major& x)    ;
 		public:
+		  // member access
+		  inline const value_type operator()(const index_type& i, const index_type& j) const; // do not return a reference, this will not work for device memory
+		  inline       value_type operator()(const index_type& i, const index_type& j);
 		  inline size_t memsize()       const { cuvAssert(m_vec); return m_vec->memsize(); }
 		  inline const value_type* ptr()const { cuvAssert(m_vec); return m_vec->ptr(); }
 		  inline       value_type* ptr()      { cuvAssert(m_vec); return m_vec->ptr(); }
@@ -26,6 +34,10 @@ namespace cuv{
 		  inline       vec_type& vec()      { return *m_vec; }
 		  inline const vec_type* vec_ptr()const { return m_vec; }
 		  inline       vec_type* vec_ptr()      { return m_vec; }
+
+		  /*
+		   * Construction
+		   */
 		  template<class V, class I>
 		  dev_dense_matrix(const matrix<V,I>* m)
 		  :  base_type(m->h(),m->w()), m_vec(NULL)
@@ -48,6 +60,10 @@ namespace cuv{
 			  o.m_vec = NULL;                // transfer ownership of memory
 			  return *this;
 		  }
+
+		  /*
+		   * Memory management
+		   */
 		  void alloc(){   
 			  cuvAssert(!m_vec);
 			  m_vec = new dev_vector<value_type,index_type>(this->n());
@@ -57,14 +73,6 @@ namespace cuv{
 				  delete m_vec;
 			  m_vec = NULL;
 		  };
-		  // element access
-		  inline const value_type operator()(const index_type& i, const index_type& j) const;
-		  inline       value_type operator()(const index_type& i, const index_type& j);
-	  private:
-		  inline const value_type operator()(const index_type& i, const index_type& j, const column_major& x) const;
-		  inline const value_type operator()(const index_type& i, const index_type& j, const row_major& x)    const;
-		  inline       value_type operator()(const index_type& i, const index_type& j, const column_major& x) ;
-		  inline       value_type operator()(const index_type& i, const index_type& j, const row_major& x)    ;
 	};
 
 	/*
