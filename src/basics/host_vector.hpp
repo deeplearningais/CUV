@@ -22,7 +22,7 @@ class host_vector
 		host_vector(size_t s)
 		:   base_type(s) { alloc(); }
 		host_vector(size_t s, value_type* p, bool is_view)
-		:   base_type(s,p,is_view) { alloc(); }
+		:   base_type(s,p,is_view) { } // do not alloc!
 		virtual void alloc(){
 		  m_ptr = new value_type[this->size()];
 		}
