@@ -84,17 +84,19 @@ struct uf_base_op{
  * Binary Functors
  */
 
+// functors without parameter
 template<class T, class U>
 struct bf_plus{  __device__  __host__       T operator()(const T& t, const U& u)      const{ return  t + (T)u; } };
 template<class T, class U>
-struct bf_minus{  __device__  __host__       T operator()(const T& t, const U& u)      const{ return  t - (T)u; } };
+struct bf_minus{  __device__  __host__      T operator()(const T& t, const U& u)      const{ return  t - (T)u; } };
 template<class T, class U>
-struct bf_multiplies{  __device__  __host__       T operator()(const T& t, const U& u)      const{ return  t * (T)u; } };
+struct bf_multiplies{  __device__  __host__ T operator()(const T& t, const U& u)      const{ return  t * (T)u; } };
 template<class T, class U>
-struct bf_divides{  __device__  __host__       T operator()(const T& t, const U& u)      const{ return  t / (T)u; } };
+struct bf_divides{  __device__  __host__    T operator()(const T& t, const U& u)      const{ return  t / (T)u; } };
 template<class T, class U>
-struct bf_squared_diff{  __device__  __host__       T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
+struct bf_squared_diff{__device__ __host__  T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
 
+// functors with parameter
 template<class T, class U>
 struct bf_axpy{  
 	const T a;
@@ -114,6 +116,11 @@ struct bf_axpby{
 	bf_axpby(const T& _a, const T& _b):a(_a),b(_b){}
 	__device__  __host__       T operator()(const T& t, const U& u) const{ return  a*t + b*((T)u); } 
 };
+
+
+/*
+ * launchers for functors
+ */
 
 #if ! USE_THRUST_LAUNCHER
 template<class unary_functor, class value_type, class index_type>
@@ -403,6 +410,9 @@ struct apply_scalar_functor_impl{
 	}
 };
 
+/*
+ * Reductions
+ */
 template<class __vector_type>
 float
 norm2(__vector_type& v){
@@ -441,6 +451,9 @@ var(__vector_type& v){
 	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_base_op<float, bf_squared_diff<float,value_type> >(m), init, bf_plus<float,value_type>()) / (float)v.size();
 }
 
+/*
+ * Template instantiations
+ */
 
 #define SIMPLE_0(X) \
 	template void apply_0ary_functor< X >(X&, const NullaryFunctor&);

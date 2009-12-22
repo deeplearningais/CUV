@@ -5,6 +5,10 @@
 
 namespace cuv{
 
+	/*
+	 * Wrappers for the vector-operation "RPROP"
+	 */
+
 template<class V, class O, class M, class I>
 void rprop(dev_dense_matrix<V,M,I>& W,
 		   dev_dense_matrix<V,M,I>& dW, 
