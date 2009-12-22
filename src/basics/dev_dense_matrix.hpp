@@ -24,6 +24,8 @@ namespace cuv{
 		  inline       value_type* ptr()      { cuvAssert(m_vec); return m_vec->ptr(); }
 		  inline const vec_type& vec()const { return *m_vec; }
 		  inline       vec_type& vec()      { return *m_vec; }
+		  inline const vec_type* vec_ptr()const { return m_vec; }
+		  inline       vec_type* vec_ptr()      { return m_vec; }
 		  template<class V, class I>
 		  dev_dense_matrix(const matrix<V,I>* m)
 		  :  base_type(m->h(),m->w()), m_vec(NULL)
@@ -55,11 +57,48 @@ namespace cuv{
 				  delete m_vec;
 			  m_vec = NULL;
 		  };
+		  // element access
+		  inline const value_type operator()(const index_type& i, const index_type& j) const;
+		  inline       value_type operator()(const index_type& i, const index_type& j);
+	  private:
+		  inline const value_type operator()(const index_type& i, const index_type& j, const column_major& x) const;
+		  inline const value_type operator()(const index_type& i, const index_type& j, const row_major& x)    const;
+		  inline       value_type operator()(const index_type& i, const index_type& j, const column_major& x) ;
+		  inline       value_type operator()(const index_type& i, const index_type& j, const row_major& x)    ;
 	};
+
+	/*
+	 * element access for dense dev matrix
+	 *
+	 */
+	template<class V, class M, class I>
+	const typename matrix<V,I>::value_type
+	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j, const column_major& x) const{ return (*m_vec)[ this->h()*j + i]; }
+
+	template<class V, class M, class I>
+	const typename matrix<V,I>::value_type
+	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j, const row_major& x)    const{ return (*m_vec)[ this->w()*i + j]; }
+
+	template<class V, class M, class I>
+	const typename matrix<V,I>::value_type
+	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j)    const{ return (*this)(i,j,memory_layout()); }
+
+	template<class V, class M, class I>
+	typename matrix<V,I>::value_type
+	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j, const column_major& x) { return (*m_vec)[ this->h()*j + i]; }
+
+	template<class V, class M, class I>
+	typename matrix<V,I>::value_type
+	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j, const row_major& x)    { return (*m_vec)[ this->w()*i + j]; }
+
+	template<class V, class M, class I>
+	typename matrix<V,I>::value_type
+	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j)    { return (*this)(i,j,memory_layout()); }
 
 	template<class V, class M, class I>
 		struct matrix_traits<dev_dense_matrix<V,M,I> >{
 			typedef dev_memory_space memory_space_type;
+			typedef M                memory_layout_type;
 		};
 }
 
