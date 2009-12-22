@@ -46,6 +46,9 @@ mat_view(pyublas::numpy_matrix<T, Mfrom> m){
 	if(same) return new host_dense_matrix<T,Mto>(m.size1(), m.size2(), vec);
 	else     return new host_dense_matrix<T,Mto>(m.size2(), m.size1(), vec);
 }
+/*
+ * Create COPYs at another location in memory
+ */
 template<class T, class Mto, class Mfrom>
 host_dense_matrix<T, Mto>*
 copy(pyublas::numpy_matrix<T, boost::numeric::ublas::column_major> m){
@@ -57,6 +60,10 @@ copy(pyublas::numpy_matrix<T, boost::numeric::ublas::column_major> m){
     return mat;
 }
 
+/*
+ * Export the main matrix class
+ *   this should work for _any_ class, namely, regardless of host/dev, value_type and memory_layout
+ */
 template<class T>
 void
 export_dense_matrix_common(std::string name){
@@ -78,6 +85,9 @@ export_dense_matrix_common(std::string name){
 		;
 }
 
+/*
+ * Export a dense matrix and corresponding conversion functions
+ */
 template <class T, class M, class M2>
 void
 export_dense_matrix_pushpull(std::string typen){
@@ -86,6 +96,12 @@ export_dense_matrix_pushpull(std::string typen){
 	def("convert", (void(*)(dev_dense_matrix<T,M>&,const host_dense_matrix<T,M2>&)) cuv::convert);
 	def("convert", (void(*)(host_dense_matrix<T,M2>&,const dev_dense_matrix<T,M>&)) cuv::convert);
 }
+
+/*
+ * Export a function to create a view of a numpy matrix. Only for HOST matrices, of course.
+ *  A view is a matrix which resides at the same point in memory. 
+ *  When the numpy matrix is destroyed, you should not operate on this matrix anymore!!!
+ */
 template <class T, class Mfrom, class Mto>
 void
 export_dense_matrix_view(const char* str){
@@ -95,15 +111,24 @@ export_dense_matrix_view(const char* str){
 	typedef to_type* (*func_type)(from_type)                  ;
 	def(str,     (func_type) (mat_view<T,Mto,Mfrom_ublas_type>),return_value_policy<manage_new_object>());
 }
+
+/*
+ * Export dense matrix views for various type combinations
+ */
 template <class T>
 void
 export_dense_matrix_views(){
-	export_dense_matrix_view<T,column_major,column_major>("view_cm");
+	export_dense_matrix_view<T,column_major,column_major>("view");
 	export_dense_matrix_view<T,column_major,row_major>("view_rm");
 	export_dense_matrix_view<T,row_major,column_major>("view_cm");
-	export_dense_matrix_view<T,row_major,row_major>("view_rm");
+	export_dense_matrix_view<T,row_major,row_major>("view");
 }
 
+/*
+ * convert a numpy matrix to a device matrix.
+ *   TODO: slightly hackish, since space is allocated and deleted later on.
+ *   Possible solution: A special constructor for matrix, which leaves it uninitialized.
+ */
 template<class T, class Mfrom, class Mto>
 dev_dense_matrix<T,Mto>*
 numpy2dev_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
@@ -113,20 +138,63 @@ numpy2dev_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
 	delete from;
 	return to;
 }
+
+/*
+ * convert a dense matrix on the device to a new numpy-matrix
+ */
+template<class T, class Mfrom, class Mto_ublas, class Mto_cuv>
+pyublas::numpy_matrix<T,Mto_ublas>
+dev_dense_mat2numpy(dev_dense_matrix<T, Mfrom> m){
+	pyublas::numpy_matrix<T,Mto_ublas> to(m.h(),m.w());
+	host_dense_matrix<T,Mto_cuv>* to_view = mat_view<T,Mto_cuv,Mto_ublas>(to);
+	convert(*to_view,m);
+	delete to_view;
+	return to;
+}
+/*
+ * export conversion of numpy matrix to device matrix (helper function)
+ */
 template<class T, class Mfrom, class Mto>
 void export_numpy2dev_dense_mat(const char* c){
 	typedef typename matrix2ublas_traits<Mfrom>::storage_type Mfrom_ublas_type;
 	def(c, numpy2dev_dense_mat<T,Mfrom_ublas_type,Mto>, return_value_policy<manage_new_object>());
 }
+/*
+ * export conversion of device matrix to numpy matrix (helper function)
+ */
+template<class T, class Mfrom, class Mto>
+void export_dev_dense_mat2numpy(const char* c){
+	typedef typename matrix2ublas_traits<Mto>::storage_type Mto_ublas_type;
+	def(c, dev_dense_mat2numpy<T,Mfrom,Mto_ublas_type,Mto>);
+}
+
+/*
+ * export conversion of numpy matrices to device matrices for various types
+ */
 template<class T>
 void
 export_numpy2dev_dense_mats(){
-	export_numpy2dev_dense_mat<T,column_major,column_major>("push_cm");
+	export_numpy2dev_dense_mat<T,column_major,column_major>("push");
 	export_numpy2dev_dense_mat<T,column_major,row_major>("push_rm");
 	export_numpy2dev_dense_mat<T,row_major,column_major>("push_cm");
-	export_numpy2dev_dense_mat<T,row_major,row_major>("push_rm");
+	export_numpy2dev_dense_mat<T,row_major,row_major>("push");
+}
+/*
+ * export conversion of device matrices to numpy matrices for various types
+ */
+template<class T>
+void
+export_dev_dense_mat2numpys(){
+	export_dev_dense_mat2numpy<T,column_major,column_major>("pull");
+	export_dev_dense_mat2numpy<T,column_major,row_major>("pull_rm");
+	export_dev_dense_mat2numpy<T,row_major,column_major>("pull_cm");
+	export_dev_dense_mat2numpy<T,row_major,row_major>("pull");
 }
 
+/*
+ * MAIN export function
+ *   calls exporters for various value_types, column/row major combinations etc.
+ */
 void export_dense_matrix(){
 	// push and pull host matrices
 	export_dense_matrix_pushpull<float,column_major,column_major>("cmf");
@@ -147,6 +215,11 @@ void export_dense_matrix(){
 	export_numpy2dev_dense_mats<float>();
 	export_numpy2dev_dense_mats<signed char>();
 	export_numpy2dev_dense_mats<unsigned char>();
+
+	// dev matrix --> numpy matrix
+	export_dev_dense_mat2numpys<float>();
+	export_dev_dense_mat2numpys<signed char>();
+	export_dev_dense_mat2numpys<unsigned char>();
 }
 
 
