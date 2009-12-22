@@ -13,6 +13,7 @@ include_directories(
 ADD_LIBRARY(cuv_python SHARED 
 	python_bindings.cpp
 	export_vector.cpp
+	export_dense_matrix.cpp
     )
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES OUTPUT_NAME "cuv_python")
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES PREFIX "")
