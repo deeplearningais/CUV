@@ -134,7 +134,7 @@ namespace cuv{
 					convert(dst.vec(), src.vec());
 				}
 
-			// dev (row-major) --> host (row-major) 
+			// host (row-major) --> dev (row-major) 
 			template<class __value_type, class __index_type>
 				static void
 				convert(         dev_dense_matrix<__value_type,  row_major,  __index_type>& dst, 
@@ -177,8 +177,14 @@ CONV_INST(unsigned char,column_major,row_major);
 CONV_INST(unsigned char,row_major,   column_major);
 CONV_INST(unsigned char,row_major,   row_major);
 
+CONV_INST(signed char,column_major,column_major);
+CONV_INST(signed char,column_major,row_major);
+CONV_INST(signed char,row_major,   column_major);
+CONV_INST(signed char,row_major,   row_major);
+
 CONV_VEC(float);
 CONV_VEC(unsigned char);
+CONV_VEC(signed char);
 
 
 } // namespace cuv
