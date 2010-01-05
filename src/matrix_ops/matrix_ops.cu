@@ -27,17 +27,14 @@ namespace cuv{
 			int k2 = (transB=='t' ? B.w() : B.h());
 			int n  = (transB=='t' ? B.h() : B.w());
 
-			bool res_is_vec = (dst.w() == 1 || dst.h() == 1);
-			if(!res_is_vec){
-				cuvAssert(dst.h() == m);
-				cuvAssert(dst.w() == n);
-			} 
+			cuvAssert(dst.h() == m);
+			cuvAssert(dst.w() == n);
 			cuvAssert(k1 == k2);
 			cuvAssert(A.ptr());
 			cuvAssert(B.ptr());
 			cuvAssert(dst.ptr());
 
-			cublasSgemm(transA, transB, m, n, k1, factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), res_is_vec ? dst.n() : dst.h());
+			cublasSgemm(transA, transB, m, n, k1, factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
 			cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
 			cuvSafeCall(cudaThreadSynchronize());
 		}
@@ -55,11 +52,8 @@ namespace cuv{
 			int k2 = (transB=='t' ? B.w() : B.h());
 			int n  = (transB=='t' ? B.h() : B.w());
 
-			bool res_is_vec = (dst.w() == 1 || dst.h() == 1);
-			if(!res_is_vec){
-				cuvAssert(dst.h() == m);
-				cuvAssert(dst.w() == n);
-			} 
+			cuvAssert(dst.h() == m);
+			cuvAssert(dst.w() == n);
 			cuvAssert(k1 == k2);
 			cuvAssert(A.ptr() != NULL);
 			cuvAssert(B.ptr() != NULL);
@@ -70,7 +64,7 @@ namespace cuv{
 				   CblasColMajor,
 				   CVT_TRANSPOSE(transA),
 				   CVT_TRANSPOSE(transB), m, n, k1,
-				   factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), res_is_vec ? dst.n() : dst.h());
+				   factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
 #else /* naive */
 			for(int i=0; i<A.h();i++)
 				for(int j=0; j<B.w(); j++){
@@ -78,7 +72,7 @@ namespace cuv{
 					for(int k=0;k<A.w();k++){
 						f += A(i,k)*B(k,j);
 					}
-					dst(i,j) = f;
+					dst.set(i,j,f);
 				}
 #endif
 		}
@@ -96,11 +90,8 @@ namespace cuv{
 			int k2 = (transB=='t' ? B.w() : B.h());
 			int n  = (transB=='t' ? B.h() : B.w());
 
-			bool res_is_vec = (dst.w() == 1 || dst.h() == 1);
-			if(!res_is_vec){
-				cuvAssert(dst.h() == m);
-				cuvAssert(dst.w() == n);
-			} 
+			cuvAssert(dst.h() == m);
+			cuvAssert(dst.w() == n);
 			cuvAssert(k1 == k2);
 			cuvAssert(A.ptr() != NULL);
 			cuvAssert(B.ptr() != NULL);
@@ -110,7 +101,7 @@ namespace cuv{
 					CblasRowMajor,
 					CVT_TRANSPOSE(transA),
 					CVT_TRANSPOSE(transB), m, n, k1, 
-					factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), res_is_vec ? dst.n() : dst.h());
+					factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
 		}
 
 
