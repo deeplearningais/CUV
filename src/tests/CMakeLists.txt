@@ -21,6 +21,9 @@ TARGET_LINK_LIBRARIES( test_vec_op_speed cuv_basics cuv_tools cuv_convert cuv_ve
 ADD_EXECUTABLE( test_mat_op matrix_op.cpp )
 TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
 
+ADD_EXECUTABLE( test_dia_mat dia_mat.cpp )
+TARGET_LINK_LIBRARIES( test_dia_mat cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
 ADD_EXECUTABLE( test_mat_op_speed matrix_op_speed.cpp )
 TARGET_LINK_LIBRARIES( test_mat_op_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
 
