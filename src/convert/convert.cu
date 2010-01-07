@@ -1,3 +1,5 @@
+#include <host_dia_matrix.hpp>
+#include <vector_ops/vector_ops.hpp>
 #include <convert.hpp>
 
 namespace cuv{
@@ -147,6 +149,31 @@ namespace cuv{
 					convert(dst.vec(), src.vec());
 				}
 
+			/*
+			 * Host Dia -> Host Dense
+			 */
+			template<class __value_type, class __mem_layout_type, class __index_type>
+				static void
+				convert(      host_dense_matrix <__value_type,   __mem_layout_type, __index_type>& dst, 
+						const host_dia_matrix<__value_type,  __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()
+							){
+						host_dense_matrix<__value_type,__mem_layout_type,__index_type> d(src.h(),src.w());
+						dst = d;
+					}
+					fill(dst.vec(),0);
+					const std::vector<int>& off = src.get_offsets();
+					for(unsigned int oi=0; oi < off.size(); oi++){
+						int o = off[oi];
+						int i=max(0, o);
+						int j=max(0,-o);
+						for(;i<src.h() && j<src.w(); i++,j++){
+							dst.set(i,j, src(i,j));
+						}
+					}
+				}
+
 
 		};
 	template<class Dst, class Src>
@@ -185,6 +212,20 @@ CONV_INST(signed char,row_major,   row_major);
 CONV_VEC(float);
 CONV_VEC(unsigned char);
 CONV_VEC(signed char);
+
+#define DIA_CONV_INST(X,Y,Z) \
+	template <>                           \
+		void convert(host_dense_matrix<X,Y,Z>& dst, const host_dia_matrix<X,Z>& src)     \
+		{                                                                                \
+			typedef host_dense_matrix<X,Y,Z> Dst;                                        \
+			convert_impl::convert<typename Dst::value_type, typename Dst::memory_layout, typename Dst::index_type>(dst,src);  \
+		};
+        
+/*#define DIA_CONV_INST(X,Y,Z) \*/
+		/*template void convert<host_dense_matrix<X,Y,Z>,host_dia_matrix<X,Z> > \*/
+		/*(host_dense_matrix<X,Y,Z>&, const host_dia_matrix<X,Z>&);*/
+DIA_CONV_INST(float,column_major,unsigned int)
+DIA_CONV_INST(float,row_major,unsigned int)
 
 
 } // namespace cuv
