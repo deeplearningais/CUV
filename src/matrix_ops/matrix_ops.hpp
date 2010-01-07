@@ -99,9 +99,8 @@ namespace cuv{
   /***************************************************
    * BLAS3 stuff
    ***************************************************/
-  template<class __matrix_type>
-	  void prod(__matrix_type& dst, __matrix_type& A, __matrix_type& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
-
+  template<class __matrix_type, class __matrix_type2, class __matrix_type3>
+	  void prod(__matrix_type& dst, __matrix_type2& A, __matrix_type3& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
 
 } // cuv
 
