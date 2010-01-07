@@ -23,7 +23,7 @@ export_vector_common(const char* name){
 		.def("memsize",&vec::memsize, "size of vector in memory (bytes)")
 		.def("alloc",&vec::alloc, "allocate memory")
 		.def("dealloc",&vec::dealloc, "deallocate memory")
-		.def("at",  (value_type (vec::*)(int))(&vec::operator[]))
+		.def("at",  (const value_type& (vec::*)(const typename vec::index_type&)const)(&vec::operator[]), return_value_policy<copy_const_reference>()) // igitt.
 		;
 }
 
