@@ -102,6 +102,16 @@ namespace cuv{
   template<class __matrix_type, class __matrix_type2, class __matrix_type3>
 	  void prod(__matrix_type& dst, __matrix_type2& A, __matrix_type3& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
 
+  /***************************************************
+   * BLAS2 stuff
+   ***************************************************/
+  // dst = factC * dst + factAv*(A*v)
+  // where 
+  // factC, factAv:  scalar
+  // A            :  sparse matrix
+  // v            :  vector
+  template<class __matrix_type, class __vector_type>
+	  void spmv(__vector_type& dst, __matrix_type& A, __vector_type& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
 } // cuv
 
 #endif
