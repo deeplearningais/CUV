@@ -43,8 +43,7 @@ namespace cuv{
 					delete m_vec;
 			}
 			void alloc(){
-				cuvAssert(m_stride >= this->h());
-				cuvAssert(m_stride >= this->w());
+				cuvAssert(m_stride >= this->h() || m_stride >= this->w());
 				m_vec = new vec_type(m_stride * m_num_dia);
 			}
 			inline const vec_type* vec()const{ return m_vec; }

@@ -16,8 +16,8 @@ using namespace std;
 using namespace cuv;
 
 static const int n = 786;
-static const int m = 512;
-static const int k = 100;
+static const int m = 2048;
+static const int k = 96;
 
 #define MEASURE_TIME(MSG, OPERATION, ITERS)     \
 	float MSG;                                  \
@@ -37,7 +37,7 @@ struct Fix{
 	host_dense_matrix<float> B,B_,BLarge;
 	host_dense_matrix<float> C,C_,CLarge;
 	Fix()
-	:   A(n,m,15,max(n,m))
+	:   A(n,m,32,min(n,m))
 	,   A_(n,m)
 	,   B(m,1)
 	,   B_(m,1)
@@ -47,8 +47,11 @@ struct Fix{
 	,   CLarge(n,k)
 	{
 		std::vector<int> off;
+#if 0
 		for(int i=0;i<A.num_dia();i++)
-		//for(int i=-A.num_dia()/2;i<=A.num_dia()/2;i++)
+#else
+		for(int i=-A.num_dia()/2;i<=A.num_dia()/2;i++)
+#endif
 			off.push_back(i);
 		A.set_offsets(off);
 		sequence(*A.vec());

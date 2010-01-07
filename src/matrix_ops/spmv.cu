@@ -6,6 +6,7 @@
 
 using namespace std;
 
+// stuff from NVIDIA SDK
 #define DIVIDE_INTO(x,y) ((x + y - 1)/y)
 #define small_grid_thread_id(void) ((__umul24(blockDim.x, blockIdx.x) + threadIdx.x))
 #define large_grid_thread_id(void) ((__umul24(blockDim.x,blockIdx.x + __umul24(blockIdx.y,gridDim.x)) + threadIdx.x))
@@ -15,6 +16,7 @@ namespace cuv{
 	namespace spmv_impl{
 		/*
 		 *  For a given number of blocks, return a 2D grid large enough to contain them
+		 *  FROM NVIDIA SDK
 		 */
 		dim3 make_large_grid(const unsigned int num_blocks){
 			if (num_blocks <= 65535){
