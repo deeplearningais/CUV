@@ -193,6 +193,23 @@ namespace cuv{
 					dst.post_update_offsets();
 				}
 
+			/*
+			 * Dev Dia -> Host Dia
+			 */
+			template<class __value_type, class __index_type>
+				static void
+				convert(      host_dia_matrix <__value_type, __index_type>& dst, 
+						const dev_dia_matrix<__value_type, __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()
+							){
+						cuvAssert(false); // no operator= yet
+					}
+					cuv::convert(dst.get_offsets(), src.get_offsets());
+					cuv::convert(*dst.vec(), *src.vec());
+					dst.post_update_offsets();
+				}
+
 
 		};
 	template<class Dst, class Src>
@@ -245,6 +262,12 @@ CONV_VEC(signed char);
 		void convert(dev_dia_matrix<X,Z>& dst, const host_dia_matrix<X,Z>& src)     \
 		{                                                                                \
 			typedef dev_dia_matrix<X,Z> Dst;                                        \
+			convert_impl::convert<typename Dst::value_type, typename Dst::index_type>(dst,src);  \
+		};                                \
+	template <>                           \
+		void convert(host_dia_matrix<X,Z>& dst, const dev_dia_matrix<X,Z>& src)     \
+		{                                                                                \
+			typedef host_dia_matrix<X,Z> Dst;                                        \
 			convert_impl::convert<typename Dst::value_type, typename Dst::index_type>(dst,src);  \
 		}; 
         

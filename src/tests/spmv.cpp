@@ -96,8 +96,18 @@ BOOST_AUTO_TEST_CASE( spmv_host_correctness_trans )
 }
 BOOST_AUTO_TEST_CASE( spmv_host2dev )
 {
+	// host->dev
 	dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride());
 	convert(A2,A);
+	for(int i=0;i<A.h();i++){
+		for(int j=0;j<A.w();j++){
+			BOOST_CHECK_CLOSE( A(i,j), A2(i,j), 1.0 );
+		}
+	}
+	fill(*A.vec(),0);
+
+	// dev->host
+	convert(A,A2);
 	for(int i=0;i<A.h();i++){
 		for(int j=0;j<A.w();j++){
 			BOOST_CHECK_CLOSE( A(i,j), A2(i,j), 1.0 );
