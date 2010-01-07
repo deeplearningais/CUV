@@ -185,13 +185,12 @@ namespace cuv{
 						const host_dia_matrix<__value_type, __index_type>& src){
 					if(        dst.h() != src.h()
 							|| dst.w() != src.w()
-							|| dst.num_dia() != src.num_dia()
-							|| dst.stride() != src.stride()
 							){
 						cuvAssert(false); // no operator= yet
 					}
-					convert(dst.get_offsets(), src.get_offsets());
-					convert(*dst.vec(), *src.vec());
+					cuv::convert(dst.get_offsets(), src.get_offsets());
+					cuv::convert(*dst.vec(), *src.vec());
+					dst.post_update_offsets();
 				}
 
 

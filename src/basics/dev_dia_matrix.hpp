@@ -10,7 +10,7 @@ namespace cuv{
 	:	public dia_matrix<__value_type, __index_type, dev_vector<__value_type, __index_type>, dev_vector<int> >{
 		public:
 		  typedef dev_vector<__value_type, __index_type>          vec_type;
-		  typedef dev_vector<__value_type, __index_type>          intvec_type;
+		  typedef dev_vector<int>                                 intvec_type;
 		  typedef dia_matrix<__value_type, __index_type, vec_type, intvec_type> base_type;
 		  typedef typename base_type::value_type                   value_type;
 		  typedef typename base_type::index_type                   index_type;

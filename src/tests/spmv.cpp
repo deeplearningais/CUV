@@ -6,6 +6,7 @@
 
 #include <cuv_general.hpp>
 #include <host_dense_matrix.hpp>
+#include <dev_dia_matrix.hpp>
 #include <host_dia_matrix.hpp>
 #include <convert.hpp>
 #include <matrix_ops/matrix_ops.hpp>
@@ -91,6 +92,16 @@ BOOST_AUTO_TEST_CASE( spmv_host_correctness_trans )
 	prod(B_,A_,C, 't', 'n');
 	for(int i=0;i<B.vec().size();i++){
 		BOOST_CHECK_CLOSE( B.vec()[i], B_.vec()[i], 1.0 );
+	}
+}
+BOOST_AUTO_TEST_CASE( spmv_host2dev )
+{
+	dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride());
+	convert(A2,A);
+	for(int i=0;i<A.h();i++){
+		for(int j=0;j<A.w();j++){
+			BOOST_CHECK_CLOSE( A(i,j), A2(i,j), 1.0 );
+		}
 	}
 }
 

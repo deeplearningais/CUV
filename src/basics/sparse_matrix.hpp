@@ -64,6 +64,10 @@ namespace cuv{
 			void set_offsets(const std::vector<T>& v){
 				for(unsigned int i=0;i<v.size();i++)
 					m_offsets.set(i,v[i]);
+				post_update_offsets();
+			}
+			void post_update_offsets(){
+				m_dia2off.clear();
 				for(unsigned int i = 0; i<m_offsets.size(); ++i)
 					m_dia2off[m_offsets[i]] = i;
 			}
