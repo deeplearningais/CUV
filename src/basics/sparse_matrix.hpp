@@ -48,6 +48,8 @@ namespace cuv{
 			inline const vec_type* vec()const{ return m_vec; }
 			inline       vec_type* vec()     { return m_vec; }
 			inline int num_dia()const{ return m_num_dia; }
+			inline int stride()const { return m_stride;  }
+			inline bool transposed()const{ return m_is_transposed; }
 			void transpose() {
 				for(std::vector<int>::iterator it=m_offsets.begin(); it!= m_offsets.end(); it++)
 					*it = -*it;
@@ -79,18 +81,18 @@ namespace cuv{
 			value_type operator()(const index_type& i, const index_type& j)const{
 				using namespace std;
 				if(!m_is_transposed){
-					int off = (int)i - (int)j;
-					typename map<int,index_type>::const_iterator it = m_dia2off.find(off);
-					if( it == m_dia2off.end() )
-						return (value_type) 0;
-					return (*m_vec)[ it->second * m_stride +j  ];
-				}
-				else{
-					int off = (int)j - (int)i; // transposed -> opposite
+					int off = (int)j - (int)i;
 					typename map<int,index_type>::const_iterator it = m_dia2off.find(off);
 					if( it == m_dia2off.end() )
 						return (value_type) 0;
 					return (*m_vec)[ it->second * m_stride +i  ];
+				}
+				else{
+					int off = (int)i - (int)j; // transposed -> opposite
+					typename map<int,index_type>::const_iterator it = m_dia2off.find(off);
+					if( it == m_dia2off.end() )
+						return (value_type) 0;
+					return (*m_vec)[ it->second * m_stride +j  ];
 				}
 			}
 	};

@@ -49,10 +49,10 @@ BOOST_AUTO_TEST_CASE( trans )
 	BOOST_CHECK_CLOSE( lw(0,0), 0.f,  0.01 );
 	BOOST_CHECK_CLOSE( lw(1,1), 1.f,  0.01 );
 	BOOST_CHECK_CLOSE( lw(2,2), 2.f,  0.01 );
-	BOOST_CHECK_CLOSE( lw(0,1), 65.f, 0.01 );
-	BOOST_CHECK_CLOSE( lw(1,0), 32.f, 0.01 );
+	BOOST_CHECK_CLOSE( lw(0,1), 32.f, 0.01 );
+	BOOST_CHECK_CLOSE( lw(1,0), 65.f, 0.01 );
 	BOOST_CHECK_CLOSE( lw(0,2), 0.f,  0.01 );
-	BOOST_CHECK_CLOSE( lw(31,30), 62.f,  0.01 );
+	BOOST_CHECK_CLOSE( lw(30,31), 62.f,  0.01 );
 	lwt.transpose();
 	for(int i=0;i<n;i++){
 		for(int j=0;j<m;j++){
