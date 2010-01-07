@@ -1,3 +1,4 @@
+#include <dev_dia_matrix.hpp>
 #include <host_dia_matrix.hpp>
 #include <vector_ops/vector_ops.hpp>
 #include <convert.hpp>
@@ -163,7 +164,7 @@ namespace cuv{
 						dst = d;
 					}
 					fill(dst.vec(),0);
-					const std::vector<int>& off = src.get_offsets();
+					const host_vector<int>& off = src.get_offsets();
 					using namespace std;
 					for(unsigned int oi=0; oi < off.size(); oi++){
 						int o = off[oi];
@@ -173,6 +174,24 @@ namespace cuv{
 							dst.set(i,j, src(i,j));
 						}
 					}
+				}
+
+			/*
+			 * Host Dia -> Dev Dia
+			 */
+			template<class __value_type, class __index_type>
+				static void
+				convert(      dev_dia_matrix <__value_type, __index_type>& dst, 
+						const host_dia_matrix<__value_type, __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()
+							|| dst.num_dia() != src.num_dia()
+							|| dst.stride() != src.stride()
+							){
+						cuvAssert(false); // no operator= yet
+					}
+					convert(dst.get_offsets(), src.get_offsets());
+					convert(*dst.vec(), *src.vec());
 				}
 
 
@@ -211,22 +230,28 @@ CONV_INST(signed char,row_major,   column_major);
 CONV_INST(signed char,row_major,   row_major);
 
 CONV_VEC(float);
+CONV_VEC(int);
 CONV_VEC(unsigned char);
 CONV_VEC(signed char);
 
-#define DIA_CONV_INST(X,Y,Z) \
+#define DIA_DENSE_CONV(X,Y,Z) \
 	template <>                           \
 		void convert(host_dense_matrix<X,Y,Z>& dst, const host_dia_matrix<X,Z>& src)     \
 		{                                                                                \
 			typedef host_dense_matrix<X,Y,Z> Dst;                                        \
 			convert_impl::convert<typename Dst::value_type, typename Dst::memory_layout, typename Dst::index_type>(dst,src);  \
-		};
+		};   
+#define DIA_HOST_DEV_CONV(X,Z) \
+	template <>                           \
+		void convert(dev_dia_matrix<X,Z>& dst, const host_dia_matrix<X,Z>& src)     \
+		{                                                                                \
+			typedef dev_dia_matrix<X,Z> Dst;                                        \
+			convert_impl::convert<typename Dst::value_type, typename Dst::index_type>(dst,src);  \
+		}; 
         
-/*#define DIA_CONV_INST(X,Y,Z) \*/
-		/*template void convert<host_dense_matrix<X,Y,Z>,host_dia_matrix<X,Z> > \*/
-		/*(host_dense_matrix<X,Y,Z>&, const host_dia_matrix<X,Z>&);*/
-DIA_CONV_INST(float,column_major,unsigned int)
-DIA_CONV_INST(float,row_major,unsigned int)
+DIA_DENSE_CONV(float,column_major,unsigned int)
+DIA_DENSE_CONV(float,row_major,unsigned int)
+DIA_HOST_DEV_CONV(float,unsigned int)
 
 
 } // namespace cuv
