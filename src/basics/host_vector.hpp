@@ -38,6 +38,8 @@ class host_vector
 			}
 			m_ptr = NULL;
 		}
+
+		void set(const index_type& i, const value_type& val) { m_ptr[i] = val; }
 };
 
 template<class V, class I>

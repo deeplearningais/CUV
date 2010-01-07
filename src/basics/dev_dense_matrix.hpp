@@ -23,6 +23,8 @@ namespace cuv{
 		  inline const value_type operator()(const index_type& i, const index_type& j, const row_major& x)    const;
 		  inline       value_type operator()(const index_type& i, const index_type& j, const column_major& x) ;
 		  inline       value_type operator()(const index_type& i, const index_type& j, const row_major& x)    ;
+		  inline	   void set(const index_type& i, const index_type& j, const value_type& val, const column_major&);
+		  inline	   void set(const index_type& i, const index_type& j, const value_type& val, const row_major&);
 		public:
 		  // member access
 		  inline const value_type operator()(const index_type& i, const index_type& j) const; // do not return a reference, this will not work for device memory
@@ -34,6 +36,7 @@ namespace cuv{
 		  inline       vec_type& vec()      { return *m_vec; }
 		  inline const vec_type* vec_ptr()const { return m_vec; }
 		  inline       vec_type* vec_ptr()      { return m_vec; }
+		  inline 	   void set(const index_type& i, const index_type& j, const value_type& val);
 
 		  /*
 		   * Construction
@@ -108,6 +111,24 @@ namespace cuv{
 			typedef dev_memory_space memory_space_type;
 			typedef M                memory_layout_type;
 		};
+
+
+	/*
+	 * Change values in dense dev matrix
+	 *
+	 */
+	template<class V, class M, class I>
+	void
+	dev_dense_matrix<V,M,I>::set(const index_type& i, const index_type& j, const value_type& val, const column_major&) { m_vec->set( this->h()*j + i, val); };
+
+	template<class V, class M, class I>
+	void
+	dev_dense_matrix<V,M,I>::set(const index_type& i, const index_type& j, const value_type& val, const row_major&) { m_vec->set( this->w()*i + j, val); };
+
+	template<class V, class M, class I>
+	void
+	dev_dense_matrix<V,M,I>::set(const index_type& i, const index_type& j, const value_type& val) { this->set(i, j, val, memory_layout()); };
+
 }
 
 #endif

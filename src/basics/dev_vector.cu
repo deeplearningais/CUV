@@ -31,6 +31,13 @@ dev_vector<V,I>::dealloc(){
 		}
 }
 
+template<class V,class I>
+void
+dev_vector<V,I>::set(const index_type& i, const value_type& val) {
+	thrust::device_ptr<value_type> ptr(this->ptr());
+	ptr[i] = val;
+}
+
 template class dev_vector<float>;
 template class dev_vector<unsigned char>;
 template class dev_vector<signed char>;

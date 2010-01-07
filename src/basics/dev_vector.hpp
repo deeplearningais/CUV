@@ -33,6 +33,8 @@ class dev_vector
 		 */
 		virtual void alloc();
 		virtual void dealloc();
+
+		void set(const index_type& i, const value_type& val);
 };
 
 template<class V, class I>
