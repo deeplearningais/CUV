@@ -4,15 +4,17 @@
 #include <map>
 #include <iostream>
 #include <vector.hpp>
+#include <vector_ops/vector_ops.hpp>
 #include <matrix.hpp>
 #include <cuv_general.hpp>
 
 namespace cuv{
-	template<class __value_type, class __index_type, class __vec_type>
+	template<class __value_type, class __index_type, class __vec_type, class __intvec_type>
 	class dia_matrix 
 	:        public matrix<__value_type, __index_type>{
 	  public:
-		  typedef __vec_type vec_type;
+		  typedef __vec_type    vec_type;
+		  typedef __intvec_type intvec_type;
 		  typedef matrix<__value_type, __index_type> base_type;
 		  typedef typename matrix<__value_type, __index_type>::value_type value_type;
 		  typedef typename matrix<__value_type, __index_type>::index_type index_type;
@@ -21,7 +23,7 @@ namespace cuv{
 		  int m_stride;                         ///< how long the stored diagonals are
 		  bool m_is_transposed;                 ///< whether current state of the matrix is "transposed", changes access patterns
 		  vec_type* m_vec;                      ///< stores the actual data 
-		  std::vector<int> m_offsets;           ///< stores the offsets of the diagonals
+		  intvec_type m_offsets;                ///< stores the offsets of the diagonals
 		  std::map<int,index_type> m_dia2off;   ///< maps a diagonal to an offset
 		public:
 			dia_matrix(const index_type& h, const index_type& w, const int& num_dia, const int& stride)
@@ -51,8 +53,7 @@ namespace cuv{
 			inline int stride()const { return m_stride;  }
 			inline bool transposed()const{ return m_is_transposed; }
 			void transpose() {
-				for(std::vector<int>::iterator it=m_offsets.begin(); it!= m_offsets.end(); it++)
-					*it = -*it;
+				apply_scalar_functor(m_offsets, SF_NEGATE);
 				m_is_transposed ^= 1;
 			}
 
@@ -61,16 +62,17 @@ namespace cuv{
 			//*****************************
 			template<class T>
 			void set_offsets(const std::vector<T>& v){
-				m_offsets.clear();
-				std::copy(v.begin(), v.end(), std::back_inserter(m_offsets));
+				for(unsigned int i=0;i<v.size();i++)
+					m_offsets.set(i,v[i]);
 				for(unsigned int i = 0; i<m_offsets.size(); ++i)
 					m_dia2off[m_offsets[i]] = i;
 			}
 			inline void set_offset(const index_type& idx, const index_type& val){
-				m_offsets[idx] = val;
+				m_offsets.set(idx,val);
 				m_dia2off[val] = idx;
 			}
-			inline const std::vector<int>& get_offsets()const{return m_offsets;}
+			inline const intvec_type& get_offsets()const{return m_offsets;}
+			inline       intvec_type& get_offsets()     {return m_offsets;}
 			inline const index_type& get_offset(const index_type& idx, const index_type& val)const{
 				return m_offsets[idx];
 			}

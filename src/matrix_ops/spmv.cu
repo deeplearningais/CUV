@@ -1,11 +1,12 @@
 #include <host_dia_matrix.hpp>
+#include <dev_dia_matrix.hpp>
 #include "matrix_ops.hpp"
 
 namespace cuv{
 	namespace spmv_impl{
 		template<class value_type, class index_type>
 			void spmv(host_vector<value_type,index_type>& dst, host_dia_matrix<value_type,index_type>& A, host_vector<value_type,index_type>& v, char transA, const float& factAv, const float& factC){
-				const std::vector<int>& offsets = A.get_offsets();
+				const host_vector<int>& offsets = A.get_offsets();
 				const int num_diags             = A.num_dia();
 				const int num_rows              = A.h();
 				const int num_cols              = A.w();

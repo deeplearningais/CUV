@@ -7,10 +7,11 @@
 namespace cuv{
 	template<class __value_type, class __index_type=unsigned int>
 	class host_dia_matrix
-	:	public dia_matrix<__value_type, __index_type, host_vector<__value_type, __index_type> >{
+	:	public dia_matrix<__value_type, __index_type, host_vector<__value_type, __index_type>, host_vector<int, unsigned int> >{
 		public:
 		  typedef host_vector<__value_type, __index_type>          vec_type;
-		  typedef dia_matrix<__value_type, __index_type, vec_type> base_type;
+		  typedef host_vector<int, unsigned int>                   intvec_type;
+		  typedef dia_matrix<__value_type, __index_type, vec_type, intvec_type> base_type;
 		  typedef typename base_type::value_type                   value_type;
 		  typedef typename base_type::index_type                   index_type;
 		protected:
