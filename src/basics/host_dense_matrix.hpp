@@ -24,8 +24,8 @@ namespace cuv{
 			inline const value_type operator()(const index_type& i, const index_type& j, row_major)    const;
 			inline       value_type operator()(const index_type& i, const index_type& j, column_major) ;
 			inline       value_type operator()(const index_type& i, const index_type& j, row_major)    ;
-			inline		 void set(index_type i, index_type j, value_type val, column_major);
-			inline		 void set(index_type i, index_type j, value_type val, row_major);
+			inline		 void set(const index_type& i, const index_type& j, const value_type& val, column_major);
+			inline		 void set(const index_type& i, const index_type& j, const value_type& val, row_major);
 		public:
 			/*
 			 * Member access
@@ -40,7 +40,7 @@ namespace cuv{
 			inline       vec_type& vec()        { return *m_vec; }
 			inline const vec_type* vec_ptr()  const { return m_vec; }
 			inline       vec_type* vec_ptr()        { return m_vec; }
-			inline 		 void set(index_type i, index_type j, value_type val);
+			inline 		 void set(const index_type& i, const index_type& j, const value_type& val);
 
 			/*
 			 * Life cycle
@@ -133,15 +133,15 @@ namespace cuv{
 	 */
 	template<class V, class M, class I>
 	void
-	host_dense_matrix<V,M,I>::set(index_type i, index_type j, value_type val, column_major) { (*m_vec)[ this->h()*j + i] = val; };
+	host_dense_matrix<V,M,I>::set(const index_type& i, const index_type& j, const value_type& val, column_major) { (*m_vec)[ this->h()*j + i] = val; };
 
 	template<class V, class M, class I>
 	void
-	host_dense_matrix<V,M,I>::set(index_type i, index_type j, value_type val, row_major) { (*m_vec)[ this->w()*i + j] = val; };
+	host_dense_matrix<V,M,I>::set(const index_type& i, const index_type& j, const value_type& val, row_major) { (*m_vec)[ this->w()*i + j] = val; };
 
 	template<class V, class M, class I>
 	void
-	host_dense_matrix<V,M,I>::set(index_type i, index_type j, value_type val) { this->set(i, j, val, memory_layout()); };
+	host_dense_matrix<V,M,I>::set(const index_type& i, const index_type& j, const value_type& val) { this->set(i, j, val, memory_layout()); };
 
 
 }
