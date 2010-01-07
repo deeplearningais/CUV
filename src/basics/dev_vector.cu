@@ -38,6 +38,7 @@ dev_vector<V,I>::set(const index_type& i, const value_type& val) {
 	ptr[i] = val;
 }
 
+template class dev_vector<int>;
 template class dev_vector<float>;
 template class dev_vector<unsigned char>;
 template class dev_vector<signed char>;
