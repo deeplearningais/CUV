@@ -164,10 +164,11 @@ namespace cuv{
 					}
 					fill(dst.vec(),0);
 					const std::vector<int>& off = src.get_offsets();
+					using namespace std;
 					for(unsigned int oi=0; oi < off.size(); oi++){
 						int o = off[oi];
-						int i=max(0, o);
-						int j=max(0,-o);
+						__index_type j = max((int)0, o);
+						__index_type i = max((int)0,-o);
 						for(;i<src.h() && j<src.w(); i++,j++){
 							dst.set(i,j, src(i,j));
 						}
