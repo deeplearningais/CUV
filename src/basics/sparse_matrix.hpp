@@ -47,6 +47,7 @@ namespace cuv{
 			}
 			inline const vec_type* vec()const{ return m_vec; }
 			inline       vec_type* vec()     { return m_vec; }
+			inline int num_dia()const{ return m_num_dia; }
 			void transpose() {
 				for(std::vector<int>::iterator it=m_offsets.begin(); it!= m_offsets.end(); it++)
 					*it = -*it;
@@ -67,6 +68,7 @@ namespace cuv{
 				m_offsets[idx] = val;
 				m_dia2off[val] = idx;
 			}
+			inline const std::vector<int>& get_offsets()const{return m_offsets;}
 			inline const index_type& get_offset(const index_type& idx, const index_type& val)const{
 				return m_offsets[idx];
 			}
