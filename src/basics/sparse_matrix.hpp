@@ -88,14 +88,14 @@ namespace cuv{
 				using namespace std;
 				if(!m_is_transposed){
 					int off = (int)j - (int)i;
-					typename map<int,index_type>::const_iterator it = m_dia2off.find(off);
+					typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
 					if( it == m_dia2off.end() )
 						return (value_type) 0;
 					return (*m_vec)[ it->second * m_stride +i  ];
 				}
 				else{
 					int off = (int)i - (int)j; // transposed -> opposite
-					typename map<int,index_type>::const_iterator it = m_dia2off.find(off);
+					typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
 					if( it == m_dia2off.end() )
 						return (value_type) 0;
 					return (*m_vec)[ it->second * m_stride +j  ];
