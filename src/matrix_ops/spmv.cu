@@ -41,6 +41,61 @@ namespace cuv{
 		/****************************************************************
 		 *   Device Code
 		 ****************************************************************/
+		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache, bool transA>
+			__global__ void
+			spmv_dia_kernel2(const index_type num_rows, 
+					const index_type num_cols, 
+					const index_type num_diagonals,
+					const index_type stride,
+					const int        * diagonal_offsets,
+					const value_type * values,
+					const value_type * x, 
+					value_type * y)
+			{
+				__shared__ int offsets[BLOCK_SIZE];
+
+				const index_type thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+				const index_type grid_size = gridDim.x * blockDim.x;
+
+				// load diagonal offsets into shared memory
+				if(threadIdx.x < num_diagonals)
+					offsets[threadIdx.x] = transA ? -diagonal_offsets[threadIdx.x] : diagonal_offsets[threadIdx.x];
+
+				__syncthreads();
+
+
+				for(index_type row = thread_id; row < (transA ? num_cols : num_rows); row += grid_size)
+				{
+					value_type sum = y[row];
+
+					index_type offset = transA ? 0 : row;
+
+					for(index_type n = 0; n < num_diagonals; n++, offset+=stride)
+					{
+						const int col = row + offsets[n];
+
+						if(col >= 0 && col < (transA ? num_rows : num_cols))
+						{
+							if(transA){
+								// offset: 0th index of diagonal
+								// col:    index within diagonal
+								// NOTE:   the access is NOT (never) coalesced, making this damn slow!
+								//         it seems to be still around 6x faster than CPU
+								//         but it does not become faster if more consecutive diagonals
+								//         are used.
+								const value_type A_ij = values[ col + offset];
+								sum += A_ij * fetch_x<UseCache>(col, x);
+							}else{
+								// offset: position within current diagonal
+								// col:    index within diagonal
+								const value_type A_ij = values[       offset];
+								sum += A_ij * fetch_x<UseCache>(col, x);
+							}
+						}
+					}
+					y[row] = sum;
+				}
+			}
 		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache>
 			__global__ void
 			spmv_dia_kernel(const index_type num_rows, 
@@ -80,7 +135,7 @@ namespace cuv{
 				y[row] = sum;
 			}
 
-		template <typename value_type, typename index_type>
+		template <bool transA, typename value_type, typename index_type>
 			void spmv_dia_device(const dev_dia_matrix<value_type,index_type>& d_dia, 
 					const dev_vector<value_type>& d_x, 
 					dev_vector<value_type>& d_y)
@@ -90,13 +145,13 @@ namespace cuv{
 
 				cuvAssert(d_dia.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
 
-				spmv_dia_kernel<value_type, index_type, BLOCK_SIZE, false> <<<grid, BLOCK_SIZE>>>
+				spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, false,transA> <<<grid, BLOCK_SIZE>>>
 					(d_dia.h(), d_dia.w(),  d_dia.num_dia(),  d_dia.stride(),
 					 d_dia.get_offsets().ptr(), d_dia.vec()->ptr(),
 					 d_x.ptr(), d_y.ptr());
 			}
 
-		template <typename value_type, typename index_type>
+		template <bool transA, typename value_type, typename index_type>
 			void spmv_dia_tex_device(const dev_dia_matrix<value_type,index_type>& d_dia, 
 					const dev_vector<value_type>& d_x, 
 					dev_vector<value_type>& d_y)
@@ -108,7 +163,7 @@ namespace cuv{
 
 				bind_x(d_x.ptr());
 
-				spmv_dia_kernel<value_type, index_type, BLOCK_SIZE, true> <<<grid, BLOCK_SIZE>>>
+				spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, true, transA> <<<grid, BLOCK_SIZE>>>
 					(d_dia.h(), d_dia.w(), d_dia.num_dia(), d_dia.stride(),
 					 d_dia.get_offsets().ptr(), d_dia.vec()->ptr(),
 					 d_x.ptr(), d_y.ptr());
@@ -117,8 +172,10 @@ namespace cuv{
 			}
 		template<class value_type, class index_type>
 			void spmv(dev_vector<value_type,index_type>& dst, dev_dia_matrix<value_type,index_type>& A, dev_vector<value_type,index_type>& v, char transA, const float& factAv, const float& factC){
-
-				spmv_dia_device(A,v,dst);
+				if(transA=='t')
+					spmv_dia_device<true>(A,v,dst);
+				else
+					spmv_dia_device<false>(A,v,dst);
 				/*spmv_dia_tex_device(A,v,dst);*/
 			}
 
