@@ -89,8 +89,9 @@ BOOST_AUTO_TEST_CASE( spmv_dev_correctness )
  dev_dense_matrix<float> B2(B.h(),B.w());
  convert(B2,B);
 
- prod(C ,A, B, 'n','n');
- prod(C2,A2,B2,'n','n');
+ float factAv = 2.f, factC = 1.3f;
+ prod(C ,A, B, 'n','n', factAv, factC);
+ prod(C2,A2,B2,'n','n', factAv, factC);
  for(int i=0;i<C.vec().size();i++){
 	 BOOST_CHECK_CLOSE( C.vec()[i], C2.vec()[i], 1.0 );
  }
