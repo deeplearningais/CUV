@@ -6,6 +6,7 @@
 #include <cuv_general.hpp>
 #include <vector_ops.hpp>
 #include <host_dia_matrix.hpp>
+#include <dev_dia_matrix.hpp>
 #include <convert.hpp>
 
 using namespace std;
@@ -61,6 +62,27 @@ BOOST_AUTO_TEST_CASE( trans )
 		}
 		cout<<endl;
 	}
+}
+
+BOOST_AUTO_TEST_CASE( spmv_host2dev )
+{
+// host->dev
+dev_dia_matrix<float> w2(n,m,w.num_dia(),w.stride());
+convert(w2,w);
+for(int i=0;i<w.h();i++){
+	for(int j=0;j<w.w();j++){
+		BOOST_CHECK_CLOSE( w(i,j), w2(i,j), 1.0 );
+	}
+}
+fill(*w.vec(),0);
+
+// dev->host
+convert(w,w2);
+for(int i=0;i<w.h();i++){
+	for(int j=0;j<w.w();j++){
+		BOOST_CHECK_CLOSE( w(i,j), w2(i,j), 1.0 );
+	}
+}
 }
 
 
