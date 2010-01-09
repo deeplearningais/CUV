@@ -42,7 +42,7 @@ namespace cuv{
 		/****************************************************************
 		 *   Device Code
 		 ****************************************************************/
-		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache>
+		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache, bool wantFactAv, bool wantFactC>
 			__global__ void
 			spmv_dia_kernel_trans(const index_type num_rows, 
 					const index_type num_cols, 
@@ -51,7 +51,9 @@ namespace cuv{
 					const int        * diagonal_offsets,
 					const value_type * values,
 					const value_type * v, 
-					value_type       * dst)
+					value_type       * dst,
+					const value_type factAv,
+					const value_type factC)
 			{
 				__shared__ int        offsets[BLOCK_SIZE];
 
@@ -66,7 +68,7 @@ namespace cuv{
 
 				for(index_type col = thread_id; col < num_cols; col += grid_size)
 				{
-					value_type sum = dst[col];
+					value_type sum = wantFactC ? factC * dst[col] : 0;
 					index_type offset = 0;
 
 					for(index_type n = 0; n < num_diagonals; n++, offset+=stride)
@@ -76,13 +78,13 @@ namespace cuv{
 						if(row >= 0 && row < num_rows)
 						{
 							const value_type A_ij = values[       offset + row];
-							sum += A_ij * fetch_x<UseCache>(row, v);
+							sum += (wantFactAv ? factAv : 1.f ) * A_ij * fetch_x<UseCache>(row, v);
 						}
 					}
 					dst[col] = sum;
 				}
 			}
-		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache>
+		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache, bool wantFactAv, bool wantFactC>
 			__global__ void
 			spmv_dia_kernel2(const index_type num_rows, 
 					const index_type num_cols, 
@@ -91,7 +93,9 @@ namespace cuv{
 					const int        * diagonal_offsets,
 					const value_type * values,
 					const value_type * v, 
-					value_type * dst)
+					value_type * dst,
+					const value_type factAv,
+					const value_type factC)
 			{
 				__shared__ int offsets[BLOCK_SIZE];
 
@@ -106,7 +110,7 @@ namespace cuv{
 
 				for(index_type row = thread_id; row < num_rows; row += grid_size)
 				{
-					value_type sum = dst[row];
+					value_type sum = wantFactC ? factC * dst[row] : 0 ;
 					index_type offset = row;
 					for(index_type n = 0; n < num_diagonals; n++, offset+=stride)
 					{
@@ -114,7 +118,7 @@ namespace cuv{
 						if(col >= 0 && col < num_cols)
 						{
 							const value_type A_ij = values[       offset];
-							sum += A_ij * fetch_x<UseCache>(col, v);
+							sum += (wantFactAv ? factAv : 1.f) * A_ij * fetch_x<UseCache>(col, v);
 						}
 					}
 					dst[row] = sum;
@@ -134,53 +138,57 @@ namespace cuv{
 				if(transA != 't'){
 					const dim3 grid = make_large_grid(A.h(),BLOCK_SIZE);
 					cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
-					spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, false> <<<grid, BLOCK_SIZE>>>
-						(A.h(), A.w(),  A.num_dia(),  A.stride(),
-						 A.get_offsets().ptr(), A.vec()->ptr(),
-						 v.ptr(), dst.ptr());
+					if(0);
+					else if(factAv==1.f && factC == 0.f)
+						spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, false,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+					else if(factAv==1.f && factC != 0.f)
+						spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, false,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+					else if(factAv!=1.f && factC == 0.f)
+						spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, false,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+					else 
+						spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, false,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
 				}else{
 					const dim3 grid = make_large_grid(A.w(),BLOCK_SIZE);
 					cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
-					spmv_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, false> <<<grid, BLOCK_SIZE>>>
-						(A.h(), A.w(),  A.num_dia(),  A.stride(),
-						 A.get_offsets().ptr(), A.vec()->ptr(),
-						 v.ptr(), dst.ptr());
+					if(0);
+					else if(factAv==1.f && factC == 0.f)
+						spmv_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, false,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+					else if(factAv==1.f && factC != 0.f)
+						spmv_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, false,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+					else if(factAv!=1.f && factC == 0.f)
+						spmv_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, false,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+					else 
+						spmv_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, false,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
 				}
 				cuvSafeCall(cudaThreadSynchronize());
 			}
 
-		template <bool transA, typename value_type, typename index_type>
-			void spmv_dia_tex_device(const dev_dia_matrix<value_type,index_type>& A, 
-					const dev_vector<value_type>& v, 
-					dev_vector<value_type>& dst)
-			{
-				const unsigned int BLOCK_SIZE = 256;
-				const dim3 grid = make_large_grid(A.h(),BLOCK_SIZE);
+		/*template <bool transA, typename value_type, typename index_type>*/
+		/*    void spmv_dia_tex_device(const dev_dia_matrix<value_type,index_type>& A, */
+		/*            const dev_vector<value_type>& v, */
+		/*            dev_vector<value_type>& dst)*/
+		/*    {*/
+		/*        const unsigned int BLOCK_SIZE = 256;*/
+		/*        const dim3 grid = make_large_grid(A.h(),BLOCK_SIZE);*/
 
-				cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
+		/*        cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals*/
 
-				bind_x(v.ptr());
+		/*        bind_x(v.ptr());*/
 
-				if(!transA){
-					const unsigned int BLOCK_SIZE = 256;
-					const dim3 grid = make_large_grid(A.h(),BLOCK_SIZE);
-					cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
-					spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, true> <<<grid, BLOCK_SIZE>>>
-						(A.h(), A.w(),  A.num_dia(),  A.stride(),
-						 A.get_offsets().ptr(), A.vec()->ptr(),
-						 v.ptr(), dst.ptr());
-				}else{
-					const unsigned int BLOCK_SIZE = 256;
-					const dim3 grid = make_large_grid(A.w(),BLOCK_SIZE);
-					cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
-					spmv_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, true> <<<grid, BLOCK_SIZE>>>
-						(A.h(), A.w(),  A.num_dia(),  A.stride(),
-						 A.get_offsets().ptr(), A.vec()->ptr(),
-						 v.ptr(), dst.ptr());
-				}
+		/*        if(!transA){*/
+		/*            const unsigned int BLOCK_SIZE = 256;*/
+		/*            const dim3 grid = make_large_grid(A.h(),BLOCK_SIZE);*/
+		/*            cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals*/
+		/*            spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr());*/
+		/*        }else{*/
+		/*            const unsigned int BLOCK_SIZE = 256;*/
+		/*            const dim3 grid = make_large_grid(A.w(),BLOCK_SIZE);*/
+		/*            cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals*/
+		/*            spmv_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr());*/
+		/*        }*/
 
-				unbind_x(v.ptr());
-			}
+		/*        unbind_x(v.ptr());*/
+		/*    }*/
 		template<class value_type, class index_type>
 			void spmv(dev_vector<value_type,index_type>& dst, dev_dia_matrix<value_type,index_type>& A, dev_vector<value_type,index_type>& v, char transA, const float& factAv, const float& factC){
 				spmv_dia_device(A,v,dst,transA,factAv,factC);
@@ -198,6 +206,11 @@ namespace cuv{
 				const int num_cols              = A.w();
 				const int stride                = A.stride();
 				cuvAssert(!A.transposed());
+				index_type max_dst = ((transA=='t') ? num_cols : num_rows);
+				if(factC==0.f)
+					for(int i=0;i<max_dst;i++) dst[i] = 0;
+				else
+					for(int i=0;i<max_dst;i++) dst[i] = dst[i] * factC;
 				if(transA == 't'){
 					cuvAssert(num_rows == v.size());
 					cuvAssert(num_cols == dst.size());
@@ -215,7 +228,7 @@ namespace cuv{
 						value_type * y_ = dst.ptr() + i_start;
 
 						for(index_type n = 0; n < N; n++){
-							y_[n] += d_[n] * x_[n];
+							y_[n] += factAv * d_[n] * x_[n];
 						}
 					}
 				}else{
@@ -235,7 +248,7 @@ namespace cuv{
 						value_type * y_ = dst.ptr() + i_start;
 
 						for(index_type n = 0; n < N; n++){
-							y_[n] += d_[n] * x_[n];
+							y_[n] += factAv * d_[n] * x_[n];
 						}
 					}
 				}
