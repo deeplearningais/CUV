@@ -10,6 +10,7 @@ using namespace std;
 #define DIVIDE_INTO(x,y) ((x + y - 1)/y)
 #define small_grid_thread_id(void) ((__umul24(blockDim.x, blockIdx.x) + threadIdx.x))
 #define large_grid_thread_id(void) ((__umul24(blockDim.x,blockIdx.x + __umul24(blockIdx.y,gridDim.x)) + threadIdx.x))
+#define large_grid_thread_num(void) ((__umul24(blockDim.x,gridDim.x + __umul24(blockDim.y,gridDim.y))))
 
 
 namespace cuv{
@@ -41,7 +42,47 @@ namespace cuv{
 		/****************************************************************
 		 *   Device Code
 		 ****************************************************************/
-		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache, bool transA>
+		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache>
+			__global__ void
+			spmv_dia_kernel_trans(const index_type num_rows, 
+					const index_type num_cols, 
+					const index_type num_diagonals,
+					const index_type stride,
+					const int        * diagonal_offsets,
+					const value_type * values,
+					const value_type * v, 
+					value_type       * dst)
+			{
+				__shared__ int        offsets[BLOCK_SIZE];
+
+				const index_type thread_id = large_grid_thread_id();
+				const index_type grid_size = large_grid_thread_num();
+
+				// load diagonal offsets into shared memory
+				if(threadIdx.x < num_diagonals)
+					offsets[threadIdx.x] = diagonal_offsets[threadIdx.x];
+
+				__syncthreads();
+
+				for(index_type col = thread_id; col < num_cols; col += grid_size)
+				{
+					value_type sum = dst[col];
+					index_type offset = 0;
+
+					for(index_type n = 0; n < num_diagonals; n++, offset+=stride)
+					{
+						const int row = col - offsets[n];
+
+						if(row >= 0 && row < num_rows)
+						{
+							const value_type A_ij = values[       offset + row];
+							sum += A_ij * fetch_x<UseCache>(row, v);
+						}
+					}
+					dst[col] = sum;
+				}
+			}
+		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache>
 			__global__ void
 			spmv_dia_kernel2(const index_type num_rows, 
 					const index_type num_cols, 
@@ -49,134 +90,100 @@ namespace cuv{
 					const index_type stride,
 					const int        * diagonal_offsets,
 					const value_type * values,
-					const value_type * x, 
-					value_type * y)
+					const value_type * v, 
+					value_type * dst)
 			{
 				__shared__ int offsets[BLOCK_SIZE];
 
-				const index_type thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-				const index_type grid_size = gridDim.x * blockDim.x;
+				const index_type thread_id = large_grid_thread_id();
+				const index_type grid_size = large_grid_thread_num();
 
 				// load diagonal offsets into shared memory
 				if(threadIdx.x < num_diagonals)
-					offsets[threadIdx.x] = transA ? -diagonal_offsets[threadIdx.x] : diagonal_offsets[threadIdx.x];
+					offsets[threadIdx.x] = diagonal_offsets[threadIdx.x];
 
 				__syncthreads();
 
-
-				for(index_type row = thread_id; row < (transA ? num_cols : num_rows); row += grid_size)
+				for(index_type row = thread_id; row < num_rows; row += grid_size)
 				{
-					value_type sum = y[row];
-
-					index_type offset = transA ? 0 : row;
-
+					value_type sum = dst[row];
+					index_type offset = row;
 					for(index_type n = 0; n < num_diagonals; n++, offset+=stride)
 					{
 						const int col = row + offsets[n];
-
-						if(col >= 0 && col < (transA ? num_rows : num_cols))
+						if(col >= 0 && col < num_cols)
 						{
-							if(transA){
-								// offset: 0th index of diagonal
-								// col:    index within diagonal
-								// NOTE:   the access is NOT (never) coalesced, making this damn slow!
-								//         it seems to be still around 6x faster than CPU
-								//         but it does not become faster if more consecutive diagonals
-								//         are used.
-								const value_type A_ij = values[ col + offset];
-								sum += A_ij * fetch_x<UseCache>(col, x);
-							}else{
-								// offset: position within current diagonal
-								// col:    index within diagonal
-								const value_type A_ij = values[       offset];
-								sum += A_ij * fetch_x<UseCache>(col, x);
-							}
+							const value_type A_ij = values[       offset];
+							sum += A_ij * fetch_x<UseCache>(col, v);
 						}
 					}
-					y[row] = sum;
+					dst[row] = sum;
 				}
 			}
-		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache>
-			__global__ void
-			spmv_dia_kernel(const index_type num_rows, 
-					const index_type num_cols, 
-					const index_type num_diags,
-					const index_type stride,
-					const int       * diag_offsets,
-					const value_type * diag_data,
-					const value_type * x, 
-					value_type * y)
+
+		template <typename value_type, typename index_type>
+			void spmv_dia_device(const dev_dia_matrix<value_type,index_type>& A, 
+					const dev_vector<value_type>& v, 
+					dev_vector<value_type>& dst, 
+					char transA,
+					const value_type& factAv,
+					const value_type& factC)
 			{
-				__shared__ int offsets[BLOCK_SIZE];
 
-				if(threadIdx.x < num_diags)
-					offsets[threadIdx.x] = diag_offsets[threadIdx.x];
-
-				__syncthreads();
-
-				const int row = large_grid_thread_id();
-
-				if(row >= num_rows){ return; }
-
-				value_type sum = y[row];
-				diag_data += row;
-
-				for(index_type n = 0; n < num_diags; n++){
-					const int col = row + offsets[n];
-
-					if(col >= 0 && col < num_cols){
-						const value_type A_ij = *diag_data;
-						sum += A_ij * fetch_x<UseCache>(col, x);
-					}
-
-					diag_data += stride;
+				const unsigned int BLOCK_SIZE = 256;
+				if(transA != 't'){
+					const dim3 grid = make_large_grid(A.h(),BLOCK_SIZE);
+					cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
+					spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, false> <<<grid, BLOCK_SIZE>>>
+						(A.h(), A.w(),  A.num_dia(),  A.stride(),
+						 A.get_offsets().ptr(), A.vec()->ptr(),
+						 v.ptr(), dst.ptr());
+				}else{
+					const dim3 grid = make_large_grid(A.w(),BLOCK_SIZE);
+					cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
+					spmv_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, false> <<<grid, BLOCK_SIZE>>>
+						(A.h(), A.w(),  A.num_dia(),  A.stride(),
+						 A.get_offsets().ptr(), A.vec()->ptr(),
+						 v.ptr(), dst.ptr());
 				}
-
-				y[row] = sum;
+				cuvSafeCall(cudaThreadSynchronize());
 			}
 
 		template <bool transA, typename value_type, typename index_type>
-			void spmv_dia_device(const dev_dia_matrix<value_type,index_type>& d_dia, 
-					const dev_vector<value_type>& d_x, 
-					dev_vector<value_type>& d_y)
+			void spmv_dia_tex_device(const dev_dia_matrix<value_type,index_type>& A, 
+					const dev_vector<value_type>& v, 
+					dev_vector<value_type>& dst)
 			{
 				const unsigned int BLOCK_SIZE = 256;
-				const dim3 grid = make_large_grid(d_dia.h(),BLOCK_SIZE);
+				const dim3 grid = make_large_grid(A.h(),BLOCK_SIZE);
 
-				cuvAssert(d_dia.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
+				cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
 
-				spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, false,transA> <<<grid, BLOCK_SIZE>>>
-					(d_dia.h(), d_dia.w(),  d_dia.num_dia(),  d_dia.stride(),
-					 d_dia.get_offsets().ptr(), d_dia.vec()->ptr(),
-					 d_x.ptr(), d_y.ptr());
-			}
+				bind_x(v.ptr());
 
-		template <bool transA, typename value_type, typename index_type>
-			void spmv_dia_tex_device(const dev_dia_matrix<value_type,index_type>& d_dia, 
-					const dev_vector<value_type>& d_x, 
-					dev_vector<value_type>& d_y)
-			{
-				const unsigned int BLOCK_SIZE = 256;
-				const dim3 grid = make_large_grid(d_dia.h(),BLOCK_SIZE);
+				if(!transA){
+					const unsigned int BLOCK_SIZE = 256;
+					const dim3 grid = make_large_grid(A.h(),BLOCK_SIZE);
+					cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
+					spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, true> <<<grid, BLOCK_SIZE>>>
+						(A.h(), A.w(),  A.num_dia(),  A.stride(),
+						 A.get_offsets().ptr(), A.vec()->ptr(),
+						 v.ptr(), dst.ptr());
+				}else{
+					const unsigned int BLOCK_SIZE = 256;
+					const dim3 grid = make_large_grid(A.w(),BLOCK_SIZE);
+					cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
+					spmv_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, true> <<<grid, BLOCK_SIZE>>>
+						(A.h(), A.w(),  A.num_dia(),  A.stride(),
+						 A.get_offsets().ptr(), A.vec()->ptr(),
+						 v.ptr(), dst.ptr());
+				}
 
-				cuvAssert(d_dia.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
-
-				bind_x(d_x.ptr());
-
-				spmv_dia_kernel2<value_type, index_type, BLOCK_SIZE, true, transA> <<<grid, BLOCK_SIZE>>>
-					(d_dia.h(), d_dia.w(), d_dia.num_dia(), d_dia.stride(),
-					 d_dia.get_offsets().ptr(), d_dia.vec()->ptr(),
-					 d_x.ptr(), d_y.ptr());
-
-				unbind_x(d_x.ptr());
+				unbind_x(v.ptr());
 			}
 		template<class value_type, class index_type>
 			void spmv(dev_vector<value_type,index_type>& dst, dev_dia_matrix<value_type,index_type>& A, dev_vector<value_type,index_type>& v, char transA, const float& factAv, const float& factC){
-				if(transA=='t')
-					spmv_dia_device<true>(A,v,dst);
-				else
-					spmv_dia_device<false>(A,v,dst);
-				/*spmv_dia_tex_device(A,v,dst);*/
+				spmv_dia_device(A,v,dst,transA,factAv,factC);
 			}
 
 
