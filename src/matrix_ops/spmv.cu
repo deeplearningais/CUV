@@ -288,7 +288,7 @@ namespace cuv{
 			};
 
 #define SPMM_CASE(z,numimg,trans) case (numimg+1): \
-		spmm_dia<value_type,index_type,((numimg>8)?96:96),(numimg+1),trans>::apply(A,v,dst,factAv,factC);break;
+		spmm_dia<value_type,index_type,((numimg>4)?256:256),(numimg+1),trans>::apply(A,v,dst,factAv,factC);break;
 
 		template <typename value_type, typename index_type>
 			void spmv_dia_device(const dev_dia_matrix<value_type,index_type>& A, 
