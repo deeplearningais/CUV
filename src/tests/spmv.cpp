@@ -17,6 +17,7 @@ using namespace cuv;
 
 static const int n = 32;
 static const int m = 16;
+static const int k = 2;
 
 struct Fix{
 	host_dia_matrix<float>   A;
@@ -26,10 +27,10 @@ struct Fix{
 	Fix()
 	:   A(n,m,7,min(n,m))
 	,   A_(n,m)
-	,   B(m,1)
-	,   B_(m,1)
-	,   C(n,1)
-	,   C_(n,1)
+	,   B(m,k)
+	,   B_(m,k)
+	,   C(n,k)
+	,   C_(n,k)
 	{
 		std::vector<int> off;
 #if 0
@@ -59,7 +60,6 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 BOOST_AUTO_TEST_CASE( spmv_dev_correctness_trans )
 {
 	sequence(C.vec());
-	fill(B.vec(),0);
 	dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride());
 	convert(A2,A);
 	dev_dense_matrix<float> C2(C.h(),C.w());
