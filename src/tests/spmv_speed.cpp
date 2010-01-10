@@ -15,7 +15,7 @@
 using namespace std;
 using namespace cuv;
 
-static const int n = 4096;
+static const int n = 8092;
 static const int m = 4096;
 static const int k = 96;
 
@@ -37,7 +37,7 @@ struct Fix{
 	host_dense_matrix<float> B,B_,BLarge;
 	host_dense_matrix<float> C,C_,CLarge;
 	Fix()
-	:   A(n,m,32,min(n,m))
+	:   A(n,m,64,min(n,m))
 	,   A_(n,m)
 	,   B(m,1)
 	,   B_(m,1)
@@ -95,17 +95,17 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed )
 }
 BOOST_AUTO_TEST_CASE( spmv_host_speed )
 {
-	float factAv = 2.f, factC = 1.3f;
-	MEASURE_TIME(sparse, prod(CLarge,A,BLarge,'n','n',factAv,factC), 10);
-	MEASURE_TIME(dense , prod(CLarge,A_,BLarge,'n','n',factAv,factC), 10);
-	printf("Speedup: %3.4f\n", dense/sparse);
+   float factAv = 2.f, factC = 1.3f;
+   MEASURE_TIME(sparse, prod(CLarge,A,BLarge,'n','n',factAv,factC), 10);
+   MEASURE_TIME(dense , prod(CLarge,A_,BLarge,'n','n',factAv,factC), 10);
+   printf("Speedup: %3.4f\n", dense/sparse);
 
-	MEASURE_TIME(sparse_t, prod(BLarge,A,CLarge,'t','n',factAv,factC), 10);
-	MEASURE_TIME(dense_t , prod(BLarge,A_,CLarge,'t','n',factAv,factC), 10);
-	printf("Speedup: %3.4f\n", dense_t/sparse_t);
+   MEASURE_TIME(sparse_t, prod(BLarge,A,CLarge,'t','n',factAv,factC), 10);
+   MEASURE_TIME(dense_t , prod(BLarge,A_,CLarge,'t','n',factAv,factC), 10);
+   printf("Speedup: %3.4f\n", dense_t/sparse_t);
 
-	BOOST_CHECK_LT(sparse,  dense);
-	BOOST_CHECK_LT(sparse_t,dense_t);
+   BOOST_CHECK_LT(sparse,  dense);
+   BOOST_CHECK_LT(sparse_t,dense_t);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
