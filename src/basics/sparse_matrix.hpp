@@ -41,6 +41,7 @@ namespace cuv{
 			void dealloc(){
 				if(m_vec)
 					delete m_vec;
+				m_vec = NULL;
 			}
 			void alloc(){
 				cuvAssert(m_stride >= this->h() || m_stride >= this->w());
