@@ -16,8 +16,8 @@ using namespace std;
 #define large_grid_thread_id(void) ((__umul24(blockDim.x,blockIdx.x + __umul24(blockIdx.y,gridDim.x)) + threadIdx.x))
 #define large_grid_thread_num(void) ((__umul24(blockDim.x,gridDim.x + __umul24(blockDim.y,gridDim.y))))
 
-/*#define MAX_NUM_IMGS_AT_ONCE 6*/
-#define MAX_NUM_IMGS_AT_ONCE 2
+#define MAX_NUM_IMGS_AT_ONCE 6
+/*#define MAX_NUM_IMGS_AT_ONCE 1*/
 
 
 namespace cuv{
@@ -134,7 +134,6 @@ namespace cuv{
 								sums[BLOCK_SIZE*i + threadIdx.x] += A_ij * fetch_x<UseCache>(row,v + i * A_h);
 						}
 					}
-					__syncthreads();
 					for(unsigned int i=0;i<NUM_IMG;i++){
 						dst[col + i*A_w] = (wantFactC  ? factC * dst[col + i * A_w] : 0.f) 
 							+              (wantFactAv ? factAv                     : 1.f) * sums[BLOCK_SIZE*i + threadIdx.x];
@@ -212,13 +211,13 @@ namespace cuv{
 				// load diagonal offsets into shared memory
 				if(threadIdx.x < A_nd)
 					offsets[threadIdx.x] = A_diaoff[threadIdx.x];
+				__syncthreads();
 
 				for(index_type row = thread_id; row < A_h; row += grid_size)
 				{
 					// initialize shared memory
 					for(unsigned int i=0;i<NUM_IMG;i++)
 						sums[BLOCK_SIZE*i + threadIdx.x] = (value_type) 0 ;
-					__syncthreads();
 					index_type offset = row;
 					for(index_type n = 0; n < A_nd; n++, offset+=A_stride)
 					{
@@ -230,7 +229,6 @@ namespace cuv{
 								sums[BLOCK_SIZE*i + threadIdx.x] += A_ij * fetch_x<UseCache>(col,v + i * A_w);
 						}
 					}
-					__syncthreads();
 					for(unsigned int i=0;i<NUM_IMG;i++){
 						dst[row + i*A_h] = (wantFactC  ? factC * dst[row + i * A_h] : 0.f) 
 							+              (wantFactAv ? factAv                     : 1.f) * sums[BLOCK_SIZE*i + threadIdx.x];
@@ -327,7 +325,7 @@ namespace cuv{
 			};
 
 #define SPMM_CASE(z,numimg,trans) case (numimg+1): \
-		spmm_dia<value_type,index_type,((numimg>4)?256:256),(numimg+1),trans>::apply(A,v,dst,factAv,factC);break;
+		spmm_dia<value_type,index_type,((numimg>4)?128:128),(numimg+1),trans>::apply(A,v,dst,factAv,factC);break;
 
 		template <typename value_type, typename index_type>
 			void spmv_dia_device(const dev_dia_matrix<value_type,index_type>& A, 

@@ -17,7 +17,7 @@ using namespace cuv;
 
 static const int n = 32;
 static const int m = 16;
-static const int k = 2;
+static const int k = 6;
 
 struct Fix{
 	host_dia_matrix<float>   A;
