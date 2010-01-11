@@ -37,7 +37,7 @@ struct Fix{
 	host_dense_matrix<float> B,B_,BLarge;
 	host_dense_matrix<float> C,C_,CLarge;
 	Fix()
-	:   A(n,m,64,min(n,m))
+	:   A(n,m,128,max(n,m))
 	,   A_(n,m)
 	,   B(m,1)
 	,   B_(m,1)
@@ -47,7 +47,7 @@ struct Fix{
 	,   CLarge(n,k)
 	{
 		std::vector<int> off;
-#if 0
+#if 1
 		for(int i=0;i<A.num_dia();i++)
 #elif 0
 		for(int i=2;i<A.num_dia()+2;i++)
