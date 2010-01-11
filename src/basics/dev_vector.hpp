@@ -27,7 +27,7 @@ class dev_vector
 		/*
 		 * Member access
 		 */
-		value_type operator[](size_t t);
+		value_type operator[](size_t t)const;
 		/* 
 		 * Memory management
 		 */

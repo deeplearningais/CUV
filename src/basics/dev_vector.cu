@@ -12,8 +12,8 @@
 namespace cuv{
 
 template<class V,class I>
-V dev_vector<V,I>::operator[](size_t idx){
-	thrust::device_ptr<value_type> ptr(this->ptr());
+V dev_vector<V,I>::operator[](size_t idx)const{
+	const thrust::device_ptr<const value_type> ptr(this->ptr());
 	return (value_type) *(ptr+idx);
 }
 template<class V,class I>
