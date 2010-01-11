@@ -27,6 +27,9 @@ TARGET_LINK_LIBRARIES( test_dia_mat cuv_basics cuv_tools cuv_convert cuv_vector_
 ADD_EXECUTABLE( test_spmv spmv.cpp )
 TARGET_LINK_LIBRARIES( test_spmv         cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
 
+ADD_EXECUTABLE( test_densedense_to_dia densedense_to_dia.cpp )
+TARGET_LINK_LIBRARIES( test_densedense_to_dia     cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
 ADD_EXECUTABLE( test_spmv_speed spmv_speed.cpp )
 TARGET_LINK_LIBRARIES( test_spmv_speed   cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
 
@@ -43,6 +46,7 @@ ADD_TEST( convert "${CMAKE_BINARY_DIR}/tests/test_convert" )
 ADD_TEST( vec_op "${CMAKE_BINARY_DIR}/tests/test_vec_op" )
 ADD_TEST( random "${CMAKE_BINARY_DIR}/tests/test_random" )
 ADD_TEST( spmv "${CMAKE_BINARY_DIR}/tests/test_spmv" )
+ADD_TEST( densedense_to_dia "${CMAKE_BINARY_DIR}/tests/test_densedense_to_dia" )
 ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/tests/test_dia_mat" )
 
 # speed tests just take too long.

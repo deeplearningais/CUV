@@ -6,6 +6,7 @@ CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/basics )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/vector_ops )
 CUDA_ADD_LIBRARY(cuv_matrix_ops SHARED
+	densedense_to_sparse.cu
 	matrix_ops.cu
 	spmv.cu
   )
