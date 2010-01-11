@@ -16,7 +16,8 @@ using namespace std;
 #define large_grid_thread_id(void) ((__umul24(blockDim.x,blockIdx.x + __umul24(blockIdx.y,gridDim.x)) + threadIdx.x))
 #define large_grid_thread_num(void) ((__umul24(blockDim.x,gridDim.x + __umul24(blockDim.y,gridDim.y))))
 
-#define MAX_NUM_IMGS_AT_ONCE 6
+/*#define MAX_NUM_IMGS_AT_ONCE 6*/
+#define MAX_NUM_IMGS_AT_ONCE 2
 
 
 namespace cuv{
@@ -48,9 +49,9 @@ namespace cuv{
 		/****************************************************************
 		 *   Device Code
 		 ****************************************************************/
-		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache, bool wantFactAv, bool wantFactC>
+		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache, int NUM_IMG, bool wantFactAv, bool wantFactC>
 			__global__ void
-			spmv_dia_kernel_trans(const index_type A_h, 
+			spmm_dia_kernel_trans_register(const index_type A_h, 
 					const index_type A_w, 
 					const index_type A_nd,
 					const index_type A_stride,
@@ -62,6 +63,7 @@ namespace cuv{
 					const value_type factC)
 			{
 				__shared__ int        offsets[BLOCK_SIZE];
+				value_type            sums[NUM_IMG];
 
 				const index_type thread_id = large_grid_thread_id();
 				const index_type grid_size = large_grid_thread_num();
@@ -69,30 +71,33 @@ namespace cuv{
 				// load diagonal offsets into shared memory
 				if(threadIdx.x < A_nd)
 					offsets[threadIdx.x] = A_diaoff[threadIdx.x];
-
 				__syncthreads();
 
 				for(index_type col = thread_id; col < A_w; col += grid_size)
 				{
-					value_type sum = wantFactC ? factC * dst[col] : 0;
+					for(unsigned int i=0;i<NUM_IMG;i++)
+						sums[i] = (value_type)0 ;
 					index_type offset = 0;
-
 					for(index_type n = 0; n < A_nd; n++, offset+=A_stride)
 					{
 						const int row = col - offsets[n];
-
 						if(row >= 0 && row < A_h)
 						{
 							const value_type A_ij = A_data[       offset + row];
-							sum += (wantFactAv ? factAv : 1.f ) * A_ij * fetch_x<UseCache>(row, v);
+							for(unsigned int i=0;i<NUM_IMG;i++)
+								sums[i] += A_ij * fetch_x<UseCache>(row,v + i * A_h);
 						}
 					}
-					dst[col] = sum;
+					__syncthreads();
+					for(unsigned int i=0;i<NUM_IMG;i++){
+						dst[col + i*A_w] = (wantFactC  ? factC * dst[col + i * A_w] : 0.f) 
+							+              (wantFactAv ? factAv                     : 1.f) * sums[i];
+					}
 				}
 			}
 		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache, int NUM_IMG, bool wantFactAv, bool wantFactC>
 			__global__ void
-			spmm_dia_kernel_trans(const index_type A_h, 
+			spmm_dia_kernel_trans_shared(const index_type A_h, 
 					const index_type A_w, 
 					const index_type A_nd,
 					const index_type A_stride,
@@ -136,9 +141,9 @@ namespace cuv{
 					}
 				}
 			}
-		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache, bool wantFactAv, bool wantFactC>
+		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache, unsigned int NUM_IMG, bool wantFactAv, bool wantFactC>
 			__global__ void
-			spmv_dia_kernel(
+			spmm_dia_kernel_register(
 					const index_type A_h, 
 					const index_type A_w, 
 					const index_type A_nd,
@@ -150,7 +155,8 @@ namespace cuv{
 					const value_type factAv,
 					const value_type factC)
 			{
-				__shared__ int offsets[BLOCK_SIZE];
+				__shared__ int        offsets[BLOCK_SIZE];
+				value_type            sums[NUM_IMG];
 
 				const index_type thread_id = large_grid_thread_id();
 				const index_type grid_size = large_grid_thread_num();
@@ -159,11 +165,12 @@ namespace cuv{
 				if(threadIdx.x < A_nd)
 					offsets[threadIdx.x] = A_diaoff[threadIdx.x];
 
-				__syncthreads();
-
 				for(index_type row = thread_id; row < A_h; row += grid_size)
 				{
-					value_type sum = wantFactC ? factC * dst[row] : 0 ;
+					// initialize shared memory
+					for(unsigned int i=0;i<NUM_IMG;i++)
+						sums[i] = (value_type) 0 ;
+					__syncthreads();
 					index_type offset = row;
 					for(index_type n = 0; n < A_nd; n++, offset+=A_stride)
 					{
@@ -171,15 +178,20 @@ namespace cuv{
 						if(col >= 0 && col < A_w)
 						{
 							const value_type A_ij = A_data[       offset];
-							sum += (wantFactAv ? factAv : 1.f) * A_ij * fetch_x<UseCache>(col, v);
+							for(unsigned int i=0;i<NUM_IMG;i++)
+								sums[i] += A_ij * fetch_x<UseCache>(col,v + i * A_w);
 						}
 					}
-					dst[row] = sum;
+					__syncthreads();
+					for(unsigned int i=0;i<NUM_IMG;i++){
+						dst[row + i*A_h] = (wantFactC  ? factC * dst[row + i * A_h] : 0.f) 
+							+              (wantFactAv ? factAv                     : 1.f) * sums[i];
+					}
 				}
 			}
 		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, bool UseCache, unsigned int NUM_IMG, bool wantFactAv, bool wantFactC>
 			__global__ void
-			spmm_dia_kernel(
+			spmm_dia_kernel_shared(
 					const index_type A_h, 
 					const index_type A_w, 
 					const index_type A_nd,
@@ -225,6 +237,9 @@ namespace cuv{
 					}
 				}
 			}
+		/*
+		 * General declaration of spmm_dia
+		 */
 		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, unsigned int NUM_IMG, bool transA>
 			struct spmm_dia{
 				static void apply(
@@ -235,7 +250,7 @@ namespace cuv{
 						const float& factC);
 			};
 
-		// implementation for non-transposed A
+		// spmm_dia implementation for non-transposed A
 		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, unsigned int NUM_IMG>
 			struct spmm_dia<value_type, index_type, BLOCK_SIZE, NUM_IMG, false>{
 				static void apply(
@@ -251,19 +266,31 @@ namespace cuv{
 						bind_x(v.ptr(), v.size());
 					if(0);
 					else if(factAv==1.f && factC == 0.f){
-						spmm_dia_kernel<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						if(NUM_IMG==1)
+							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						else
+							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else if(factAv==1.f && factC != 0.f){
-						spmm_dia_kernel<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						if(NUM_IMG==1)
+							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						else
+							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else if(factAv!=1.f && factC == 0.f){
-						spmm_dia_kernel<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						if(NUM_IMG==1)
+							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						else
+							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else{
-						spmm_dia_kernel<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						if(NUM_IMG==1)
+							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						else
+							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}
 					if(useCache)
 						unbind_x(v.ptr());
 				}
 			};
-		// implementation for transposed A
+		// spmm_dia implementation for transposed A
 		template <typename value_type, typename index_type, unsigned int BLOCK_SIZE, unsigned int NUM_IMG>
 			struct spmm_dia<value_type, index_type, BLOCK_SIZE, NUM_IMG, true>{
 				static void apply(
@@ -276,13 +303,25 @@ namespace cuv{
 					cuvAssert(A.num_dia() <= BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals
 					if(0);
 					else if(factAv==1.f && factC == 0.f){
-						spmm_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						if(NUM_IMG==1)
+							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						else
+							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else if(factAv==1.f && factC != 0.f){
-						spmm_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						if(NUM_IMG==1)
+							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						else
+							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else if(factAv!=1.f && factC == 0.f){
-						spmm_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						if(NUM_IMG==1)
+							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						else
+							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else{
-						spmm_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						if(NUM_IMG==1)
+							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+						else
+							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}
 				}
 			};
@@ -307,7 +346,7 @@ namespace cuv{
 					}
 				}else{
 					switch( v.size() / A.h() ){
-						BOOST_PP_REPEAT(MAX_NUM_IMGS_AT_ONCE,SPMM_CASE,true);  // image-num 1..32; not transposed
+						BOOST_PP_REPEAT(MAX_NUM_IMGS_AT_ONCE,SPMM_CASE,true);  // image-num 1..32;     transposed
 						default: 
 						cout << "Not implemented: SPMM w/ num_img="<<v.size()/A.h()<<endl;
 						cuvAssert(false);
