@@ -25,7 +25,7 @@ struct Fix{
 	host_dense_matrix<float> B,B_;
 	host_dense_matrix<float> C,C_;
 	Fix()
-	:   A(n,m,7,min(n,m))
+	:   A(n,m,7,max(n,m))
 	,   A_(n,m)
 	,   B(m,k)
 	,   B_(m,k)
