@@ -15,7 +15,9 @@ texture<int2,1>  tex_x_double;
 // Use int2 to pull doubles through texture cache
 void bind_x(const float * x, const unsigned int len)
 {   
-	cudaBindTexture(NULL, tex_x_float, (const void *)x, sizeof(float)*len);
+	size_t offset;
+	cuvSafeCall(cudaBindTexture(&offset, tex_x_float, (const void *)x, sizeof(float)*len));
+	cuvAssert(offset==0);
 	//cuvSafeCall(cudaBindTexture(NULL, tex_x_float, x));   
 }
 
