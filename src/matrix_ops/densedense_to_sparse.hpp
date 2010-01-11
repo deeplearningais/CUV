@@ -24,12 +24,12 @@ namespace cuv{
 			typedef dev_dia_matrix<value_type,index_type> diamat_type;
 		protected:
 			struct block{
-				index_type              startx,starty;
-				index_type              diag[2*SPARSE_DIA_BLOCK_SIZE];
+				int              startx,starty;
+				int              diag[2*SPARSE_DIA_BLOCK_SIZE];
 			};
 			struct block_array{ 
-				index_type*             ptr; 
-				unsigned int            len; 
+				int*    ptr; 
+				int     len; 
 			} m_blocks;
 		public:
 			dev_block_descriptor(const diamat_type&);

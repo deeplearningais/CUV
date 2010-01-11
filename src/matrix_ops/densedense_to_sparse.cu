@@ -11,66 +11,71 @@ using namespace std;
 template <class value_type, class index_type>                                                                        
 __global__                                                                                                            
 void                                                                                                                  
-dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_type wA, index_type wB, index_type* blockidx, int dialen)
+dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_type wA, index_type hA, index_type hB, int* blockidx, int dialen)
 {
-	uint2 blk = ((uint2*) blockidx)[SPARSE_DIA_BLOCK_SIZE_LEN/2 * blockIdx.x ];
+	int2 blk = ((int2*) blockidx)[SPARSE_DIA_BLOCK_SIZE_LEN/2 * blockIdx.x ];
 
-	__shared__ index_type dia_offsets[SPARSE_DIA_BLOCK_SIZE*2];
-	index_type v = __mul24(SPARSE_DIA_BLOCK_SIZE,threadIdx.y) + threadIdx.x;
+	__shared__ int dia_offsets[SPARSE_DIA_BLOCK_SIZE*2];
+	int v = __mul24(SPARSE_DIA_BLOCK_SIZE,threadIdx.y) + threadIdx.x;
 	if(v < SPARSE_DIA_BLOCK_SIZE*2)
 		dia_offsets[v] = blockidx[SPARSE_DIA_BLOCK_SIZE_LEN * blockIdx.x + 2 + v]; // 2: the two ints read already above
 
 	__syncthreads();
 
-    index_type tx = threadIdx.x;                                                                                             
-    index_type ty = threadIdx.y;                                                                                             
+    int tx = threadIdx.x;                                                                                             
+    int ty = threadIdx.y;                                                                                             
                                                                                                                       
-    index_type aBegin = wA * SPARSE_DIA_BLOCK_SIZE * blk.y;                                                              
-    index_type aEnd   = aBegin + wA - 1;
-    index_type aStep  = SPARSE_DIA_BLOCK_SIZE;                                                                                          
+    int aBegin = blk.y;                                                              
+    int aEnd   = aBegin + hA*wA;
+    int aStep  = hA * SPARSE_DIA_BLOCK_SIZE;                                                                                          
                                                                                                                       
-    index_type bBegin = wA * SPARSE_DIA_BLOCK_SIZE * blk.x;                                                              
-    index_type bStep  = SPARSE_DIA_BLOCK_SIZE;                                                                                          
+    int bBegin = blk.x;                                                              
+    int bStep  = hB * SPARSE_DIA_BLOCK_SIZE;                                                                                          
                                                                                                                       
     value_type Csub = 0;                                                                                            
                                                                                                                       
-    index_type waty = __mul24(wA,ty)+tx;                                                                                     
-                                                                                                                      
+    int hatyptx = __mul24(hA,ty)+tx;                                                                                     
+    int hbtyptx = __mul24(hB,ty)+tx;                                                                                     
 
-    for (index_type a = aBegin, b  = bBegin;                                                                                 
-             a <= aEnd;                                                                                               
+    for (int a = aBegin, b  = bBegin;                                                                                 
+             a < aEnd;                                                                                               
              a += aStep, b += bStep) {                                                                                
+		/*if(tx==0 && ty == 0)*/
+		/*    printf("Loop: a = %d    b = %d\n",a,b);*/
                                                                                                                       
         __shared__ value_type As[SPARSE_DIA_BLOCK_SIZE][SPARSE_DIA_BLOCK_SIZE];                                                           
-        __shared__ value_type Bs[SPARSE_DIA_BLOCK_SIZE][SPARSE_DIA_BLOCK_SIZE+1];                                                         
+        __shared__ value_type Bs[SPARSE_DIA_BLOCK_SIZE][SPARSE_DIA_BLOCK_SIZE];                                                         
                                                                                                                       
-		AS(ty, tx) = A[a + waty];                                                                     
-		BS(ty, tx) = B[b + waty];                                                                     
+		AS(ty, tx) = A[a + hatyptx];                                                                     
+		BS(ty, tx) = B[b + hbtyptx];                                                                     
                                                                                                                       
 		__syncthreads();  // Synchronize to make sure the matrices are loaded                                                          
 																													  
-		for (index_type k = 0; k < SPARSE_DIA_BLOCK_SIZE; ++k)
-		   Csub += AS(ty,k)*BS(tx, k);
+		/*printf("t(%d,%d):  a+hatyptx=%d b+hatyptx=%d\n",tx,ty,a+hatyptx, b+hatyptx);*/
+		for (int k = 0; k < SPARSE_DIA_BLOCK_SIZE; ++k){
+			Csub += AS(k,ty)*BS(k,tx);
+		}
 		__syncthreads();
     }
+	/*printf("t(%d,%d) Csub: %3.1f\n", tx,ty, Csub);*/
 
 	// diagonal in block
-	int dia = tx - ty;
-	int dia_real = __mul24(SPARSE_DIA_BLOCK_SIZE,blk.x) - __mul24(SPARSE_DIA_BLOCK_SIZE,blk.y) + dia;
+	int dia        = tx - ty;
+	int dia_real   = blk.x - blk.y + dia;
 	int dia_sparse = dia_offsets[SPARSE_DIA_BLOCK_SIZE-1+dia];
-	int offd =  __mul24(blk.y,SPARSE_DIA_BLOCK_SIZE)+ty;
-	/*printf("Csub=%2.2f dia=%d dia_real=%d dia_sparse=%d tx=%d ty=%d blk=%d,%d\n",Csub,dia,dia_real,dia_sparse,tx,ty,blk.x,blk.y);*/
-	if(dia_sparse >= 0){
-		int idx = dia_sparse*dialen           // the diagonal in the final matrix
-		   + offd;                            // offset within diagonal
-		/*printf("idx=%5d Csub=%2.2f dia=%d dia_real=%d dia_sparse=%d tx=%d ty=%d blk=%d,%d\n",idx,Csub,dia,dia_real,dia_sparse,tx,ty,blk.x,blk.y);*/
-	   C[ idx ] += Csub;
+	if(dia_sparse >= 0 && blk.x+tx<hB && blk.y+ty<hA){
+		int offd   =  blk.y + ty;
+		int idx    = dia_sparse*dialen           // the diagonal in the final matrix
+		   +         offd;                       // offset within diagonal
+	   C[ idx ]  = Csub;
 	}
 }   
 
 namespace cuv{
 	template<class V, class I>
-		dev_block_descriptor<V,I>::dev_block_descriptor(const diamat_type& mat){
+		dev_block_descriptor<V,I>::dev_block_descriptor(const diamat_type& mat)
+		{
+			m_blocks.ptr = NULL;
 			thrust::host_vector<int> dia_offsets(
 					thrust::device_ptr<const int>(mat.get_offsets().ptr()),
 					thrust::device_ptr<const int>(mat.get_offsets().ptr()+mat.get_offsets().size()));
@@ -80,32 +85,45 @@ namespace cuv{
 					/*int upperdia = (j+SPARSE_DIA_BLOCK_SIZE-1) - i; // diagonal of upper right element of BLOCK_SIZExBLOCK_SIZE block*/
 					int lowerdia = j - (i+SPARSE_DIA_BLOCK_SIZE-1); // diagonal of lower left  element of BLOCK_SIZExBLOCK_SIZE block
 					block b;
-					b.startx = j/SPARSE_DIA_BLOCK_SIZE;
-					b.starty = i/SPARSE_DIA_BLOCK_SIZE;
+					b.startx = j;
+					b.starty = i;
 					bool founddiag = false;
 					for(int e=0; e<2*SPARSE_DIA_BLOCK_SIZE-1;e++){ // diag within block
+						b.diag[e] = -1;
 						for(int d=0; d< dia_offsets.size();d++){
 							if(lowerdia + e == dia_offsets[d]){
+								/*cout << "Found Diag: "<<i<<" "<< j<<" e=" << e <<" ld="<<lowerdia<< ", d="<<d<<" do[d]="<<dia_offsets[d]<<endl;*/
 								b.diag[e] = d;
 								founddiag = true;
 								break; // look at next diag of block
-							}else{
-								b.diag[e] = -1;
 							}
 						}
 					}
 					if(founddiag){
+						/*cout << "Found Block: " << b.startx << ", "<<b.starty<<endl;*/
+						/*cout << "           : ";*/
+						for(int i=0;i<2*SPARSE_DIA_BLOCK_SIZE-1;i++){
+							cout << b.diag[i]<<" ";
+						}
 						blocks.push_back(b);
+						cout <<endl;
 					}
 				}
 			}
-			cuvSafeCall(cudaMalloc((void**)&m_blocks.ptr, sizeof(int) * SPARSE_DIA_BLOCK_SIZE_LEN*blocks.size()));
-			cuvSafeCall(cudaMemcpy(m_blocks.ptr, (void*)&blocks.front(), SPARSE_DIA_BLOCK_SIZE_LEN*blocks.size()*sizeof(int),cudaMemcpyHostToDevice));
+			size_t siz = sizeof(block) * blocks.size();
+			cuvSafeCall(cudaMalloc((void**)&m_blocks.ptr, siz));
+			cuvSafeCall(cudaMemcpy(m_blocks.ptr, (void*)&blocks.front(),siz,cudaMemcpyHostToDevice));
 			m_blocks.len = blocks.size();
+			cout << "Final Block-Set MemSize: "<< siz<<endl;
+			cout << "Final Block-Set Size: "<< m_blocks.len<<endl;
+			cout << "Final Block-Set  Ptr: "<< m_blocks.ptr<<endl;
+			cout << "Final Block-Set Size: "<< blocks.size()<<endl;
 		}
 	template<class V,class I>
 		dev_block_descriptor<V,I>::~dev_block_descriptor(){
-			cuvSafeCall(cudaFree(m_blocks.ptr));
+			if(m_blocks.ptr)
+				cuvSafeCall(cudaFree(m_blocks.ptr));
+			m_blocks.ptr = NULL;
 		}
 
 	namespace densedense_to_dia_impl{
@@ -117,10 +135,14 @@ namespace cuv{
 					const dev_dense_matrix<value_type,cuv::column_major,index_type>& B){
 				dim3 block(SPARSE_DIA_BLOCK_SIZE, SPARSE_DIA_BLOCK_SIZE);
 				dim3 grid(bd.blocks().len);
+				cuvAssert(bd.blocks().ptr);
+				cuvAssert(dst.w() == B.h());
+				cuvAssert(dst.h() == A.h());
+				cuvAssert(A.w()   == B.w());
+				cuvAssert(A.w() % SPARSE_DIA_BLOCK_SIZE  == 0);
 				cout << "dMultiplyAdd: block:" << block.x << ", "<<block.y<<"; grid: "<<grid.x<<endl;
-				value_type* c   = dst.vec()->ptr();
-				dense2dia_mm<value_type><<<grid,block>>>(c, A.ptr(), B.ptr(), A.w(), B.w(), bd.blocks().ptr, dst.stride());
 				cout << "MatrixInfo: Need to calculate " << bd.blocks().len << " of " << dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE) <<" blocks"<<endl;
+				dense2dia_mm<value_type><<<grid,block>>>(dst.vec()->ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride());
 				cuvSafeCall(cudaThreadSynchronize());
 			}
 	}
