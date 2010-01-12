@@ -56,7 +56,7 @@ struct Fix{
 #endif
 			off.push_back(i);
 		A.set_offsets(off);
-		sequence(*A.vec());
+		sequence(A.vec());
 		sequence(C);
 		sequence(C_);
 		sequence(B);

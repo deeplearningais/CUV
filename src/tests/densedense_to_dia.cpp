@@ -48,7 +48,7 @@ struct Fix{
 		sequence(B);
 		sequence(B_);
 
-		sequence(*C.vec());
+		sequence(C.vec());
 		host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride());
 		host_dense_matrix<float> C_2(C.h(),C.w());
 		convert(C2,C);  // dev->host
@@ -65,7 +65,7 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( dd2s_correctness_dev )
 {
-	fill(*C.vec(),0);
+	fill(C.vec(),0);
 	sequence(A);
 	sequence(B);
 	dev_block_descriptor<float> bd(C);
@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE( dd2s_correctness_dev )
 
 BOOST_AUTO_TEST_CASE( dd2s_correctness_host )
 {
-	fill(*C.vec(),0);
+	fill(C.vec(),0);
 	sequence(A);
 	sequence(B);
 

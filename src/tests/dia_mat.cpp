@@ -45,8 +45,8 @@ BOOST_AUTO_TEST_CASE( trans )
 	off.push_back(-1);
 	lw.set_offsets(off);
 	lwt.set_offsets(off);
-	sequence(*lw.vec());
-	sequence(*lwt.vec());
+	sequence(lw.vec());
+	sequence(lwt.vec());
 	BOOST_CHECK_CLOSE( lw(0,0), 0.f,  0.01 );
 	BOOST_CHECK_CLOSE( lw(1,1), 1.f,  0.01 );
 	BOOST_CHECK_CLOSE( lw(2,2), 2.f,  0.01 );
@@ -74,7 +74,7 @@ for(int i=0;i<w.h();i++){
 		BOOST_CHECK_CLOSE( w(i,j), w2(i,j), 1.0 );
 	}
 }
-fill(*w.vec(),0);
+fill(w.vec(),0);
 
 // dev->host
 convert(w,w2);

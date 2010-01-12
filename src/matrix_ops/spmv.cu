@@ -265,24 +265,24 @@ namespace cuv{
 					if(0);
 					else if(factAv==1.f && factC == 0.f){
 						if(NUM_IMG==1)
-							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 						else
-							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else if(factAv==1.f && factC != 0.f){
 						if(NUM_IMG==1)
-							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 						else
-							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else if(factAv!=1.f && factC == 0.f){
 						if(NUM_IMG==1)
-							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 						else
-							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else{
 						if(NUM_IMG==1)
-							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_register<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 						else
-							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_shared<value_type, index_type, BLOCK_SIZE,useCache,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}
 					if(useCache)
 						unbind_x(v.ptr());
@@ -302,24 +302,24 @@ namespace cuv{
 					if(0);
 					else if(factAv==1.f && factC == 0.f){
 						if(NUM_IMG==1)
-							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 						else
-							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else if(factAv==1.f && factC != 0.f){
 						if(NUM_IMG==1)
-							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 						else
-							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,false,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else if(factAv!=1.f && factC == 0.f){
 						if(NUM_IMG==1)
-							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 						else
-							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,false> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}else{
 						if(NUM_IMG==1)
-							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_trans_register<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 						else
-							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr(), factAv,factC);
+							spmm_dia_kernel_trans_shared<value_type, index_type, BLOCK_SIZE, false,NUM_IMG,true,true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
 					}
 				}
 			};
@@ -369,12 +369,12 @@ namespace cuv{
 		/*            const unsigned int BLOCK_SIZE = 256;*/
 		/*            const dim3 grid = make_large_grid(A.h(),BLOCK_SIZE);*/
 		/*            cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals*/
-		/*            spmv_dia_kernel<value_type, index_type, BLOCK_SIZE, true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr());*/
+		/*            spmv_dia_kernel<value_type, index_type, BLOCK_SIZE, true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr());*/
 		/*        }else{*/
 		/*            const unsigned int BLOCK_SIZE = 256;*/
 		/*            const dim3 grid = make_large_grid(A.w(),BLOCK_SIZE);*/
 		/*            cuvAssert(A.num_dia() < BLOCK_SIZE); // kernel doesn't handle larger numbers of diagonals*/
-		/*            spmv_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec()->ptr(), v.ptr(), dst.ptr());*/
+		/*            spmv_dia_kernel_trans<value_type, index_type, BLOCK_SIZE, true> <<<grid, BLOCK_SIZE>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr());*/
 		/*        }*/
 
 		/*        unbind_x(v.ptr());*/
@@ -413,7 +413,7 @@ namespace cuv{
 						//number of elements to process
 						const index_type N = std::min(A_h - j_start, A_w - i_start);
 
-						const value_type * d_ = A.vec()->ptr() + i*A_stride + j_start;
+						const value_type * d_ = A.vec().ptr() + i*A_stride + j_start;
 						const value_type * x_ = v.ptr() + j_start;
 						value_type * y_ = dst.ptr() + i_start;
 
@@ -433,7 +433,7 @@ namespace cuv{
 						//number of elements to process
 						const index_type N = std::min(A_h - i_start, A_w - j_start);
 
-						const value_type * d_ = A.vec()->ptr() + i*A_stride + i_start;
+						const value_type * d_ = A.vec().ptr() + i*A_stride + i_start;
 						const value_type * x_ = v.ptr() + j_start;
 						value_type * y_ = dst.ptr() + i_start;
 

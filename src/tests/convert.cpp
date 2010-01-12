@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE( dia2host )
 	off.push_back(0);
 	off.push_back(1);
 	off.push_back(-1);
-	sequence(*hdia.vec());
+	sequence(hdia.vec());
 	hdia.set_offsets(off);
 	//hdia.transpose(); // works, too
 	convert(hdns,hdia);

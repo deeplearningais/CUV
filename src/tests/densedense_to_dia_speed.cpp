@@ -55,7 +55,7 @@ struct Fix{
 		C.set_offsets(off);
 		sequence(A);
 		sequence(B);
-		sequence(*C.vec());
+		sequence(C.vec());
 	}
 	~Fix(){
 	}
@@ -66,7 +66,7 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( dd2s_speed_host_host )
 {
-	fill(*C.vec(),0);
+	fill(C.vec(),0);
 
 	host_dia_matrix<float>   C2(C.h(),C.w(),C.num_dia(),C.stride());
 	host_dense_matrix<float> C2dense(C.h(),C.w());
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_host_host )
 
 BOOST_AUTO_TEST_CASE( dd2s_speed_dev_host )
 {
-	fill(*C.vec(),0);
+	fill(C.vec(),0);
 
 	host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride());
 	host_dense_matrix<float,column_major> A2(A.h(),A.w());
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_sparse_dense )
 {
 	//if(n>1024 || m>1024)
 	//    return; // otherwise, we get out of memory errors!
-	fill(*C.vec(),0);
+	fill(C.vec(),0);
 
 	// make a dev_dense_matrix equivalent to the dia-matrix
 	dev_dense_matrix<float,column_major> Cd(C.h(),C.w());

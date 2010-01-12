@@ -189,7 +189,7 @@ namespace cuv{
 						cuvAssert(false); // no operator= yet
 					}
 					cuv::convert(dst.get_offsets(), src.get_offsets());
-					cuv::convert(*dst.vec(), *src.vec());
+					cuv::convert(dst.vec(), src.vec());
 					dst.post_update_offsets();
 				}
 
@@ -206,7 +206,7 @@ namespace cuv{
 						cuvAssert(false); // no operator= yet
 					}
 					cuv::convert(dst.get_offsets(), src.get_offsets());
-					cuv::convert(*dst.vec(), *src.vec());
+					cuv::convert(dst.vec(), src.vec());
 					dst.post_update_offsets();
 				}
 

@@ -47,8 +47,8 @@ namespace cuv{
 				cuvAssert(m_stride >= this->h() || m_stride >= this->w());
 				m_vec = new vec_type(m_stride * m_num_dia);
 			}
-			inline const vec_type* vec()const{ return m_vec; }
-			inline       vec_type* vec()     { return m_vec; }
+			inline const vec_type& vec()const{ return *m_vec; }
+			inline       vec_type& vec()     { return *m_vec; }
 			inline int num_dia()const{ return m_num_dia; }
 			inline int stride()const { return m_stride;  }
 			inline bool transposed()const{ return m_is_transposed; }

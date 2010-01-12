@@ -163,7 +163,7 @@ namespace cuv{
 				cuvAssert(dst.w() == B.h());
 				cuvAssert(dst.h() == A.h());
 				cuvAssert(A.w()   == B.w());
-				value_type *dst_diabase = dst.vec()->ptr();
+				value_type *dst_diabase = dst.vec().ptr();
 				index_type Ah = A.h(), Aw = A.w(), Bh = B.h(), Ch = dst.h(), Cw = dst.w();
 				for(int dia=0;dia<dst.num_dia();dia++, dst_diabase += dst.stride()){
 						const int k = dst.get_offset(dia);  //diagonal offset
@@ -214,7 +214,7 @@ namespace cuv{
 				/*cout << "dMultiplyAdd: block:" << block.x << ", "<<block.y<<"; grid: "<<grid.x<<endl;*/
 				float theoret_speedup = (dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE)) / (float)(bd.blocks().len);
 				cout << "MatrixInfo: Need to calculate " << bd.blocks().len << " of " << dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE) <<" blocks, theoretical speedup:"<< theoret_speedup<<endl;
-				dense2dia_mm<value_type><<<grid,block>>>(dst.vec()->ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride());
+				dense2dia_mm<value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride());
 				cuvSafeCall(cudaThreadSynchronize());
 			}
 	}
