@@ -15,6 +15,7 @@ ADD_LIBRARY(cuv_python SHARED
 	python_bindings.cpp
 	export_vector.cpp
 	export_dense_matrix.cpp
+	export_dia_mat.cpp
 	export_matrix_ops.cpp
 	export_vector_ops.cpp
 	export_random.cpp
@@ -25,6 +26,7 @@ TARGET_LINK_LIBRARIES( cuv_python
 		cuv_tools
         cuv_basics
 		cuv_vector_ops
+		cuv_matrix_ops
 		cuv_convert
 		cuv_random
 		cuv_matrix_ops
