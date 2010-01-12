@@ -1,7 +1,14 @@
 #include <iostream>
 #include <thrust/device_ptr.h>
 #include <thrust/host_vector.h>
+#include <host_dense_matrix.hpp>
 #include "densedense_to_sparse.hpp"
+
+// stuff from NVIDIA SDK
+#define DIVIDE_INTO(x,y) ((x + y - 1)/y)
+#define small_grid_thread_id(void) ((__umul24(blockDim.x, blockIdx.x) + threadIdx.x))
+#define large_grid_thread_id(void) ((__umul24(blockDim.x,blockIdx.x + __umul24(blockIdx.y,gridDim.x)) + threadIdx.x))
+#define large_grid_thread_num(void) ((__umul24(blockDim.x,gridDim.x + __umul24(blockDim.y,gridDim.y))))
 #define AS(i, j) As[i][j]
 #define BS(i, j) Bs[i][j]
 
@@ -13,12 +20,13 @@ __global__
 void                                                                                                                  
 dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_type wA, index_type hA, index_type hB, int* blockidx, int dialen)
 {
-	int2 blk = ((int2*) blockidx)[SPARSE_DIA_BLOCK_SIZE_LEN/2 * blockIdx.x ];
+	const int blockid = (blockIdx.y * gridDim.x + blockIdx.x);
+	int2 blk = ((int2*) blockidx)[SPARSE_DIA_BLOCK_SIZE_LEN/2 * blockid ];
 
 	__shared__ int dia_offsets[SPARSE_DIA_BLOCK_SIZE*2];
 	int v = __mul24(SPARSE_DIA_BLOCK_SIZE,threadIdx.y) + threadIdx.x;
 	if(v < SPARSE_DIA_BLOCK_SIZE*2)
-		dia_offsets[v] = blockidx[SPARSE_DIA_BLOCK_SIZE_LEN * blockIdx.x + 2 + v]; // 2: the two ints read already above
+		dia_offsets[v] = blockidx[SPARSE_DIA_BLOCK_SIZE_LEN * blockid + 2 + v]; // 2: the two ints read already above
 
 	__syncthreads();
 
@@ -40,8 +48,6 @@ dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_typ
     for (int a = aBegin, b  = bBegin;                                                                                 
              a < aEnd;                                                                                               
              a += aStep, b += bStep) {                                                                                
-		/*if(tx==0 && ty == 0)*/
-		/*    printf("Loop: a = %d    b = %d\n",a,b);*/
                                                                                                                       
         __shared__ value_type As[SPARSE_DIA_BLOCK_SIZE][SPARSE_DIA_BLOCK_SIZE];                                                           
         __shared__ value_type Bs[SPARSE_DIA_BLOCK_SIZE][SPARSE_DIA_BLOCK_SIZE];                                                         
@@ -51,17 +57,14 @@ dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_typ
                                                                                                                       
 		__syncthreads();  // Synchronize to make sure the matrices are loaded                                                          
 																													  
-		/*printf("t(%d,%d):  a+hatyptx=%d b+hatyptx=%d\n",tx,ty,a+hatyptx, b+hatyptx);*/
 		for (int k = 0; k < SPARSE_DIA_BLOCK_SIZE; ++k){
 			Csub += AS(k,ty)*BS(k,tx);
 		}
 		__syncthreads();
     }
-	/*printf("t(%d,%d) Csub: %3.1f\n", tx,ty, Csub);*/
 
 	// diagonal in block
 	int dia        = tx - ty;
-	int dia_real   = blk.x - blk.y + dia;
 	int dia_sparse = dia_offsets[SPARSE_DIA_BLOCK_SIZE-1+dia];
 	if(dia_sparse >= 0 && blk.x+tx<hB && blk.y+ty<hA){
 		int offd   =  blk.y + ty;
@@ -102,11 +105,11 @@ namespace cuv{
 					if(founddiag){
 						/*cout << "Found Block: " << b.startx << ", "<<b.starty<<endl;*/
 						/*cout << "           : ";*/
-						for(int i=0;i<2*SPARSE_DIA_BLOCK_SIZE-1;i++){
-							cout << b.diag[i]<<" ";
-						}
+						/*for(int i=0;i<2*SPARSE_DIA_BLOCK_SIZE-1;i++){*/
+							/*cout << b.diag[i]<<" ";*/
+						/*}*/
 						blocks.push_back(b);
-						cout <<endl;
+						/*cout <<endl;*/
 					}
 				}
 			}
@@ -114,10 +117,10 @@ namespace cuv{
 			cuvSafeCall(cudaMalloc((void**)&m_blocks.ptr, siz));
 			cuvSafeCall(cudaMemcpy(m_blocks.ptr, (void*)&blocks.front(),siz,cudaMemcpyHostToDevice));
 			m_blocks.len = blocks.size();
-			cout << "Final Block-Set MemSize: "<< siz<<endl;
-			cout << "Final Block-Set Size: "<< m_blocks.len<<endl;
-			cout << "Final Block-Set  Ptr: "<< m_blocks.ptr<<endl;
-			cout << "Final Block-Set Size: "<< blocks.size()<<endl;
+			/*cout << "Final Block-Set MemSize: "<< siz<<endl;*/
+			/*cout << "Final Block-Set Size: "<< m_blocks.len<<endl;*/
+			/*cout << "Final Block-Set  Ptr: "<< m_blocks.ptr<<endl;*/
+			/*cout << "Final Block-Set Size: "<< blocks.size()<<endl;*/
 		}
 	template<class V,class I>
 		dev_block_descriptor<V,I>::~dev_block_descriptor(){
@@ -127,6 +130,65 @@ namespace cuv{
 		}
 
 	namespace densedense_to_dia_impl{
+		/*
+		 *  For a given number of blocks, return a 2D grid large enough to contain them
+		 *  FROM NVIDIA SDK
+		 */
+		dim3 make_large_grid(const unsigned int num_blocks){
+			if (num_blocks <= 65535){
+				return dim3(num_blocks);
+			} else {
+				unsigned int side = (unsigned int) ceil(sqrt((double)num_blocks));
+				return dim3(side,side);
+			}
+		}
+
+		dim3 make_large_grid(const unsigned int num_threads, const unsigned int blocksize){
+			const unsigned int num_blocks = DIVIDE_INTO(num_threads, blocksize);
+			if (num_blocks <= 65535){
+				//fits in a 1D grid
+				return dim3(num_blocks);
+			} else {
+				//2D grid is required
+				const unsigned int side = (unsigned int) ceil(sqrt((double)num_blocks));
+				return dim3(side,side);
+			}
+		}
+		template<class value_type, class index_type>
+			void densedense_to_dia(
+					host_dia_matrix<value_type,index_type>& dst,
+					const host_block_descriptor<value_type,index_type>& bd,
+					const host_dense_matrix<value_type,cuv::column_major,index_type>& A,
+					const host_dense_matrix<value_type,cuv::column_major,index_type>& B){
+				cuvAssert(dst.w() == B.h());
+				cuvAssert(dst.h() == A.h());
+				cuvAssert(A.w()   == B.w());
+				value_type *dst_diabase = dst.vec()->ptr();
+				index_type Ah = A.h(), Aw = A.w(), Bh = B.h(), Ch = dst.h(), Cw = dst.w();
+				for(int dia=0;dia<dst.num_dia();dia++, dst_diabase += dst.stride()){
+						const int k = dst.get_offset(dia);  //diagonal offset
+
+						const index_type row_start = std::max((int)0,-k);
+						const index_type col_start = std::max((int)0, k);
+
+						// number of elements to process
+						const index_type N   = std::min(Ch - row_start, Cw - col_start);
+
+						// data vectors
+						value_type       *d      = dst_diabase + row_start;
+						const value_type *a_base = A.ptr() + row_start;
+						const value_type *b_base = B.ptr() + col_start;
+
+						for(index_type n = 0; n < N; n++, d++){
+							const value_type* a  = a_base+n;
+							const value_type* b  = b_base+n;
+							register value_type v = (value_type)0;
+							for(int diak=0;   diak<Aw;   diak++, a+=Ah, b+=Bh)
+								v  += (*a)  *  (*b);
+							*d = v;
+						}
+				}
+			}
 		template<class value_type, class index_type>
 			void densedense_to_dia(
 					dev_dia_matrix<value_type,index_type>& dst,
@@ -134,14 +196,24 @@ namespace cuv{
 					const dev_dense_matrix<value_type,cuv::column_major,index_type>& A,
 					const dev_dense_matrix<value_type,cuv::column_major,index_type>& B){
 				dim3 block(SPARSE_DIA_BLOCK_SIZE, SPARSE_DIA_BLOCK_SIZE);
-				dim3 grid(bd.blocks().len);
+				dim3 grid; 
+				if(bd.blocks().len < 4096)
+					grid = dim3(bd.blocks().len);
+				else{
+					static const int div = 4;
+					cuvAssert( bd.blocks().len % div == 0 ); 
+					int i = bd.blocks().len/div;
+					grid = dim3(i, div);
+				}
+
 				cuvAssert(bd.blocks().ptr);
 				cuvAssert(dst.w() == B.h());
 				cuvAssert(dst.h() == A.h());
 				cuvAssert(A.w()   == B.w());
 				cuvAssert(A.w() % SPARSE_DIA_BLOCK_SIZE  == 0);
-				cout << "dMultiplyAdd: block:" << block.x << ", "<<block.y<<"; grid: "<<grid.x<<endl;
-				cout << "MatrixInfo: Need to calculate " << bd.blocks().len << " of " << dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE) <<" blocks"<<endl;
+				/*cout << "dMultiplyAdd: block:" << block.x << ", "<<block.y<<"; grid: "<<grid.x<<endl;*/
+				float theoret_speedup = (dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE)) / (float)(bd.blocks().len);
+				cout << "MatrixInfo: Need to calculate " << bd.blocks().len << " of " << dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE) <<" blocks, theoretical speedup:"<< theoret_speedup<<endl;
 				dense2dia_mm<value_type><<<grid,block>>>(dst.vec()->ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride());
 				cuvSafeCall(cudaThreadSynchronize());
 			}
@@ -165,11 +237,17 @@ namespace cuv{
 			const dev_block_descriptor<V>& ,                      \
 			const dev_dense_matrix<V,cuv::column_major>& ,        \
 			const dev_dense_matrix<V,cuv::column_major>& );       \
+	template void densedense_to_dia(                                \
+			host_dia_matrix<V>& ,                                  \
+			const host_block_descriptor<V>& ,                      \
+			const host_dense_matrix<V,cuv::column_major>& ,        \
+			const host_dense_matrix<V,cuv::column_major>& );       \
 
 INST_DD2DIA(float);
 
 
 template class dev_block_descriptor<float>;
+template class host_block_descriptor<float>;
 
 
 

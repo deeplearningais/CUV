@@ -26,7 +26,7 @@ struct Fix{
 	dev_dense_matrix<float> A,A_;
 	dev_dense_matrix<float> B,B_;
 	Fix()
-	:   C(n,m,4,max(n,m))
+	:   C(n,m,7,max(n,m))
 	,   C_(n,m)
 	,   A(n,k)
 	,   A_(n,k)
@@ -36,7 +36,7 @@ struct Fix{
 		std::vector<int> off;
 #if 0
 		for(int i=0;i<C.num_dia();i++)
-#elif 1
+#elif 0
 		for(int i=2;i<C.num_dia()+2;i++)
 #else
 		for(int i=-C.num_dia()/2;i<=C.num_dia()/2;i++)
@@ -89,6 +89,43 @@ BOOST_AUTO_TEST_CASE( dd2s_correctness_dev )
 			if(C(i,j) != 0){
 				BOOST_CHECK_CLOSE( C(i,j), C_(i,j), 0.01 );
 			}
+		}
+	}
+}
+
+BOOST_AUTO_TEST_CASE( dd2s_correctness_host )
+{
+	fill(*C.vec(),0);
+	sequence(A);
+	sequence(B);
+
+	host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride());
+	host_dense_matrix<float,column_major> A2(A.h(),A.w());
+	host_dense_matrix<float,column_major> B2(B.h(),B.w());
+	convert(C2,C);
+	convert(A2,A);
+	convert(B2,B);
+
+	dev_block_descriptor<float>  bd(C);
+	host_block_descriptor<float> bdh(C2);
+	densedense_to_dia(C,bd,A,B);
+	densedense_to_dia(C2,bdh,A2,B2);
+	
+	//cout <<"Host: "<<endl;
+	//for(int i=0;i<C2.h();i++){
+	//  for(int j=0;j<C2.w();j++)
+	//          cout << C2(i,j)<<" ";
+	//  cout <<endl;
+	//}
+	//cout <<"Dev: "<<endl;
+	//for(int i=0;i<C.h();i++){
+	//  for(int j=0;j<C.w();j++)
+	//          cout << C(i,j)<<" ";
+	//  cout <<endl;
+	//}
+	for(int i=0;i<C.h();i++){
+		for(int j=0;j<C.w();j++){
+			BOOST_CHECK_CLOSE( C(i,j), C2(i,j), 0.01 );
 		}
 	}
 }

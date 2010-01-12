@@ -27,11 +27,14 @@ TARGET_LINK_LIBRARIES( test_dia_mat cuv_basics cuv_tools cuv_convert cuv_vector_
 ADD_EXECUTABLE( test_spmv spmv.cpp )
 TARGET_LINK_LIBRARIES( test_spmv         cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
 
+ADD_EXECUTABLE( test_spmv_speed spmv_speed.cpp )
+TARGET_LINK_LIBRARIES( test_spmv_speed   cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
 ADD_EXECUTABLE( test_densedense_to_dia densedense_to_dia.cpp )
 TARGET_LINK_LIBRARIES( test_densedense_to_dia     cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
 
-ADD_EXECUTABLE( test_spmv_speed spmv_speed.cpp )
-TARGET_LINK_LIBRARIES( test_spmv_speed   cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+ADD_EXECUTABLE( test_densedense_to_dia_speed densedense_to_dia_speed.cpp )
+TARGET_LINK_LIBRARIES( test_densedense_to_dia_speed     cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
 
 ADD_EXECUTABLE( test_mat_op_speed matrix_op_speed.cpp )
 TARGET_LINK_LIBRARIES( test_mat_op_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
@@ -53,6 +56,7 @@ ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/tests/test_dia_mat" )
 #ADD_TEST( vec_op_speed "${CMAKE_BINARY_DIR}/tests/test_vec_op_speed" )
 #ADD_TEST( mat_op_speed "${CMAKE_BINARY_DIR}/tests/test_mat_op_speed" )
 #ADD_TEST( spmv_speed "${CMAKE_BINARY_DIR}/tests/test_spmv_speed" )
+#ADD_TEST( densedense_to_dia_speed "${CMAKE_BINARY_DIR}/tests/test_densedense_to_dia_speed" )
 
 SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
 ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/python_bindings python -c 'import cuv_python as cp'" )
