@@ -61,6 +61,13 @@ namespace cuv{
 			// set/get offsets of diagonals
 			//*****************************
 			template<class T>
+			void set_offsets(T a, const T& b){
+				int i=0;
+				while(a!=b)
+					m_offsets.set(i++,*a++);
+				post_update_offsets();
+			}
+			template<class T>
 			void set_offsets(const std::vector<T>& v){
 				for(unsigned int i=0;i<v.size();i++)
 					m_offsets.set(i,v[i]);
