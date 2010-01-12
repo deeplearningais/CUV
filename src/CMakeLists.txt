@@ -47,10 +47,13 @@ CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}                           
 INCLUDE_DIRECTORIES(      ${CMAKE_CURRENT_SOURCE_DIR}                                )
 
 ENABLE_TESTING()
+add_subdirectory(3rd_party)
+
 add_subdirectory(tools)
 add_subdirectory(basics)
 add_subdirectory(vector_ops)
 add_subdirectory(matrix_ops)
+add_subdirectory(convolution_ops)
 add_subdirectory(convert)
 add_subdirectory(random)
 
