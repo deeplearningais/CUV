@@ -6,6 +6,7 @@ include_directories(
         ${CMAKE_SOURCE_DIR}/basics
         ${CMAKE_SOURCE_DIR}/convert
         ${CMAKE_SOURCE_DIR}/vector_ops
+        ${CMAKE_SOURCE_DIR}/matrix_ops
         ${CMAKE_SOURCE_DIR}/random
         ${PYTHON_INCLUDE_PATH} 
         /usr/local/lib/python2.6/dist-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/include
@@ -16,6 +17,7 @@ ADD_LIBRARY(cuv_python SHARED
 	export_dense_matrix.cpp
 	export_matrix_ops.cpp
 	export_vector_ops.cpp
+	export_random.cpp
     )
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES OUTPUT_NAME "cuv_python")
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES PREFIX "")

@@ -15,7 +15,13 @@ using namespace boost::python;
 using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
-void export_scalar_functor() {
+void export_0ary_functors(){
+    enum_<cuv::NullaryFunctor>("NullaryFunctor")
+        .value("FILL", NF_FILL)
+        .value("SEQ", NF_SEQ);
+
+}
+void export_scalar_functors() {
     enum_<cuv::ScalarFunctor>("ScalarFunctor")
         .value("EXACT_EXP", SF_EXACT_EXP)
         .value("EXP", SF_EXP)
@@ -34,11 +40,32 @@ void export_scalar_functor() {
         .value("NEGATE", SF_NEGATE)
         .value("ABS", SF_ABS)
 
+        .value("ADD", SF_ADD)
+        .value("SUBTRACT", SF_SUBTRACT)
+        .value("MULT", SF_MULT)
+        .value("DIV", SF_DIV)
         ;
 
 }
+
+void export_binary_functors(){
+    enum_<cuv::BinaryFunctor>("BinaryFunctor")
+        .value("ADD", BF_ADD)
+        .value("SUBTRACT", BF_SUBTRACT)
+        .value("MULT", BF_MULT)
+        .value("DIV", BF_DIV)
+        .value("COPY", BF_COPY)
+
+        .value("AXPY", BF_AXPY)
+        .value("YPBY", BF_AXPY)
+        .value("AXPBY", BF_AXPBY)
+        ;
+}
+
 void export_vector_ops(){
-	export_scalar_functor();
+	export_scalar_functors();
+	export_binary_functors();
+	export_0ary_functors();
 }
 
 

@@ -4,7 +4,7 @@
 
 
 #include <cuv_general.hpp>
-#include <random.hpp>
+#include <random/random.hpp>
 
 using namespace boost::python;
 using namespace cuv;
@@ -12,6 +12,7 @@ using namespace cuv;
 void export_vector();
 void export_dense_matrix();
 void export_matrix_ops();
+void export_random();
 
 BOOST_PYTHON_MODULE(cuv_python){
 	def("initCUDA", initCUDA);
@@ -20,4 +21,5 @@ BOOST_PYTHON_MODULE(cuv_python){
 	export_vector();
 	export_dense_matrix();
 	export_matrix_ops();
+	export_random();
 }

@@ -21,6 +21,23 @@ void export_blas3() {
 }
 
 template<class M>
+void export_nullary_functor() {
+	def("apply_0ary_functor",
+	   (void (*)(M&,const NullaryFunctor&)) 
+	   apply_0ary_functor<
+	     typename M::value_type,
+		 typename M::memory_layout,
+		 typename M::index_type>);
+	def("apply_0ary_functor",
+	   (void (*)(M&,const NullaryFunctor&, const typename M::value_type&)) 
+	   apply_0ary_functor<
+	     typename M::value_type,
+		 typename M::memory_layout,
+		 typename M::index_type,
+		 typename M::value_type>);
+}
+
+template<class M>
 void export_scalar_functor() {
 	def("apply_scalar_functor",
 	   (void (*)(M&,const ScalarFunctor&)) 
@@ -36,6 +53,39 @@ void export_scalar_functor() {
 		 typename M::index_type,
 		 typename M::value_type>);
 }
+
+template<class M, class N>
+void export_binary_functor() {
+	def("apply_binary_functor",
+	   (void (*)(M&, N&, const BinaryFunctor&)) 
+	   apply_binary_functor<
+	     typename M::value_type,
+		 typename M::memory_layout,
+		 typename M::index_type,
+		 typename N::value_type>);
+	def("apply_binary_functor",
+	   (void (*)(M&, N&, const BinaryFunctor&, const typename M::value_type&)) 
+	   apply_binary_functor<
+	     typename M::value_type,
+		 typename M::memory_layout,
+		 typename M::index_type,
+	     typename M::value_type,
+		 typename N::value_type>);
+	def("apply_binary_functor",
+	   (void (*)(M&, N&, const BinaryFunctor&, const typename M::value_type&, const typename M::value_type&)) 
+	   apply_binary_functor<
+	     typename M::value_type,
+		 typename M::memory_layout,
+		 typename M::index_type,
+	     typename M::value_type,
+		 typename N::value_type>);
+}
+
+template <class M>
+void export_reductions(){
+	def("norm2",(float (*)(M&)) norm2<typename M::value_type,typename M::memory_layout,typename M::index_type>);
+}
+
 void export_matrix_ops(){
 	typedef dev_dense_matrix<float,column_major> fdev;
 	typedef host_dense_matrix<float,column_major> fhost;
@@ -44,6 +94,11 @@ void export_matrix_ops(){
 	export_blas3<fhost,fhost,fhost>();
 	export_scalar_functor<fhost>();
 	export_scalar_functor<fdev>();
+	export_binary_functor<fdev,fdev>();
+	export_binary_functor<fhost,fhost>();
+	export_reductions<fhost>();
+	export_reductions<fdev>();
+
 }
 
 
