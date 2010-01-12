@@ -64,6 +64,24 @@ struct Fix{
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
+BOOST_AUTO_TEST_CASE( dd2s_speed_host_host )
+{
+	fill(*C.vec(),0);
+
+	host_dia_matrix<float>   C2(C.h(),C.w(),C.num_dia(),C.stride());
+	host_dense_matrix<float> C2dense(C.h(),C.w());
+	host_dense_matrix<float,column_major> A2(A.h(),A.w());
+	host_dense_matrix<float,column_major> B2(B.h(),B.w());
+	convert(C2,C);
+	convert(A2,A);
+	convert(B2,B);
+	convert(C2dense,C2);
+
+	host_block_descriptor<float> bdh(C2);
+	MEASURE_TIME(host_dense ,prod(C2dense,A2,B2,'n','t'),2);
+	MEASURE_TIME(host_dia,   densedense_to_dia(C2,bdh,A2,B2),2);
+	printf("Speedup: %3.4f\n", host_dense/host_dia);
+}
 
 
 BOOST_AUTO_TEST_CASE( dd2s_speed_dev_host )
