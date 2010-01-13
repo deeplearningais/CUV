@@ -61,7 +61,11 @@ add_subdirectory(convert)
 add_subdirectory(random)
 
 add_subdirectory(tests)
-add_subdirectory(python_bindings)
+
+IF(CUDA_SHARED)
+	add_subdirectory(python_bindings)
+ENDIF(CUDA_SHARED)
+
 
 CUDA_BUILD_CLEAN_TARGET()
 
