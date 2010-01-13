@@ -342,9 +342,8 @@ namespace cuv{
 	// Initialize seeds for the Mersenne Twister
 	void initialize_mersenne_twister_seeds() {
 		mt_struct_stripped *mtStripped = new mt_struct_stripped[MT_RNG_COUNT];
-		const char *asdf = (std::string(QUOTEME(RANDOM_PATH))+"/MersenneTwister.dat").c_str();
-		std::cout << asdf; 
-		FILE *datFile = fopen(asdf, "rb");
+		std::cout << std::endl << QUOTEME(RANDOM_PATH) << std::endl;
+		FILE *datFile = fopen((std::string(QUOTEME(RANDOM_PATH))+"/MersenneTwister.dat").c_str(), "rb");
 		if(!datFile){
 			cuvAssert(datFile);
 		}
