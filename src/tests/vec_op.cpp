@@ -102,6 +102,22 @@ BOOST_AUTO_TEST_CASE( vec_ops_0ary1 )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( vec_ops_lswd )
+{
+	sequence(v);
+	dev_vector<float> v_old(N);
+	copy(v_old,v);
+	sequence(w);
+	host_vector<float> v2(N); sequence(v2);
+	host_vector<float> w2(N); sequence(w2);
+	learn_step_weight_decay(v,w,0.1f,0.05f);
+	learn_step_weight_decay(v2,w2,0.1f,0.05f);
+	for(int i=0;i<N;i++){
+		BOOST_CHECK_CLOSE(v[i],v2[i],0.01);
+		BOOST_CHECK_CLOSE(v[i],v_old[i] + 0.1f *(w[i] - 0.05f *v_old[i]),0.01);
+	}
+
+}
 BOOST_AUTO_TEST_CASE( vec_ops_norms )
 {
 	sequence(v);
