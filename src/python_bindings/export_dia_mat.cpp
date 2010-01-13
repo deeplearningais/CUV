@@ -68,8 +68,17 @@ void export_dia_matrix(){
 	export_block_descriptors<float>("f");
 	export_diamat_conversion<float>();
 
-	def("densedense_to_dia", densedense_to_dia<dev_dia_matrix<float>, dev_block_descriptor<float>, dev_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
-	def("densedense_to_dia", densedense_to_dia<host_dia_matrix<float>,host_block_descriptor<float>,host_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
+	//def("densedense_to_dia", densedense_to_dia<dev_dia_matrix<float>, dev_block_descriptor<float>, dev_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
+	//def("densedense_to_dia", densedense_to_dia<host_dia_matrix<float>,host_block_descriptor<float>,host_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
+
+	def("densedense_to_dia", 
+			densedense_to_dia<dev_dia_matrix<float>, dev_block_descriptor<float>, dev_dense_matrix<float,column_major> >,
+			(arg("C"),arg("Cbd"),arg("A"),arg("B"),arg("factAB")=1.f,arg("factC")=0.f));
+			//"C <- A*B', where C is sparse");
+	def("densedense_to_dia", 
+			densedense_to_dia<host_dia_matrix<float>,host_block_descriptor<float>,host_dense_matrix<float,column_major> >, 
+			(arg("C"),arg("Cbd"),arg("A"),arg("B"),arg("factAB")=1.f,arg("factC")=0.f));
+			//"C <- A*B', where C is sparse");
 
 	def("prod", cuv::prod<host_dense_matrix<float,column_major>, host_dia_matrix<float>,host_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
 	def("prod", cuv::prod<dev_dense_matrix<float,column_major>,  dev_dia_matrix<float>,  dev_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");

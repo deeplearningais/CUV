@@ -55,7 +55,9 @@ namespace cuv{
 		   __dia_type&,
 		   const __bd_type&,
 		   const __dense_type&,
-		   const __dense_type&);
+		   const __dense_type&,
+		   const typename __dia_type::value_type&,
+		   const typename __dia_type::value_type&);
 
 	
 } // cuv

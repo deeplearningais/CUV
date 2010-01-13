@@ -10,14 +10,16 @@
 #include <matrix_ops/matrix_ops.hpp>
 #include <convert.hpp>
 
-using namespace std;
+//using namespace std;
 using namespace boost::python;
 using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
 template<class R, class S, class T>
 void export_blas3() {
-	def("prod",&prod<R,S,T>);
+	def("prod",&prod<R,S,T>, (
+				arg("C"), arg("A"), arg("B"), arg("transA")='n', arg("transB")='n', arg("factAB")=1.f, arg("factC")=0.f
+				));
 }
 
 template<class M>

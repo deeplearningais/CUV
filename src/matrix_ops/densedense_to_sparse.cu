@@ -15,10 +15,10 @@
 using namespace std;
 
 // multiply two dense matrices and put the result in an existing sparse DIA-formated matrix
-template <class value_type, class index_type>                                                                        
+template <bool wantFactAB, bool wantFactC, class value_type, class index_type>                                                                        
 __global__                                                                                                            
 void                                                                                                                  
-dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_type wA, index_type hA, index_type hB, int* blockidx, int dialen)
+dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_type wA, index_type hA, index_type hB, int* blockidx, int dialen, const value_type factAB, const value_type factC)
 {
 	const int blockid = (blockIdx.y * gridDim.x + blockIdx.x);
 	int2 blk = ((int2*) blockidx)[SPARSE_DIA_BLOCK_SIZE_LEN/2 * blockid ];
@@ -70,7 +70,15 @@ dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_typ
 		int offd   =  blk.y + ty;
 		int idx    = dia_sparse*dialen           // the diagonal in the final matrix
 		   +         offd;                       // offset within diagonal
-	   C[ idx ]  = Csub;
+		if(0);
+		else if(wantFactAB && wantFactC)
+			C[ idx ]  = factC*C[idx] + factAB*Csub;
+		else if(wantFactAB && !wantFactC)
+			C[ idx ]  = factAB*Csub;
+		else if(!wantFactAB && wantFactC)
+			C[ idx ]  = factC*C[idx] + Csub;
+		else if(!wantFactAB && !wantFactC)
+			C[ idx ]  = Csub;
 	}
 }   
 
@@ -159,7 +167,9 @@ namespace cuv{
 					host_dia_matrix<value_type,index_type>& dst,
 					const host_block_descriptor<value_type,index_type>& bd,
 					const host_dense_matrix<value_type,cuv::column_major,index_type>& A,
-					const host_dense_matrix<value_type,cuv::column_major,index_type>& B){
+					const host_dense_matrix<value_type,cuv::column_major,index_type>& B,
+					const value_type& factAB,
+					const value_type& factC){
 				cuvAssert(dst.w() == B.h());
 				cuvAssert(dst.h() == A.h());
 				cuvAssert(A.w()   == B.w());
@@ -185,7 +195,7 @@ namespace cuv{
 							register value_type v = (value_type)0;
 							for(int diak=0;   diak<Aw;   diak++, a+=Ah, b+=Bh)
 								v  += (*a)  *  (*b);
-							*d = v;
+							*d = factC * *d + factAB * v;
 						}
 				}
 			}
@@ -194,7 +204,10 @@ namespace cuv{
 					dev_dia_matrix<value_type,index_type>& dst,
 					const dev_block_descriptor<value_type,index_type>& bd,
 					const dev_dense_matrix<value_type,cuv::column_major,index_type>& A,
-					const dev_dense_matrix<value_type,cuv::column_major,index_type>& B){
+					const dev_dense_matrix<value_type,cuv::column_major,index_type>& B,
+					const value_type& factAB,
+					const value_type& factC
+					){
 				dim3 block(SPARSE_DIA_BLOCK_SIZE, SPARSE_DIA_BLOCK_SIZE);
 				dim3 grid; 
 				if(bd.blocks().len < 4096)
@@ -212,9 +225,20 @@ namespace cuv{
 				cuvAssert(A.w()   == B.w());
 				cuvAssert(A.w() % SPARSE_DIA_BLOCK_SIZE  == 0);
 				/*cout << "dMultiplyAdd: block:" << block.x << ", "<<block.y<<"; grid: "<<grid.x<<endl;*/
+#ifndef NDEBUG
 				float theoret_speedup = (dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE)) / (float)(bd.blocks().len);
 				cout << "MatrixInfo: Need to calculate " << bd.blocks().len << " of " << dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE) <<" blocks, theoretical speedup:"<< theoret_speedup<<endl;
-				dense2dia_mm<value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride());
+#endif
+				if(0);
+				else if(factAB==1.f && factC==0.f)
+					dense2dia_mm<false,false,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC);
+				else if(factAB==1.f && factC!=0.f)
+					dense2dia_mm<false,true,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC);
+				else if(factAB!=1.f && factC==0.f)
+					dense2dia_mm<true,false,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC);
+				else if(factAB!=1.f && factC!=0.f)
+					dense2dia_mm<true,true,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC);
+
 				cuvSafeCall(cudaThreadSynchronize());
 			}
 	}
@@ -224,8 +248,11 @@ namespace cuv{
 		   __dia_type&dst,
 		   const __bd_type&bd,
 		   const __dense_type&A,
-		   const __dense_type&B){
-		densedense_to_dia_impl::densedense_to_dia(dst,bd,A,B);
+		   const __dense_type&B,
+		   const typename __dia_type::value_type& factAB,
+		   const typename __dia_type::value_type& factC
+		   ){
+		densedense_to_dia_impl::densedense_to_dia(dst,bd,A,B,factAB,factC);
 	}
 
 	/*
@@ -236,12 +263,14 @@ namespace cuv{
 			dev_dia_matrix<V>& ,                                  \
 			const dev_block_descriptor<V>& ,                      \
 			const dev_dense_matrix<V,cuv::column_major>& ,        \
-			const dev_dense_matrix<V,cuv::column_major>& );       \
+			const dev_dense_matrix<V,cuv::column_major>&,         \
+			const V&,const V&);       \
 	template void densedense_to_dia(                                \
 			host_dia_matrix<V>& ,                                  \
 			const host_block_descriptor<V>& ,                      \
 			const host_dense_matrix<V,cuv::column_major>& ,        \
-			const host_dense_matrix<V,cuv::column_major>& );       \
+			const host_dense_matrix<V,cuv::column_major>&,         \
+			const V&,const V&);       
 
 INST_DD2DIA(float);
 
