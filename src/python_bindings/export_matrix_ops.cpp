@@ -8,6 +8,7 @@
 #include <dev_dense_matrix.hpp>
 #include <host_dense_matrix.hpp>
 #include <matrix_ops/matrix_ops.hpp>
+#include <matrix_ops/rprop.hpp>
 #include <convert.hpp>
 
 //using namespace std;
@@ -88,6 +89,11 @@ void export_reductions(){
 	def("norm2",(float (*)(M&)) norm2<typename M::value_type,typename M::memory_layout,typename M::index_type>);
 }
 
+template <class M>
+void export_learn_step(){
+	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<typename M::value_type,typename M::memory_layout,typename M::index_type>);
+}
+
 void export_matrix_ops(){
 	typedef dev_dense_matrix<float,column_major> fdev;
 	typedef host_dense_matrix<float,column_major> fhost;
@@ -102,7 +108,8 @@ void export_matrix_ops(){
 	export_binary_functor<fhost,fhost>();
 	export_reductions<fhost>();
 	export_reductions<fdev>();
-
+	export_learn_step<fhost>();
+	export_learn_step<fdev>();
 }
 
 

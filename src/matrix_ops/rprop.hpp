@@ -9,6 +9,16 @@ namespace cuv{
 	 * Wrappers for the vector-operation "RPROP"
 	 */
 
+template<class V, class M, class I>
+void learn_step_weight_decay(dev_dense_matrix<V,M,I>& W, dev_dense_matrix<V,M,I>& dW, const float& learnrate, const float& decay){
+	learn_step_weight_decay(W.vec(),dW.vec(),learnrate,decay);
+}
+
+template<class V, class M, class I>
+void learn_step_weight_decay(host_dense_matrix<V,M,I>& W, host_dense_matrix<V,M,I>& dW, const float& learnrate, const float& decay){
+	learn_step_weight_decay(W.vec(),dW.vec(),learnrate,decay);
+}
+
 template<class V, class O, class M, class I>
 void rprop(dev_dense_matrix<V,M,I>& W,
 		   dev_dense_matrix<V,M,I>& dW, 
