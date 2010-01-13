@@ -3,8 +3,7 @@ import numpy
 import math
 import sys
 import pdb
-sys.path.append('../../build/debug/python_bindings')
-import cuv_python
+import cuv_python as cp
 
 import unittest
 
@@ -15,30 +14,25 @@ class TestCuvMatrix(unittest.TestCase):
         self.xa = numpy.random.standard_normal((5,6)).astype(numpy.float32).copy('F')
         self.xb = numpy.random.random((5,6)).astype(numpy.float32).copy('F')
 
-        self.a = cuv_python.create_mat_from_numpy_view("matrix_a", self.xa)
-        self.b = cuv_python.create_mat_from_numpy_view("matrix_b", self.xb)
+        self.a = cp.push(self.xa)
+        self.b = cp.push(self.xb)
 
-        self.xc = cuv_python.create_numpy_from_mat_copy(self.a)
-        self.c  = cuv_python.create_mat_from_numpy_view("matrix_c",self.xc)
-
-        self.xd = cuv_python.create_numpy_from_mat_copy(self.a) # copy a -> xd
-        self.d  = cuv_python.create_mat_from_numpy_view("matrix_d",self.xd)
-        cuv_python.copy_numpy_to_host_matrix(self.d, self.xb)  # copy b -> xd
-
-        self.a.push()
-        self.b.push()
+        self.xd = cp.pull(self.a) # copy a -> xd
+        self.d  = cp.push(self.xd)
+        
+        c = cp.push(self.xa)
+        cp.apply_binary_functor(self.d, self.xb,cp.binary_functor.COPY)  # copy b -> xd
 
     def tearDown(self):
-        self.a.deallocDevice()
-        self.b.deallocDevice()
+        self.a.dealloc()
+        self.b.dealloc()
+        self.c.dealloc()
+        self.d.dealloc()
         self.a = None
         self.b = None
 
     def testCreateCopy(self):
-        self.a[0,0]=5
-        self.c[0,0]=6  # c was created by _copying_ a
-        self.assertEqual(self.a[0,0], 5)
-        self.assertEqual(self.c[0,0], 6)
+        self.assertAlmostEqual( 
 
     def testBinarize(self):
         cuv_python.binarize_probs(self.a)
