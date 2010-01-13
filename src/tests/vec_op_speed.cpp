@@ -62,8 +62,8 @@ BOOST_AUTO_TEST_CASE( vec_rnd )
 	MEASURE_TIME(rnd_uniform_host, fill_rnd_uniform(x) , 100);
 	printf("Speedup: %3.4f\n", rnd_uniform_host/rnd_uniform);
 
-	MEASURE_TIME(rnd_normal,      fill_rnd_normal(v), 100);
-	MEASURE_TIME(rnd_normal_host, fill_rnd_normal(x) , 100);
+	MEASURE_TIME(rnd_normal,      add_rnd_normal(v), 100);
+	MEASURE_TIME(rnd_normal_host, add_rnd_normal(x) , 100);
 
 	printf("Speedup: %3.4f\n", rnd_normal_host/rnd_normal);
 }

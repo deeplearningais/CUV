@@ -42,8 +42,10 @@ BOOST_AUTO_TEST_CASE( random_uniform )
 }
 BOOST_AUTO_TEST_CASE( random_normal )
 {
-	fill_rnd_normal(v);
-	fill_rnd_normal(x);
+	apply_0ary_functor(v,NF_FILL,0);
+	apply_0ary_functor(x,NF_FILL,0);	
+	add_rnd_normal(v);
+	add_rnd_normal(x);
 	float m   = mean(v);
 	float std = std::sqrt(var(v));
 	BOOST_CHECK_SMALL( m, 0.02f );
