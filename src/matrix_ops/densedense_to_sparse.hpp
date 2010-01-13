@@ -52,12 +52,12 @@ namespace cuv{
 	 */
 	template<class __dia_type, class __bd_type, class __dense_type >
 	void densedense_to_dia(
-		   __dia_type&,
-		   const __bd_type&,
-		   const __dense_type&,
-		   const __dense_type&,
-		   const typename __dia_type::value_type&,
-		   const typename __dia_type::value_type&);
+		   __dia_type&           C,
+		   const __bd_type&      Cbd,
+		   const __dense_type&   A,
+		   const __dense_type&   B,
+		   const typename __dia_type::value_type& factAB=1.f,
+		   const typename __dia_type::value_type& factC =0.f);
 
 	
 } // cuv
