@@ -3,6 +3,7 @@ INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/basics )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/convert )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/vector_ops )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/matrix_ops )
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/convolution_ops )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/random )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR} )
 
@@ -38,6 +39,12 @@ TARGET_LINK_LIBRARIES( test_densedense_to_dia_speed     cuv_basics cuv_tools cuv
 
 ADD_EXECUTABLE( test_mat_op_speed matrix_op_speed.cpp )
 TARGET_LINK_LIBRARIES( test_mat_op_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_conv_op conv_op.cpp )
+TARGET_LINK_LIBRARIES( test_conv_op cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_convolution_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_conv_op_speed conv_op_speed.cpp )
+TARGET_LINK_LIBRARIES( test_conv_op_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_convolution_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
 
 ADD_EXECUTABLE( test_random random.cpp )
 TARGET_LINK_LIBRARIES( test_random cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_random)
