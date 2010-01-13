@@ -1,3 +1,4 @@
+#include <string>
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/variate_generator.hpp>
@@ -200,6 +201,8 @@
 #define MT_SHIFTB 7
 #define MT_SHIFTC 15
 #define MT_SHIFT1 18
+#define QUOTEME_(x) #x
+#define QUOTEME(x) QUOTEME_(x)
  
 // Record format for MersenneTwister.dat, created by spawnTwisters.c
 struct mt_struct_stripped {
@@ -329,7 +332,8 @@ struct rnd_normal {
 			 BoxMuller(x, y); //transform uniform into two independent standard normals
 			 /*u1 = u1 * __expf( sigma); oder so*/
 			 /*u2 = u2 * __expf( sigma); oder so*/
-			 dst[idx] = make_float2(x,y);
+			 float2 tmp=dst[idx];
+			 dst[idx] = make_float2(x+tmp.x,y+tmp.y);
 		}
 	}
 };
@@ -338,8 +342,9 @@ namespace cuv{
 	// Initialize seeds for the Mersenne Twister
 	void initialize_mersenne_twister_seeds() {
 		mt_struct_stripped *mtStripped = new mt_struct_stripped[MT_RNG_COUNT];
-
-		FILE *datFile = fopen("MersenneTwister.dat", "rb");
+		const char *asdf = (std::string(QUOTEME(RANDOM_PATH))+"/MersenneTwister.dat").c_str();
+		std::cout << asdf; 
+		FILE *datFile = fopen(asdf, "rb");
 		if(!datFile){
 			cuvAssert(datFile);
 		}
@@ -400,7 +405,7 @@ namespace cuv{
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<>
-	void fill_rnd_normal(host_vector<float>& v){
+	void add_rnd_normal(host_vector<float>& v){
 	   cuvAssert(v.ptr());
 	   host_vector<float>::value_type* ptr = v.ptr();
 	   typedef boost::mt19937 rng_type;
@@ -408,10 +413,10 @@ namespace cuv{
 	   boost::normal_distribution<float> nd;
 	   boost::variate_generator<rng_type, boost::normal_distribution<float> > die(rng, nd);
 	   for(int i=0;i<v.size();i++)
-		   *ptr++ = die();
+		   *ptr++ = *ptr + die();
 	}
 	template<>
-	void fill_rnd_normal(dev_vector<float>& v){
+	void add_rnd_normal(dev_vector<float>& v){
 		cuvAssert(v.ptr());
 		cuvAssert((v.size()%2) == 0);
 		rnd_normal<float2> rng;
