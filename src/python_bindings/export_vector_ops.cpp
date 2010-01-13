@@ -16,13 +16,13 @@ using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
 void export_0ary_functors(){
-    enum_<cuv::NullaryFunctor>("NullaryFunctor")
+    enum_<cuv::NullaryFunctor>("nullary_functor")
         .value("FILL", NF_FILL)
         .value("SEQ", NF_SEQ);
 
 }
 void export_scalar_functors() {
-    enum_<cuv::ScalarFunctor>("ScalarFunctor")
+    enum_<cuv::ScalarFunctor>("scalar_functor")
         .value("EXACT_EXP", SF_EXACT_EXP)
         .value("EXP", SF_EXP)
         .value("LOG", SF_LOG)
@@ -49,7 +49,7 @@ void export_scalar_functors() {
 }
 
 void export_binary_functors(){
-    enum_<cuv::BinaryFunctor>("BinaryFunctor")
+    enum_<cuv::BinaryFunctor>("binary_functor")
         .value("ADD", BF_ADD)
         .value("SUBTRACT", BF_SUBTRACT)
         .value("MULT", BF_MULT)

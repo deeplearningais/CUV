@@ -22,13 +22,13 @@ void export_blas3() {
 
 template<class M>
 void export_nullary_functor() {
-	def("apply_0ary_functor",
+	def("apply_nullary_functor",
 	   (void (*)(M&,const NullaryFunctor&)) 
 	   apply_0ary_functor<
 	     typename M::value_type,
 		 typename M::memory_layout,
 		 typename M::index_type>);
-	def("apply_0ary_functor",
+	def("apply_nullary_functor",
 	   (void (*)(M&,const NullaryFunctor&, const typename M::value_type&)) 
 	   apply_0ary_functor<
 	     typename M::value_type,
@@ -92,6 +92,8 @@ void export_matrix_ops(){
 
 	export_blas3<fdev,fdev,fdev>();
 	export_blas3<fhost,fhost,fhost>();
+	export_nullary_functor<fhost>();
+	export_nullary_functor<fdev>();
 	export_scalar_functor<fhost>();
 	export_scalar_functor<fdev>();
 	export_binary_functor<fdev,fdev>();
