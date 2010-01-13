@@ -144,13 +144,24 @@ numpy2dev_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
  */
 template<class T, class Mfrom, class Mto_ublas, class Mto_cuv>
 pyublas::numpy_matrix<T,Mto_ublas>
-dev_dense_mat2numpy(dev_dense_matrix<T, Mfrom> m){
+dev_dense_mat2numpy(dev_dense_matrix<T, Mfrom>& m){
 	pyublas::numpy_matrix<T,Mto_ublas> to(m.h(),m.w());
 	host_dense_matrix<T,Mto_cuv>* to_view = mat_view<T,Mto_cuv,Mto_ublas>(to);
 	convert(*to_view,m);
 	delete to_view;
 	return to;
 }
+/*
+ *template<class T, class Mfrom, class Mto_ublas, class Mto_cuv>
+ *pyublas::numpy_matrix<T,Mto_ublas>*
+ *dev_dense_mat2numpy(dev_dense_matrix<T, Mfrom> m){
+ *    pyublas::numpy_matrix<T,Mto_ublas>* to= new pyublas::numpy_matrix<T,Mto_ublas>(m.h(),m.w());
+ *    host_dense_matrix<T,Mto_cuv>* to_view = mat_view<T,Mto_cuv,Mto_ublas>(*to);
+ *    convert(*to_view,m);
+ *    delete to_view;
+ *    return to;
+ *}
+ */
 /*
  * export conversion of numpy matrix to device matrix (helper function)
  */
@@ -165,6 +176,7 @@ void export_numpy2dev_dense_mat(const char* c){
 template<class T, class Mfrom, class Mto>
 void export_dev_dense_mat2numpy(const char* c){
 	typedef typename matrix2ublas_traits<Mto>::storage_type Mto_ublas_type;
+	//def(c, dev_dense_mat2numpy<T,Mfrom,Mto_ublas_type,Mto>, return_value_policy<manage_new_object>());
 	def(c, dev_dense_mat2numpy<T,Mfrom,Mto_ublas_type,Mto>);
 }
 

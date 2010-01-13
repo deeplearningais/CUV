@@ -24,6 +24,7 @@ class dev_vector
 			:   base_type(s) { alloc(); }
 		dev_vector(size_t s, value_type* p, bool is_view)
 			:   base_type(s,p,is_view) {} // do not alloc!
+		~dev_vector(){dealloc();}
 		/*
 		 * Member access
 		 */

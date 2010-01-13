@@ -55,6 +55,7 @@ namespace cuv{
 				:	base_type(h,w), m_vec(NULL){ alloc(); }
 			host_dense_matrix(const index_type& h, const index_type& w, host_vector<value_type,index_type>* p) 
 				:	base_type(h,w), m_vec(p) {} // do not alloc!
+			~host_dense_matrix(){ dealloc(); }
 			host_dense_matrix<value_type,memory_layout,index_type>& 
 				operator=(host_dense_matrix<value_type,memory_layout,index_type>& o){
 					if(this==&o) return *this;

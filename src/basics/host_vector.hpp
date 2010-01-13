@@ -27,6 +27,7 @@ class host_vector
 			:   base_type(s) { alloc(); }
 		host_vector(size_t s, value_type* p, bool is_view)
 			:   base_type(s,p,is_view) { } // do not alloc!
+		~host_vector(){ dealloc(); }
 		/*
 		 * Memory Management
 		 */
