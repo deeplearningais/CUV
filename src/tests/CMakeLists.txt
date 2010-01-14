@@ -58,12 +58,14 @@ ADD_TEST( random "${CMAKE_BINARY_DIR}/tests/test_random" )
 ADD_TEST( spmv "${CMAKE_BINARY_DIR}/tests/test_spmv" )
 ADD_TEST( densedense_to_dia "${CMAKE_BINARY_DIR}/tests/test_densedense_to_dia" )
 ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/tests/test_dia_mat" )
+ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/tests/test_conv_op" )
 
 # speed tests just take too long.
 #ADD_TEST( vec_op_speed "${CMAKE_BINARY_DIR}/tests/test_vec_op_speed" )
 #ADD_TEST( mat_op_speed "${CMAKE_BINARY_DIR}/tests/test_mat_op_speed" )
 #ADD_TEST( spmv_speed "${CMAKE_BINARY_DIR}/tests/test_spmv_speed" )
 #ADD_TEST( densedense_to_dia_speed "${CMAKE_BINARY_DIR}/tests/test_densedense_to_dia_speed" )
+#ADD_TEST( conv_ops_speed "${CMAKE_BINARY_DIR}/tests/test_conv_op_speed" )
 
 SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
 ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/python_bindings python -c 'import cuv_python as cp'" )

@@ -16,10 +16,10 @@
 using namespace cuv;
 
 struct Fix{
-	static const int c = 4;  // # patterns
-	static const int n = 128;  // image size
-	static const int f = 32;   // # filters
-	static const int g = 16;    // filter size
+	static const int c = 2;  // # patterns
+	static const int n = 64;  // image size
+	static const int f = 16;   // # filters
+	static const int g = 8;    // filter size
 	static const int k = n-g+1;// target image size
 	dev_dense_matrix<float, row_major>  d_img,d_filter,d_dst;
 	host_dense_matrix<float, row_major> h_img,h_filter,h_dst;
