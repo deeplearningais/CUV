@@ -101,6 +101,8 @@ void export_dia_matrix(){
 			(arg("C"),arg("Cbd"),arg("A"),arg("B"),arg("factAB")=1.f,arg("factC")=0.f));
 			//"C <- A*B', where C is sparse");
 
-	def("prod", cuv::prod<host_dense_matrix<float,column_major>, host_dia_matrix<float>,host_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
-	def("prod", cuv::prod<dev_dense_matrix<float,column_major>,  dev_dia_matrix<float>,  dev_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
+	def("prod", cuv::prod<host_dense_matrix<float,column_major>, host_dia_matrix<float>,host_dense_matrix<float,column_major> >, 
+			(arg("C"),arg("A"),arg("B"),arg("transA"),arg("transB"),arg("factAB")=1.f,arg("factC")=0.f));
+	def("prod", cuv::prod<dev_dense_matrix<float,column_major>,  dev_dia_matrix<float>,  dev_dense_matrix<float,column_major> >,
+			(arg("C"),arg("A"),arg("B"),arg("transA"),arg("transB"),arg("factAB")=1.f,arg("factC")=0.f));
 }
