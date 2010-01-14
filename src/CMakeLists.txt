@@ -28,6 +28,9 @@ ELSE(CUDA_SHARED)
 	SET(CUDA_SDK_ROOT_DIR "/usr/local/src/cuda" CACHE STRING "Location of CUDA SDK")
 ENDIF(CUDA_SHARED)
 
+SET (CUDA_TEST_DEVICE "0" CACHE STRING "Which CUDA device should the tests be run on, if multiple devices are present.")
+add_definitions(-DCUDA_TEST_DEVICE=${CUDA_TEST_DEVICE})
+
 FIND_PACKAGE(CUDA)
 #FIND_PACKAGE(CxxTest)
 

@@ -28,7 +28,7 @@ using namespace cuv;
 	}
 
 struct MyConfig {
-	static const int dev = 0;
+	static const int dev = CUDA_TEST_DEVICE;
 	MyConfig()   { 
 		printf("Testing on device=%d\n",dev);
 		initCUDA(dev); 

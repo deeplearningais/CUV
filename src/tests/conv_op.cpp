@@ -15,19 +15,6 @@
 
 using namespace cuv;
 
-struct MyConfig {
-	static const int dev = 0;
-	MyConfig()   {
-		printf("Testing on device=%d\n",dev);
-		initCUDA(dev);
-	}
-	~MyConfig()  { exitCUDA();  }
-};
-
-
-BOOST_GLOBAL_FIXTURE( MyConfig );
-
-
 struct Fix{
 	static const int c = 4;  // # patterns
 	static const int n = 128;  // image size
