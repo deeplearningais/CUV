@@ -46,16 +46,21 @@ void
 export_diamat_common(const char* name){
 	typedef T mat;
 	typedef typename mat::value_type value_type;
+	typedef typename mat::vec_type vec_type;
 
 	class_<mat>(name, no_init)
 		.def("w",   &mat::w,    "width")
 		.def("h",   &mat::h,    "height")
 		.def("__len__",&mat::n, "number of elements")
 		.def("alloc",&mat::alloc, "allocate memory")
+		.def("vec",    (vec_type* (mat::*)())(&mat::vec_ptr), "internal memory vector", return_internal_reference<>())
 		.def("dealloc",&mat::dealloc, "deallocate memory")
+		.def("stride",&mat::stride, "matrix stride")
+		.def("num_dia",&mat::num_dia, "number of diagonals")
 		.def("__call__",  (const value_type& (mat::*)(const typename mat::index_type&, const typename mat::index_type&)const)(&mat::operator()), return_value_policy<copy_const_reference>()) // igitt.
 		;
-	def((std::string("make_")+name).c_str(),  create_dia_mat<mat>, return_value_policy<manage_new_object>());
+	def((std::string("make_")+name).c_str(),  create_dia_mat<mat>,              return_value_policy<manage_new_object>());
+	def((std::string("make_")+name).c_str(),  create_dia_mat_from_dia_mat<mat>, return_value_policy<manage_new_object>());
 }
 
 template<class T>
