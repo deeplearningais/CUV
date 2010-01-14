@@ -93,6 +93,14 @@ namespace cuv{
   template<class V,class M, class I> float mean(host_dense_matrix<V,M,I>& v) {return mean(v.vec());}
   template<class V,class M, class I> float var(host_dense_matrix<V,M,I>& v)  {return var(v.vec());}
 
+  /// sum all columns of a matrix to get one sum-column
+  template<class __matrix_type, class __vector_type> 
+	  void reduce_to_col(__vector_type&, const __matrix_type&);
+
+  /// sum all rows of a matrix to get one sum-row
+  template<class __matrix_type, class __vector_type> 
+	  void reduce_to_row(__vector_type&, const __matrix_type&);
+
   // end of wrappers for vector ops
 
 

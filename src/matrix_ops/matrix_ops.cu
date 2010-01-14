@@ -11,6 +11,37 @@
 	 ((c) == 'C' || (c) == 'c') ? CblasConjTrans : \
 	 -1)
 
+template<int BLOCK_SIZE, class T, int OP>
+__global__ 
+void reduce_to_col_kernel(T* matrix, T* vector, int nCols, int nRows, T param) {
+	__shared__ T shared[BLOCK_SIZE*2][BLOCK_SIZE/2];
+	int tx = threadIdx.x, bx=blockIdx.x;
+	int ty = threadIdx.y;//, by=blockIdx.y;
+	if(bx*blockDim.x+tx>nRows) return;
+	int off = blockDim.y;
+	
+	shared[ty][tx] = 0.f;
+	for(int my=ty; my<nCols; my += off){
+		T f = matrix[my*nRows + bx*blockDim.x + tx];
+
+		if(OP==1)  f*= f;
+		if(OP==2)  f*= param;
+		shared[ty][tx] +=f;
+	}
+	__syncthreads();
+
+	int offset = blockDim.y / 2;
+	while(offset > 0) {
+		if( ty < offset)
+			shared[ty][tx] += shared[ty+offset][tx];
+		offset >>= 1;
+		__syncthreads();
+	}
+
+	if (ty == 0)
+		vector[bx * blockDim.x + tx] = shared[0][tx];
+	__syncthreads();
+}
 
 
 namespace cuv{
@@ -145,6 +176,7 @@ namespace cuv{
 				int num_threads = min(512,A.h());
 				int num_blocks  = A.w();
 				matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
+				cuvSafeCall(cudaThreadSynchronize());
 			}
 		template<class V, class I, class V2, class OP>
 			void matrix_plus_col(dev_dense_matrix<V,column_major,I>& A, const dev_vector<V2,I>& v, const OP& op){
@@ -152,6 +184,7 @@ namespace cuv{
 				int num_threads = 512;
 				int num_blocks  = min(512,(int)ceil((float)A.n() / num_threads));
 				matrix_plus_vector_kernel_column_major2<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
+				cuvSafeCall(cudaThreadSynchronize());
 			}
 		template<class V, class I, class V2, class OP>
 			void matrix_plus_col(host_dense_matrix<V,column_major,I>& A, const host_vector<V2,I>& v, const OP& op){
@@ -181,6 +214,18 @@ namespace cuv{
   template<class __matrix_type, class __vector_type>
 	  void matrix_times_col(__matrix_type& A, const __vector_type& v){
 		  matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<typename __matrix_type::value_type>());
+	  }
+
+  template<class __matrix_type, class __vector_type>
+	  void reduce_to_col(__vector_type&v, const __matrix_type& m){
+		  assert(m.ptr() != NULL);
+		  assert(m.h()   == v.size());
+		  fill(v,0);
+		  static const int BLOCK_SIZE = 16;
+		  dim3 grid(ceil((float)m.h()/(BLOCK_SIZE/2)), 1);
+		  dim3 threads(BLOCK_SIZE/2,BLOCK_SIZE*2);
+		  reduce_to_col_kernel<BLOCK_SIZE,typename __matrix_type::value_type,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0);
+		  cuvSafeCall(cudaThreadSynchronize());
 	  }
 
 #define INSTANTIATE_MV(V,M) \
