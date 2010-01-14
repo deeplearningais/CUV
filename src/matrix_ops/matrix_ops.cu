@@ -13,7 +13,7 @@
 
 template<int BLOCK_SIZE, class T, int OP>
 __global__ 
-void reduce_to_col_kernel(T* matrix, T* vector, int nCols, int nRows, T param) {
+void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows, T param) {
 	__shared__ T shared[BLOCK_SIZE*2][BLOCK_SIZE/2];
 	int tx = threadIdx.x, bx=blockIdx.x;
 	int ty = threadIdx.y;//, by=blockIdx.y;
@@ -216,16 +216,22 @@ namespace cuv{
 		  matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<typename __matrix_type::value_type>());
 	  }
 
-  template<class __matrix_type, class __vector_type>
-	  void reduce_to_col(__vector_type&v, const __matrix_type& m){
-		  assert(m.ptr() != NULL);
-		  assert(m.h()   == v.size());
+  namespace reduce_to_col_impl{
+	  template<class V,class I, class V2>
+	  void reduce_to_col(dev_vector<V2,I>&v, const dev_dense_matrix<V,column_major,I>& m){
+		  cuvAssert(m.ptr() != NULL);
+		  cuvAssert(m.h()   == v.size());
 		  fill(v,0);
 		  static const int BLOCK_SIZE = 16;
 		  dim3 grid(ceil((float)m.h()/(BLOCK_SIZE/2)), 1);
 		  dim3 threads(BLOCK_SIZE/2,BLOCK_SIZE*2);
-		  reduce_to_col_kernel<BLOCK_SIZE,typename __matrix_type::value_type,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0);
+		  reduce_to_col_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0);
 		  cuvSafeCall(cudaThreadSynchronize());
+	  }
+  }
+  template<class __matrix_type, class __vector_type>
+	  void reduce_to_col(__vector_type&v, const __matrix_type& m){
+		  reduce_to_col_impl::reduce_to_col(v,m);
 	  }
 
 #define INSTANTIATE_MV(V,M) \
@@ -234,7 +240,12 @@ namespace cuv{
   template void matrix_times_col(dev_dense_matrix<V,M>&, const dev_vector<V>&);  \
   template void matrix_times_col(host_dense_matrix<V,M>&, const host_vector<V>&);
 
+#define INSTANTIATE_REDCOL(V,M) \
+  template void reduce_to_col(dev_vector<V>&, const dev_dense_matrix<V,M>&);
+
   INSTANTIATE_MV(float, column_major);
   INSTANTIATE_MV(float, row_major);
+
+  INSTANTIATE_REDCOL(float,column_major);
 
 }; // cuv

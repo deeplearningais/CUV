@@ -199,5 +199,18 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_vec_row_major )
 
 }
 
+BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col )
+{
+	sequence(v);
+	dev_vector<float> v_col(n);
+	reduce_to_col(v_col,v);
+	for(int i=0;i<n;i++){
+		float v_correct = 0;
+		for(int j=0;j<n;j++)
+			v_correct += v(i,j);
+		BOOST_CHECK_CLOSE(v_correct,v_col[i],0.01);
+	}
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
