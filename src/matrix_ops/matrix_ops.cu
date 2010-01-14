@@ -2,6 +2,7 @@
 #include <cblas.h>
 
 #include <cuv_general.hpp>
+#include <thrust/functional.h>
 #include "matrix_ops.hpp"
 
 #define CVT_TRANSPOSE(c) \
@@ -104,5 +105,91 @@ namespace cuv{
 					factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
 		}
 
+	template<class V, class I, class V2, class OP>
+	__global__
+	void matrix_plus_vector_kernel_column_major(V*A,V2* v,I w,I h, OP op){
+		int tid = blockDim.x*blockIdx.x + threadIdx.x;
+		if(tid>h) return;
+		V2 tid_v = v[tid];
+		for(int i=tid;i<w;i++)
+			A[i] = op(A[i],tid_v);
+	}
+	template<class V, class I, class V2, class OP>
+	__global__ 
+	void matrix_plus_vector_kernel_column_major2 (V *A, const V2* v,  I h, I w, OP op) {
+			const unsigned int idx        = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+			const unsigned int numThreads = __mul24(blockDim.x , gridDim.x);
+
+			int stop = w*h;
+			for (unsigned int i = idx; i < stop; i += numThreads)
+				A[i] = op(A[i] , v[i % h]);
+		}
+	template<class V, class I, class V2, class OP>
+	__global__ 
+	void matrix_plus_vector_kernel_row_major (V *A, V2* v,  I h, I w, OP op) {
+			__shared__ float scalar;
+			if (threadIdx.x == 0) {
+				scalar = v[blockIdx.x];
+			}
+			__syncthreads();
+			int stop = h;
+			for (unsigned int i = threadIdx.x; i < stop; i += blockDim.x) {
+				A[blockIdx.x * h + i] = op(A[blockIdx.x * h + i] , scalar);
+			}
+		}
+
+	namespace matrix_plus_vector_impl{
+		template<class V, class I, class V2, class OP>
+			void matrix_plus_col(dev_dense_matrix<V,row_major,I>& A, const dev_vector<V2,I>& v, const OP& op){
+				cuvAssert(A.h() == v.size());
+				int num_threads = min(512,A.h());
+				int num_blocks  = A.w();
+				matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
+			}
+		template<class V, class I, class V2, class OP>
+			void matrix_plus_col(dev_dense_matrix<V,column_major,I>& A, const dev_vector<V2,I>& v, const OP& op){
+				cuvAssert(A.h() == v.size());
+				int num_threads = 512;
+				int num_blocks  = min(512,(int)ceil((float)A.n() / num_threads));
+				matrix_plus_vector_kernel_column_major2<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
+			}
+		template<class V, class I, class V2, class OP>
+			void matrix_plus_col(host_dense_matrix<V,column_major,I>& A, const host_vector<V2,I>& v, const OP& op){
+				const V2* v_ptr = v.ptr();
+				V *       A_ptr = A.ptr();
+				for(int j=0;j<A.w();j++){
+					v_ptr = v.ptr();
+					for(int i=0;i<A.h();i++,A_ptr++,v_ptr++)
+						*A_ptr = op(*A_ptr,*v_ptr);
+				}
+			}
+		template<class V, class I, class V2, class OP>
+			void matrix_plus_col(host_dense_matrix<V,row_major,I>& A, const host_vector<V2,I>& v, const OP& op){
+				const V2* v_ptr = v.ptr();
+				V *       A_ptr = A.ptr();
+				for(int i=0;i<A.h();i++, v_ptr++){
+					for(int j=0;j<A.w();j++)
+						*A_ptr++ = op(*A_ptr,*v_ptr);
+				}
+			}
+	}
+  template<class __matrix_type, class __vector_type>
+	  void matrix_plus_col(__matrix_type& A, const __vector_type& v){
+		  matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::plus<typename __matrix_type::value_type>());
+	  }
+
+  template<class __matrix_type, class __vector_type>
+	  void matrix_times_col(__matrix_type& A, const __vector_type& v){
+		  matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<typename __matrix_type::value_type>());
+	  }
+
+#define INSTANTIATE_MV(V,M) \
+  template void matrix_plus_col(dev_dense_matrix<V,M>&, const dev_vector<V>&);   \
+  template void matrix_plus_col(host_dense_matrix<V,M>&, const host_vector<V>&); \
+  template void matrix_times_col(dev_dense_matrix<V,M>&, const dev_vector<V>&);  \
+  template void matrix_times_col(host_dense_matrix<V,M>&, const host_vector<V>&);
+
+  INSTANTIATE_MV(float, column_major);
+  INSTANTIATE_MV(float, row_major);
 
 }; // cuv

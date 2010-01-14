@@ -112,6 +112,12 @@ namespace cuv{
   // v            :  vector
   template<class __matrix_type, class __vector_type>
 	  void spmv(__vector_type& dst, __matrix_type& A, __vector_type& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
+  
+  template<class __matrix_type, class __vector_type>
+	  void matrix_plus_col(__matrix_type& A, const __vector_type& v);
+
+  template<class __matrix_type, class __vector_type>
+	  void matrix_times_col(__matrix_type& A, const __vector_type& v);
 } // cuv
 
 #endif
