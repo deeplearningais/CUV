@@ -53,6 +53,8 @@ namespace cuv{
 
 		  dev_dense_matrix(const index_type& h, const index_type& w, dev_vector<value_type,index_type>* p)
 			:  base_type(h,w), m_vec(p) { } // do not alloc!
+		  dev_dense_matrix(const index_type& h, const index_type& w, value_type* p, bool is_view)
+			:	base_type(h,w) { m_vec = new vec_type(h*w,p,is_view); }
 		  ~dev_dense_matrix(){ dealloc(); }
 
 		  dev_dense_matrix<value_type,memory_layout,index_type>& 

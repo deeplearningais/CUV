@@ -22,6 +22,7 @@ namespace cuv{
 			~dense_matrix(){}
 			dense_matrix(const index_type& h, const index_type& w)
 				: base_type(h,w) {}
+			dense_matrix(const index_type& h, const index_type& w, value_type* p, bool is_view = false) { }
 	};
 }
 

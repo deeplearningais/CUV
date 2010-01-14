@@ -55,6 +55,8 @@ namespace cuv{
 				:	base_type(h,w), m_vec(NULL){ alloc(); }
 			host_dense_matrix(const index_type& h, const index_type& w, host_vector<value_type,index_type>* p) 
 				:	base_type(h,w), m_vec(p) {} // do not alloc!
+			host_dense_matrix(const index_type& h, const index_type& w, value_type* p, bool is_view)
+				:	base_type(h,w) { m_vec = new vec_type(h*w,p,is_view); }
 			~host_dense_matrix(){ dealloc(); }
 			host_dense_matrix<value_type,memory_layout,index_type>& 
 				operator=(host_dense_matrix<value_type,memory_layout,index_type>& o){
