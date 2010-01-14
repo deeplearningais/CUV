@@ -38,6 +38,13 @@ void export_nullary_functor() {
 		 typename M::memory_layout,
 		 typename M::index_type,
 		 typename M::value_type>);
+	typedef typename M::vec_type V;
+	def("apply_nullary_functor",
+	   (void (*)(V&,const NullaryFunctor&)) 
+	   apply_0ary_functor<V>);
+	def("apply_nullary_functor",
+	   (void (*)(V&,const NullaryFunctor&, const typename V::value_type&)) 
+	   apply_0ary_functor<V,typename V::value_type>);
 }
 
 template<class M>
@@ -55,6 +62,13 @@ void export_scalar_functor() {
 		 typename M::memory_layout,
 		 typename M::index_type,
 		 typename M::value_type>);
+	typedef typename M::vec_type V;
+	def("apply_scalar_functor",
+	   (void (*)(V&,const ScalarFunctor&)) 
+	   apply_scalar_functor<V>);
+	def("apply_scalar_functor",
+	   (void (*)(V&,const ScalarFunctor&, const typename V::value_type&)) 
+	   apply_scalar_functor<V,typename V::value_type>);
 }
 
 template<class M, class N>
@@ -82,6 +96,20 @@ void export_binary_functor() {
 		 typename M::index_type,
 	     typename M::value_type,
 		 typename N::value_type>);
+	typedef typename M::vec_type V;
+	typedef typename N::vec_type W;
+	def("apply_binary_functor",
+	   (void (*)(V&, W&, const BinaryFunctor&)) 
+	   apply_binary_functor<V,W>);
+	def("apply_binary_functor",
+	   (void (*)(V&, W&, const BinaryFunctor&, const typename V::value_type&)) 
+	   apply_binary_functor<V,W,typename V::value_type>);
+	def("apply_binary_functor",
+	   (void (*)(V&, W&, const BinaryFunctor&, const typename V::value_type&, const typename V::value_type&)) 
+	   apply_binary_functor<
+	     V,
+		 W,
+	     typename M::value_type>);
 }
 
 template <class M>
@@ -99,6 +127,8 @@ void export_blas2(){
 template <class M>
 void export_learn_step(){
 	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<typename M::value_type,typename M::memory_layout,typename M::index_type>);
+	typedef typename M::vec_type V;
+	def("learn_step_weight_decay",(void (*)(V&, V&, const float&, const float&)) learn_step_weight_decay<V>);
 }
 
 void export_matrix_ops(){
