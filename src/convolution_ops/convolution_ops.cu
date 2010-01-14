@@ -3,6 +3,7 @@
 #include <convert.hpp>
 #include <nvmatrix.cuh>
 #include <conv.cuh>
+#include <conv_util.cuh>
 
 namespace cuv{
 
@@ -51,8 +52,6 @@ void convolve(host_dense_matrix<float,row_major>& dst,
 	int dstSize = sqrt(dst.w()/numFilters);
 
 	int dstPixels = dstSize * dstSize;
-	int imgPixels = imgSize * imgSize;
-	int filterPixels = filterSize * filterSize;
 
 // Alex' host convolution is ~25% faster due to better memory access patterns
 //	convCPU(img.ptr(), filter.ptr(), dst.ptr(), imgSize, filterSize, numImages, numFilters);
@@ -71,6 +70,58 @@ void convolve(host_dense_matrix<float,row_major>& dst,
 					sum += dst(i, f*dstPixels + r*dstSize + c);
 					dst.set(i, f*dstPixels + r*dstSize + c, sum);
 				}
+}
+
+template<>
+void localMaximum(dev_dense_matrix<float,row_major>& dst,
+		  dev_dense_matrix<float,row_major>&   img,
+		  int poolSize) {
+	int numImages = img.h();
+	int imgPixels = img.w();
+	int regionsPerImage = imgPixels / (poolSize * poolSize);
+	int imgSize = sqrt(img.w());
+	int dstSize = sqrt(dst.w());
+
+	// some preliminary checks
+	cuvAssert(imgSize*imgSize == img.w());
+	cuvAssert(dstSize*dstSize == dst.w());
+	cuvAssert(img.h() == dst.h());
+
+	// make nvMatrices with this data
+	NVMatrix nv_img(img.ptr(), numImages, imgPixels, false);
+	NVMatrix nv_trans(numImages * regionsPerImage, poolSize * poolSize, false);
+	NVMatrix nv_dst(dst.ptr(), numImages * regionsPerImage, 1, false);
+	nv_trans.apply(NVMatrix::ZERO);
+	nv_dst.apply(NVMatrix::ZERO);
+
+	// transform and calculate maximum
+	gridToMatrix(&nv_img, &nv_trans, poolSize, true);
+	nv_trans.max(1, nv_dst);
+
+	cudaThreadSynchronize();
+}
+
+template<>
+void localMaximum(host_dense_matrix<float,row_major>& dst,
+		  host_dense_matrix<float,row_major>&   img,
+		  int poolSize) {
+	int numImages = img.h();
+	int imgPixels = img.w();
+	int imgSize = sqrt(img.w());
+	int dstSize = sqrt(dst.w());
+
+	for(int i=0; i < img.h(); i++)
+		for(int r=0; r<dstSize; r++)
+			for(int c=0; c<dstSize; c++) {
+				float maxi = -1000.f;
+				for(int y=0; y<poolSize; y++)
+					for(int x=0; x<poolSize; x++) {
+						float val = img(i, (r*poolSize+y)*imgSize + c*poolSize+x);
+						if(maxi < val)
+							maxi = val;
+					}
+				dst.set(i, r*dstSize+c, maxi);
+			}
 }
 
 }

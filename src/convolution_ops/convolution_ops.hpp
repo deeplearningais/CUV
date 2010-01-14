@@ -7,13 +7,6 @@
 #include <dev_dense_matrix.hpp>
 #include <host_dense_matrix.hpp>
 
-//#include <cuv_general.hpp>
-//#include <vector_ops.hpp>
-//#include <dev_dense_matrix.hpp>
-//#include <host_dense_matrix.hpp>
-//#include <vector_ops/rprop.hpp>
-//#include <convert/convert.hpp>
-
 namespace cuv{
 
 /*
@@ -29,6 +22,16 @@ template<class V, class M, class I>
 void convolve(host_dense_matrix<V,M,I>& dst,
 		   host_dense_matrix<V,M,I>& img,
 		   host_dense_matrix<V,M,I>& filter);
+
+template<class V, class M, class I>
+void localMaximum(dev_dense_matrix<V,M,I>& dst,
+		   dev_dense_matrix<V,M,I>& img,
+		   int poolSize);
+
+template<class V, class M, class I>
+void localMaximum(host_dense_matrix<V,M,I>& dst,
+		   host_dense_matrix<V,M,I>& img,
+		   int poolSize);
 
 }
 
