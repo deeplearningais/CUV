@@ -14,7 +14,7 @@ CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/basics )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/vector_ops )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/convert )
 
-CUDA_ADD_LIBRARY(cuv_convolution_ops
+CUDA_ADD_LIBRARY(cuv_convolution_ops STATIC
 	convolution_ops.cu
   )
 
