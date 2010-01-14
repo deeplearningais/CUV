@@ -421,7 +421,6 @@ namespace cuv{
 		dim3 threads(512,1);
 		dim3 grid(MT_RNG_COUNT/512,1,1);
 		using namespace std;
-		cout << "------------------------------> "<< v.size()<<endl;
 		kRndNormal<<<grid,threads>>>((float2*)v.ptr(),v.size()/2,rng);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
