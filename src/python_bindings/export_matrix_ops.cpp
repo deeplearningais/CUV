@@ -87,6 +87,7 @@ void export_binary_functor() {
 template <class M>
 void export_reductions(){
 	def("norm2",(float (*)(M&)) norm2<typename M::value_type,typename M::memory_layout,typename M::index_type>);
+	def("reduce_to_row", reduce_to_row<M,typename M::vec_type>);
 }
 
 template <class M>
@@ -112,7 +113,7 @@ void export_matrix_ops(){
 	export_scalar_functor<fdev>();
 	export_binary_functor<fdev,fdev>();
 	export_binary_functor<fhost,fhost>();
-	export_reductions<fhost>();
+	//export_reductions<fhost>();
 	export_reductions<fdev>();
 	export_learn_step<fhost>();
 	export_learn_step<fdev>();
