@@ -231,9 +231,9 @@ namespace cuv{
 				cuvAssert(A.w()   == B.w());
 				cuvAssert(A.w() % SPARSE_DIA_BLOCK_SIZE  == 0);
 				/*cout << "dMultiplyAdd: block:" << block.x << ", "<<block.y<<"; grid: "<<grid.x<<endl;*/
-#ifndef NDEBUG
-				float theoret_speedup = (dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE)) / (float)(bd.blocks().len);
-				cout << "MatrixInfo: Need to calculate " << bd.blocks().len << " of " << dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE) <<" blocks, theoretical speedup:"<< theoret_speedup<<endl;
+#ifndef NDEBUG && 0
+				/*float theoret_speedup = (dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE)) / (float)(bd.blocks().len);*/
+				/*cout << "MatrixInfo: Need to calculate " << bd.blocks().len << " of " << dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE) <<" blocks, theoretical speedup:"<< theoret_speedup<<endl;*/
 #endif
 				if(0);
 				else if(factAB==1.f && factC==0.f)
