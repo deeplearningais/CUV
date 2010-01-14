@@ -49,6 +49,8 @@ namespace cuv{
 			}
 			inline const vec_type& vec()const{ return *m_vec; }
 			inline       vec_type& vec()     { return *m_vec; }
+			inline const vec_type* vec_ptr()const{ return m_vec; }
+			inline       vec_type* vec_ptr()     { return m_vec; }
 			inline int num_dia()const{ return m_num_dia; }
 			inline int stride()const { return m_stride;  }
 			inline bool transposed()const{ return m_is_transposed; }
