@@ -3,6 +3,7 @@
 #include <boost/python/extract.hpp>
 #include <boost/python/list.hpp>
 
+#include <pyublas/numpy.hpp>
 
 #include <host_dia_matrix.hpp>
 #include <dev_dia_matrix.hpp>
@@ -10,6 +11,7 @@
 #include <matrix_ops/densedense_to_sparse.hpp>
 #include <convert.hpp>
 
+namespace ublas = boost::numeric::ublas;
 using namespace boost::python;
 using namespace cuv;
 
@@ -74,6 +76,22 @@ void export_block_descriptors(const char*name){
 		;
 }
 
+// forward declaration...
+template<class T, class Mfrom, class Mto_ublas, class Mto_cuv>
+pyublas::numpy_matrix<T,Mto_ublas>
+host_dense_mat2numpy(host_dense_matrix<T, Mfrom>& m);
+
+template<class T>
+pyublas::numpy_matrix<T,ublas::column_major> 
+dev_dia_mat2numpy(dev_dia_matrix<T>&m){
+	host_dia_matrix<T>   hostdia(m.h(),m.w(),m.num_dia(),m.stride());
+	cuv::convert(hostdia,m);
+	host_dense_matrix<T,column_major> mdense(m.h(),m.w());
+	cuv::convert(mdense,hostdia);
+	pyublas::numpy_matrix<T,ublas::column_major> to = host_dense_mat2numpy<T,cuv::column_major,ublas::column_major,cuv::column_major>(mdense);
+	return to;
+}
+
 
 
 template <class T>
@@ -81,6 +99,8 @@ void
 export_diamat_conversion(){
 	def("convert", (void(*)(dev_dia_matrix<T>&,const host_dia_matrix<T>&)) cuv::convert);
 	def("convert", (void(*)(host_dia_matrix<T>&,const dev_dia_matrix<T>&)) cuv::convert);
+	def("convert", (void(*)(host_dense_matrix<T>&, const host_dia_matrix<T>&)) cuv::convert);
+	def("pull",    dev_dia_mat2numpy<T>);
 }
 
 void export_dia_matrix(){
