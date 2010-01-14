@@ -86,7 +86,7 @@ namespace cuv{
 			}
 			inline const intvec_type& get_offsets()const{return m_offsets;}
 			inline       intvec_type& get_offsets()     {return m_offsets;}
-			inline const int& get_offset(const index_type& idx)const{
+			inline int get_offset(const index_type& idx)const{
 				return m_offsets[idx];
 			}
 
