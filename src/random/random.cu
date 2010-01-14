@@ -290,7 +290,7 @@ struct binarize{
 		MersenneTwisterState mtState;
 		MersenneTwisterInitialize(mtState, idx);
 		for(int i=idx; i<n; i += __mul24(blockDim.x , gridDim.x))
-			 dst[i] = ((value_type(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f) > 0.5f);
+			 dst[i] = ((value_type(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f) < dst[i]);
 	}
 };
 
@@ -382,7 +382,7 @@ namespace cuv{
 	   cuvAssert(v.ptr());
 	   host_vector<float>::value_type* ptr = v.ptr();
 	   for(int i=0;i<v.size();i++)
-		   *ptr++ = ((float)rand()/RAND_MAX) > *ptr;
+		   *ptr++ = ((float)rand()/RAND_MAX) < *ptr;
 	}
 	template<>
 	void fill_rnd_uniform(host_vector<float>& v){
@@ -411,7 +411,7 @@ namespace cuv{
 	   boost::normal_distribution<float> nd;
 	   boost::variate_generator<rng_type, boost::normal_distribution<float> > die(rng, nd);
 	   for(int i=0;i<v.size();i++)
-		   *ptr++ = *ptr + die();
+		   *ptr++ += die();
 	}
 	template<>
 	void add_rnd_normal(dev_vector<float>& v){
