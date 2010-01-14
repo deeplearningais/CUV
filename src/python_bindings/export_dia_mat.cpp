@@ -51,6 +51,8 @@ void export_block_descriptors(const char*name){
 			(std::string("host_block_descriptor_") + name).c_str(), init<const host_dia_matrix<T>& >());
 	class_<dev_block_descriptor<T>  >(
 			(std::string("dev_block_descriptor_") + name).c_str(),  init<const dev_dia_matrix<T>&  >())
+		.def("__len__", &dev_block_descriptor<T>::len)
+		;
 }
 
 
