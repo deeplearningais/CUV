@@ -24,6 +24,16 @@ create_dia_mat(unsigned int h, unsigned int w, boost::python::list& dia_offsets,
 	}
 	T* m = new T(h,w,num_dia,stride);
 	m->set_offsets(dias,dias+num_dia);
+template<class T>
+T*
+create_dia_mat_from_dia_mat(T* other){
+	int *dias = new int[other->num_dia()];
+	for(int i=0; i< other->num_dia(); i++) {
+		dias[i]=other->get_offset(i);
+	}
+	T* m = new T(other->h(),other->w(),other->num_dia(),other->stride());
+	m->set_offsets(dias,dias+other->num_dia());
+	delete[] dias;
 	return m;
 }
 
