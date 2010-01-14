@@ -27,6 +27,11 @@ void export_functions() {
 	def("add_rnd_normal",add_rnd_normal_matrix<T>);
 	def("fill_rnd_uniform",fill_rnd_uniform_matrix<T>);
 	def("rnd_binarize",rnd_binarize_matrix<T>);
+
+	typedef typename T::vec_type V;
+	def("add_rnd_normal",add_rnd_normal<V>);
+	def("fill_rnd_uniform",fill_rnd_uniform<V>);
+	def("rnd_binarize",rnd_binarize<V>);
 }
 
 void export_random(){
