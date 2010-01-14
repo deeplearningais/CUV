@@ -6,6 +6,7 @@
 
 #include <dev_dense_matrix.hpp>
 #include <host_dense_matrix.hpp>
+#include <matrix_ops/matrix_ops.hpp>
 #include <convert.hpp>
 
 using namespace std;
@@ -152,16 +153,18 @@ dev_dense_mat2numpy(dev_dense_matrix<T, Mfrom>& m){
 	return to;
 }
 /*
- *template<class T, class Mfrom, class Mto_ublas, class Mto_cuv>
- *pyublas::numpy_matrix<T,Mto_ublas>*
- *dev_dense_mat2numpy(dev_dense_matrix<T, Mfrom> m){
- *    pyublas::numpy_matrix<T,Mto_ublas>* to= new pyublas::numpy_matrix<T,Mto_ublas>(m.h(),m.w());
- *    host_dense_matrix<T,Mto_cuv>* to_view = mat_view<T,Mto_cuv,Mto_ublas>(*to);
- *    convert(*to_view,m);
- *    delete to_view;
- *    return to;
- *}
+ * convert a dense matrix on the host to a new numpy-matrix
  */
+template<class T, class Mfrom, class Mto_ublas, class Mto_cuv>
+pyublas::numpy_matrix<T,Mto_ublas>
+host_dense_mat2numpy(host_dense_matrix<T, Mfrom>& m){
+	pyublas::numpy_matrix<T,Mto_ublas> to(m.h(),m.w());
+	host_dense_matrix<T,Mto_cuv>* to_view = mat_view<T,Mto_cuv,Mto_ublas>(to);
+	cuv::copy(*to_view,m);
+	delete to_view;
+	return to;
+}
+
 /*
  * export conversion of numpy matrix to device matrix (helper function)
  */
@@ -178,6 +181,15 @@ void export_dev_dense_mat2numpy(const char* c){
 	typedef typename matrix2ublas_traits<Mto>::storage_type Mto_ublas_type;
 	//def(c, dev_dense_mat2numpy<T,Mfrom,Mto_ublas_type,Mto>, return_value_policy<manage_new_object>());
 	def(c, dev_dense_mat2numpy<T,Mfrom,Mto_ublas_type,Mto>);
+}
+
+/*
+ * export conversion of host matrix to numpy matrix (helper function)
+ */
+template<class T, class Mfrom, class Mto>
+void export_host_dense_mat2numpy(const char* c){
+	typedef typename matrix2ublas_traits<Mto>::storage_type Mto_ublas_type;
+	def(c, host_dense_mat2numpy<T,Mfrom,Mto_ublas_type,Mto>);
 }
 
 /*
@@ -201,6 +213,15 @@ export_dev_dense_mat2numpys(){
 	export_dev_dense_mat2numpy<T,column_major,row_major>("pull_rm");
 	export_dev_dense_mat2numpy<T,row_major,column_major>("pull_cm");
 	export_dev_dense_mat2numpy<T,row_major,row_major>("pull");
+}
+
+template<class T>
+void
+export_host_dense_mat2numpys(){
+	export_host_dense_mat2numpy<T,column_major,column_major>("pull");
+	//export_host_dense_mat2numpy<T,column_major,row_major>("pull_rm"); // the use of ``copy'' prohibits these 
+	//export_host_dense_mat2numpy<T,row_major,column_major>("pull_cm");
+	export_host_dense_mat2numpy<T,row_major,row_major>("pull");
 }
 
 /*
@@ -232,6 +253,9 @@ void export_dense_matrix(){
 	export_dev_dense_mat2numpys<float>();
 	export_dev_dense_mat2numpys<signed char>();
 	export_dev_dense_mat2numpys<unsigned char>();
+	
+	// host matrix --> numpy matrix
+	export_host_dense_mat2numpys<float>();
 }
 
 
