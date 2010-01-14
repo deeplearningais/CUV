@@ -218,6 +218,23 @@ namespace cuv{
 
   namespace reduce_to_col_impl{
 	  template<class V,class I, class V2>
+	  void reduce_to_col(host_vector<V2,I>&v, const host_dense_matrix<V,column_major,I>& m, const V& factNew, const V& factOld){
+		  cuvAssert(m.ptr() != NULL);
+		  cuvAssert(m.h()   == v.size());
+		  const  V* A_ptr = m.ptr();
+		  
+		  V2* v_ptr = v.ptr();
+		  for(int j=0; j<m.h(); j++){
+				  *v_ptr++  *= factOld;
+		  }
+		  for(int i=0;i<m.w();i++){
+			  v_ptr = v.ptr();
+			  for(int j=0; j<m.h(); j++){
+				  *v_ptr++ += factNew * *A_ptr++;
+			  }
+		  }
+	  }
+	  template<class V,class I, class V2>
 	  void reduce_to_col(dev_vector<V2,I>&v, const dev_dense_matrix<V,column_major,I>& m, const V& factNew, const V& factOld){
 		  cuvAssert(m.ptr() != NULL);
 		  cuvAssert(m.h()   == v.size());
@@ -240,7 +257,8 @@ namespace cuv{
   template void matrix_times_col(host_dense_matrix<V,M>&, const host_vector<V>&);
 
 #define INSTANTIATE_REDCOL(V,M) \
-  template void reduce_to_col(dev_vector<V>&, const dev_dense_matrix<V,M>&, const V&,const V&);
+  template void reduce_to_col(dev_vector<V>&, const dev_dense_matrix<V,M>&, const V&,const V&); \
+  template void reduce_to_col(host_vector<V>&, const host_dense_matrix<V,M>&, const V&,const V&);
 
   INSTANTIATE_MV(float, column_major);
   INSTANTIATE_MV(float, row_major);

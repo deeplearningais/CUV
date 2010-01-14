@@ -113,7 +113,7 @@ void export_matrix_ops(){
 	export_scalar_functor<fdev>();
 	export_binary_functor<fdev,fdev>();
 	export_binary_functor<fhost,fhost>();
-	//export_reductions<fhost>();
+	export_reductions<fhost>();
 	export_reductions<fdev>();
 	export_learn_step<fhost>();
 	export_learn_step<fdev>();
