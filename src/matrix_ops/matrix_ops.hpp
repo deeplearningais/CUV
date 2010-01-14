@@ -95,11 +95,11 @@ namespace cuv{
 
   /// sum all columns of a matrix to get one sum-column
   template<class __matrix_type, class __vector_type> 
-	  void reduce_to_col(__vector_type&, const __matrix_type&);
+	  void reduce_to_col(__vector_type&, const __matrix_type&, const typename __matrix_type::value_type& factNew=1.f, const typename __matrix_type::value_type& factOld=0.f);
 
   /// sum all rows of a matrix to get one sum-row
   template<class __matrix_type, class __vector_type> 
-	  void reduce_to_row(__vector_type&, const __matrix_type&);
+	  void reduce_to_row(__vector_type&, const __matrix_type&, const typename __matrix_type::value_type& factNew=1.f, const typename __matrix_type::value_type& factOld=0.f);
 
   // end of wrappers for vector ops
 

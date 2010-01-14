@@ -13,7 +13,7 @@
 
 template<int BLOCK_SIZE, class T, int OP>
 __global__ 
-void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows, T param) {
+void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows, T param, T factNew, T factOld) {
 	__shared__ T shared[BLOCK_SIZE*2][BLOCK_SIZE/2];
 	int tx = threadIdx.x, bx=blockIdx.x;
 	int ty = threadIdx.y;//, by=blockIdx.y;
@@ -39,7 +39,7 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows, T pa
 	}
 
 	if (ty == 0)
-		vector[bx * blockDim.x + tx] = shared[0][tx];
+		vector[bx * blockDim.x + tx] = vector[bx*blockDim.x+tx]*factOld + shared[0][tx] * factNew;
 	__syncthreads();
 }
 
@@ -218,20 +218,20 @@ namespace cuv{
 
   namespace reduce_to_col_impl{
 	  template<class V,class I, class V2>
-	  void reduce_to_col(dev_vector<V2,I>&v, const dev_dense_matrix<V,column_major,I>& m){
+	  void reduce_to_col(dev_vector<V2,I>&v, const dev_dense_matrix<V,column_major,I>& m, const V& factNew, const V& factOld){
 		  cuvAssert(m.ptr() != NULL);
 		  cuvAssert(m.h()   == v.size());
 		  fill(v,0);
 		  static const int BLOCK_SIZE = 16;
 		  dim3 grid(ceil((float)m.h()/(BLOCK_SIZE/2)), 1);
 		  dim3 threads(BLOCK_SIZE/2,BLOCK_SIZE*2);
-		  reduce_to_col_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0);
+		  reduce_to_col_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
 		  cuvSafeCall(cudaThreadSynchronize());
 	  }
   }
   template<class __matrix_type, class __vector_type>
-	  void reduce_to_col(__vector_type&v, const __matrix_type& m){
-		  reduce_to_col_impl::reduce_to_col(v,m);
+	  void reduce_to_col(__vector_type&v, const __matrix_type& m, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld){
+		  reduce_to_col_impl::reduce_to_col(v,m,factNew,factOld);
 	  }
 
 #define INSTANTIATE_MV(V,M) \
@@ -241,7 +241,7 @@ namespace cuv{
   template void matrix_times_col(host_dense_matrix<V,M>&, const host_vector<V>&);
 
 #define INSTANTIATE_REDCOL(V,M) \
-  template void reduce_to_col(dev_vector<V>&, const dev_dense_matrix<V,M>&);
+  template void reduce_to_col(dev_vector<V>&, const dev_dense_matrix<V,M>&, const V&,const V&);
 
   INSTANTIATE_MV(float, column_major);
   INSTANTIATE_MV(float, row_major);
