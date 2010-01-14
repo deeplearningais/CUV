@@ -45,6 +45,7 @@ namespace cuv{
 			~dev_block_descriptor();
 
 			const block_array& blocks()const{return m_blocks;}
+			inline int len()const{ return m_blocks.len; }
 	};
 
 	/*
