@@ -29,16 +29,16 @@
 using namespace std;
 using namespace cuv;
 
-static const int n = 8192;
-static const int m = 8192;
-static const int k = 96;
+static const int n = 1*8192;
+static const int m = 1*8192;
+static const int k = 128;
 
 struct Fix{
 	dev_dia_matrix<float>   C;
 	dev_dense_matrix<float> A;
 	dev_dense_matrix<float> B;
 	Fix()
-	:   C(n,m,127,max(n,m))
+	:   C(n,m,63,max(n,m))
 	,   A(n,k)
 	,   B(m,k)
 	{
@@ -104,8 +104,8 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_dev_host )
 
 BOOST_AUTO_TEST_CASE( dd2s_speed_sparse_dense )
 {
-	//if(n>1024 || m>1024)
-	//    return; // otherwise, we get out of memory errors!
+	if(n>8092 || m>8092)
+	   return; // otherwise, we get out of memory errors!
 	fill(C.vec(),0);
 
 	// make a dev_dense_matrix equivalent to the dia-matrix
