@@ -174,7 +174,7 @@ namespace cuv{
 				cuvAssert(dst.h() == A.h());
 				cuvAssert(A.w()   == B.w());
 				value_type *dst_diabase = dst.vec().ptr();
-				index_type Ah = A.h(), Aw = A.w(), Bh = B.h(), Ch = dst.h(), Cw = dst.w();
+				const index_type Ah = A.h(), Aw = A.w(), Bh = B.h(), Bw = B.w(), Ch = dst.h(), Cw = dst.w();
 				for(int dia=0;dia<dst.num_dia();dia++, dst_diabase += dst.stride()){
 						const int k = dst.get_offset(dia);  //diagonal offset
 
@@ -185,17 +185,23 @@ namespace cuv{
 						const index_type N   = std::min(Ch - row_start, Cw - col_start);
 
 						// data vectors
-						value_type       *d      = dst_diabase + row_start;
-						const value_type *a_base = A.ptr() + row_start;
-						const value_type *b_base = B.ptr() + col_start;
+						value_type *const d_base = dst_diabase + row_start;
+						const value_type *const a_base = A.ptr() + row_start;
+						const value_type *const b_base = B.ptr() + col_start;
+						const value_type *a = a_base;
+						const value_type *b = b_base;
 
-						for(index_type n = 0; n < N; n++, d++){
-							const value_type* a  = a_base+n;
-							const value_type* b  = b_base+n;
-							register value_type v = (value_type)0;
-							for(int diak=0;   diak<Aw;   diak++, a+=Ah, b+=Bh)
-								v  += (*a)  *  (*b);
-							*d = factC * *d + factAB * v;
+						// now the main loop: move along the columns of A and B
+						// and update the corresponding data point on the diagonal
+						// this is better than finishing one diagonal element and then move to the next,
+						// since in that case, one has to move in Ah-sized steps.
+						const value_type*const a_end = a_base+Aw*Ah;
+						const value_type*const d_end = d_base+N;
+						for(;a<a_end; a+=Ah,b+=Bh){
+							value_type* d = d_base;
+							while(d<d_end)
+								*d++  += (*a++)  *  (*b++);
+							a-=N;   b-=N;
 						}
 				}
 			}
