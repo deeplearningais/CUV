@@ -221,7 +221,6 @@ namespace cuv{
 	  void reduce_to_col(dev_vector<V2,I>&v, const dev_dense_matrix<V,column_major,I>& m, const V& factNew, const V& factOld){
 		  cuvAssert(m.ptr() != NULL);
 		  cuvAssert(m.h()   == v.size());
-		  fill(v,0);
 		  static const int BLOCK_SIZE = 16;
 		  dim3 grid(ceil((float)m.h()/(BLOCK_SIZE/2)), 1);
 		  dim3 threads(BLOCK_SIZE/2,BLOCK_SIZE*2);
