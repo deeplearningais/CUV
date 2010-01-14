@@ -1,4 +1,5 @@
 #include <string>
+#include <iostream>
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/variate_generator.hpp>
@@ -330,10 +331,8 @@ struct rnd_normal {
 			 float x = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
 			 float y = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
 			 BoxMuller(x, y); //transform uniform into two independent standard normals
-			 /*u1 = u1 * __expf( sigma); oder so*/
-			 /*u2 = u2 * __expf( sigma); oder so*/
 			 float2 tmp=dst[idx];
-			 dst[idx] = make_float2(x+tmp.x,y+tmp.y);
+			 dst[i] = make_float2(x+tmp.x,y+tmp.y);
 		}
 	}
 };
@@ -421,6 +420,8 @@ namespace cuv{
 		rnd_normal<float2> rng;
 		dim3 threads(512,1);
 		dim3 grid(MT_RNG_COUNT/512,1,1);
+		using namespace std;
+		cout << "------------------------------> "<< v.size()<<endl;
 		kRndNormal<<<grid,threads>>>((float2*)v.ptr(),v.size()/2,rng);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
