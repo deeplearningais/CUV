@@ -16,7 +16,7 @@ using namespace std;
 #define large_grid_thread_id(void) ((__umul24(blockDim.x,blockIdx.x + __umul24(blockIdx.y,gridDim.x)) + threadIdx.x))
 #define large_grid_thread_num(void) ((__umul24(blockDim.x,gridDim.x + __umul24(blockDim.y,gridDim.y))))
 
-#define MAX_NUM_IMGS_AT_ONCE 6
+#define MAX_NUM_IMGS_AT_ONCE 8
 /*#define MAX_NUM_IMGS_AT_ONCE 1*/
 
 
@@ -83,9 +83,10 @@ namespace cuv{
 						const int row = col - offsets[n];
 						if(row >= 0 && row < A_h)
 						{
-							const value_type A_ij = A_data[       offset + row];
-							for(unsigned int i=0;i<NUM_IMG;i++)
-								sums[i] += A_ij * fetch_x<UseCache>(row,v + i * A_h);
+							const value_type A_ij   = A_data[       offset + row];
+							const value_type* v_ptr = v+row;
+							for(unsigned int i=0;i<NUM_IMG;i++,v_ptr+=A_h)
+								sums[i] += A_ij * *v_ptr;
 						}
 					}
 					__syncthreads();
@@ -110,28 +111,28 @@ namespace cuv{
 			{
 				__shared__ int        offsets[BLOCK_SIZE];
 				__shared__ value_type    sums[BLOCK_SIZE * NUM_IMG];
-
 				const index_type thread_id = large_grid_thread_id();
 				const index_type grid_size = large_grid_thread_num();
 
 				// load diagonal offsets into shared memory
 				if(threadIdx.x < A_nd)
-					offsets[threadIdx.x] = A_diaoff[threadIdx.x];
+				   offsets[threadIdx.x] = A_diaoff[threadIdx.x];
 				__syncthreads();
 
 				for(index_type col = thread_id; col < A_w; col += grid_size)
 				{
-					for(unsigned int i=0;i<NUM_IMG;i++)
-						sums[BLOCK_SIZE*i + threadIdx.x] = (value_type)0 ;
-					index_type offset = 0;
-					for(index_type n = 0; n < A_nd; n++, offset+=A_stride)
+					for(value_type* s_ptr=sums+threadIdx.x; s_ptr<sums+BLOCK_SIZE*NUM_IMG;  s_ptr += BLOCK_SIZE)
+						*s_ptr = (value_type)0 ;
+					for(index_type n = 0, offset=0; n < A_nd; n++, offset+=A_stride)
 					{
 						const int row = col - offsets[n];
+						/*const int row = col - A_diaoff[n];*/
 						if(row >= 0 && row < A_h)
 						{
 							const value_type A_ij = A_data[       offset + row];
-							for(unsigned int i=0;i<NUM_IMG;i++)
-								sums[BLOCK_SIZE*i + threadIdx.x] += A_ij * fetch_x<UseCache>(row,v + i * A_h);
+							const value_type* v_ptr = v+row;
+							for(int i=0; i<NUM_IMG;i++,v_ptr+=A_h)
+								sums[BLOCK_SIZE*i + threadIdx.x] += A_ij * *v_ptr;
 						}
 					}
 					for(unsigned int i=0;i<NUM_IMG;i++){
@@ -177,8 +178,9 @@ namespace cuv{
 						if(col >= 0 && col < A_w)
 						{
 							const value_type A_ij = A_data[       offset];
-							for(unsigned int i=0;i<NUM_IMG;i++)
-								sums[i] += A_ij * fetch_x<UseCache>(col,v + i * A_w);
+							const value_type* v_ptr = v+col;
+							for(unsigned int i=0;i<NUM_IMG;i++, v_ptr+=A_w)
+								sums[i] += A_ij * *v_ptr;
 						}
 					}
 					__syncthreads();
@@ -216,17 +218,21 @@ namespace cuv{
 				for(index_type row = thread_id; row < A_h; row += grid_size)
 				{
 					// initialize shared memory
-					for(unsigned int i=0;i<NUM_IMG;i++)
-						sums[BLOCK_SIZE*i + threadIdx.x] = (value_type) 0 ;
+					/*for(unsigned int i=0;i<NUM_IMG;i++)*/
+					/*    sums[BLOCK_SIZE*i + threadIdx.x] = (value_type) 0 ;*/
+					for(value_type* s_ptr=sums+threadIdx.x; s_ptr<sums+BLOCK_SIZE*NUM_IMG;  s_ptr += BLOCK_SIZE)
+						*s_ptr = (value_type)0 ;
 					index_type offset = row;
 					for(index_type n = 0; n < A_nd; n++, offset+=A_stride)
 					{
 						const int col = row + offsets[n];
+						/*const int col = row + A_diaoff[n];*/
 						if(col >= 0 && col < A_w)
 						{
 							const value_type A_ij = A_data[       offset];
-							for(unsigned int i=0;i<NUM_IMG;i++)
-								sums[BLOCK_SIZE*i + threadIdx.x] += A_ij * fetch_x<UseCache>(col,v + i * A_w);
+							const value_type* v_ptr = v+col;
+							for(unsigned int i=0;i<NUM_IMG;i++, v_ptr+=A_w)
+								sums[BLOCK_SIZE*i + threadIdx.x] += A_ij * *v_ptr;
 						}
 					}
 					for(unsigned int i=0;i<NUM_IMG;i++){
@@ -325,7 +331,7 @@ namespace cuv{
 			};
 
 #define SPMM_CASE(z,numimg,trans) case (numimg+1): \
-		spmm_dia<value_type,index_type,((numimg>4)?128:128),(numimg+1),trans>::apply(A,v,dst,factAv,factC);break;
+		spmm_dia<value_type,index_type,((numimg>4)?256:256),(numimg+1),trans>::apply(A,v,dst,factAv,factC);break;
 
 		template <typename value_type, typename index_type>
 			void spmv_dia_device(const dev_dia_matrix<value_type,index_type>& A, 
