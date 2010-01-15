@@ -29,29 +29,30 @@
 using namespace std;
 using namespace cuv;
 
-static const int n = 1*8192;
-static const int m = 1*8192;
-static const int k = 128;
+static const int n = 784;
+static const int m = 2*784;
+static const int k = 96;
+static const int fs = 8;
+static const int nm = m/n;
 
 struct Fix{
 	dev_dia_matrix<float>   C;
 	dev_dense_matrix<float> A;
 	dev_dense_matrix<float> B;
 	Fix()
-	:   C(n,m,63,max(n,m))
+	:   C(n,m,fs*fs*nm,n)
 	,   A(n,k)
 	,   B(m,k)
 	{
 		cerr << "-------------------------------"<<endl;
 		std::vector<int> off;
-#if 0
-		for(int i=0;i<C.num_dia();i++)
-#elif 0
-		for(int i=2;i<C.num_dia()+2;i++)
-#else
-		for(int i=-C.num_dia()/2;i<=C.num_dia()/2;i++)
-#endif
-			off.push_back(i);
+		off.resize(fs*fs*nm);
+		for(int i=0;i<fs;i++)
+			for(int j=0;j<fs;j++)
+				for(int m=0;m<nm;m++)
+				{
+					off[i*fs+j + m*fs*fs] = i*28+j;
+				}
 		C.set_offsets(off);
 		sequence(A);
 		sequence(B);

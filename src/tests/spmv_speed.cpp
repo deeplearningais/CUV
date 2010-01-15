@@ -15,9 +15,11 @@
 using namespace std;
 using namespace cuv;
 
-static const int n = 8092;
-static const int m = 4096;
+static const int n = 784;
+static const int m = 2*784;
 static const int k = 96;
+static const int fs = 8;
+static const int nm = m/n;
 
 #define MEASURE_TIME(MSG, OPERATION, ITERS)     \
 	float MSG;                                  \
@@ -37,7 +39,7 @@ struct Fix{
 	host_dense_matrix<float> B,B_,BLarge;
 	host_dense_matrix<float> C,C_,CLarge;
 	Fix()
-	:   A(n,m,128,max(n,m))
+	:   A(n,m,fs*fs*nm,n)
 	,   A_(n,m)
 	,   B(m,1)
 	,   B_(m,1)
@@ -47,14 +49,13 @@ struct Fix{
 	,   CLarge(n,k)
 	{
 		std::vector<int> off;
-#if 1
-		for(int i=0;i<A.num_dia();i++)
-#elif 0
-		for(int i=2;i<A.num_dia()+2;i++)
-#else
-		for(int i=-A.num_dia()/2;i<=A.num_dia()/2;i++)
-#endif
-			off.push_back(i);
+		off.resize(fs*fs*nm);
+		for(int i=0;i<fs;i++)
+			for(int j=0;j<fs;j++)
+				for(int m=0;m<nm;m++)
+				{
+					off[i*fs+j + m*fs*fs] = i*28+j;
+				}
 		A.set_offsets(off);
 		sequence(A.vec());
 		sequence(C);
@@ -71,7 +72,36 @@ struct Fix{
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 
-BOOST_AUTO_TEST_CASE( spmv_dev_speed )
+BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
+{
+	host_dense_matrix<float> Ahostdense(n,m);
+	convert(Ahostdense,A);
+
+	dev_dense_matrix<float> Adevdense(n,m);
+	convert(Adevdense,Ahostdense);
+
+	dev_dia_matrix<float>   Adevdia(n,m,A.num_dia(),A.stride());
+	convert(Adevdia,A);
+
+	dev_dense_matrix<float> CLarge2(CLarge.h(), CLarge.w());
+	convert(CLarge2,CLarge);
+	dev_dense_matrix<float> BLarge2(BLarge.h(), BLarge.w());
+	convert(BLarge2,BLarge);
+
+	float factAv = 2.f, factC = 1.3f;
+	//float factAv = 1.f, factC = 0.f;
+	MEASURE_TIME(dev_dense, prod(CLarge2, Adevdense, BLarge2,'n','n',factAv,factC),  10);
+	MEASURE_TIME(dev_dia , prod(CLarge2,Adevdia,BLarge2,'n','n',factAv,factC), 10);
+	printf("Speedup: %3.4f\n", dev_dense/dev_dia);
+
+	MEASURE_TIME(dev_dense_t, prod(BLarge2,Adevdense,CLarge2,'t','n',factAv,factC), 10);
+	MEASURE_TIME(dev_dia_t , prod(BLarge2,Adevdense,CLarge2,'t','n',factAv,factC), 10);
+	printf("Speedup: %3.4f\n", dev_dense_t/dev_dia_t);
+
+	BOOST_CHECK_LT(dev_dia,  dev_dense);
+	BOOST_CHECK_LT(dev_dia_t,dev_dense_t);
+}
+BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dia )
 {
 	dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride());
 	convert(A2,A);
@@ -80,32 +110,32 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed )
 	dev_dense_matrix<float> BLarge2(BLarge.h(), BLarge.w());
 	convert(BLarge2,BLarge);
 
-	//float factAv = 2.f, factC = 1.3f;
-	float factAv = 1.f, factC = 0.f;
-	MEASURE_TIME(host, prod(CLarge, A, BLarge,'n','n',factAv,factC),  10);
-	MEASURE_TIME(dev , prod(CLarge2,A2,BLarge2,'n','n',factAv,factC), 10);
-	printf("Speedup: %3.4f\n", host/dev);
+	float factAv = 2.f, factC = 1.3f;
+	//float factAv = 1.f, factC = 0.f;
+	MEASURE_TIME(host_dia, prod(CLarge, A, BLarge,'n','n',factAv,factC),  10);
+	MEASURE_TIME(dev_dia , prod(CLarge2,A2,BLarge2,'n','n',factAv,factC), 10);
+	printf("Speedup: %3.4f\n", host_dia/dev_dia);
 
-	MEASURE_TIME(host_t, prod(BLarge,A,CLarge,'t','n',factAv,factC), 10);
-	MEASURE_TIME(dev_t , prod(BLarge2,A2,CLarge2,'t','n',factAv,factC), 10);
-	printf("Speedup: %3.4f\n", host_t/dev_t);
+	MEASURE_TIME(host_dia_t, prod(BLarge,A,CLarge,'t','n',factAv,factC), 10);
+	MEASURE_TIME(dev_dia_t , prod(BLarge2,A2,CLarge2,'t','n',factAv,factC), 10);
+	printf("Speedup: %3.4f\n", host_dia_t/dev_dia_t);
 
-	BOOST_CHECK_LT(dev,  host);
-	BOOST_CHECK_LT(dev_t,host_t);
+	BOOST_CHECK_LT(dev_dia,  host_dia);
+	BOOST_CHECK_LT(dev_dia_t,host_dia_t);
 }
 BOOST_AUTO_TEST_CASE( spmv_host_speed )
 {
    float factAv = 2.f, factC = 1.3f;
-   MEASURE_TIME(sparse, prod(CLarge,A,BLarge,'n','n',factAv,factC), 10);
-   MEASURE_TIME(dense , prod(CLarge,A_,BLarge,'n','n',factAv,factC), 10);
-   printf("Speedup: %3.4f\n", dense/sparse);
+   MEASURE_TIME(sparse_host, prod(CLarge,A,BLarge,'n','n',factAv,factC), 10);
+   MEASURE_TIME(dense_host , prod(CLarge,A_,BLarge,'n','n',factAv,factC), 10);
+   printf("Speedup: %3.4f\n", dense_host/sparse_host);
 
-   MEASURE_TIME(sparse_t, prod(BLarge,A,CLarge,'t','n',factAv,factC), 10);
-   MEASURE_TIME(dense_t , prod(BLarge,A_,CLarge,'t','n',factAv,factC), 10);
-   printf("Speedup: %3.4f\n", dense_t/sparse_t);
+   MEASURE_TIME(sparse_host_t, prod(BLarge,A,CLarge,'t','n',factAv,factC), 10);
+   MEASURE_TIME(dense_host_t , prod(BLarge,A_,CLarge,'t','n',factAv,factC), 10);
+   printf("Speedup: %3.4f\n", dense_host_t/sparse_host_t);
 
-   BOOST_CHECK_LT(sparse,  dense);
-   BOOST_CHECK_LT(sparse_t,dense_t);
+   BOOST_CHECK_LT(sparse_host,  dense_host);
+   BOOST_CHECK_LT(sparse_host_t,dense_host_t);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
