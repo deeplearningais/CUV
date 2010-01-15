@@ -18,7 +18,8 @@ namespace cuv{
 		  typedef matrix<__value_type, __index_type> base_type;
 		  typedef typename matrix<__value_type, __index_type>::value_type value_type;
 		  typedef typename matrix<__value_type, __index_type>::index_type index_type;
-		protected:
+		//protected:
+		public:
 		  int m_num_dia;                        ///< number of diagonals stored
 		  int m_stride;                         ///< how long the stored diagonals are
 		  bool m_is_transposed;                 ///< whether current state of the matrix is "transposed", changes access patterns

@@ -101,14 +101,15 @@ namespace cuv{
 					bool founddiag = false;
 					for(int e=0; e<2*SPARSE_DIA_BLOCK_SIZE-1;e++){ // diag within block
 						b.diag[e] = -1;
-						for(int d=0; d< dia_offsets.size();d++){
-							if(lowerdia + e == dia_offsets[d]){
+						typename std::map<int,I>::const_iterator it = mat.m_dia2off.find(lowerdia+e);
+							/*cout << "DiaTest: "<< lowerdia<<" + "<<e<< " == "<< dia_offsets[d]<<" ? "<<endl;*/
+
+							if(it != mat.m_dia2off.end()){
 								/*cout << "Found Diag: "<<i<<" "<< j<<" e=" << e <<" ld="<<lowerdia<< ", d="<<d<<" do[d]="<<dia_offsets[d]<<endl;*/
-								b.diag[e] = d;
+								b.diag[e] = it->second;
 								founddiag = true;
-								break; // look at next diag of block
+								/*break; // look at next diag of block*/
 							}
-						}
 					}
 					if(founddiag){
 						/*cout << "Found Block: " << b.startx << ", "<<b.starty<<endl;*/
@@ -122,11 +123,11 @@ namespace cuv{
 				}
 			}
 			size_t siz = sizeof(block) * blocks.size();
+			cout << "Final Block-Set Size: "<< blocks.size()<<endl;
+			cout << "Final Block-Set MemSize (Mb): "<< siz/1024/1024<<endl;
 			cuvSafeCall(cudaMalloc((void**)&m_blocks.ptr, siz));
 			cuvSafeCall(cudaMemcpy(m_blocks.ptr, (void*)&blocks.front(),siz,cudaMemcpyHostToDevice));
 			m_blocks.len = blocks.size();
-			/*cout << "Final Block-Set MemSize: "<< siz<<endl;*/
-			/*cout << "Final Block-Set Size: "<< m_blocks.len<<endl;*/
 			/*cout << "Final Block-Set  Ptr: "<< m_blocks.ptr<<endl;*/
 			/*cout << "Final Block-Set Size: "<< blocks.size()<<endl;*/
 		}
