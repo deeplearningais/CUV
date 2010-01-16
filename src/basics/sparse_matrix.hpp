@@ -9,7 +9,7 @@
 #include <cuv_general.hpp>
 
 namespace cuv{
-	template<class __value_type, class __index_type, class __vec_type, class __intvec_type>
+	template<class __value_type, class __index_type, class __vec_type, class __intvec_type> 
 	class dia_matrix 
 	:        public matrix<__value_type, __index_type>{
 	  public:
@@ -22,7 +22,6 @@ namespace cuv{
 		public:
 		  int m_num_dia;                        ///< number of diagonals stored
 		  int m_stride;                         ///< how long the stored diagonals are
-		  bool m_is_transposed;                 ///< whether current state of the matrix is "transposed", changes access patterns
 		  vec_type* m_vec;                      ///< stores the actual data 
 		  intvec_type m_offsets;                ///< stores the offsets of the diagonals
 		  std::map<int,index_type> m_dia2off;   ///< maps a diagonal to an offset
@@ -32,7 +31,6 @@ namespace cuv{
 				: base_type(h,w)
 				, m_num_dia(num_dia)
 				, m_stride(stride)
-				, m_is_transposed(false)
 				, m_offsets(num_dia)
 			{
 				m_row_fact = row_fact;
@@ -58,11 +56,6 @@ namespace cuv{
 			inline int num_dia()const{ return m_num_dia; }
 			inline int stride()const { return m_stride;  }
 			inline int row_fact()const{ return m_row_fact; }
-			inline bool transposed()const{ return m_is_transposed; }
-			void transpose() {
-				apply_scalar_functor(m_offsets, SF_NEGATE);
-				m_is_transposed ^= 1;
-			}
 
 			//*****************************
 			// set/get offsets of diagonals

@@ -401,7 +401,6 @@ namespace cuv{
 				const int A_h                   = A.h();
 				const int A_w                   = A.w();
 				const int A_stride              = A.stride();
-				cuvAssert(!A.transposed());
 				index_type max_dst = ((transA=='t') ? A_w : A_h);
 				if(factC==0.f)
 					for(int i=0;i<max_dst;i++) dst[i] = 0;
