@@ -1,8 +1,8 @@
 #define BOOST_TEST_MODULE example
 #include <iostream>
-#include <boost/test/included/unit_test.hpp>
-#include <boost/test/floating_point_comparison.hpp>
+#include <fstream>
 
+#include <cuv_test.hpp>
 #include <cuv_general.hpp>
 #include <vector_ops.hpp>
 #include <host_dia_matrix.hpp>
@@ -13,19 +13,22 @@ using namespace std;
 using namespace cuv;
 
 static const int n=32;
-static const int m=32;
+static const int m=16;
 static const int d=3;
+static const int rf=2;
+
 
 struct Fix{
 	host_dia_matrix<float> w;
 	Fix()
-	:  w(n,m,d,n) 
+	:  w(n,m,d,n,rf) 
 	{
 		std::vector<int> off;
 		off.push_back(0);
 		off.push_back(1);
 		off.push_back(-1);
 		w.set_offsets(off);
+		sequence(w.vec());
 	}
 	~Fix(){
 	}
@@ -35,54 +38,26 @@ struct Fix{
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 
-BOOST_AUTO_TEST_CASE( trans )
+BOOST_AUTO_TEST_CASE( spmv_dia2dense )
 {
-	host_dia_matrix<float> lw (32,32,3,32);
-	host_dia_matrix<float> lwt(32,32,3,32);
-	std::vector<int> off;
-	off.push_back(0);
-	off.push_back(1);
-	off.push_back(-1);
-	lw.set_offsets(off);
-	lwt.set_offsets(off);
-	sequence(lw.vec());
-	sequence(lwt.vec());
-	BOOST_CHECK_CLOSE( lw(0,0), 0.f,  0.01 );
-	BOOST_CHECK_CLOSE( lw(1,1), 1.f,  0.01 );
-	BOOST_CHECK_CLOSE( lw(2,2), 2.f,  0.01 );
-	BOOST_CHECK_CLOSE( lw(0,1), 32.f, 0.01 );
-	BOOST_CHECK_CLOSE( lw(1,0), 65.f, 0.01 );
-	BOOST_CHECK_CLOSE( lw(0,2), 0.f,  0.01 );
-	BOOST_CHECK_CLOSE( lw(30,31), 62.f,  0.01 );
-	lwt.transpose();
-	for(int i=0;i<n;i++){
-		for(int j=0;j<m;j++){
-			BOOST_CHECK_CLOSE( lw(i,j), lwt(j,i),0.01 );
-			cout << lw(i,j) <<" ";
-		}
-		cout<<endl;
-	}
+	// hostdia->hostdense
+	host_dense_matrix<float> w2(n,m);
+	fill(w2.vec(),-1);
+	convert(w2,w);
+	MAT_CMP(w,w2);
 }
 
 BOOST_AUTO_TEST_CASE( spmv_host2dev )
 {
-// host->dev
-dev_dia_matrix<float> w2(n,m,w.num_dia(),w.stride());
-convert(w2,w);
-for(int i=0;i<w.h();i++){
-	for(int j=0;j<w.w();j++){
-		BOOST_CHECK_CLOSE( w(i,j), w2(i,j), 1.0 );
-	}
-}
-fill(w.vec(),0);
+	// host->dev
+	dev_dia_matrix<float> w2(n,m,w.num_dia(),w.stride(),rf);
+	convert(w2,w);
+	MAT_CMP(w,w2);
+	fill(w.vec(),0);
 
-// dev->host
-convert(w,w2);
-for(int i=0;i<w.h();i++){
-	for(int j=0;j<w.w();j++){
-		BOOST_CHECK_CLOSE( w(i,j), w2(i,j), 1.0 );
-	}
-}
+	// dev->host
+	convert(w,w2);
+	MAT_CMP(w,w2);
 }
 
 
