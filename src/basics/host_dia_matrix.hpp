@@ -24,4 +24,21 @@ namespace cuv{
 	};
 };
 
+#include<iostream>
+namespace std{
+	template<class T, class I>
+	ostream& 
+	operator<<(ostream& o, const cuv::host_dia_matrix<T,I>& w2){
+		cout << "Host-Dia-Matrix: "<<endl;
+		for(I i=0;i<w2.h();i++){
+			for(I j=0;j<w2.w();j++){
+				o << w2(i,j) << " ";
+			}
+			o << endl;
+		}
+		o << endl;
+		return o;
+	}
+}
+
 #endif
