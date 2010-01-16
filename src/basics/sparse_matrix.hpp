@@ -26,14 +26,17 @@ namespace cuv{
 		  vec_type* m_vec;                      ///< stores the actual data 
 		  intvec_type m_offsets;                ///< stores the offsets of the diagonals
 		  std::map<int,index_type> m_dia2off;   ///< maps a diagonal to an offset
+		  int m_row_fact;                       ///< factor by which to multiply a row index (allows matrices with "steep" diagonals)
 		public:
-			dia_matrix(const index_type& h, const index_type& w, const int& num_dia, const int& stride)
+			dia_matrix(const index_type& h, const index_type& w, const int& num_dia, const int& stride, int row_fact=1)
 				: base_type(h,w)
 				, m_num_dia(num_dia)
 				, m_stride(stride)
 				, m_is_transposed(false)
 				, m_offsets(num_dia)
 			{
+				m_row_fact = row_fact;
+				cuvAssert(m_row_fact>0);
 				alloc();
 			}
 			~dia_matrix(){
@@ -54,6 +57,7 @@ namespace cuv{
 			inline       vec_type* vec_ptr()     { return m_vec; }
 			inline int num_dia()const{ return m_num_dia; }
 			inline int stride()const { return m_stride;  }
+			inline int row_fact()const{ return m_row_fact; }
 			inline bool transposed()const{ return m_is_transposed; }
 			void transpose() {
 				apply_scalar_functor(m_offsets, SF_NEGATE);
@@ -95,21 +99,11 @@ namespace cuv{
 			// read/write access
 			// ******************************
 			value_type operator()(const index_type& i, const index_type& j)const{
-				using namespace std;
-				if(!m_is_transposed){
-					int off = (int)j - (int)i;
-					typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
-					if( it == m_dia2off.end() )
-						return (value_type) 0;
-					return (*m_vec)[ it->second * m_stride +i  ];
-				}
-				else{
-					int off = (int)i - (int)j; // transposed -> opposite
-					typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
-					if( it == m_dia2off.end() )
-						return (value_type) 0;
-					return (*m_vec)[ it->second * m_stride +j  ];
-				}
+				int off = (int)j - (int)i/m_row_fact;
+				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
+				if( it == m_dia2off.end() )
+					return (value_type) 0;
+				return (*m_vec)[ it->second * m_stride +i  ];
 			}
 	};
 }

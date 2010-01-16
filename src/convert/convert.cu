@@ -169,9 +169,10 @@ namespace cuv{
 					for(unsigned int oi=0; oi < off.size(); oi++){
 						int o = off[oi];
 						__index_type j = max((int)0, o);
-						__index_type i = max((int)0,-o);
+						__index_type i = src.row_fact() * max((int)0,-o);
 						for(;i<src.h() && j<src.w(); i++,j++){
 							dst.set(i,j, src(i,j));
+							if((i % src.row_fact()) == 0) j--;
 						}
 					}
 				}
@@ -185,6 +186,7 @@ namespace cuv{
 						const host_dia_matrix<__value_type, __index_type>& src){
 					if(        dst.h() != src.h()
 							|| dst.w() != src.w()
+							|| dst.row_fact() != src.row_fact()
 							){
 						cuvAssert(false); // no operator= yet
 					}
@@ -202,6 +204,7 @@ namespace cuv{
 						const dev_dia_matrix<__value_type, __index_type>& src){
 					if(        dst.h() != src.h()
 							|| dst.w() != src.w()
+							|| dst.row_fact() != src.row_fact()
 							){
 						cuvAssert(false); // no operator= yet
 					}
