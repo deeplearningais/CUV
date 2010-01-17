@@ -15,7 +15,7 @@ using namespace cuv;
 static const int n=32;
 static const int m=16;
 static const int d=3;
-static const int rf=2;
+static const int rf=1;
 
 
 struct Fix{
@@ -44,7 +44,8 @@ BOOST_AUTO_TEST_CASE( spmv_dia2dense )
 	host_dense_matrix<float> w2(n,m);
 	fill(w2.vec(),-1);
 	convert(w2,w);
-	MAT_CMP(w,w2);
+	MAT_CMP(w,w2,0.1);
+	cout << w <<w2;
 }
 
 BOOST_AUTO_TEST_CASE( spmv_host2dev )
@@ -52,12 +53,12 @@ BOOST_AUTO_TEST_CASE( spmv_host2dev )
 	// host->dev
 	dev_dia_matrix<float> w2(n,m,w.num_dia(),w.stride(),rf);
 	convert(w2,w);
-	MAT_CMP(w,w2);
+	MAT_CMP(w,w2,0.1);
 	fill(w.vec(),0);
 
 	// dev->host
 	convert(w,w2);
-	MAT_CMP(w,w2);
+	MAT_CMP(w,w2,0.1);
 }
 
 

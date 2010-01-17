@@ -3,16 +3,16 @@
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 
-#define MAT_CMP(X,Y) \
+#define MAT_CMP(X,Y,PREC) \
 	if(1){                                                                                        \
-		bool (*matrix_eq_cmp)(const __typeof__(X)&, const __typeof__(Y)&) = make_matrix_eq(X,Y);  \
-		BOOST_CHECK_PREDICATE(matrix_eq_cmp,(X)(Y));                                              \
+		bool (*matrix_eq_cmp)(const __typeof__(X)&, const __typeof__(Y)&, float) = make_matrix_eq(X,Y);  \
+		BOOST_CHECK_PREDICATE(matrix_eq_cmp,(X)(Y)(PREC));                                              \
 	}
 
 	template<class M, class N>
-	bool matrix_eq(const M& w, const N& w2)
+	bool matrix_eq(const M& w, const N& w2, float prec)
 	{ 
-		boost::test_tools::percent_tolerance_t <double> pt(0.1);
+		boost::test_tools::percent_tolerance_t <float> pt(prec);
 		boost::test_tools::close_at_tolerance<typename M::value_type> cmp(pt);
 		for(int i=0;i<w.h();i++){
 			for(int j=0;j<w.w();j++){
@@ -24,7 +24,7 @@
 	}
 
 	template<class M, class N>
-	bool (*make_matrix_eq(const M&,const N&))(const M& w, const N& w2){
+	bool (*make_matrix_eq(const M&,const N&))(const M& w, const N& w2, float){
 		return &matrix_eq<M,N>;
 	}
 
