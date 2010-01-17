@@ -169,7 +169,7 @@ namespace cuv{
 					const int rf = src.row_fact();
 					for(unsigned int oi=0; oi < off.size(); oi++){
 						int o = off[oi];
-						__index_type j = rf*max((int)0, o);
+						__index_type j = 1 *max((int)0, o);
 						__index_type i = rf*max((int)0,-o);
 						for(;i<src.h() && j<src.w(); j++){
 							for(int k=0;k<rf;k++,i++)

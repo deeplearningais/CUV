@@ -406,24 +406,26 @@ namespace cuv{
 					for(int i=0;i<max_dst;i++) dst[i] = 0;
 				else
 					for(int i=0;i<max_dst;i++) dst[i] = dst[i] * factC;
+				const int rf = A.row_fact();
 				if(transA == 't'){
 					cuvAssert(A_h == v.size());
 					cuvAssert(A_w == dst.size());
 					for(index_type i = 0; i < num_diags; i++){
 						const int k = offsets[i];  //diagonal offset
 
-						const index_type i_start = std::max((int)0, k);
-						const index_type j_start = std::max((int)0,-k);
+						const index_type i_start =  1 * std::max((int)0, k);
+						const index_type j_start = rf * std::max((int)0,-k); // the matrix is now _wider_ than high --> stretch columns!
 
 						//number of elements to process
-						const index_type N = std::min(A_h - j_start, A_w - i_start);
+						const index_type N = std::min((A_h - j_start)/rf, A_w - i_start);
 
 						const value_type * d_ = A.vec().ptr() + i*A_stride + j_start;
 						const value_type * x_ = v.ptr() + j_start;
 						value_type * y_ = dst.ptr() + i_start;
 
-						for(index_type n = 0; n < N; n++){
-							y_[n] += factAv * d_[n] * x_[n];
+						for(index_type n = 0; n < N; n++,y_++){
+							for(int k=0;k<rf;k++,x_++,d_++)
+								*y_ += factAv * *d_ * *x_;
 						}
 					}
 				}else{
@@ -432,18 +434,18 @@ namespace cuv{
 					for(index_type i = 0; i < num_diags; i++){
 						const int k = offsets[i];  //diagonal offset
 
-						const index_type i_start = std::max((int)0,-k);
-						const index_type j_start = std::max((int)0, k);
+						const index_type i_start = rf*std::max((int)0,-k);
+						const index_type j_start =  1*std::max((int)0, k);
 
 						//number of elements to process
-						const index_type N = std::min(A_h - i_start, A_w - j_start);
+						const index_type N = std::min(A_h - i_start, rf*(A_w - j_start));
 
 						const value_type * d_ = A.vec().ptr() + i*A_stride + i_start;
 						const value_type * x_ = v.ptr() + j_start;
 						value_type * y_ = dst.ptr() + i_start;
 
 						for(index_type n = 0; n < N; n++){
-							y_[n] += factAv * d_[n] * x_[n];
+							y_[n] += factAv * d_[n] * x_[n/rf];
 						}
 					}
 				}
