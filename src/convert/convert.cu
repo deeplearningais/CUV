@@ -166,13 +166,14 @@ namespace cuv{
 					fill(dst.vec(),0);
 					const host_vector<int>& off = src.get_offsets();
 					using namespace std;
+					const int rf = src.row_fact();
 					for(unsigned int oi=0; oi < off.size(); oi++){
 						int o = off[oi];
-						__index_type j = max((int)0, o);
-						__index_type i = src.row_fact() * max((int)0,-o);
-						for(;i<src.h() && j<src.w(); i++,j++){
-							dst.set(i,j, src(i,j));
-							if((i % src.row_fact()) == 0) j--;
+						__index_type j = rf*max((int)0, o);
+						__index_type i = rf*max((int)0,-o);
+						for(;i<src.h() && j<src.w(); j++){
+							for(int k=0;k<rf;k++,i++)
+								dst.set(i,j, src(i,j));
 						}
 					}
 				}
