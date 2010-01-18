@@ -222,6 +222,7 @@ struct MersenneTwisterState {
  
 // Preloaded, offline-generated seed data structure.
 __device__ static mt_struct_stripped MT[MT_RNG_COUNT];
+__device__ static MersenneTwisterState gStates[MT_RNG_COUNT];
  
 __device__ unsigned int MersenneTwisterGenerate(MersenneTwisterState &state, unsigned int threadID) {
 	int iState1 = state.iState + 1;
@@ -287,10 +288,10 @@ struct binarize{
 		unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
 		if( idx >= n ) return;
 		/*__shared__ MersenneTwisterState mtState;*/
-		MersenneTwisterState mtState;
-		MersenneTwisterInitialize(mtState, idx);
+		MersenneTwisterState mtState = gStates[idx];
 		for(int i=idx; i<n; i += __mul24(blockDim.x , gridDim.x))
 			 dst[i] = ((value_type(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f) < dst[i]);
+		gStates[idx] = mtState;
 	}
 };
 
@@ -307,13 +308,20 @@ struct rnd_uniform{
 	void operator()(value_type* dst, const int& n) const {
 		unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
 		if( idx >= n ) return;
-		/*__shared__ MersenneTwisterState mtState;*/
-		MersenneTwisterState mtState;
-		MersenneTwisterInitialize(mtState, idx);
+		MersenneTwisterState mtState = gStates[idx];
 		for(int i=idx; i<n; i += __mul24(blockDim.x , gridDim.x))
 			 dst[i] = value_type(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
+		gStates[idx] = mtState;
 	}
 };
+
+__global__
+void rnd_init_dev() {
+	unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+	MersenneTwisterState mtState = gStates[idx];
+	MersenneTwisterInitialize(mtState, idx);
+	gStates[idx] = mtState;
+}
 
 template<class value_type>
 struct rnd_normal {
@@ -325,8 +333,7 @@ struct rnd_normal {
 		unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
 		if( idx >= n ) return;
 		/*__shared__ MersenneTwisterState mtState;*/
-		MersenneTwisterState mtState;
-		MersenneTwisterInitialize(mtState, idx);
+		MersenneTwisterState mtState = gStates[idx];
 		for(int i=idx; i<n; i += __mul24(blockDim.x , gridDim.x)){
 			 float x = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
 			 float y = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
@@ -334,6 +341,7 @@ struct rnd_normal {
 			 float2 tmp=dst[idx];
 			 dst[i] = make_float2(x+tmp.x,y+tmp.y);
 		}
+		gStates[idx] = mtState;
 	}
 };
 
@@ -359,6 +367,10 @@ namespace cuv{
 
 		// Upload the initial configurations to the GPU.
 		cuvSafeCall(cudaMemcpyToSymbol(MT, mtStripped, sizeof(mt_struct_stripped) * MT_RNG_COUNT, 0, cudaMemcpyHostToDevice));
+		dim3 threads(512,1);
+		dim3 grid(MT_RNG_COUNT/512,1,1);
+		rnd_init_dev<<<grid,threads>>>();
+
 		cuvSafeCall(cudaThreadSynchronize());
 		delete[] mtStripped;
 	}
