@@ -76,6 +76,8 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 {
+	if(n*m > 1000*1000)
+		return;
 	host_dense_matrix<float> Ahostdense(n,m);
 	convert(Ahostdense,A);
 
@@ -127,6 +129,8 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dia )
 }
 BOOST_AUTO_TEST_CASE( spmv_host_speed )
 {
+	if(n*m > 1000*1000)
+		return;
    float factAv = 2.f, factC = 1.3f;
    MEASURE_TIME(sparse_host, prod(CLarge,A,BLarge,'n','n',factAv,factC), 10);
    MEASURE_TIME(dense_host , prod(CLarge,A_,BLarge,'n','n',factAv,factC), 10);
