@@ -1,7 +1,7 @@
 #ifndef __HOST_VECTOR_HPP__
 #define __HOST_VECTOR_HPP__
 
-#include <cuv_general.hpp>
+#include <tools/cuv_general.hpp>
 #include "vector.hpp"
 
 namespace cuv{

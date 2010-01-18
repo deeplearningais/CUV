@@ -1,9 +1,9 @@
 #ifndef __H_DENSE_MATRIX_H__
 #define __H_DENSE_MATRIX_H__
 
-#include <cuv_general.hpp>
-#include <dense_matrix.hpp>
-#include <host_vector.hpp>
+#include <tools/cuv_general.hpp>
+#include "dense_matrix.hpp"
+#include "host_vector.hpp"
 
 namespace cuv{
 	template<class __value_type, class __mem_layout=cuv::column_major, class __index_type=unsigned int>

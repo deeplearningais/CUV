@@ -3,9 +3,9 @@
 
 #include <stdio.h>
 
-#include <vector_ops.hpp>
-#include <dev_dense_matrix.hpp>
-#include <host_dense_matrix.hpp>
+#include <vector_ops/vector_ops.hpp>
+#include <basics/dev_dense_matrix.hpp>
+#include <basics/host_dense_matrix.hpp>
 
 namespace cuv{
 

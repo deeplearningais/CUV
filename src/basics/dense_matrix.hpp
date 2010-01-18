@@ -1,8 +1,8 @@
 #ifndef __DENSE_MATRIX_HPP__
 #define __DENSE_MATRIX_HPP__
-#include <vector.hpp>
-#include <matrix.hpp>
-#include <cuv_general.hpp>
+#include <basics/vector.hpp>
+#include <basics/matrix.hpp>
+#include <tools/cuv_general.hpp>
 
 namespace cuv{
 	struct memory_layout_tag{};

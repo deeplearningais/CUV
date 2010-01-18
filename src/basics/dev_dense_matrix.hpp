@@ -1,8 +1,8 @@
 #ifndef __DEV_DENSE_MATRIX_H__
 #define __DEV_DENSE_MATRIX_H__
-#include <cuv_general.hpp>
-#include <dense_matrix.hpp>
-#include <dev_vector.hpp>
+#include <tools/cuv_general.hpp>
+#include <basics/dense_matrix.hpp>
+#include <basics/dev_vector.hpp>
 
 namespace cuv{
 	template<class __value_type, class __mem_layout=cuv::column_major, class __index_type=unsigned int>
