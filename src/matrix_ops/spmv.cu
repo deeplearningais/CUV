@@ -19,7 +19,7 @@ using namespace std;
 #define large_grid_thread_id(void) ((__umul24(blockDim.x,blockIdx.x + __umul24(blockIdx.y,gridDim.x)) + threadIdx.x))
 #define large_grid_thread_num(void) ((__umul24(blockDim.x,gridDim.x + __umul24(blockDim.y,gridDim.y))))
 
-#define MAX_NUM_IMGS_AT_ONCE 8
+#define MAX_NUM_IMGS_AT_ONCE 14
 #define SEQ_ROW_FACT         1,2,4
 #define SPMM_BLOCK_SIZE      256
 
@@ -151,7 +151,7 @@ namespace cuv{
 						value_type * y_ = dst.ptr() + i_start;
 
 						for(index_type n = 0; n < N; n++){
-							y_[n] += factAv * d_[n] * x_[n/rf];
+							*y_++ += factAv * *d_++ * x_[n/rf];
 						}
 					}
 				}
