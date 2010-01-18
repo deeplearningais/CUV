@@ -15,10 +15,12 @@
 using namespace std;
 using namespace cuv;
 
-static const int n = 784;
-static const int m = 2*784;
-static const int k = 96;
+static const int  n = 150*150;
+static const int  m = 150*150;
+static const int  k = 96;
+static const int rf = 2;
 static const int fs = 8;
+static const int px = 150;
 static const int nm = m/n;
 
 #define MEASURE_TIME(MSG, OPERATION, ITERS)     \
@@ -39,7 +41,7 @@ struct Fix{
 	host_dense_matrix<float> B,B_,BLarge;
 	host_dense_matrix<float> C,C_,CLarge;
 	Fix()
-	:   A(n,m,fs*fs*nm,n)
+	:   A(n,m,fs*fs*nm,n,rf)
 	,   A_(n,m)
 	,   B(m,1)
 	,   B_(m,1)
@@ -54,7 +56,7 @@ struct Fix{
 			for(int j=0;j<fs;j++)
 				for(int m=0;m<nm;m++)
 				{
-					off[i*fs+j + m*fs*fs] = i*28+j;
+					off[i*fs+j + m*fs*fs] = i*px+j;
 				}
 		A.set_offsets(off);
 		sequence(A.vec());
@@ -80,7 +82,7 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 	dev_dense_matrix<float> Adevdense(n,m);
 	convert(Adevdense,Ahostdense);
 
-	dev_dia_matrix<float>   Adevdia(n,m,A.num_dia(),A.stride());
+	dev_dia_matrix<float>   Adevdia(n,m,A.num_dia(),A.stride(),rf);
 	convert(Adevdia,A);
 
 	dev_dense_matrix<float> CLarge2(CLarge.h(), CLarge.w());
@@ -103,7 +105,7 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 }
 BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dia )
 {
-	dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride());
+	dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride(),rf);
 	convert(A2,A);
 	dev_dense_matrix<float> CLarge2(CLarge.h(), CLarge.w());
 	convert(CLarge2,CLarge);

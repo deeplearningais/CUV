@@ -15,7 +15,7 @@ using namespace cuv;
 static const int n=32;
 static const int m=16;
 static const int d=3;
-static const int rf=1;
+static const int rf=2;
 
 
 struct Fix{
