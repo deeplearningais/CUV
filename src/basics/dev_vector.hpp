@@ -33,8 +33,8 @@ class dev_vector
 		/* 
 		 * Memory management
 		 */
-		virtual void alloc();
-		virtual void dealloc();
+		void alloc();
+		void dealloc();
 
 		void set(const index_type& i, const value_type& val);
 };
