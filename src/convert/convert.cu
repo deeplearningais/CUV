@@ -189,7 +189,8 @@ namespace cuv{
 							|| dst.w() != src.w()
 							|| dst.row_fact() != src.row_fact()
 							){
-						cuvAssert(false); // no operator= yet
+						dst.dealloc();
+						dst = dev_dia_matrix<__value_type,__index_type>(src.h(),src.w(),src.num_dia(),src.stride(),src.row_fact());
 					}
 					cuv::convert(dst.get_offsets(), src.get_offsets());
 					cuv::convert(dst.vec(), src.vec());
