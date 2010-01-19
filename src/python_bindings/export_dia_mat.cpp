@@ -1,12 +1,17 @@
 #include <string>
+#include <iostream>
+#include <fstream>
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
 #include <boost/python/list.hpp>
+
+#include  <boost/type_traits/is_same.hpp> 
 
 #include <pyublas/numpy.hpp>
 
 #include <host_dia_matrix.hpp>
 #include <dev_dia_matrix.hpp>
+#include <sparse_matrix_io.hpp>
 #include <matrix_ops/matrix_ops.hpp>
 #include <matrix_ops/densedense_to_sparse.hpp>
 #include <convert.hpp>
@@ -17,14 +22,14 @@ using namespace cuv;
 
 template<class T>
 T*
-create_dia_mat(unsigned int h, unsigned int w, boost::python::list& dia_offsets, unsigned int stride){
+create_dia_mat(unsigned int h, unsigned int w, boost::python::list& dia_offsets, unsigned int stride, unsigned int rf=1){
 	int num_dia=boost::python::len(dia_offsets);
 	int *dias = new int[num_dia];
 	for(int i=0; i< num_dia; i++) {
 		int ls = boost::python::extract<int>(dia_offsets[i]);
 		dias[i]=ls;
 	}
-	T* m = new T(h,w,num_dia,stride);
+	T* m = new T(h,w,num_dia,stride,rf);
 	m->set_offsets(dias,dias+num_dia);
 	delete[] dias;
 	return m;
@@ -37,20 +42,45 @@ create_dia_mat_from_dia_mat(T* other){
 	for(int i=0; i< other->num_dia(); i++) {
 		dias[i]=other->get_offset(i);
 	}
-	T* m = new T(other->h(),other->w(),other->num_dia(),other->stride());
+	T* m = new T(other->h(),other->w(),other->num_dia(),other->stride(),other->row_fact());
 	m->set_offsets(dias,dias+other->num_dia());
 	delete[] dias;
 	return m;
 }
+template<class V, class I>
+struct dia_io{
+	static void save_dia_mat(host_dia_matrix<V,I>& m, std::string fn){
+			std::ofstream ofs(fn.c_str());
+			boost::archive::binary_oarchive oa(ofs);
+			oa << m;
+	}
+	static void load_dia_mat(host_dia_matrix<V,I>& m, std::string fn){
+			std::ifstream ifs(fn.c_str());
+			boost::archive::binary_iarchive ia(ifs);
+			ia >> m;
+	}
+	static void save_dia_mat(dev_dia_matrix<V,I>& m, std::string fn){
+		host_dia_matrix<V,I> m2(m.h(),m.w(),m.num_dia(),m.stride(),m.row_fact());
+		convert(m2,m);
+		save_dia_mat(m2,fn);
+	}
+	static void load_dia_mat(dev_dia_matrix<V,I>& m, std::string fn){
+		host_dia_matrix<V,I> m2;
+		load_dia_mat(m2,fn);
+		convert(m,m2);
+	}
+};
 
 template<class T>
 void
 export_diamat_common(const char* name){
 	typedef T mat;
 	typedef typename mat::value_type value_type;
+	typedef typename mat::index_type index_type;
 	typedef typename mat::vec_type vec_type;
 
-	class_<mat>(name, no_init)
+	class_<mat> matobj(name, init<>());
+	matobj
 		.def("w",   &mat::w,    "width")
 		.def("h",   &mat::h,    "height")
 		.def("__len__",&mat::n, "number of elements")
@@ -59,9 +89,13 @@ export_diamat_common(const char* name){
 		.def("dealloc",&mat::dealloc, "deallocate memory")
 		.def("stride",&mat::stride, "matrix stride")
 		.def("num_dia",&mat::num_dia, "number of diagonals")
+		.def("save", (void (*)(mat&,std::string)) dia_io<value_type, index_type>::save_dia_mat, "save to file")
+		.def("load", (void (*)(mat&,std::string)) dia_io<value_type, index_type>::load_dia_mat, "load from file")
 		.def("__call__",  (const value_type& (mat::*)(const typename mat::index_type&, const typename mat::index_type&)const)(&mat::operator()), return_value_policy<copy_const_reference>()) // igitt.
 		;
-	def((std::string("make_")+name).c_str(),  create_dia_mat<mat>,              return_value_policy<manage_new_object>());
+
+
+	def((std::string("make_")+name).c_str(),  create_dia_mat<mat>,              (arg("h"),arg("w"),arg("offsets"),arg("stride"),arg("steepness")=1), return_value_policy<manage_new_object>());
 	def((std::string("make_")+name).c_str(),  create_dia_mat_from_dia_mat<mat>, return_value_policy<manage_new_object>());
 }
 
@@ -84,7 +118,7 @@ host_dense_mat2numpy(host_dense_matrix<T, Mfrom>& m);
 template<class T>
 pyublas::numpy_matrix<T,ublas::column_major> 
 dev_dia_mat2numpy(dev_dia_matrix<T>&m){
-	host_dia_matrix<T>   hostdia(m.h(),m.w(),m.num_dia(),m.stride());
+	host_dia_matrix<T>   hostdia(m.h(),m.w(),m.num_dia(),m.stride(),m.row_fact());
 	cuv::convert(hostdia,m);
 	host_dense_matrix<T,column_major> mdense(m.h(),m.w());
 	cuv::convert(mdense,hostdia);
