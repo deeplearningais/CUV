@@ -24,6 +24,15 @@ namespace cuv{
 			  :base_type(h,w,num_dia,stride,row_fact)
 		  {
 		  }
+		  host_dia_matrix<value_type,index_type>& 
+			  operator=(const host_dia_matrix<value_type,index_type>& o){
+				  if(this==&o) return *this;
+				  this->dealloc();
+				  (base_type&) (*this)  = (base_type&) o; 
+				   // transfer ownership of memory (!)
+				  (const_cast< my_type *>(&o))->m_vec = NULL;
+				  return *this;
+			  }
 	};
 };
 

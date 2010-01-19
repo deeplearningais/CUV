@@ -43,6 +43,20 @@ class vector{
 	   */
 	  void alloc(){};
 	  void dealloc(){};
+
+	  vector<value_type,index_type>& 
+		  operator=(const vector<value_type,index_type>& o){
+			  if(this==&o) return *this;
+			  this->dealloc();
+			  this->m_ptr = o.m_ptr;
+			  this->m_is_view = o.m_is_view;
+			  this->m_size = o.m_size;
+			  if(!m_is_view){
+				  // transfer ownership of memory (!)
+				  (const_cast< vector<value_type,index_type> *>(&o))->m_ptr = NULL;
+			  }
+			  return *this;
+		  }
 };
 
 };

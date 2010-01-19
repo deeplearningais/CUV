@@ -188,6 +188,7 @@ namespace cuv{
 					if(        dst.h() != src.h()
 							|| dst.w() != src.w()
 							|| dst.row_fact() != src.row_fact()
+							|| !dst.vec_ptr()
 							){
 						dst.dealloc();
 						dst = dev_dia_matrix<__value_type,__index_type>(src.h(),src.w(),src.num_dia(),src.stride(),src.row_fact());
@@ -207,8 +208,10 @@ namespace cuv{
 					if(        dst.h() != src.h()
 							|| dst.w() != src.w()
 							|| dst.row_fact() != src.row_fact()
+							|| !dst.vec_ptr()
 							){
-						cuvAssert(false); // no operator= yet
+						dst.dealloc();
+						dst = host_dia_matrix<__value_type,__index_type>(src.h(),src.w(),src.num_dia(),src.stride(),src.row_fact());
 					}
 					cuv::convert(dst.get_offsets(), src.get_offsets());
 					cuv::convert(dst.vec(), src.vec());

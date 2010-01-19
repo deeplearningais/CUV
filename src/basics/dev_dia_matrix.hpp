@@ -14,6 +14,7 @@ namespace cuv{
 		  typedef dia_matrix<__value_type, __index_type, vec_type, intvec_type> base_type;
 		  typedef typename base_type::value_type                   value_type;
 		  typedef typename base_type::index_type                   index_type;
+		  typedef dev_dia_matrix<value_type,index_type>            my_type;
 		  using base_type::m_row_fact;
 		protected:
 		public:
@@ -23,6 +24,15 @@ namespace cuv{
 			  :base_type(h,w,num_dia,stride,row_fact)
 		  {
 		  }
+		  dev_dia_matrix<value_type,index_type>& 
+			  operator=(const dev_dia_matrix<value_type,index_type>& o){
+				  if(this==&o) return *this;
+				  this->dealloc();
+				  (base_type&) (*this)  = (base_type&) o; 
+				   // transfer ownership of memory (!)
+				  (const_cast< my_type *>(&o))->m_vec = NULL;
+				  return *this;
+			  }
 	};
 };
 
