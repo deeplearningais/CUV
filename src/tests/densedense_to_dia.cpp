@@ -1,9 +1,8 @@
 #define BOOST_TEST_MODULE densedense_to_dia
 #include <iostream>
 #include <cstdio>
-#include <boost/test/included/unit_test.hpp>
-#include <boost/test/floating_point_comparison.hpp>
 
+#include <cuv_test.hpp>
 #include <cuv_general.hpp>
 #include <host_dense_matrix.hpp>
 #include <dev_dia_matrix.hpp>
@@ -16,9 +15,10 @@
 using namespace std;
 using namespace cuv;
 
-static const int n = 64;
-static const int m = 32;
+static const int n = 32;
+static const int m = 16;
 static const int k = 16;
+static const int rf = 2;
 
 struct Fix{
 	dev_dia_matrix<float>   C;
@@ -26,7 +26,7 @@ struct Fix{
 	dev_dense_matrix<float> A,A_;
 	dev_dense_matrix<float> B,B_;
 	Fix()
-	:   C(n,m,7,max(n,m))
+	:   C(n,m,7,max(n,m),rf)
 	,   C_(n,m)
 	,   A(n,k)
 	,   A_(n,k)
@@ -49,7 +49,7 @@ struct Fix{
 		sequence(B_);
 
 		sequence(C.vec());
-		host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride());
+		host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride(),rf);
 		host_dense_matrix<float> C_2(C.h(),C.w());
 		convert(C2,C);  // dev->host
 		convert(C_2,C2); // dia->dense
@@ -99,7 +99,34 @@ BOOST_AUTO_TEST_CASE( dd2s_correctness_host )
 	sequence(A);
 	sequence(B);
 
-	host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride());
+	host_dense_matrix<float> Chdense(C.h(),C.w());
+	host_dia_matrix<float>   Chdia(C.h(),C.w(),C.num_dia(),C.stride(),rf);
+	host_dense_matrix<float,column_major> Ah(A.h(),A.w());
+	host_dense_matrix<float,column_major> Bh(B.h(),B.w());
+	convert(Chdia,C);
+	convert(Chdense,Chdia);
+	convert(Ah,A);
+	convert(Bh,B);
+
+	host_block_descriptor<float> bdh(Chdia);
+	densedense_to_dia(Chdia,bdh,Ah,Bh);
+	prod(Chdense,Ah,Bh,'n','t');
+	for(int i=0;i<C.h();i++){
+		for(int j=0;j<C.w();j++){
+			if(Chdia(i,j) != 0){
+				BOOST_CHECK_CLOSE( Chdia(i,j), Chdense(i,j), 0.01 );
+			}
+		}
+	}
+}
+
+BOOST_AUTO_TEST_CASE( dd2s_cmp_dev_host )
+{
+	fill(C.vec(),0);
+	sequence(A);
+	sequence(B);
+
+	host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride(),rf);
 	host_dense_matrix<float,column_major> A2(A.h(),A.w());
 	host_dense_matrix<float,column_major> B2(B.h(),B.w());
 	convert(C2,C);
@@ -123,11 +150,7 @@ BOOST_AUTO_TEST_CASE( dd2s_correctness_host )
 	//          cout << C(i,j)<<" ";
 	//  cout <<endl;
 	//}
-	for(int i=0;i<C.h();i++){
-		for(int j=0;j<C.w();j++){
-			BOOST_CHECK_CLOSE( C(i,j), C2(i,j), 0.01 );
-		}
-	}
+	MAT_CMP(C,C2,0.01);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -1,3 +1,4 @@
+#include <cmath>
 #include <iostream>
 #include <thrust/device_ptr.h>
 #include <thrust/host_vector.h>
@@ -18,7 +19,7 @@ using namespace std;
 template <bool wantFactAB, bool wantFactC, class value_type, class index_type>                                                                        
 __global__                                                                                                            
 void                                                                                                                  
-dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_type wA, index_type hA, index_type hB, int* blockidx, int dialen, const value_type factAB, const value_type factC)
+dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_type wA, index_type hA, index_type hB, int* blockidx, int dialen, const value_type factAB, const value_type factC, const unsigned char rf)
 {
 	const int blockid = (blockIdx.y * gridDim.x + blockIdx.x);
 	int2 blk = ((int2*) blockidx)[SPARSE_DIA_BLOCK_SIZE_LEN/2 * blockid ];
@@ -64,12 +65,11 @@ dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_typ
     }
 
 	// diagonal in block
-	int dia        = tx - ty;
+	int dia        = tx - ty/rf;
 	int dia_sparse = dia_offsets[SPARSE_DIA_BLOCK_SIZE-1+dia];
 	if(dia_sparse >= 0 && blk.x+tx<hB && blk.y+ty<hA){
-		int offd   =  blk.y + ty;
-		int idx    = dia_sparse*dialen           // the diagonal in the final matrix
-		   +         offd;                       // offset within diagonal
+		int idx    =  dia_sparse*dialen           // the diagonal in the final matrix
+		   +          blk.y + ty;                 // offset within diagonal
 		if(0);
 		else if(wantFactAB && wantFactC)
 			C[ idx ]  = factC*C[idx] + factAB*Csub;
@@ -91,34 +91,31 @@ namespace cuv{
 					thrust::device_ptr<const int>(mat.get_offsets().ptr()),
 					thrust::device_ptr<const int>(mat.get_offsets().ptr()+mat.get_offsets().size()));
 			std::vector<block> blocks;
+			const int rf = mat.row_fact();
+			const int num_dias_within_dia_block = (SPARSE_DIA_BLOCK_SIZE-1)/rf + SPARSE_DIA_BLOCK_SIZE;
+			// indices are now shifted, there are equally many positive diagonals but the negative ones
+			// are partially pushed out to the left. We make sure that 0th diagonal is always at the same position!
+			const int dia_offset_storage_offset = (2*SPARSE_DIA_BLOCK_SIZE-1) - num_dias_within_dia_block;
+			cout << "num_dias_within_dia_block: "<<num_dias_within_dia_block<<" dia_offset_storage_offset: "<<dia_offset_storage_offset<<endl;
 			for(int i=0;i<mat.h();i+=SPARSE_DIA_BLOCK_SIZE){
 				for(int j=0;j<mat.w();j+=SPARSE_DIA_BLOCK_SIZE){
 					/*int upperdia = (j+SPARSE_DIA_BLOCK_SIZE-1) - i; // diagonal of upper right element of BLOCK_SIZExBLOCK_SIZE block*/
-					int lowerdia = j - (i+SPARSE_DIA_BLOCK_SIZE-1); // diagonal of lower left  element of BLOCK_SIZExBLOCK_SIZE block
-					block b;
-					b.startx = j;
-					b.starty = i;
+					int lowerdia = j - (i+SPARSE_DIA_BLOCK_SIZE-1)/rf; // diagonal of lower left  element of BLOCK_SIZExBLOCK_SIZE block
 					bool founddiag = false;
-					for(int e=0; e<2*SPARSE_DIA_BLOCK_SIZE-1;e++){ // diag within block
-						b.diag[e] = -1;
-						typename std::map<int,I>::const_iterator it = mat.m_dia2off.find(lowerdia+e);
-							/*cout << "DiaTest: "<< lowerdia<<" + "<<e<< " == "<< dia_offsets[d]<<" ? "<<endl;*/
-
-							if(it != mat.m_dia2off.end()){
-								/*cout << "Found Diag: "<<i<<" "<< j<<" e=" << e <<" ld="<<lowerdia<< ", d="<<d<<" do[d]="<<dia_offsets[d]<<endl;*/
-								b.diag[e] = it->second;
-								founddiag = true;
-								/*break; // look at next diag of block*/
-							}
+					block b;
+					for(int e=0;e<2*SPARSE_DIA_BLOCK_SIZE;e++)
+						b.diag[e]=-1;
+					for(int e=dia_offset_storage_offset; e<2*SPARSE_DIA_BLOCK_SIZE-1;e++){ // diag within block
+						typename std::map<int,I>::const_iterator it = mat.m_dia2off.find(lowerdia+e-dia_offset_storage_offset);
+						if(it != mat.m_dia2off.end()){
+							b.diag[e] = it->second;
+							founddiag = true;
+						}
 					}
 					if(founddiag){
-						/*cout << "Found Block: " << b.startx << ", "<<b.starty<<endl;*/
-						/*cout << "           : ";*/
-						/*for(int i=0;i<2*SPARSE_DIA_BLOCK_SIZE-1;i++){*/
-							/*cout << b.diag[i]<<" ";*/
-						/*}*/
+						b.startx = j;
+						b.starty = i;
 						blocks.push_back(b);
-						/*cout <<endl;*/
 					}
 				}
 			}
@@ -176,14 +173,15 @@ namespace cuv{
 				cuvAssert(A.w()   == B.w());
 				value_type *dst_diabase = dst.vec().ptr();
 				const index_type Ah = A.h(), Aw = A.w(), Bh = B.h(), Bw = B.w(), Ch = dst.h(), Cw = dst.w();
+				const int rf = dst.row_fact();
 				for(int dia=0;dia<dst.num_dia();dia++, dst_diabase += dst.stride()){
 						const int k = dst.get_offset(dia);  //diagonal offset
 
-						const index_type row_start = std::max((int)0,-k);
-						const index_type col_start = std::max((int)0, k);
+						const index_type row_start = rf*std::max((int)0,-k);
+						const index_type col_start =  1*std::max((int)0, k);
 
 						// number of elements to process
-						const index_type N   = std::min(Ch - row_start, Cw - col_start);
+						const index_type N   = std::min(Ch - row_start, rf*(Cw - col_start));
 
 						// data vectors
 						value_type *const d_base = dst_diabase + row_start;
@@ -200,9 +198,12 @@ namespace cuv{
 						const value_type*const d_end = d_base+N;
 						for(;a<a_end; a+=Ah,b+=Bh){
 							value_type* d = d_base;
-							while(d<d_end)
+							while(d<d_end){
+								for(int row_fact=1;row_fact<rf;row_fact++) // TODO: inefficient, needs explicit instantiation for fixed rf
+									*d++  += (*a++)  *  (*b);
 								*d++  += (*a++)  *  (*b++);
-							a-=N;   b-=N;
+							}
+							a-=N;   b-=N/rf;
 						}
 				}
 			}
@@ -238,13 +239,13 @@ namespace cuv{
 #endif
 				if(0);
 				else if(factAB==1.f && factC==0.f)
-					dense2dia_mm<false,false,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC);
+					dense2dia_mm<false,false,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 				else if(factAB==1.f && factC!=0.f)
-					dense2dia_mm<false,true,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC);
+					dense2dia_mm<false,true,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 				else if(factAB!=1.f && factC==0.f)
-					dense2dia_mm<true,false,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC);
+					dense2dia_mm<true,false,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 				else if(factAB!=1.f && factC!=0.f)
-					dense2dia_mm<true,true,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC);
+					dense2dia_mm<true,true,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 
 				cuvSafeCall(cudaThreadSynchronize());
 			}
