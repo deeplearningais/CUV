@@ -57,6 +57,13 @@ BOOST_AUTO_TEST_CASE( spmv_saveload )
 	
 }
 
+BOOST_AUTO_TEST_CASE( spmv_uninit )
+{
+	dev_dia_matrix<float> wdev(32,16,3,16,1);
+	wdev.dealloc();
+	convert(wdev,w);
+}
+
 
 BOOST_AUTO_TEST_CASE( spmv_dia2dense )
 {

@@ -193,6 +193,8 @@ namespace cuv{
 						dst.dealloc();
 						dst = dev_dia_matrix<__value_type,__index_type>(src.h(),src.w(),src.num_dia(),src.stride(),src.row_fact());
 					}
+					cuvAssert(dst.get_offsets().ptr());
+					cuvAssert(dst.vec().ptr());
 					cuv::convert(dst.get_offsets(), src.get_offsets());
 					cuv::convert(dst.vec(), src.vec());
 					dst.post_update_offsets();
@@ -213,6 +215,8 @@ namespace cuv{
 						dst.dealloc();
 						dst = host_dia_matrix<__value_type,__index_type>(src.h(),src.w(),src.num_dia(),src.stride(),src.row_fact());
 					}
+					cuvAssert(dst.get_offsets().ptr());
+					cuvAssert(dst.vec().ptr());
 					cuv::convert(dst.get_offsets(), src.get_offsets());
 					cuv::convert(dst.vec(), src.vec());
 					dst.post_update_offsets();
