@@ -8,6 +8,7 @@
 #include <host_dia_matrix.hpp>
 #include <dev_dia_matrix.hpp>
 #include <convert.hpp>
+#include <sparse_matrix_io.hpp>
 
 using namespace std;
 using namespace cuv;
@@ -36,6 +37,25 @@ struct Fix{
 
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
+
+BOOST_AUTO_TEST_CASE( spmv_saveload )
+{
+	if(1){
+		// save...
+		std::ofstream ofs("test_dia_mat.save");
+		boost::archive::binary_oarchive oa(ofs);
+		oa << w;
+	}
+	host_dia_matrix<float> w2;
+	if(1){
+		// load...
+		std::ifstream ifs("test_dia_mat.save");
+		boost::archive::binary_iarchive ia(ifs);
+		ia >> w2;
+	}
+	MAT_CMP(w,w2,0.01);
+	
+}
 
 
 BOOST_AUTO_TEST_CASE( spmv_dia2dense )
