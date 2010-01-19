@@ -51,7 +51,8 @@ namespace cuv{
 			}
 		}
 
-#include <spmv_kernel.cuh.generated>
+// this file is generated using a perl-script from spmv_kernel.cuh
+#include "spmv_kernel_inst.cuh"
 
 		template <typename value_type, typename index_type>
 			void spmv_dia_device(const dev_dia_matrix<value_type,index_type>& A, 
