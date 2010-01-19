@@ -27,7 +27,8 @@ EOT
 ;
 
 
-my $templ = `cat $ifile`;
+open IFILE, "<$ifile" or die $!; $/=undef;
+my $templ = <IFILE>;
 my $outstr = "";
 my (@ifclauses,@ifclausesTrans);
 
