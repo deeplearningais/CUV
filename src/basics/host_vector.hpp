@@ -23,6 +23,8 @@ class host_vector
 		 */
 		inline value_type& operator[](const index_type& idx){ return m_ptr[idx]; }
 		inline const value_type& operator[](const index_type& idx)const{ return m_ptr[idx]; }
+		host_vector()
+			:   base_type(0) {}
 		host_vector(size_t s)
 			:   base_type(s) { alloc(); }
 		host_vector(size_t s, value_type* p, bool is_view)

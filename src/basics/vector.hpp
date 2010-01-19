@@ -7,6 +7,8 @@ namespace cuv{
 	struct vector_traits{
 		typedef memory_space memory_space_type;
 	};
+	template<class V, class I>
+	class host_vector;
 
 template<class __value_type, class __index_type>
 class vector{
@@ -14,6 +16,7 @@ class vector{
 	public:
 	  typedef __value_type value_type;
 	  typedef __index_type index_type;
+	  template <class Archive, class V, class I> friend void serialize(Archive&, host_vector<V,I>&, unsigned int) ;
 	  
 	protected:
 	  value_type* m_ptr;
@@ -31,6 +34,7 @@ class vector{
 	  /*
 	   * Construction
 	   */
+	  vector():m_ptr(NULL),m_is_view(false),m_size(0) {}
 	  vector(size_t s):m_ptr(NULL),m_is_view(false),m_size(s) { alloc(); }
 	  vector(size_t s,value_type* p, bool is_view):m_ptr(p),m_is_view(is_view),m_size(s) {}
 	  ~vector(){ dealloc(); }

@@ -27,6 +27,12 @@ namespace cuv{
 		  std::map<int,index_type> m_dia2off;   ///< maps a diagonal to an offset
 		  int m_row_fact;                       ///< factor by which to multiply a row index (allows matrices with "steep" diagonals)
 		public:
+			dia_matrix()
+				: base_type(0,0),
+				 m_vec(0),
+				 m_num_dia(0),
+				 m_stride(0),
+				 m_row_fact(0){}
 			dia_matrix(const index_type& h, const index_type& w, const int& num_dia, const int& stride, int row_fact=1)
 				: base_type(h,w)
 				, m_num_dia(num_dia)

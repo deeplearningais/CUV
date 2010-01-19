@@ -14,10 +14,12 @@ namespace cuv{
 		  typedef dia_matrix<__value_type, __index_type, vec_type, intvec_type> base_type;
 		  typedef typename base_type::value_type                   value_type;
 		  typedef typename base_type::index_type                   index_type;
+		  typedef host_dia_matrix<value_type,index_type>  my_type;
 		  using base_type::m_row_fact;
 		protected:
 		public:
 		  ~host_dia_matrix(){}
+		  host_dia_matrix(){}
 		  host_dia_matrix(const index_type& h, const index_type& w, const int& num_dia, const int& stride, const int& row_fact=1)
 			  :base_type(h,w,num_dia,stride,row_fact)
 		  {

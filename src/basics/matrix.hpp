@@ -6,6 +6,8 @@ namespace cuv{
 	struct matrix_traits{
 		typedef memory_space memory_space_type;
 	};
+	template<class V, class I>
+	class host_dia_matrix;
 
 	template<class __value_type, class __index_type>
   class matrix
@@ -13,6 +15,7 @@ namespace cuv{
 	  public:
 		  typedef __value_type value_type;
 		  typedef __index_type index_type;
+		  template <class Archive, class V, class I> friend void serialize(Archive&, host_dia_matrix<V,I>&, unsigned int) ;
 	  protected:
 		  index_type m_width;
 		  index_type m_height;

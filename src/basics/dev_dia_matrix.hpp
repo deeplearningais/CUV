@@ -18,6 +18,7 @@ namespace cuv{
 		protected:
 		public:
 		  ~dev_dia_matrix(){}
+		  dev_dia_matrix(){}
 		  dev_dia_matrix(const index_type& h, const index_type& w, const int& num_dia, const int& stride, const int& row_fact=1)
 			  :base_type(h,w,num_dia,stride,row_fact)
 		  {

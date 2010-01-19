@@ -20,6 +20,7 @@ class dev_vector
 		/*
 		 * Construction
 		 */
+		dev_vector(){}
 		dev_vector(size_t s)
 			:   base_type(s) { alloc(); }
 		dev_vector(size_t s, value_type* p, bool is_view)
