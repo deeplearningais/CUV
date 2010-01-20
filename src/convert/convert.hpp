@@ -1,9 +1,9 @@
 #ifndef __CONVERT_HPP__
 #define __CONVERT_HPP__
 
-#include <cuv_general.hpp>
-#include <dev_dense_matrix.hpp>
-#include <host_dense_matrix.hpp>
+#include <tools/cuv_general.hpp>
+#include <basics/dev_dense_matrix.hpp>
+#include <basics/host_dense_matrix.hpp>
 
 namespace cuv{
 
