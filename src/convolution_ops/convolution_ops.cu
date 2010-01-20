@@ -124,4 +124,45 @@ void localMaximum(host_dense_matrix<float,row_major>& dst,
 			}
 }
 
+/* sort the images in a matrix in a different order
+ * input:  A1 B1 C1 D1
+ *         A2 B2 C2 D2
+ *         A3 B3 C3 D3
+ * , where A1 is an image with blockLength pixels
+ * output: A1
+ *         A2
+ *         A3
+ *         B1
+ *         B2
+ *         ..
+ */
+template<>
+void reorder(dev_dense_matrix<float,row_major>& M,
+		  int blockLength) {
+	// NYI
+	printf("warning! resorting on dev not yet implemented!\n");
+
+	cudaThreadSynchronize();
+}
+
+template<>
+void reorder(host_dense_matrix<float,row_major>& M,
+		  int blockLength) {
+	int patternCount = M.h();
+	int imgSize = M.w()/blockLength;
+
+	float* temp = (float*) malloc(sizeof(float) * M.n());
+	float* img = M.ptr();
+
+	for(int p = 0; p < patternCount; p++)
+		for(int m = 0; m < blockLength; m++) {
+			memcpy(	&temp[p*imgSize+m*imgSize*patternCount],
+					&img[p*M.w()+m*imgSize], sizeof(float)*imgSize);
+		}
+
+	memcpy(M.ptr(), temp, sizeof(float) * M.n());
+	M.resize(patternCount*blockLength, imgSize);
+	free(temp);
+}
+
 }

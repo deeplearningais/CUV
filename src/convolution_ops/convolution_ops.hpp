@@ -33,6 +33,14 @@ void localMaximum(host_dense_matrix<V,M,I>& dst,
 		   host_dense_matrix<V,M,I>& img,
 		   int poolSize);
 
+template<class V, class M, class I>
+void reorder(dev_dense_matrix<V,M,I>& A,
+		   int blockLength);
+
+template<class V, class M, class I>
+void reorder(host_dense_matrix<V,M,I>& A,
+		   int blockLength);
+
 }
 
 
