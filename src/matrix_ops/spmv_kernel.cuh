@@ -142,7 +142,7 @@ spmm_dia_kernel_shared_[%bs%]_[%ni%]_[%rf%]
 /*
  * Registers are a bit special, they (empirically) make only sense for NUM_IMG = 1
  */
-[% IF ni == 1 %]
+[% IF ni < 2 %]
 template <typename value_type, typename index_type, bool UseCache, bool wantFactAv, bool wantFactC>
 	__global__ void
 spmm_dia_kernel_trans_register_[%bs%]_[%ni%]_[%rf%]
