@@ -39,15 +39,7 @@ my $tt = Template->new({
 foreach my $rf (@seq_row_fact){
 foreach my $ni (1..$max_num_imgs_at_once){
 	print "Instantiating rf=$rf ni=$ni\n";
-	my @lines = split/\n/,$templ;
-	foreach my $i (0..$#lines){
-		$_ = $lines[$i];
-		next if(/^\s*#/ and not /SPMM_NAME/ and not /__SPMM_DIA_REGISTER__ROW_FACT/);
-		s/NUM_IMG/$ni/g;
-		s/BLOCK_SIZE/$spmm_block_size/g;
-		$lines[$i] = $_;
-	}
-	my $tmpl2 = join("\n",@lines);
+	my $tmpl2 = $templ;
 
 	# now expand the loops et cetera
 	my $vars = {
@@ -85,8 +77,7 @@ $outstr .= $o;
 my $kernel = (($ni==1) ? "spmm_dia_kernel_trans_register" : "spmm_dia_kernel_trans_shared");
 $kernel .= "_" . join("_",($spmm_block_size, $ni, $rf));
 my $ifc = "\t\telse if(nimg == $ni && A.row_fact()==$rf){
-			   //cout << \"Executing Kernel: $kernel\"<<endl;
-               $kernel<value_type, index_type, false,true,true> <<<grid, $spmm_block_size>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC);
+               $kernel<value_type, index_type, false,true,true> <<<grid, $spmm_block_size>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC,toff);
 		   }";
 push @ifclausesTrans, $ifc;
 $ifc =~ s/_trans//g;
@@ -104,7 +95,8 @@ void spmm_device_dispatch(const dev_dia_matrix<value_type,index_type>& A,
 					dev_vector<value_type>& dst, 
 					char transA,
 					const value_type& factAv,
-					const value_type& factC){
+					const value_type& factC,
+					const unsigned int& toff){
 	if(transA=='n'){
 		const dim3 grid = make_large_grid(A.h(),$spmm_block_size);
 		cuvAssert(A.num_dia() <= $spmm_block_size); // kernel doesn't handle larger numbers of diagonals

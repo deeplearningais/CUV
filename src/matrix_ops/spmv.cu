@@ -62,8 +62,10 @@ namespace cuv{
 					const value_type& factAv,
 					const value_type& factC)
 			{
-				spmm_device_dispatch(A,v,dst,transA,factAv,factC);
+				const unsigned int toff = bind_x(v.ptr(), v.size());
+				spmm_device_dispatch(A,v,dst,transA,factAv,factC,toff);
 				cuvSafeCall(cudaThreadSynchronize());
+				unbind_x(v.ptr());
 			}
 
 		/*template <bool transA, typename value_type, typename index_type>*/
