@@ -12,7 +12,7 @@ namespace cuv{
 	void cuvAssertFailed(const char *msg){
 			/*cout << "cuvAssert failed: " << msg <<endl;*/
 			/*abort();*/
-		ExceptionTracer et;
+		/*ExceptionTracer et;*/
 			throw std::runtime_error(std::string(msg));
 	}
 	void checkCudaError(const char *msg)
@@ -22,7 +22,7 @@ namespace cuv{
 		{
 			/*cout << "checkCudaError: " << msg << ": " << cudaGetErrorString(err) <<endl;*/
 			/*abort();*/
-			ExceptionTracer et;
+			/*ExceptionTracer et;*/
 			throw std::runtime_error(std::string(msg) + cudaGetErrorString(err) );
 		}                         
 	}

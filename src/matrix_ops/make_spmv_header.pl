@@ -99,7 +99,9 @@ void spmm_device_dispatch(const dev_dia_matrix<value_type,index_type>& A,
 					const unsigned int& toff){
 	if(transA=='n'){
 		const dim3 grid = make_large_grid(A.h(),$spmm_block_size);
+#if BLOCK_SIZE_LIMITS_NUM_DIAG
 		cuvAssert(A.num_dia() <= $spmm_block_size); // kernel doesn't handle larger numbers of diagonals
+#endif
 	    int nimg = v.size() / A.w();
 		if(0);
 		@ifclauses
@@ -107,7 +109,9 @@ void spmm_device_dispatch(const dev_dia_matrix<value_type,index_type>& A,
 	}else if(transA=='t'){
 	    int nimg = v.size() / A.h();
 		const dim3 grid = make_large_grid(A.w(),$spmm_block_size);
+#if BLOCK_SIZE_LIMITS_NUM_DIAG
 		cuvAssert(A.num_dia() <= $spmm_block_size); // kernel doesn't handle larger numbers of diagonals
+#endif
 		if(0);
 		@ifclausesTrans
 		else cuvAssert(false);

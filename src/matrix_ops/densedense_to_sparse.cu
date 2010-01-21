@@ -13,6 +13,8 @@
 #define AS(i, j) As[i][j]
 #define BS(i, j) Bs[i][j]
 
+#define BLOCKS_LARGE_GRID_Y 4
+
 using namespace std;
 
 // multiply two dense matrices and put the result in an existing sparse DIA-formated matrix
@@ -30,6 +32,10 @@ dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_typ
 		dia_offsets[v] = blockidx[SPARSE_DIA_BLOCK_SIZE_LEN * blockid + 2 + v]; // 2: the two ints read already above
 
 	__syncthreads();
+	if(dia_offsets[SPARSE_DIA_BLOCK_SIZE*2-1] > 0){
+		// this is a dummy block for easy grid creation
+		return;
+	}
 
     int tx = threadIdx.x;                                                                                             
     int ty = threadIdx.y;                                                                                             
@@ -118,6 +124,10 @@ namespace cuv{
 						blocks.push_back(b);
 					}
 				}
+			}
+			while(blocks.size() % BLOCKS_LARGE_GRID_Y != 0){
+				blocks.push_back(block());
+				blocks.back().diag[2*SPARSE_DIA_BLOCK_SIZE-1] = 1;  // marker for "just exit!"
 			}
 			size_t siz = sizeof(block) * blocks.size();
 			cout << "Final Block-Set Size: "<< blocks.size()<<endl;
@@ -221,10 +231,10 @@ namespace cuv{
 				if(bd.blocks().len < 4096)
 					grid = dim3(bd.blocks().len);
 				else{
-					static const int div = 4;
+					static const int div = BLOCKS_LARGE_GRID_Y;
 					cuvAssert( bd.blocks().len % div == 0 ); 
 					int i = bd.blocks().len/div;
-					grid = dim3(i, div);
+					grid = dim3(div,i);
 				}
 
 				cuvAssert(bd.blocks().ptr);

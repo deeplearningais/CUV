@@ -216,5 +216,22 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( mat_op_view )
+{
+	host_dense_matrix<float>* h2 = blockview(x,0,n,1,2);
+	dev_dense_matrix<float>*  d2 = blockview(v,0,n,1,2);
+	sequence(x);
+	sequence(v);
+	BOOST_CHECK_EQUAL(h2->h(), x.h());
+	BOOST_CHECK_EQUAL(d2->h(), x.h());
+	BOOST_CHECK_EQUAL(h2->w(), 2);
+	BOOST_CHECK_EQUAL(d2->w(), 2);
+	for(int i=0;i<n;i++)
+		for(int j=0;j<2;j++){
+			BOOST_CHECK_CLOSE((*h2)(i,j),(*d2)(i,j),0.01);
+			BOOST_CHECK_CLOSE((*h2)(i,j),x(i, j+1),0.01);
+		}
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()

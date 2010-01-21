@@ -13,7 +13,7 @@
 
 // set this to one if you have less than BLOCK_SIZE diagonals to deal with. 
 // Makes program faster.
-#define BLOCK_SIZE_LIMITS_NUM_DIAG 1
+#define BLOCK_SIZE_LIMITS_NUM_DIAG 0
 
 /****************************************************************
  *   Device Code

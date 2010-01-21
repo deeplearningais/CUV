@@ -102,6 +102,14 @@ namespace cuv{
 	  void reduce_to_row(__vector_type&, const __matrix_type&, const typename __matrix_type::value_type& factNew=1.f, const typename __matrix_type::value_type& factOld=0.f);
 
   // end of wrappers for vector ops
+ 
+  /***************************************************
+  * Get view on parts of matrix
+  * *************************************************/
+  template<class __matrix_type>
+	  __matrix_type* blockview(__matrix_type & matrix, typename __matrix_type::index_type start_rows, typename __matrix_type::index_type num_rows ,typename __matrix_type::index_type start_cols, typename __matrix_type::index_type num_cols);
+
+
 
 
   /***************************************************

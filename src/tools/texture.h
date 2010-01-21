@@ -13,12 +13,13 @@ texture<float,1> tex_x_float;
 texture<int2,1>  tex_x_double;
 
 // Use int2 to pull doubles through texture cache
-void bind_x(const float * x, const unsigned int len)
+size_t bind_x(const float * x, const unsigned int len)
 {   
 	size_t offset;
 	cuvSafeCall(cudaBindTexture(&offset, tex_x_float, (const void *)x, sizeof(float)*len));
-	cuvAssert(offset==0);
+	//cuvAssert(offset==0);
 	//cuvSafeCall(cudaBindTexture(NULL, tex_x_float, x));   
+	return offset/sizeof(float);
 }
 
 void bind_x(const double * x)
@@ -31,7 +32,7 @@ void unbind_x(const double * x)
 // Note: x is unused, but distinguishes the two functions
 
 template <bool UseCache>
-__inline__ __device__ float fetch_x(const int& i, const float * x)
+__inline__ __device__ float fetch_x(const float* x, const int& i)
 {
     if (UseCache)
         return tex1Dfetch(tex_x_float, i);

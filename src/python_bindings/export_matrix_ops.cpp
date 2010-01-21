@@ -72,6 +72,16 @@ void export_scalar_functor() {
 }
 
 template<class M, class N>
+void export_binary_functor_simple() {
+	def("apply_binary_functor",
+	   (void (*)(M&, N&, const BinaryFunctor&)) 
+	   apply_binary_functor<
+	     typename M::value_type,
+		 typename M::memory_layout,
+		 typename M::index_type,
+		 typename N::value_type>);
+}
+template<class M, class N>
 void export_binary_functor() {
 	def("apply_binary_functor",
 	   (void (*)(M&, N&, const BinaryFunctor&)) 
@@ -125,6 +135,11 @@ void export_blas2(){
 }
 
 template <class M>
+void export_blockview(){
+	def("blockview",blockview<M>,return_value_policy<manage_new_object>());
+}
+
+template <class M>
 void export_learn_step(){
 	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<typename M::value_type,typename M::memory_layout,typename M::index_type>);
 	typedef typename M::vec_type V;
@@ -134,6 +149,8 @@ void export_learn_step(){
 void export_matrix_ops(){
 	typedef dev_dense_matrix<float,column_major> fdev;
 	typedef host_dense_matrix<float,column_major> fhost;
+	typedef dev_dense_matrix<unsigned char,column_major> udev;
+	typedef host_dense_matrix<unsigned char,column_major> uhost;
 
 	export_blas3<fdev,fdev,fdev>();
 	export_blas3<fhost,fhost,fhost>();
@@ -143,12 +160,16 @@ void export_matrix_ops(){
 	export_scalar_functor<fdev>();
 	export_binary_functor<fdev,fdev>();
 	export_binary_functor<fhost,fhost>();
+	export_binary_functor_simple<fhost,uhost>();
+	export_binary_functor_simple<fdev,udev>();
 	export_reductions<fhost>();
 	export_reductions<fdev>();
 	export_learn_step<fhost>();
 	export_learn_step<fdev>();
 	export_blas2<fdev>();
 	export_blas2<fhost>();
+	export_blockview<fdev>();
+	export_blockview<fhost>();
 }
 
 

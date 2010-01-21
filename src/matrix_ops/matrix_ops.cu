@@ -45,6 +45,28 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows, T pa
 
 
 namespace cuv{
+	template<>
+		host_dense_matrix<float,column_major>* blockview(
+				host_dense_matrix<float,column_major>& matrix,
+				unsigned int start_rows,
+				unsigned int num_rows,
+				unsigned int start_cols,
+				unsigned int num_cols) {
+			cuvAssert(start_rows==0);
+			cuvAssert(num_rows==matrix.h())
+			return new host_dense_matrix<float,column_major>(num_rows,num_cols, matrix.ptr()+matrix.h()*start_cols,true);
+		}
+	template<>
+		dev_dense_matrix<float,column_major>* blockview(
+				dev_dense_matrix<float,column_major>& matrix,
+				unsigned int start_rows,
+				unsigned int num_rows,
+				unsigned int start_cols,
+				unsigned int num_cols) {
+			cuvAssert(start_rows==0);
+			cuvAssert(num_rows==matrix.h())
+			return new dev_dense_matrix<float,column_major>(num_rows,num_cols, matrix.ptr()+matrix.h()*start_cols,true);
+		}
 
 	template<>
 		void prod(dev_dense_matrix<float,column_major>& dst,
