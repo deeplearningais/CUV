@@ -196,10 +196,17 @@ void supersample(host_dense_matrix<float,row_major>& dst,
 
 	cuvAssert(dstSize / factor == imgSize);
 
-	for(int i = 0; i < numImages; i++)
+	float* image = img.ptr();
+	float* target = dst.ptr();
+
+	for(int i = 0; i < numImages; i++) {
 		for(int r = 0; r < dstSize; r++)
-			for(int c = 0; c < dstSize; c++)
-				dst.set(i, r*dstSize+c, img(i, (r/factor)*imgSize+c/factor));
+			for(int c = 0; c < dstSize; c++) {
+				target[0] = image[(r/factor)*imgSize+c/factor];
+				target++;
+			}
+		image += img.w();
+	}
 }
 
 }

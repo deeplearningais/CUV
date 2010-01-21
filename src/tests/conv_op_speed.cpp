@@ -91,4 +91,23 @@ BOOST_AUTO_TEST_CASE( convolution_speed )
 	conv_speed_test(47, 15, 16, 1);
 }
 
+BOOST_AUTO_TEST_CASE( supersampling_speed )
+{
+	int size = 32;
+	int imgs = 20;
+	int factor = 8;
+
+	host_dense_matrix<float, row_major> A(imgs,size*size);
+	host_dense_matrix<float, row_major> B(imgs,size*size*factor*factor);
+	dev_dense_matrix<float, row_major> dev_A(imgs,size*size);
+	dev_dense_matrix<float, row_major> dev_B(imgs,size*size*factor*factor);
+
+	sequence(A);
+	sequence(dev_A);
+
+	MEASURE_TIME(host, supersample(B, A, factor), 10);
+	MEASURE_TIME(dev,  supersample(dev_B, dev_A, factor), 10);
+	printf("Speedup: %3.4f\n", host/dev);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
