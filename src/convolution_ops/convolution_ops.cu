@@ -53,23 +53,28 @@ void convolve(host_dense_matrix<float,row_major>& dst,
 
 	int dstPixels = dstSize * dstSize;
 
-// Alex' host convolution is ~25% faster due to better memory access patterns
-//	convCPU(img.ptr(), filter.ptr(), dst.ptr(), imgSize, filterSize, numImages, numFilters);
+	float* images = img.ptr();
+	float* targets = dst.ptr();
 
-	for(int i=0; i<numImages; i++)
-		for(int f=0; f<numFilters; f++)
+	for(int i=0; i<numImages; i++) {
+		float* filters = filter.ptr();
+		for(int f=0; f<numFilters; f++) {
 			for(int r=0; r<dstSize; r++)
 				for(int c=0; c<dstSize; c++) {
 					float sum = 0.0f;
 					for(int y=0; y<filterSize; y++) {
 						float subsum = 0.0f;
 						for(int x=0; x<filterSize; x++)
-							subsum += img(i, (r+y)*imgSize + (c+x) ) *  filter(f, y * filterSize + x);
+							subsum += images[(r+y)*imgSize + (c+x)] * filters[y * filterSize + x];
 						sum += subsum;
 					}
-					sum += dst(i, f*dstPixels + r*dstSize + c);
-					dst.set(i, f*dstPixels + r*dstSize + c, sum);
+					targets[f*dstPixels + r*dstSize + c] += sum;
 				}
+			filters += filter.w();
+		}
+		targets += dst.w();
+		images += img.w();
+	}
 }
 
 template<>
