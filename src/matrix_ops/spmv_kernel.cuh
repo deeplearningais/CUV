@@ -65,9 +65,9 @@ spmm_dia_kernel_trans_shared_[%bs%]_[%ni%]_[%rf%]
 			{
 				value_type A_ij;
 				[% FOREACH lrf IN rfs %]
-					A_ij  = A_data[       offset + row];
+					A_ij  = A_data[       offset + row + [%lrf%]];
 					[% FOREACH img IN nimgs  %]
-						sums[[%bs%] * [% img %] + threadIdx.x] += A_ij * fetch_x<UseCache>(v,toff+row++ + A_h*[%img%]);
+						sums[[%bs%] * [% img %] + threadIdx.x] += A_ij * fetch_x<UseCache>(v,toff+row+ [%lrf%]+ A_h*[%img%]);
 					[% END %]
 				[% END %]
 			}
