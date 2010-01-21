@@ -1,6 +1,6 @@
 #include "convolution_ops.hpp"
 
-#include <convert.hpp>
+#include <convert/convert.hpp>
 #include <nvmatrix.cuh>
 #include <conv.cuh>
 #include <conv_util.cuh>
@@ -163,6 +163,43 @@ void reorder(host_dense_matrix<float,row_major>& M,
 	memcpy(M.ptr(), temp, sizeof(float) * M.n());
 	M.resize(patternCount*blockLength, imgSize);
 	free(temp);
+}
+
+/*
+ * Supersampling takes a n x (m*m) matrix img with n images of size (m x m)
+ * and a factor s. Output is a n x (m*s*m*s) matrix dst with n enlarged images
+ * of size (m*s x m*s)
+ */
+template<>
+void supersample(dev_dense_matrix<float,row_major>& dst,
+		dev_dense_matrix<float,row_major>& img,
+		int factor) {
+	int numImages = img.h();
+	int imgPixels = img.w();
+	int dstPixels = imgPixels * (factor * factor);
+
+	NVMatrix nv_img(img.ptr(), numImages, imgPixels, false);
+	NVMatrix nv_dst(dst.ptr(), numImages, dstPixels, false);
+
+	supersample(&nv_img, &nv_dst, factor);
+
+	cudaThreadSynchronize();
+}
+
+template<>
+void supersample(host_dense_matrix<float,row_major>& dst,
+		host_dense_matrix<float,row_major>& img,
+		int factor) {
+	int numImages = img.h();
+	int imgSize = sqrt(img.w());
+	int dstSize = imgSize * factor;
+
+	cuvAssert(dstSize / factor == imgSize);
+
+	for(int i = 0; i < numImages; i++)
+		for(int r = 0; r < dstSize; r++)
+			for(int c = 0; c < dstSize; c++)
+				dst.set(i, r*dstSize+c, img(i, (r/factor)*imgSize+c/factor));
 }
 
 }

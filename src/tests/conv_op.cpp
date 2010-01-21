@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <boost/test/included/unit_test.hpp>
 
+#include <cuv_test.hpp>
 #include <cuv_general.hpp>
 #include <dev_dense_matrix.hpp>
 #include <host_dense_matrix.hpp>
@@ -80,5 +81,22 @@ BOOST_AUTO_TEST_CASE( local_maximum )
 			BOOST_CHECK_CLOSE( pooled2(i,j), h_pooled(i,j), 0.001 );
 		}
 	}
+}
+
+BOOST_AUTO_TEST_CASE( supersampling )
+{
+	fill(d_dst, 0.0f);
+	sequence(d_pooled);    apply_scalar_functor(d_pooled,   SF_MULT,0.001f);
+
+	fill(h_pooled, 0.0f);
+	sequence(h_pooled);    apply_scalar_functor(h_pooled,   SF_MULT,0.001f);
+
+	supersample(h_img, h_pooled, p);
+	supersample(d_img, d_pooled, p);
+
+	host_dense_matrix<float, row_major> img2(d_img.h(), d_img.w());
+	convert(img2, d_img);
+
+	MAT_CMP(img2, h_img, 0.001);
 }
 }

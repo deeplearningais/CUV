@@ -34,6 +34,16 @@ void localMaximum(host_dense_matrix<V,M,I>& dst,
 		   int poolSize);
 
 template<class V, class M, class I>
+void supersample(host_dense_matrix<V,M,I>& dst,
+		host_dense_matrix<V,M,I>& img,
+		int factor);
+
+template<class V, class M, class I>
+void supersample(dev_dense_matrix<V,M,I>& dst,
+		dev_dense_matrix<V,M,I>& img,
+		int factor);
+
+template<class V, class M, class I>
 void reorder(dev_dense_matrix<V,M,I>& A,
 		   int blockLength);
 
