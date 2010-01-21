@@ -77,7 +77,7 @@ $outstr .= $o;
 my $kernel = (($ni==1) ? "spmm_dia_kernel_trans_register" : "spmm_dia_kernel_trans_shared");
 $kernel .= "_" . join("_",($spmm_block_size, $ni, $rf));
 my $ifc = "\t\telse if(nimg == $ni && A.row_fact()==$rf){
-               $kernel<value_type, index_type, false,true,true> <<<grid, $spmm_block_size>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC,toff);
+               $kernel<value_type, index_type, true,true,true> <<<grid, $spmm_block_size>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC,toff);
 		   }";
 push @ifclausesTrans, $ifc;
 $ifc =~ s/_trans//g;

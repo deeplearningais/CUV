@@ -64,14 +64,11 @@ spmm_dia_kernel_trans_shared_[%bs%]_[%ni%]_[%rf%]
 			if(row >= 0 && row < A_h)
 			{
 				value_type A_ij;
-				const value_type* v_ptr = v+row;
-				
 				[% FOREACH lrf IN rfs %]
 					A_ij  = A_data[       offset + row];
 					[% FOREACH img IN nimgs  %]
-						sums[[%bs%] * [% img %] + threadIdx.x] += A_ij * fetch_x<UseCache>(v_ptr,toff+[%lrf%] + A_h*[%img%]);
+						sums[[%bs%] * [% img %] + threadIdx.x] += A_ij * fetch_x<UseCache>(v,toff+row++ + A_h*[%img%]);
 					[% END %]
-					row++;
 				[% END %]
 			}
 		}
@@ -129,10 +126,8 @@ spmm_dia_kernel_shared_[%bs%]_[%ni%]_[%rf%]
 			if(col >= 0 && col < A_w)
 			{
 				const value_type   A_ij = A_data[       offset];
-				const value_type* v_ptr = v+col;
 				[% FOREACH img IN nimgs %]
-					/*sums[[%bs%]* [%img%] + threadIdx.x] += A_ij * *v_ptr; v_ptr += A_w;*/
-					sums[[%bs%]* [%img%] + threadIdx.x] += A_ij * fetch_x<UseCache>(v_ptr, [%img%]*A_w);
+					sums[[%bs%]* [%img%] + threadIdx.x] += A_ij * fetch_x<UseCache>(v, toff + col+[%img%]*A_w);
 				[% END %]
 			}
 		}
@@ -168,7 +163,6 @@ spmm_dia_kernel_trans_register_[%bs%]_[%ni%]_[%rf%]
 #if BLOCK_SIZE_LIMITS_NUM_DIAG
 	__shared__ int        offsets[[%bs%]];
 #endif
-	value_type            sums[[%ni%]];
 
 	const index_type thread_id = large_grid_thread_id();
 	const index_type grid_size = large_grid_thread_num();
@@ -182,32 +176,33 @@ spmm_dia_kernel_trans_register_[%bs%]_[%ni%]_[%rf%]
 
 	for(index_type col = thread_id; col < A_w; col += grid_size)
 	{
-		for(unsigned int i=0;i<[%ni%];i++)
-			sums[i] = (value_type)0 ;
+		[% FOREACH img IN nimgs %] 
+			value_type            sum[%img%] = 0; 
+		[% END %]
 		index_type offset = 0;
 		for(index_type n = 0; n < A_nd; n++, offset+=A_stride)
 		{
 #if BLOCK_SIZE_LIMITS_NUM_DIAG
-			const int row = (col - offsets[n])*[%rf%];
+			int row = (col - offsets[n])*[%rf%];
 #else
-			const int row = (col - A_diaoff[n])*[%rf%];
+			int row = (col - A_diaoff[n])*[%rf%];
 #endif
 			if(row >= 0 && row < A_h)
 			{
 				value_type        A_ij;
-				const value_type* v_ptr ;
 				[% FOREACH lrf IN rfs %]
-					A_ij  = A_data[       offset + row+[% lrf %]];
-					v_ptr = v + row + [% lrf %];
+					A_ij  = A_data[       offset + row];
 					[% FOREACH img IN nimgs %]
-						sums[ [% img %] ] += A_ij * *v_ptr; v_ptr += A_h; [% END %]
+						sum[%img%] += A_ij * fetch_x<UseCache>(v,toff+row + A_h*[%img%]);
+					[% END %]
+					row++;
 				[% END %]
 			}
 		}
 		__syncthreads();
 		[% FOREACH img IN nimgs %]
 			dst[col + [% img %] *A_w] = (wantFactC  ? factC * dst[col + [% img %]  * A_w] : 0.f) 
-				+              (wantFactAv ? factAv                     : 1.f) * sums[[% img %] ];
+				+              (wantFactAv ? factAv                     : 1.f) * sum[% img %];
 		[% END %]
 	}
 }
@@ -230,7 +225,6 @@ spmm_dia_kernel_register_[%bs%]_[%ni%]_[%rf%]
 #if BLOCK_SIZE_LIMITS_NUM_DIAG
 	__shared__ int        offsets[[%bs%]];
 #endif
-	value_type            sums[[%ni%]];
 
 	const index_type thread_id = large_grid_thread_id();
 	const index_type grid_size = large_grid_thread_num();
@@ -243,9 +237,9 @@ spmm_dia_kernel_register_[%bs%]_[%ni%]_[%rf%]
 
 	for(index_type row = thread_id; row < A_h; row += grid_size)
 	{
-		// initialize shared memory
-		for(unsigned int i=0;i<[%ni%];i++)
-			sums[i] = (value_type) 0 ;
+		[% FOREACH img IN nimgs %] 
+			value_type            sums[%img%];
+		[% END %]
 		__syncthreads();
 		index_type offset = row;
 		for(index_type n = 0; n < A_nd; n++, offset+=A_stride)
@@ -260,14 +254,14 @@ spmm_dia_kernel_register_[%bs%]_[%ni%]_[%rf%]
 				const value_type A_ij = A_data[       offset];
 				const value_type* v_ptr = v+col;
 				[% FOREACH img IN nimgs %]
-					sums[ [% img %] ] += A_ij * *v_ptr; v_ptr += A_h;
+					sums[% img %] += A_ij * *v_ptr; v_ptr += A_h;
 				[% END %]
 			}
 		}
 		__syncthreads();
 		[% FOREACH img IN nimgs %]
 			dst[row + [%img%]*A_h] = (wantFactC  ? factC * dst[row + [%img%] * A_h] : 0.f) 
-				+                    (wantFactAv ? factAv                     : 1.f) * sums[[%img%]];
+				+                    (wantFactAv ? factAv                     : 1.f) * sums[%img%];
 		[% END %]
 	}
 }
