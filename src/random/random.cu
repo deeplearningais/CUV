@@ -338,7 +338,7 @@ struct rnd_normal {
 			 float x = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
 			 float y = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
 			 BoxMuller(x, y); //transform uniform into two independent standard normals
-			 float2 tmp=dst[idx];
+			 float2 tmp=dst[i];
 			 dst[i] = make_float2(x+tmp.x,y+tmp.y);
 		}
 		gStates[idx] = mtState;
