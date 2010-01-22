@@ -257,6 +257,23 @@ namespace cuv{
 		  }
 	  }
 	  template<class V,class I, class V2>
+	  void reduce_to_col(host_vector<V2,I>&v, const host_dense_matrix<V,row_major,I>& m, const V& factNew, const V& factOld){
+		  cuvAssert(m.ptr() != NULL);
+		  cuvAssert(m.h()   == v.size());
+		  const  V* A_ptr = m.ptr();
+
+		  V2* v_ptr = v.ptr();
+		  for(int j=0; j<m.h(); j++){
+				  *v_ptr++  *= factOld;
+		  }
+		  v_ptr = v.ptr();
+		  for(int i=0;i<m.h(); i++) {
+			 for(int j=0; j<m.w(); j++)
+				 *v_ptr += factNew * *A_ptr++;
+			  v_ptr++;
+		  }
+	  }
+	  template<class V,class I, class V2>
 	  void reduce_to_col(dev_vector<V2,I>&v, const dev_dense_matrix<V,column_major,I>& m, const V& factNew, const V& factOld){
 		  cuvAssert(m.ptr() != NULL);
 		  cuvAssert(m.h()   == v.size());
@@ -272,6 +289,30 @@ namespace cuv{
 		  reduce_to_col_impl::reduce_to_col(v,m,factNew,factOld);
 	  }
 
+  namespace reduce_to_row_impl{
+	  template<class V,class I, class V2>
+	  void reduce_to_row(host_vector<V2,I>&v, const host_dense_matrix<V,row_major,I>& m, const V& factNew, const V& factOld){
+		  cuvAssert(m.ptr() != NULL);
+		  cuvAssert(m.w()   == v.size());
+		  const  V* A_ptr = m.ptr();
+
+		  V2* v_ptr = v.ptr();
+		  for(int j=0; j<v.size(); j++){
+				  *v_ptr++  *= factOld;
+		  }
+		  for(int i=0;i<m.h();i++){
+			  v_ptr = v.ptr();
+			  for(int j=0; j<m.w(); j++){
+				  *v_ptr++ += factNew * *A_ptr++;
+			  }
+		  }
+	  }
+  }
+  template<class __matrix_type, class __vector_type>
+	  void reduce_to_row(__vector_type&v, const __matrix_type& m, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld){
+		  reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld);
+	  }
+
 #define INSTANTIATE_MV(V,M) \
   template void matrix_plus_col(dev_dense_matrix<V,M>&, const dev_vector<V>&);   \
   template void matrix_plus_col(host_dense_matrix<V,M>&, const host_vector<V>&); \
@@ -282,9 +323,13 @@ namespace cuv{
   template void reduce_to_col(dev_vector<V>&, const dev_dense_matrix<V,M>&, const V&,const V&); \
   template void reduce_to_col(host_vector<V>&, const host_dense_matrix<V,M>&, const V&,const V&);
 
+#define INSTANTIATE_REDROW(V,M) \
+  template void reduce_to_col(host_vector<V>&, const host_dense_matrix<V,M>&, const V&,const V&); \
+  template void reduce_to_row(host_vector<V>&, const host_dense_matrix<V,M>&, const V&,const V&);
+
   INSTANTIATE_MV(float, column_major);
   INSTANTIATE_MV(float, row_major);
 
   INSTANTIATE_REDCOL(float,column_major);
-
+  INSTANTIATE_REDROW(float,row_major);
 }; // cuv
