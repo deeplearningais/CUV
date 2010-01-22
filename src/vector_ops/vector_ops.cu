@@ -72,6 +72,9 @@ struct uf_sqrt{  __device__  __host__       T operator()(const T& t)      const{
 template<class T>
 struct uf_abs{  __device__  __host__       T operator()(const T& t)      const{ return fabs(t); } };
 
+template<class T>
+struct uf_is_nan{  __device__  __host__     bool operator()(const T& t)      const{ return t!=t; } };
+
 template<class T, class binary_functor>
 struct uf_base_op{
   const T x;
@@ -95,6 +98,10 @@ template<class T, class U>
 struct bf_divides{  __device__  __host__    T operator()(const T& t, const U& u)      const{ return  t / (T)u; } };
 template<class T, class U>
 struct bf_squared_diff{__device__ __host__  T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
+template<class T, class U>
+struct bf_and{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t && u; } };
+template<class T, class U>
+struct bf_or{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t || u; } };
 
 // functors with parameter
 template<class T, class U>
@@ -414,6 +421,15 @@ struct apply_scalar_functor_impl{
  * Reductions
  */
 template<class __vector_type>
+bool
+has_nan(__vector_type& v){
+	typedef typename __vector_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	ptr_type v_ptr(v.ptr());
+	bool init=false;
+	return  thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_is_nan<value_type>(), init, bf_or<bool,bool>());
+}
+template<class __vector_type>
 float
 norm2(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
@@ -473,6 +489,7 @@ var(__vector_type& v){
 	template void apply_binary_functor<X,Y,P>(X&, Y&, const BinaryFunctor&,  const P&, const P&);
 
 #define SIMPLE_NORM(X) \
+	template bool has_nan<X>(X&); \
 	template float norm1<X>(X&); \
 	template float norm2<X>(X&); \
 	template float mean<X>(X&);  \

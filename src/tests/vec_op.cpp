@@ -1,6 +1,7 @@
 #define BOOST_TEST_MODULE example
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>
+#include <limits>
 
 #include <cuv_general.hpp>
 #include <dev_dense_matrix.hpp>
@@ -117,6 +118,25 @@ BOOST_AUTO_TEST_CASE( vec_ops_lswd )
 		BOOST_CHECK_CLOSE(v[i],v_old[i] + 0.1f *(w[i] - 0.05f *v_old[i]),0.01);
 	}
 
+}
+BOOST_AUTO_TEST_CASE( vec_ops_is_nan )
+{
+	host_vector<float> v2(N); fill(v2,0);
+	fill(v,0);
+	bool no  = has_nan(v);
+	bool no2 = has_nan(v2);
+	BOOST_CHECK_EQUAL(no,false);
+	BOOST_CHECK_EQUAL(no2,false);
+	if(std::numeric_limits<float>::has_quiet_NaN){
+		v.set(3,std::numeric_limits<float>::quiet_NaN());
+		v2.set(3,std::numeric_limits<float>::quiet_NaN());
+		bool yes = has_nan(v);
+		bool yes2 = has_nan(v2);
+		BOOST_CHECK_EQUAL(yes,true);
+		BOOST_CHECK_EQUAL(yes2,true);
+	}else{
+		BOOST_MESSAGE("Warning: we do not have NaN, skip test!");
+	}
 }
 BOOST_AUTO_TEST_CASE( vec_ops_norms )
 {
