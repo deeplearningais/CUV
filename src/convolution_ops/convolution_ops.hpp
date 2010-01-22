@@ -24,6 +24,18 @@ void convolve(host_dense_matrix<V,M,I>& dst,
 		   host_dense_matrix<V,M,I>& filter);
 
 template<class V, class M, class I>
+void convolve2(dev_dense_matrix<V,M,I>& dst,
+		   dev_dense_matrix<V,M,I>& img,
+		   dev_dense_matrix<V,M,I>& filter,
+		   int numFilters);
+
+template<class V, class M, class I>
+void convolve2(host_dense_matrix<V,M,I>& dst,
+		   host_dense_matrix<V,M,I>& img,
+		   host_dense_matrix<V,M,I>& filter,
+		   int numFilters);
+
+template<class V, class M, class I>
 void localMaximum(dev_dense_matrix<V,M,I>& dst,
 		   dev_dense_matrix<V,M,I>& img,
 		   int poolSize);

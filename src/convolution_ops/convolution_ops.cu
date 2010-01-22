@@ -3,10 +3,20 @@
 #include <convert/convert.hpp>
 #include <nvmatrix.cuh>
 #include <conv.cuh>
+#include <conv2.cuh>
 #include <conv_util.cuh>
+#include <convCPU.h>
 
 namespace cuv{
 
+/* Convolve N patterns (images) with F filters, resulting in N*F target images
+ *
+ * img		contains one input pattern in each row
+ * filters	contains one filter in each row, number of filters must
+ * 			be multiples of 16.
+ * dst		holds the target images of the convolution. one row for each
+ *			input image. width = dstSize^2 * numFilters
+ */
 template<>
 	void convolve(dev_dense_matrix<float,row_major>& dst,
 			  dev_dense_matrix<float,row_major>&   img,
@@ -32,13 +42,6 @@ template<>
 	cuvSafeCall(cudaThreadSynchronize());
 	}
 
-/*
- * img		contains one input pattern in each row
- * filters	contains one filter in each row, number of filters must
- * 			be multiples of 16.
- * dst		holds the target images of the convolution. one row for each
- *			input image. width = dstSize^2 * numFilters
- */
 template<>
 void convolve(host_dense_matrix<float,row_major>& dst,
 		  host_dense_matrix<float,row_major>&   img,
@@ -76,6 +79,72 @@ void convolve(host_dense_matrix<float,row_major>& dst,
 		images += img.w();
 	}
 }
+
+/* Convolve N patterns (images), each with a different set of F filters,
+ * resulting in N*F target images
+ *
+ * img		contains one input pattern in each row
+ * filters	contains F filters in each row, number of filters must
+ * 			be multiples of 16.
+ * dst		holds the target images of the convolution. one row for each
+ *			input image. width = dstSize^2 * numFilters
+ *
+ * This routine can be used to compute the weight gradients: img contains the
+ * activations from the lower layers filters are the error maps from the upper
+ * layer. dst will then contain weight gradients for each pattern per row (sum
+ * each column up).
+ */
+template<>
+	void convolve2(dev_dense_matrix<float,row_major>& dst,
+			  dev_dense_matrix<float,row_major>&   img,
+			  dev_dense_matrix<float,row_major>&   filter,
+			  int numFilters) {
+	int imgSize = sqrt(img.w());
+	int numImages = img.h();
+	int filterSize = sqrt(filter.w()/numFilters);
+	int dstSize = sqrt(dst.w()/numFilters);
+
+	// some preliminary checks to ensure compatibility
+	cuvAssert(numFilters%16 == 0);
+	cuvAssert(filterSize*filterSize == filter.w()*numFilters);
+	cuvAssert(imgSize*imgSize == img.w());
+	cuvAssert(dstSize == imgSize - filterSize + 1);
+
+	// make NVMatrices with this data
+	NVMatrix nv_dst(dst.ptr(), dst.h(), dst.w(), false);
+	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
+	NVMatrix nv_filter(filter.ptr(), filter.h(), filter.w(), false);
+
+	// execute convolution
+    convolve2_bw(&nv_img, &nv_filter, &nv_dst, filterSize);
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
+template<>
+void convolve2(host_dense_matrix<float,row_major>& dst,
+		  host_dense_matrix<float,row_major>&   img,
+		  host_dense_matrix<float,row_major>&   filter,
+		  int numFilters) {
+	int imgSize = sqrt(img.w());
+	int numImages = img.h();
+	int filterSize = sqrt(filter.w()/numFilters);
+	int dstSize = sqrt(dst.w()/numFilters);
+
+	conv2CPU(img.ptr(), filter.ptr(), dst.ptr(), imgSize, filterSize, numImages, numFilters);
+}
+
+
+/* Convolve N patterns, each consisting of F images/maps with F filters and add
+ * them up. Resulting in N target images
+ *
+ * img		contains F input pattern in each row
+ * filters	contains one filter in each row, number of filters must
+ * 			be multiples of 16.
+ * dst		holds the target image of the convolution. one row for each
+ *			input image. width = dstSize^2
+ */
+// NYI conv3
+
 
 template<>
 void localMaximum(dev_dense_matrix<float,row_major>& dst,
