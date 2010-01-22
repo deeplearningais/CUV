@@ -83,11 +83,13 @@ namespace cuv{
    * reductions
    *
    */
+  template<class V,class M, class I> bool has_nan(dev_dense_matrix<V,M,I>& v){return has_nan(v.vec());}
   template<class V,class M, class I> float norm2(dev_dense_matrix<V,M,I>& v){return norm2(v.vec());}
   template<class V,class M, class I> float norm1(dev_dense_matrix<V,M,I>& v){return norm1(v.vec());}
   template<class V,class M, class I> float mean(dev_dense_matrix<V,M,I>& v) {return mean(v.vec());}
   template<class V,class M, class I> float var(dev_dense_matrix<V,M,I>& v)  {return var(v.vec());}
 
+  template<class V,class M, class I> bool has_nan(host_dense_matrix<V,M,I>& v){return has_nan(v.vec());}
   template<class V,class M, class I> float norm2(host_dense_matrix<V,M,I>& v){return norm2(v.vec());}
   template<class V,class M, class I> float norm1(host_dense_matrix<V,M,I>& v){return norm1(v.vec());}
   template<class V,class M, class I> float mean(host_dense_matrix<V,M,I>& v) {return mean(v.vec());}
