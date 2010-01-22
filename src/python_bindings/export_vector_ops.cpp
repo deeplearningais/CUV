@@ -57,7 +57,7 @@ void export_binary_functors(){
         .value("COPY", BF_COPY)
 
         .value("AXPY", BF_AXPY)
-        .value("YPBY", BF_AXPY)
+        .value("XPBY", BF_XPBY)
         .value("AXPBY", BF_AXPBY)
         ;
 }
