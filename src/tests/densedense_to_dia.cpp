@@ -15,10 +15,10 @@
 using namespace std;
 using namespace cuv;
 
-static const int n = 32;
-static const int m = 16;
+static const int n = 36;
+static const int m = 19;
 static const int k = 16;
-static const int rf = 2;
+static const int rf = 4;
 
 struct Fix{
 	dev_dia_matrix<float>   C;

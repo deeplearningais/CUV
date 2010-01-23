@@ -59,13 +59,14 @@ dense2dia_mm( value_type* C, const value_type* A, const value_type* B, index_typ
         __shared__ value_type As[SPARSE_DIA_BLOCK_SIZE][SPARSE_DIA_BLOCK_SIZE];                                                           
         __shared__ value_type Bs[SPARSE_DIA_BLOCK_SIZE][SPARSE_DIA_BLOCK_SIZE];                                                         
                                                                                                                       
-		AS(ty, tx) = A[a + hatyptx];                                                                     
-		BS(ty, tx) = B[b + hbtyptx];                                                                     
+		// allow matrices to have dimensions which are not n*SPARSE_DIA_BLOCK_SIZE
+		AS(ty, tx) = a+hatyptx < aEnd         ? A[a + hatyptx] : 0;
+		BS(ty, tx) = b+hbtyptx < bBegin+hB*wA ? B[b + hbtyptx] : 0;
                                                                                                                       
 		__syncthreads();  // Synchronize to make sure the matrices are loaded                                                          
 																													  
 		for (int k = 0; k < SPARSE_DIA_BLOCK_SIZE; ++k){
-			Csub += AS(k,ty)*BS(k,tx);
+			Csub += AS(k,ty) * BS(k,tx);
 		}
 		__syncthreads();
     }
