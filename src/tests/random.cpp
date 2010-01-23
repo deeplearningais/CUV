@@ -45,10 +45,11 @@ BOOST_AUTO_TEST_CASE( random_normal_nan )
 	dev_vector<float> large(105*150*96);
 	apply_0ary_functor(large,NF_FILL,0);
 	//apply_0ary_functor(x,NF_FILL,0);	
-	for(int iter=0;iter<10;iter++){
+	for(int iter=0;iter<10000;iter++){
 		add_rnd_normal(large);
 		//add_rnd_normal(x);
 		BOOST_CHECK( ! has_nan(large) );
+		BOOST_CHECK( ! has_inf(large) );
 		//BOOST_CHECK( ! has_nan(x) );
 	}
 }

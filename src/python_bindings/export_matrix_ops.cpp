@@ -124,6 +124,8 @@ void export_binary_functor() {
 
 template <class M>
 void export_reductions(){
+	def("has_inf",(bool (*)(typename M::vec_type&)) has_inf<typename M::vec_type>);
+	def("has_inf",(bool (*)(M&)) has_inf<typename M::value_type,typename M::memory_layout,typename M::index_type>);
 	def("has_nan",(bool (*)(typename M::vec_type&)) has_nan<typename M::vec_type>);
 	def("has_nan",(bool (*)(M&)) has_nan<typename M::value_type,typename M::memory_layout,typename M::index_type>);
 	def("norm2",(float (*)(M&)) norm2<typename M::value_type,typename M::memory_layout,typename M::index_type>);

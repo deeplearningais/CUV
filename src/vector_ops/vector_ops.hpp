@@ -120,6 +120,7 @@ namespace cuv{
    * reductions
    *
    */
+  template<class __vector_type1> bool has_inf(__vector_type1& v);
   template<class __vector_type1> bool has_nan(__vector_type1& v);
   template<class __vector_type1> float norm2(__vector_type1& v);
   template<class __vector_type1> float norm1(__vector_type1& v);
