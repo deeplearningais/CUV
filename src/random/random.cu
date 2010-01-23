@@ -334,11 +334,11 @@ struct rnd_normal {
 		if( idx >= n ) return;
 		/*__shared__ MersenneTwisterState mtState;*/
 		MersenneTwisterState mtState = gStates[idx];
-		for(int i=idx; i<n; i += __mul24(blockDim.x , gridDim.x)){
-			 float x = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
-			 float y = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
-			 BoxMuller(x, y); //transform uniform into two independent standard normals
-			 float2 tmp=dst[i];
+		float x = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
+		float y = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
+		BoxMuller(x, y); //transform uniform into two independent standard normals
+		for(unsigned int i=idx; i<n; i += __umul24(blockDim.x , gridDim.x)){
+			 float2 tmp=dst[i]; // move up so it can be done in background while we fetch random numbers
 			 dst[i] = make_float2(x+tmp.x,y+tmp.y);
 		}
 		gStates[idx] = mtState;
