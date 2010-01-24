@@ -45,6 +45,12 @@ void export_nullary_functor() {
 	def("apply_nullary_functor",
 	   (void (*)(V&,const NullaryFunctor&, const typename V::value_type&)) 
 	   apply_0ary_functor<V,typename V::value_type>);
+
+	// convenience wrappers
+	def("sequence", (void (*)(V&)) sequence);
+	def("sequence", (void (*)(M&)) sequence);
+	def("fill",     (void (*)(V&,const typename V::value_type&)) fill);
+	def("fill",     (void (*)(M&,const typename V::value_type&)) fill);
 }
 
 template<class M>
