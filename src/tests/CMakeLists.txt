@@ -49,6 +49,9 @@ TARGET_LINK_LIBRARIES( test_conv_op_speed cuv_basics cuv_tools cuv_convert cuv_v
 ADD_EXECUTABLE( test_random random.cpp )
 TARGET_LINK_LIBRARIES( test_random cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_random)
 
+ADD_EXECUTABLE( test_random_speed random_speed.cpp )
+TARGET_LINK_LIBRARIES( test_random_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_random)
+
 
 
 ADD_TEST( basics  "${CMAKE_BINARY_DIR}/tests/test_basic" )
@@ -66,6 +69,7 @@ ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/tests/test_conv_op" )
 #ADD_TEST( spmv_speed "${CMAKE_BINARY_DIR}/tests/test_spmv_speed" )
 #ADD_TEST( densedense_to_dia_speed "${CMAKE_BINARY_DIR}/tests/test_densedense_to_dia_speed" )
 #ADD_TEST( conv_ops_speed "${CMAKE_BINARY_DIR}/tests/test_conv_op_speed" )
+#ADD_TEST( random_speed "${CMAKE_BINARY_DIR}/tests/test_random_speed" )
 
 SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
 ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/python_bindings python -c 'import cuv_python as cp'" )
