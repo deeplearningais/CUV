@@ -128,6 +128,7 @@ void export_reductions(){
 	def("has_inf",(bool (*)(M&)) has_inf<typename M::value_type,typename M::memory_layout,typename M::index_type>);
 	def("has_nan",(bool (*)(typename M::vec_type&)) has_nan<typename M::vec_type>);
 	def("has_nan",(bool (*)(M&)) has_nan<typename M::value_type,typename M::memory_layout,typename M::index_type>);
+	def("norm2",(float (*)(typename M::vec_type&)) norm2<typename M::vec_type>);
 	def("norm2",(float (*)(M&)) norm2<typename M::value_type,typename M::memory_layout,typename M::index_type>);
 	def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"),arg("matrix"),arg("factor_new")=1.f,arg("factor_old")=0.f));
 }

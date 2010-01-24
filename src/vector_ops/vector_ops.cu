@@ -74,7 +74,7 @@ template<class T>
 struct uf_abs{  __device__  __host__       T operator()(const T& t)      const{ return fabs(t); } };
 
 template<class T>
-struct uf_is_nan{  __device__  __host__     bool operator()(const T& t)      const{ return t!=t; } };
+struct uf_is_nan{  __device__  __host__     bool operator()(const T& t)      const{ return (t!=t) ; } };
 template<class T>
 struct uf_is_inf{  __device__  __host__     bool operator()(const T& t)      const{ return t == INFINITY || t == -INFINITY; } };
 

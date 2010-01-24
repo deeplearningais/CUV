@@ -343,6 +343,7 @@ struct rnd_normal {
 		}while(y==INFINITY || x==INFINITY);
 		for(unsigned int i=idx; i<n; i += __umul24(blockDim.x , gridDim.x)){
 			 float2 tmp=dst[i]; // move up so it can be done in background while we fetch random numbers
+
 			 dst[i] = make_float2(x+tmp.x,y+tmp.y);
 		}
 		__syncthreads();
