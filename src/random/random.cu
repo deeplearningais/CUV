@@ -1,4 +1,5 @@
 #include <string>
+#include <cmath>
 #include <iostream>
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -274,7 +275,7 @@ __device__ void MersenneTwisterInitialize(MersenneTwisterState &state, unsigned 
 #define PI 3.14159265358979f
 __device__ 
 void BoxMuller(float &u1, float &u2){
-    float   r = sqrtf(-2.0f * logf(u1));
+    float   r = sqrtf(-2.0f * logf(u1)); 
     float phi = 2 * PI * u2;
  
     u1 = (r * __cosf(phi));
@@ -334,13 +335,17 @@ struct rnd_normal {
 		if( idx >= n ) return;
 		/*__shared__ MersenneTwisterState mtState;*/
 		MersenneTwisterState mtState = gStates[idx];
-		float x = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
-		float y = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
-		BoxMuller(x, y); //transform uniform into two independent standard normals
+		float x,y;
+		do{
+			x = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
+			y = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
+			BoxMuller(x, y); //transform uniform into two independent standard normals
+		}while(y==INFINITY || x==INFINITY);
 		for(unsigned int i=idx; i<n; i += __umul24(blockDim.x , gridDim.x)){
 			 float2 tmp=dst[i]; // move up so it can be done in background while we fetch random numbers
 			 dst[i] = make_float2(x+tmp.x,y+tmp.y);
 		}
+		__syncthreads();
 		gStates[idx] = mtState;
 	}
 };
