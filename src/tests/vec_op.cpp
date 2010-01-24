@@ -119,6 +119,25 @@ BOOST_AUTO_TEST_CASE( vec_ops_lswd )
 	}
 
 }
+BOOST_AUTO_TEST_CASE( vec_ops_has_inf )
+{
+	host_vector<float> v2(N); fill(v2,0);
+	fill(v,0);
+	bool no  = has_inf(v);
+	bool no2 = has_inf(v2);
+	BOOST_CHECK_EQUAL(no,false);
+	BOOST_CHECK_EQUAL(no2,false);
+	if(std::numeric_limits<float>::has_infinity){
+		v.set(3,std::numeric_limits<float>::infinity());
+		v2.set(3,std::numeric_limits<float>::infinity());
+		bool yes = has_inf(v);
+		bool yes2 = has_inf(v2);
+		BOOST_CHECK_EQUAL(yes,true);
+		BOOST_CHECK_EQUAL(yes2,true);
+	}else{
+		BOOST_MESSAGE("Warning: we do not have Inf, skip test!");
+	}
+}
 BOOST_AUTO_TEST_CASE( vec_ops_is_nan )
 {
 	host_vector<float> v2(N); fill(v2,0);
