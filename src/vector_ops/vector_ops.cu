@@ -50,8 +50,8 @@ struct uf_log{  __device__ __host__         T operator()(const T& t)      const{
 template<class T>
 struct uf_sign{  __device__ __host__        T operator()(const T& t)      const{ return sgn((float)t);    } };
 template<class T>
-/*struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+__expf(-t));    } };*/
-struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+exp(-t));    } };
+struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+__expf(-t));    } };
+/*struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+exp(-t));    } };*/
 template<class T>
 struct uf_exact_sigm{  __device__  __host__ T operator()(const T& t)      const{ return ((T)1)/(((T)1)+exp(-t));    } };
 template<class T>
@@ -77,6 +77,9 @@ template<class T>
 struct uf_is_nan{  __device__  __host__     bool operator()(const T& t)      const{ return (t!=t) ; } };
 template<class T>
 struct uf_is_inf{  __device__  __host__     bool operator()(const T& t)      const{ return t == INFINITY || t == -INFINITY; } };
+
+template<class T>
+struct bf_sigm_temp{ __device__  __host__       T operator()(const T& t, const T& temp) const{ return ((T)1)/(((T)1)+exp(-t / (T)(temp))); } };
 
 template<class T, class binary_functor>
 struct uf_base_op{
@@ -389,6 +392,7 @@ struct apply_scalar_functor_impl{
 	apply(__vector_type& v, const ScalarFunctor& sf, const __arg_value_type& param){
 		typedef typename __vector_type::value_type value_type;
 		switch(sf){
+			case SF_SIGM:      launch_unary_kernel(v,v,uf_base_op<value_type, bf_sigm_temp<value_type> >(param)); break;
 			case SF_ADD:       launch_unary_kernel(v,v,uf_base_op<value_type, thrust::plus<value_type> >(param)); break;
 			case SF_MULT:      launch_unary_kernel(v,v,uf_base_op<value_type, thrust::multiplies<value_type> >(param)); break;
 			case SF_DIV:       launch_unary_kernel(v,v,uf_base_op<value_type, thrust::divides<value_type> >(param)); break;
