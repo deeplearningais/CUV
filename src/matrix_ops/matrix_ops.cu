@@ -43,6 +43,38 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows, T pa
 	__syncthreads();
 }
 
+template<int BLOCK_SIZE, class T, int OP>
+__global__
+void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows, T param, T factNew, T factOld) {
+    __shared__ T shared[BLOCK_SIZE*BLOCK_SIZE];
+	int tx = threadIdx.x, bx=blockIdx.x;
+	int ty = threadIdx.y, by=blockIdx.y;
+	if(by*blockDim.y + ty>nCols) return;
+	int off = blockDim.x;
+
+	shared[tx] = 0.f;
+	for(int my=tx; my<nRows; my += off){
+		T f = matrix[by * nRows + bx*blockDim.x + my];
+
+		if(OP==1)  f*= f;
+		if(OP==2)  f*= param;
+		if(OP==3)  f= -log(f);
+		shared[tx] +=f;
+	}
+	__syncthreads();
+
+	int offset = blockDim.x / 2;
+	while(offset > 0) {
+		if( tx < offset)
+			shared[tx] += shared[tx+offset];
+		offset >>= 1;
+		__syncthreads();
+	}
+
+	if (tx == 0)
+		vector[by * blockDim.y + ty] = vector[by * blockDim.y + ty] * factOld + shared[0] * factNew;
+	__syncthreads();
+}
 
 namespace cuv{
 	template<>
@@ -307,6 +339,35 @@ namespace cuv{
 			  }
 		  }
 	  }
+	  template<class V,class I, class V2>
+	  void reduce_to_row(host_vector<V2,I>&v, const host_dense_matrix<V,column_major,I>& m, const V& factNew, const V& factOld) {
+		  cuvAssert(m.ptr() != NULL);
+		  cuvAssert(m.w()   == v.size());
+		  const  V* A_ptr = m.ptr();
+
+		  V2* v_ptr = v.ptr();
+		  for(int j=0; j<v.size(); j++){
+				  *v_ptr++  *= factOld;
+		  }
+		  v_ptr = v.ptr();
+		  for(int i=0;i<m.w();i++){
+			  for(int j=0; j<m.h(); j++)
+				  *v_ptr += factNew * *A_ptr++;
+			  v_ptr++;
+		  }
+	  }
+
+	template<class V,class I, class V2>
+	void reduce_to_row(dev_vector<V2,I>&v, const dev_dense_matrix<V,column_major,I>& m, const V& factNew, const V& factOld){
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.w() == v.size());
+		static const int BLOCK_SIZE = 16;
+		dim3 grid(1, m.w());
+		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
+		reduce_to_row_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+
   }
   template<class __matrix_type, class __vector_type>
 	  void reduce_to_row(__vector_type&v, const __matrix_type& m, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld){
@@ -320,7 +381,9 @@ namespace cuv{
   template void matrix_times_col(host_dense_matrix<V,M>&, const host_vector<V>&);
 
 #define INSTANTIATE_REDCOL(V,M) \
+  template void reduce_to_row(dev_vector<V>&, const dev_dense_matrix<V,M>&, const V&,const V&); \
   template void reduce_to_col(dev_vector<V>&, const dev_dense_matrix<V,M>&, const V&,const V&); \
+  template void reduce_to_row(host_vector<V>&, const host_dense_matrix<V,M>&, const V&,const V&); \
   template void reduce_to_col(host_vector<V>&, const host_dense_matrix<V,M>&, const V&,const V&);
 
 #define INSTANTIATE_REDROW(V,M) \
