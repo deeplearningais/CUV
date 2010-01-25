@@ -216,6 +216,27 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
+{
+	dev_dense_matrix<float,row_major> dA(40, 30);
+	dev_vector<float> dV(40);
+	host_dense_matrix<float,row_major> hA(40, 30);
+	host_vector<float> hV(40);
+
+	sequence(dA);
+	sequence(dV);
+	sequence(hA);
+	sequence(hV);
+
+	reduce_to_col(dV,dA,1.f,0.5f);
+	reduce_to_col(hV,hA,1.f,0.5f);
+
+	host_vector<float> hV2(dV.size());
+	convert(hV2, dV);
+
+	for(int i=0;i<30;i++)
+		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.01);
+}
 
 BOOST_AUTO_TEST_CASE( mat_op_reduce_to_row )
 {
@@ -238,6 +259,29 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_row )
 	for(int i=0;i<30;i++)
 		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.01);
 }
+
+BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_row )
+{
+	dev_dense_matrix<float,row_major> dA(40, 30);
+	dev_vector<float> dV(30);
+	host_dense_matrix<float,row_major> hA(40, 30);
+	host_vector<float> hV(30);
+
+	sequence(dA);
+	sequence(dV);
+	sequence(hA);
+	sequence(hV);
+
+	reduce_to_row(dV,dA,1.f,0.5f);
+	reduce_to_row(hV,hA,1.f,0.5f);
+
+	host_vector<float> hV2(dV.size());
+	convert(hV2, dV);
+
+	for(int i=0;i<30;i++)
+		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.01);
+}
+
 
 BOOST_AUTO_TEST_CASE( mat_op_view )
 {

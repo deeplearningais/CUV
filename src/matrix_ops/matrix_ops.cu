@@ -315,6 +315,18 @@ namespace cuv{
 		  reduce_to_col_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
 		  cuvSafeCall(cudaThreadSynchronize());
 	  }
+	template<class V,class I, class V2>
+	void reduce_to_col(dev_vector<V2,I>&v, const dev_dense_matrix<V,row_major,I>& m, const V& factNew, const V& factOld){
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.h() == v.size());
+		static const int BLOCK_SIZE = 16;
+		dim3 grid(1, m.h());
+		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
+		// yes, we abuse the reduce_to_row kernel here :)
+		reduce_to_row_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+
   }
   template<class __matrix_type, class __vector_type>
 	  void reduce_to_col(__vector_type&v, const __matrix_type& m, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld){
@@ -367,6 +379,17 @@ namespace cuv{
 		reduce_to_row_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
+	template<class V,class I, class V2>
+		void reduce_to_row(dev_vector<V2,I>&v, const dev_dense_matrix<V,row_major,I>& m, const V& factNew, const V& factOld){
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.w()   == v.size());
+		static const int BLOCK_SIZE = 16;
+		dim3 grid(ceil((float)m.w()/(BLOCK_SIZE/2)), 1);
+		dim3 threads(BLOCK_SIZE/2,BLOCK_SIZE*2);
+		// yes, we abuse the reduce_to_col kernel here :)
+		reduce_to_col_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);
+		cuvSafeCall(cudaThreadSynchronize());
+	}
 
   }
   template<class __matrix_type, class __vector_type>
@@ -387,6 +410,8 @@ namespace cuv{
   template void reduce_to_col(host_vector<V>&, const host_dense_matrix<V,M>&, const V&,const V&);
 
 #define INSTANTIATE_REDROW(V,M) \
+  template void reduce_to_col(dev_vector<V>&, const dev_dense_matrix<V,M>&, const V&,const V&); \
+  template void reduce_to_row(dev_vector<V>&, const dev_dense_matrix<V,M>&, const V&,const V&); \
   template void reduce_to_col(host_vector<V>&, const host_dense_matrix<V,M>&, const V&,const V&); \
   template void reduce_to_row(host_vector<V>&, const host_dense_matrix<V,M>&, const V&,const V&);
 
