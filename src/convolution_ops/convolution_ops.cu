@@ -106,7 +106,7 @@ template<>
 
 	// some preliminary checks to ensure compatibility
 	cuvAssert(numFilters%16 == 0);
-	cuvAssert(filterSize*filterSize == filter.w()*numFilters);
+	cuvAssert(filterSize*filterSize*numFilters == filter.w());
 	cuvAssert(imgSize*imgSize == img.w());
 	cuvAssert(dstSize == imgSize - filterSize + 1);
 
@@ -213,8 +213,25 @@ void localMaximum(host_dense_matrix<float,row_major>& dst,
 template<>
 void reorder(dev_dense_matrix<float,row_major>& M,
 		  int blockLength) {
-	// NYI
-	printf("warning! resorting on dev not yet implemented!\n");
+	int patternCount = M.h();
+	int imgSize = M.w()/blockLength;
+
+	float* img = M.ptr();
+	float* temp;
+	cuvSafeCall(cudaMalloc( (void**) &temp, sizeof(float) * M.n() ));
+
+	for(int p = 0; p < patternCount; p++)
+		for(int m = 0; m < blockLength; m++) {
+			cuvSafeCall(cudaMemcpy(	&temp[p*imgSize+m*imgSize*patternCount],
+									&img[p*M.w()+m*imgSize],
+									sizeof(float)*imgSize,
+									cudaMemcpyDeviceToDevice
+			));
+		}
+
+	cuvSafeCall(cudaMemcpy(M.ptr(), temp, sizeof(float) * M.n(),cudaMemcpyDeviceToDevice));
+	M.resize(patternCount*blockLength, imgSize);
+	cuvSafeCall(cudaFree(temp));
 
 	cudaThreadSynchronize();
 }
