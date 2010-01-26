@@ -81,6 +81,7 @@ export_dense_matrix_common(std::string name){
 		.def("memsize",&mat::memsize, "size of vector in memory (bytes)")
 		.def("alloc",  &mat::alloc, "allocate memory")
 		.def("dealloc",&mat::dealloc, "deallocate memory")
+		.def("set",    (void (mat::*)(const index_type&, const index_type&, const value_type&))(&mat::set), "set a value in the matrix")
 		.def("vec",    (vec_type* (mat::*)())(&mat::vec_ptr), "internal memory vector", return_internal_reference<>())
 		.def("at",    (value_type (mat::*)(const index_type&,const index_type&))(&mat::operator()), "value at this position")
 		;
