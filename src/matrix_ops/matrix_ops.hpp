@@ -87,6 +87,13 @@ namespace cuv{
   template<class V,class M, class I>
 	  void copy(host_dense_matrix<V,M,I>& dst, host_dense_matrix<V,M,I>& src){ apply_binary_functor(dst.vec(),src.vec(),BF_COPY); }
 
+  /*
+   * transpose
+   *
+   */
+
+  template<class V,class M, class I> void transpose(dev_dense_matrix<V,M,I>&  dst, dev_dense_matrix<V,M,I>&  src);
+  template<class V,class M, class I> void transpose(host_dense_matrix<V,M,I>& dst, host_dense_matrix<V,M,I>& src);
 
   /*
    * reductions

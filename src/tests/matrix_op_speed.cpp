@@ -90,5 +90,17 @@ BOOST_AUTO_TEST_CASE( mat_plus_vec_row_maj )
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
+BOOST_AUTO_TEST_CASE( mat_transpose )
+{
+	const int n = 256;
+	const int m = 4096;
+
+	dev_dense_matrix<float> V(n,m), W(m,n); sequence(V);
+	host_dense_matrix<float> X(n,m), Y(m,n); sequence(X);
+
+	MEASURE_TIME(dev,  transpose(W,V), 10);
+	MEASURE_TIME(host, transpose(Y,X), 10);
+	printf("Speedup: %3.4f\n", host/dev);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

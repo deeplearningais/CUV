@@ -76,6 +76,29 @@ void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows, T pa
 	__syncthreads();
 }
 
+// "coalesced transpose" with no bank conflicts, example from SDK
+// potential speedup by 5 possible for "fine-grained transpose"
+template<int BLOCK_SIZE, class T>
+__global__
+void transpose_kernel(T* dst, T* src, int width, int height) {
+    const int bx = blockIdx.x * blockDim.x;
+    const int by = blockIdx.y * blockDim.y;
+    const int tx = bx + threadIdx.x;
+    const int ty = by + threadIdx.y;
+
+    __shared__ T shared[BLOCK_SIZE][BLOCK_SIZE + 1];
+
+    if (tx < width && ty < height) {
+        shared[threadIdx.y][threadIdx.x] = src[ty * width + tx];
+    }
+    __syncthreads();
+
+    if (by + threadIdx.x < height && threadIdx.y + bx < width) {
+        dst[(bx + threadIdx.y) * height + by + threadIdx.x] = shared[threadIdx.x][threadIdx.y];
+    }
+}
+
+
 namespace cuv{
 	template<>
 		host_dense_matrix<float,column_major>* blockview(
@@ -396,6 +419,69 @@ namespace cuv{
 	  void reduce_to_row(__vector_type&v, const __matrix_type& m, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld){
 		  reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld);
 	  }
+
+	template<>
+	void transpose(dev_dense_matrix<float,column_major>& dst,
+		dev_dense_matrix<float,column_major>& src) {
+		cuvAssert(dst.w() == src.h());
+		cuvAssert(dst.h() == src.w());
+	    const int width = dst.w();
+	    const int height = dst.h();
+		static const int BLOCK_SIZE = 16;
+	    const int numBlocksX = ceil((float)width / BLOCK_SIZE);
+	    const int numBlocksY = ceil((float)height / BLOCK_SIZE);
+	    dim3 gridSize(numBlocksX, numBlocksY, 1);
+	    dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
+	    transpose_kernel<BLOCK_SIZE,float><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+
+	template<>
+	void transpose(dev_dense_matrix<float,row_major>& dst,
+		dev_dense_matrix<float,row_major>& src) {
+		cuvAssert(dst.w() == src.h());
+		cuvAssert(dst.h() == src.w());
+	    const int width = dst.h();
+	    const int height = dst.w();
+		static const int BLOCK_SIZE = 16;
+	    const int numBlocksX = ceil((float)width / BLOCK_SIZE);
+	    const int numBlocksY = ceil((float)height / BLOCK_SIZE);
+	    dim3 gridSize(numBlocksX, numBlocksY, 1);
+	    dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
+	    transpose_kernel<BLOCK_SIZE,float><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+
+	template<>
+	void transpose(host_dense_matrix<float,column_major>& dst,
+		host_dense_matrix<float,column_major>& src) {
+		cuvAssert(dst.w() == src.h());
+		cuvAssert(dst.h() == src.w());
+		float* dst_ptr = dst.ptr();
+		float* src_ptr = src.ptr();
+		for(int i=0; i<dst.w(); i++) {
+			for(int j=0; j<dst.h(); j++) {
+				*dst_ptr++ = src_ptr[j*src.h()];
+			}
+			src_ptr++;
+		}
+	}
+
+	template<>
+	void transpose(host_dense_matrix<float,row_major>& dst,
+		host_dense_matrix<float,row_major>& src) {
+		cuvAssert(dst.w() == src.h());
+		cuvAssert(dst.h() == src.w());
+		float* dst_ptr = dst.ptr();
+		float* src_ptr = src.ptr();
+		for(int i=0; i<dst.h(); i++) {
+			for(int j=0; j<dst.w(); j++) {
+				*dst_ptr++ = src_ptr[j*src.w()];
+			}
+			src_ptr++;
+		}
+	}
+
 
 #define INSTANTIATE_MV(V,M) \
   template void matrix_plus_col(dev_dense_matrix<V,M>&, const dev_vector<V>&);   \

@@ -8,6 +8,7 @@
 #include <convert.hpp>
 #include <matrix_ops.hpp>
 #include <matrix_ops/rprop.hpp>
+#include <cuv_test.hpp>
 
 using namespace cuv;
 
@@ -300,5 +301,36 @@ BOOST_AUTO_TEST_CASE( mat_op_view )
 		}
 }
 
+
+BOOST_AUTO_TEST_CASE( mat_op_transpose )
+{
+	const int n = 8;
+	const int m = 3;
+
+	host_dense_matrix<float> hA(n, m), hB(m, n);
+	dev_dense_matrix<float>  dA(n, m), dB(m, n);
+	host_dense_matrix<float, row_major> hC(n, m), hD(m, n);
+	dev_dense_matrix<float, row_major>  dC(n, m), dD(m, n);
+
+	sequence(hB); sequence(dB);
+	sequence(hD); sequence(dD);
+
+	transpose(hA, hB);
+	transpose(dA, dB);
+	transpose(hC, hD);
+	transpose(dC, dD);
+
+	host_dense_matrix<float> h2A(dA.w(), dA.h()); convert(h2A, dA);
+	host_dense_matrix<float, row_major> h2C(dC.w(), dC.h()); convert(h2C, dC);
+
+	for(int i=0;i<n;i++)
+		for(int j=0;j<m;j++){
+			BOOST_CHECK_EQUAL(hA(i,j), hB(j,i));
+			BOOST_CHECK_EQUAL(hC(i,j), hD(j,i));
+		}
+
+	MAT_CMP(hA, h2A, 0.1);
+	MAT_CMP(hC, h2C, 0.1);
+}
 
 BOOST_AUTO_TEST_SUITE_END()
