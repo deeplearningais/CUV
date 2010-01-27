@@ -154,6 +154,9 @@ namespace cuv{
 
   template<class __matrix_type, class __vector_type>
 	  void matrix_times_col(__matrix_type& A, const __vector_type& v);
+
+  template<class __matrix_type, class __vector_type>
+	  void matrix_divide_col(__matrix_type& A, const __vector_type& v);
 } // cuv
 
 #endif

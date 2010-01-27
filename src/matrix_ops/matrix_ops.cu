@@ -292,6 +292,10 @@ namespace cuv{
 	  void matrix_times_col(__matrix_type& A, const __vector_type& v){
 		  matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<typename __matrix_type::value_type>());
 	  }
+  template<class __matrix_type, class __vector_type>
+	  void matrix_divide_col(__matrix_type& A, const __vector_type& v){
+		  matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::divides<typename __matrix_type::value_type>());
+	  }
 
   namespace reduce_to_col_impl{
 	  template<class V,class I, class V2>
@@ -487,7 +491,9 @@ namespace cuv{
   template void matrix_plus_col(dev_dense_matrix<V,M>&, const dev_vector<V>&);   \
   template void matrix_plus_col(host_dense_matrix<V,M>&, const host_vector<V>&); \
   template void matrix_times_col(dev_dense_matrix<V,M>&, const dev_vector<V>&);  \
-  template void matrix_times_col(host_dense_matrix<V,M>&, const host_vector<V>&);
+  template void matrix_times_col(host_dense_matrix<V,M>&, const host_vector<V>&); \
+  template void matrix_divide_col(dev_dense_matrix<V,M>&, const dev_vector<V>&);  \
+  template void matrix_divide_col(host_dense_matrix<V,M>&, const host_vector<V>&);
 
 #define INSTANTIATE_REDCOL(V,M) \
   template void reduce_to_row(dev_vector<V>&, const dev_dense_matrix<V,M>&, const V&,const V&); \
