@@ -164,6 +164,13 @@ void export_learn_step(){
 	def("learn_step_weight_decay",(void (*)(V&, V&, const float&, const float&)) learn_step_weight_decay<V>);
 }
 
+template<class T>
+void
+export_transpose(){
+	def("transpose", (void (*)(T&,T&))transpose);
+}
+
+
 void export_matrix_ops(){
 	typedef dev_dense_matrix<float,column_major> fdev;
 	typedef host_dense_matrix<float,column_major> fhost;
@@ -190,7 +197,11 @@ void export_matrix_ops(){
 	export_blockview<fhost>();
 	export_pooling<dev_dense_matrix<float,row_major> >();
 	export_pooling<host_dense_matrix<float,row_major> >();
-
+	// transpose
+	export_transpose<dev_dense_matrix<float,column_major> >();
+	export_transpose<host_dense_matrix<float,column_major> >();
+	export_transpose<dev_dense_matrix<float,row_major> >();
+	export_transpose<host_dense_matrix<float,row_major> >();
 }
 
 
