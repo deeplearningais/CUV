@@ -81,14 +81,17 @@ export_diamat_common(const char* name){
 
 	class_<mat> matobj(name, init<>());
 	matobj
-		.def("w",   &mat::w,    "width")
-		.def("h",   &mat::h,    "height")
+		//.def("w",   &mat::w,    "width")
+		//.def("h",   &mat::h,    "height")
+		//.def("vec",    (vec_type* (mat::*)())(&mat::vec_ptr), "internal memory vector", return_internal_reference<>())
+		.add_property("h", &mat::h)
+		.add_property("w", &mat::w)
+		.add_property("vec", make_function((vec_type* (mat::*)())(&mat::vec_ptr), return_internal_reference<>()))
+		.add_property("stride",&mat::stride, "matrix stride")
+		.add_property("num_dia",&mat::num_dia, "number of diagonals")
 		.def("__len__",&mat::n, "number of elements")
 		.def("alloc",&mat::alloc, "allocate memory")
-		.def("vec",    (vec_type* (mat::*)())(&mat::vec_ptr), "internal memory vector", return_internal_reference<>())
 		.def("dealloc",&mat::dealloc, "deallocate memory")
-		.def("stride",&mat::stride, "matrix stride")
-		.def("num_dia",&mat::num_dia, "number of diagonals")
 		.def("save", (void (*)(mat&,std::string)) dia_io<value_type, index_type>::save_dia_mat, "save to file")
 		.def("load", (void (*)(mat&,std::string)) dia_io<value_type, index_type>::load_dia_mat, "load from file")
 		.def("__call__",  (const value_type& (mat::*)(const typename mat::index_type&, const typename mat::index_type&)const)(&mat::operator()), return_value_policy<copy_const_reference>()) // igitt.
