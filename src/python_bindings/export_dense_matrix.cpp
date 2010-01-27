@@ -97,16 +97,21 @@ export_dense_matrix_common(std::string name){
 	typedef typename mat::vec_type   vec_type;
 
 	class_<mat>(name.c_str(), init<typename mat::index_type, typename mat::index_type>())
-		.def("w",      &mat::w, "width of matrix")
-		.def("h",      &mat::h, "height of matrix")
-		.def("n",      &mat::n, "matrix number of elements")
+		//.def("w",      &mat::w, "width of matrix")
+		//.def("h",      &mat::h, "height of matrix")
+		//.def("n",      &mat::n, "matrix number of elements")
 		.def("__len__",&mat::n, "matrix number of elements")
-		.def("memsize",&mat::memsize, "size of vector in memory (bytes)")
+		//.def("memsize",&mat::memsize, "size of vector in memory (bytes)")
 		.def("alloc",  &mat::alloc, "allocate memory")
 		.def("dealloc",&mat::dealloc, "deallocate memory")
 		.def("set",    (void (mat::*)(const index_type&, const index_type&, const value_type&))(&mat::set), "set a value in the matrix")
-		.def("vec",    (vec_type* (mat::*)())(&mat::vec_ptr), "internal memory vector", return_internal_reference<>())
+		//.def("vec",    (vec_type* (mat::*)())(&mat::vec_ptr), "internal memory vector", return_internal_reference<>())
 		.def("at",    (value_type (mat::*)(const index_type&,const index_type&))(&mat::operator()), "value at this position")
+		.add_property("h", &mat::h)
+		.add_property("w", &mat::w)
+		.add_property("n", &mat::n)
+		.add_property("vec", make_function((vec_type* (mat::*)())(&mat::vec_ptr), return_internal_reference<>()))
+		.add_property("memsize", &mat::memsize)
 		;
 }
 
