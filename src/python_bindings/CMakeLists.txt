@@ -7,6 +7,7 @@ include_directories(
         ${CMAKE_SOURCE_DIR}/convert
         ${CMAKE_SOURCE_DIR}/vector_ops
         ${CMAKE_SOURCE_DIR}/matrix_ops
+        ${CMAKE_SOURCE_DIR}/convolution_ops
         ${CMAKE_SOURCE_DIR}/random
         ${PYTHON_INCLUDE_PATH} 
         /usr/local/lib/python2.6/dist-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/include
@@ -30,6 +31,7 @@ TARGET_LINK_LIBRARIES( cuv_python
 		cuv_convert
 		cuv_random
 		cuv_matrix_ops
+		cuv_convolution_ops
         ${Boost_LIBRARIES}
         ${PYTHON_LIBRARY}
         ${CUDA_CUBLAS_LIBRARIES}

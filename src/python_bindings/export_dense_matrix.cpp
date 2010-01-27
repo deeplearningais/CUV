@@ -13,6 +13,7 @@ using namespace std;
 using namespace boost::python;
 using namespace cuv;
 namespace ublas = boost::numeric::ublas;
+namespace bp    = boost::python;
 
 /*
  * translate our storage type to the one of ublas
@@ -30,6 +31,28 @@ template<>
 struct ublas2matrix_traits<boost::numeric::ublas::column_major > { typedef cuv::column_major storage_type; };
 template<>
 struct ublas2matrix_traits<boost::numeric::ublas::row_major >    { typedef cuv::row_major storage_type; };
+
+
+/*
+ * Create RM view of CM dev matrix
+ */
+template<class T,class I>
+dev_dense_matrix<T,row_major,I>*
+	make_rm_view(dev_dense_matrix<T,column_major,I> &m,int h, int w){
+	if (w==-1) {
+		w=m.h();
+		}
+	if (h==-1) {
+		h=m.w();
+	}
+	cuvAssert(w*h==m.h()*m.w());
+	return new dev_dense_matrix<T,row_major,I>(h,w,m.ptr(),true);
+}
+
+template<class T,class I>
+void export_rm_view(){
+	def("make_rm_view",make_rm_view<T,I>,(bp::arg ("matrix"),bp::arg("height")=-1,bp::arg("width")=-1),return_value_policy<manage_new_object>());
+}
 
 /*
  * Create VIEWs at the same location in memory
@@ -257,6 +280,9 @@ void export_dense_matrix(){
 	
 	// host matrix --> numpy matrix
 	export_host_dense_mat2numpys<float>();
+
+	// dev cm -> dev rm
+	export_rm_view<float,unsigned  int>();
 }
 
 

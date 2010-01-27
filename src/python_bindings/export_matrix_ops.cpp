@@ -10,6 +10,7 @@
 #include <matrix_ops/matrix_ops.hpp>
 #include <matrix_ops/rprop.hpp>
 #include <convert.hpp>
+#include <convolution_ops/convolution_ops.hpp>
 
 //using namespace std;
 using namespace boost::python;
@@ -129,6 +130,12 @@ void export_binary_functor() {
 }
 
 template <class M>
+void export_pooling(){
+	def("max_pool",(void (*)(M&,M&,int))localMaximum<typename M::value_type,typename M::memory_layout,typename M::index_type>);
+	def("supersample",(void (*)(M&,M&,int))supersample<typename M::value_type,typename M::memory_layout,typename M::index_type>);
+}
+
+template <class M>
 void export_reductions(){
 	def("has_inf",(bool (*)(typename M::vec_type&)) has_inf<typename M::vec_type>);
 	def("has_inf",(bool (*)(M&)) has_inf<typename M::value_type,typename M::memory_layout,typename M::index_type>);
@@ -181,6 +188,9 @@ void export_matrix_ops(){
 	export_blas2<fhost>();
 	export_blockview<fdev>();
 	export_blockview<fhost>();
+	export_pooling<dev_dense_matrix<float,row_major> >();
+	export_pooling<host_dense_matrix<float,row_major> >();
+
 }
 
 
