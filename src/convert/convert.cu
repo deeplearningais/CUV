@@ -269,6 +269,10 @@ namespace cuv{
 	template void convert<host_dense_matrix<X,Y>,         dev_dense_matrix<X,Z> > \
 		(                 host_dense_matrix<X,Y>&,  const dev_dense_matrix<X,Z>&);
 
+#define CONV_SIMPLE_INST(X,Y) \
+		template void convert<host_dense_matrix<X,Y>,         host_dense_matrix<X,Y> > \
+			(                 host_dense_matrix<X,Y>&,  const host_dense_matrix<X,Y>&);
+
 CONV_INST(float,column_major,column_major);
 CONV_INST(float,column_major,row_major);
 CONV_INST(float,row_major,   column_major);
@@ -284,9 +288,9 @@ CONV_INST(signed char,column_major,row_major);
 CONV_INST(signed char,row_major,   column_major);
 CONV_INST(signed char,row_major,   row_major);
 
-template void convert<host_dense_matrix<float,column_major>,         host_dense_matrix<float,column_major> > \
-	(                 host_dense_matrix<float,column_major>&,  const host_dense_matrix<float,column_major>&); \
-
+CONV_SIMPLE_INST(float,column_major);
+CONV_SIMPLE_INST(unsigned char,column_major);
+CONV_SIMPLE_INST(signed char,column_major);
 
 CONV_VEC(float);
 CONV_VEC(int);
