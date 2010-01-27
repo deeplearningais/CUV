@@ -35,6 +35,18 @@ namespace cuv{
 					cuvSafeCall(cudaMemcpy(dst.ptr(),src.ptr(),dst.memsize(),cudaMemcpyDeviceToHost));
 				}
 
+			// host  --> host
+			template<class __value_type, class __index_type>
+				static void
+				convert(        host_vector<__value_type,  __index_type>& dst,
+						const host_vector<__value_type,  __index_type>& src){
+					if( dst.size() != src.size()){
+						host_vector<__value_type,__index_type> h(src.size());
+						dst = h;
+					}
+					memcpy(dst.ptr(),src.ptr(),dst.memsize());
+				}
+
 			/*
 			 * Matrix Conversion
 			 */
@@ -97,6 +109,19 @@ namespace cuv{
 			 * Simple copying
 			 *
 			 */
+
+			// host (col-major) --> host (col-major)
+			template<class __value_type, class __index_type>
+				static void
+				convert(        host_dense_matrix<__value_type,  column_major, __index_type>& dst,
+						const   host_dense_matrix<__value_type,  column_major, __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()){
+						host_dense_matrix<__value_type,column_major,__index_type> h(src.h(),src.w());
+						dst = h;
+					}
+					convert(dst.vec(), src.vec());
+				}
 
 			// dev (col-major) --> host (col-major) 
 			template<class __value_type, class __index_type>
@@ -231,6 +256,8 @@ namespace cuv{
 		};
 
 #define CONV_VEC(X) \
+	template void convert<host_vector<X>,         host_vector<X> > \
+		(                 host_vector<X>&,  const host_vector<X>&); \
 	template void convert<dev_vector<X>,          host_vector<X> > \
 		(                 dev_vector<X>&,   const host_vector<X>&); \
 	template void convert<host_vector<X>,          dev_vector<X> > \
@@ -256,6 +283,10 @@ CONV_INST(signed char,column_major,column_major);
 CONV_INST(signed char,column_major,row_major);
 CONV_INST(signed char,row_major,   column_major);
 CONV_INST(signed char,row_major,   row_major);
+
+template void convert<host_dense_matrix<float,column_major>,         host_dense_matrix<float,column_major> > \
+	(                 host_dense_matrix<float,column_major>&,  const host_dense_matrix<float,column_major>&); \
+
 
 CONV_VEC(float);
 CONV_VEC(int);
