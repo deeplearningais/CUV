@@ -112,9 +112,9 @@ namespace cuv{
 				const int A_stride              = A.stride();
 				index_type max_dst = ((transA=='t') ? A_w : A_h);
 				if(factC==0.f)
-					for(int i=0;i<max_dst;i++) dst[i] = 0;
+					for(int i=0;i<max_dst;i++) dst.set(i, 0);
 				else
-					for(int i=0;i<max_dst;i++) dst[i] = dst[i] * factC;
+					for(int i=0;i<max_dst;i++) dst.set(i, dst[i] * factC);
 				const int rf = A.row_fact();
 				if(transA == 't'){
 					cuvAssert(A_h == v.size());

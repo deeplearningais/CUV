@@ -78,9 +78,9 @@ namespace cuv{
 				dwn = sn * r;
 			}
 			/*__synchthreads();*/
-			rate[i]   = rn;
-			dW_old[i] = (O)sgn(dwn);
-			W[i]     += dwn;
+			rate.set(i,rn);
+			dW_old.set(i,(O)sgn(dwn));
+			W.set(i, W[i]  + dwn);
 		}
 	}
 
@@ -106,7 +106,7 @@ namespace cuv{
 	template<class V, class I>
 	void learn_step_weight_decay_impl(host_vector<V,I>& W,host_vector<V,I>& dW, const float& alpha, const float& beta){
 		for (unsigned int i = 0; i < W.size(); i++){
-			W[i] = alpha*dW[i] + beta*W[i];
+			W.set(i,alpha*dW[i] + beta*W[i]);
 		}
 	}
 	template<class __vector_type>

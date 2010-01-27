@@ -1,6 +1,7 @@
 #include <string>
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
+#include  <boost/type_traits/is_same.hpp>
 
 
 #include <dev_vector.hpp>
@@ -17,14 +18,15 @@ export_vector_common(const char* name){
 	typedef T vec;
 	typedef typename vec::value_type value_type;
 
-	class_<vec>(name, init<int>())
+	class_<vec> (name, init<int>())
 		.def("size",   &vec::size, "vector size")
 		.def("__len__",&vec::size, "vector size")
 		.def("memsize",&vec::memsize, "size of vector in memory (bytes)")
 		.def("alloc",&vec::alloc, "allocate memory")
 		.def("dealloc",&vec::dealloc, "deallocate memory")
-		.def("at",  (const value_type& (vec::*)(const typename vec::index_type&)const)(&vec::operator[]), return_value_policy<copy_const_reference>()) // igitt.
+		.def("at",  (value_type  (vec::*)(const typename vec::index_type&)const)(&vec::operator[]))
 		;
+	
 }
 
 template <class T>

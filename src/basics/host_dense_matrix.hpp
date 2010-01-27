@@ -136,11 +136,11 @@ namespace cuv{
 	 */
 	template<class V, class M, class I>
 	void
-	host_dense_matrix<V,M,I>::set(const index_type& i, const index_type& j, const value_type& val, column_major) { (*m_vec)[ this->h()*j + i] = val; };
+	host_dense_matrix<V,M,I>::set(const index_type& i, const index_type& j, const value_type& val, column_major) { m_vec->set( this->h()*j + i, val); };
 
 	template<class V, class M, class I>
 	void
-	host_dense_matrix<V,M,I>::set(const index_type& i, const index_type& j, const value_type& val, row_major) { (*m_vec)[ this->w()*i + j] = val; };
+	host_dense_matrix<V,M,I>::set(const index_type& i, const index_type& j, const value_type& val, row_major) { m_vec->set( this->w()*i + j, val); };
 
 	template<class V, class M, class I>
 	void
