@@ -51,6 +51,15 @@ BOOST_AUTO_TEST_CASE( vec_ops_binary2 )
 	apply_binary_functor(v,w, BF_AXPY, 2);
 }
 
+BOOST_AUTO_TEST_CASE( vec_ops_scalar_2param )
+{
+	sequence(v);
+	apply_scalar_functor(v, SF_TANH, 3, 5);
+	for(int i=0;i<N;i++){
+		BOOST_CHECK_CLOSE(v[i], (float)(3*tanh(5*i)), 0.1);
+	}
+}
+
 BOOST_AUTO_TEST_CASE( vec_ops_copy )
 {
 	// generate data

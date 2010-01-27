@@ -84,6 +84,13 @@ namespace cuv{
   template<class __vector_type, class __value_type>
   void
   apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& param);
+  /*
+   * Pointwise Unary Functor with scalar parameter
+   * v = sf(v, param, param2)
+   */
+  template<class __vector_type, class __value_type>
+  void
+  apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& param, const __value_type& param2);
 
   /*
    * Pointwise Binary Functor

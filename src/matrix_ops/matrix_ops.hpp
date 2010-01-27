@@ -44,6 +44,15 @@ namespace cuv{
 	  void apply_scalar_functor(host_dense_matrix<V,M,I>& m, const ScalarFunctor& sf, const P& p) {apply_scalar_functor(m.vec(),sf,p);};
 
   /*
+   * Pointwise Unary Functor with two scalar parameters
+   * v = sf(v, param, param2)
+   */
+  template<class V,class M,class I,class P>
+	  void apply_scalar_functor(dev_dense_matrix<V,M,I>& m, const ScalarFunctor& sf, const P& p, const P& p2) {apply_scalar_functor(m.vec(),sf,p,p2);};
+  template<class V,class M,class I,class P>
+	  void apply_scalar_functor(host_dense_matrix<V,M,I>& m, const ScalarFunctor& sf, const P& p, const P& p2) {apply_scalar_functor(m.vec(),sf,p,p2);};
+
+  /*
    * Pointwise Binary Functor
    * v = bf(v,w)
    */

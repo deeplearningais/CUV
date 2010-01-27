@@ -81,12 +81,24 @@ struct uf_is_inf{  __device__  __host__     bool operator()(const T& t)      con
 template<class T>
 struct bf_sigm_temp{ __device__  __host__       T operator()(const T& t, const T& temp) const{ return ((T)1)/(((T)1)+exp(-t / (T)(temp))); } };
 
+template<class T>
+struct tf_tanh{  __device__  __host__       T operator()(const T& t, const T& x, const T& y)      const{ return (T) x * tanh((T) y * t); } };
+template<class T>
+struct tf_dtanh{  __device__  __host__      T operator()(const T& t, const T& x, const T& y)      const{ return ((T)x) - (T) y * (t*t); } };
+
 template<class T, class binary_functor>
 struct uf_base_op{
   const T x;
   const binary_functor bf;
   uf_base_op(const T& _x):x(_x),bf(){};
-  T operator()(T t){ return bf(t,x); }
+  T operator()(const T& t){ return bf(t,x); }
+};
+template<class T, class ternary_functor>
+struct uf_base_op3{
+  const T x,y;
+  const ternary_functor tf;
+  uf_base_op3(const T& _x, const T& _y):x(_x),y(_y),tf(){};
+  T operator()(const T& t){ return tf(t,x,y); }
 };
 
 /*
@@ -290,6 +302,11 @@ void
 apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& param){
   apply_scalar_functor_impl<__vector_type>::apply(v,sf,param);
 }
+template<class __vector_type, class __value_type>
+void
+apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& param, const __value_type& param2){
+  apply_scalar_functor_impl<__vector_type>::apply(v,sf,param,param2);
+}
 
 /*
  * Binary Functor
@@ -387,6 +404,19 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 template<class __vector_type>
 struct apply_scalar_functor_impl{
 
+
+	template<class __arg_value_type>
+	static void
+	apply(__vector_type& v, const ScalarFunctor& sf, const __arg_value_type& param, const __arg_value_type& param2){
+		typedef typename __vector_type::value_type value_type;
+		switch(sf){
+			case SF_TANH:      launch_unary_kernel(v,v,uf_base_op3<value_type, tf_tanh<value_type> >(param,param2)); break;
+			case SF_DTANH:     launch_unary_kernel(v,v,uf_base_op3<value_type, tf_dtanh<value_type> >(param,param2)); break;
+			default:
+				cuvAssert(false);
+		}
+	}
+
 	template<class __arg_value_type>
 	static void
 	apply(__vector_type& v, const ScalarFunctor& sf, const __arg_value_type& param){
@@ -397,6 +427,8 @@ struct apply_scalar_functor_impl{
 			case SF_MULT:      launch_unary_kernel(v,v,uf_base_op<value_type, thrust::multiplies<value_type> >(param)); break;
 			case SF_DIV:       launch_unary_kernel(v,v,uf_base_op<value_type, thrust::divides<value_type> >(param)); break;
 			case SF_SUBTRACT:  launch_unary_kernel(v,v,uf_base_op<value_type, thrust::minus<value_type> >(param)); break;
+			default:
+				cuvAssert(false);
 		}
 	}
 
@@ -496,7 +528,8 @@ var(__vector_type& v){
 #define SIMPLE_1(X) \
 	template void apply_scalar_functor< X >(X&, const ScalarFunctor&);
 #define SIMPLE_11(X,P) \
-	template void apply_scalar_functor< X, P>(X&, const ScalarFunctor&,const P&);
+	template void apply_scalar_functor< X, P>(X&, const ScalarFunctor&,const P&); \
+	template void apply_scalar_functor< X, P>(X&, const ScalarFunctor&,const P&, const P&);
 
 #define SIMPLE_2(X,Y) \
 	template void apply_binary_functor<X,Y  >(X&, Y&, const BinaryFunctor&);
