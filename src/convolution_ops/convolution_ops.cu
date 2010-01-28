@@ -198,6 +198,19 @@ void localMaximum(host_dense_matrix<float,row_major>& dst,
 			}
 }
 
+__global__
+void reorder_kernel(float*dst, float* src, int len) {
+	int tx = threadIdx.x, ix = blockIdx.x;
+	int pt = blockIdx.y;
+
+	if(tx >= len)
+		return;
+	while(tx < len) {
+		dst[tx + pt * len + gridDim.y * len * ix] = src[tx + ix * len + pt * len * gridDim.x];
+		tx += blockDim.x;
+	}
+}
+
 /* sort the images in a matrix in a different order
  * input:  A1 B1 C1 D1
  *         A2 B2 C2 D2
@@ -221,17 +234,11 @@ void reorder(dev_dense_matrix<float,row_major>& M,
 	float* tmp_ptr = temp;
 	float* img_ptr = M.ptr();
 
-	for(int p = 0; p < patternCount; p++) {
-		for(int m = 0; m < imgCount; m++) {
-			cuvSafeCall(cudaMemcpy(	&tmp_ptr[blockLength * patternCount * m],
-									img_ptr,
-									sizeof(float)*blockLength,
-									cudaMemcpyDeviceToDevice
-			));
-			img_ptr += blockLength;
-		}
-		tmp_ptr += blockLength;
-	}
+	dim3 grid(imgCount, patternCount);
+	dim3 threads(min(blockLength, 512));
+	reorder_kernel<<<grid,threads>>>(temp, M.ptr(), blockLength);
+
+	cuvSafeCall(cudaThreadSynchronize());
 
 	cuvSafeCall(cudaMemcpy(M.ptr(), temp, sizeof(float) * M.n(),cudaMemcpyDeviceToDevice));
 	M.resize(patternCount*imgCount, blockLength);
