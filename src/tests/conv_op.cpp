@@ -99,4 +99,18 @@ BOOST_AUTO_TEST_CASE( supersampling )
 
 	MAT_CMP(img2, h_img, 0.001);
 }
+
+BOOST_AUTO_TEST_CASE( reorder_matrix )
+{
+	sequence(d_dst); apply_scalar_functor(h_dst, SF_MULT,0.001f);
+	sequence(h_dst); apply_scalar_functor(h_dst, SF_MULT,0.001f);
+
+	reorder(d_dst, k*k);
+	reorder(h_dst, k*k);
+
+	host_dense_matrix<float, row_major> dst2(d_dst.h(), d_dst.w());
+	convert(dst2, d_dst);
+
+	MAT_CMP(dst2, d_dst, 0.1);
+}
 }

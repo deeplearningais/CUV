@@ -51,6 +51,23 @@ struct Fix{
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
+BOOST_AUTO_TEST_CASE( reorder_speed )
+{
+	int size = 4*4;
+	int x = 10;
+	int y = 16;
+
+	host_dense_matrix<float, row_major> A(y,x*size);
+	dev_dense_matrix<float, row_major> dev_A(y,x*size);
+
+	sequence(A);
+	sequence(dev_A);
+
+	MEASURE_TIME(host, reorder(A, size), 1);
+	MEASURE_TIME(dev,  reorder(dev_A, size), 1);
+	printf("Speedup: %3.4f\n", host/dev);
+}
+
 void conv_speed_test(int inputSize, int filterSize, int numFilters, int numImages)
 {
 	int c = numImages;

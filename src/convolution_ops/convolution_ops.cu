@@ -172,7 +172,7 @@ void localMaximum(dev_dense_matrix<float,row_major>& dst,
 	gridToMatrix(&nv_img, &nv_trans, poolSize, true);
 	nv_trans.max(1, nv_dst);
 
-	cudaThreadSynchronize();
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
@@ -214,45 +214,53 @@ template<>
 void reorder(dev_dense_matrix<float,row_major>& M,
 		  int blockLength) {
 	int patternCount = M.h();
-	int imgSize = M.w()/blockLength;
+	int imgCount = M.w()/blockLength;
 
-	float* img = M.ptr();
 	float* temp;
 	cuvSafeCall(cudaMalloc( (void**) &temp, sizeof(float) * M.n() ));
+	float* tmp_ptr = temp;
+	float* img_ptr = M.ptr();
 
-	for(int p = 0; p < patternCount; p++)
-		for(int m = 0; m < blockLength; m++) {
-			cuvSafeCall(cudaMemcpy(	&temp[p*imgSize+m*imgSize*patternCount],
-									&img[p*M.w()+m*imgSize],
-									sizeof(float)*imgSize,
+	for(int p = 0; p < patternCount; p++) {
+		for(int m = 0; m < imgCount; m++) {
+			cuvSafeCall(cudaMemcpy(	&tmp_ptr[blockLength * patternCount * m],
+									img_ptr,
+									sizeof(float)*blockLength,
 									cudaMemcpyDeviceToDevice
 			));
+			img_ptr += blockLength;
 		}
+		tmp_ptr += blockLength;
+	}
 
 	cuvSafeCall(cudaMemcpy(M.ptr(), temp, sizeof(float) * M.n(),cudaMemcpyDeviceToDevice));
-	M.resize(patternCount*blockLength, imgSize);
+	M.resize(patternCount*imgCount, blockLength);
 	cuvSafeCall(cudaFree(temp));
 
-	cudaThreadSynchronize();
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
 void reorder(host_dense_matrix<float,row_major>& M,
 		  int blockLength) {
 	int patternCount = M.h();
-	int imgSize = M.w()/blockLength;
+	int imgCount = M.w()/blockLength;
 
 	float* temp = (float*) malloc(sizeof(float) * M.n());
-	float* img = M.ptr();
+	float* tmp_ptr = temp;
+	float* img_ptr = M.ptr();
 
-	for(int p = 0; p < patternCount; p++)
-		for(int m = 0; m < blockLength; m++) {
-			memcpy(	&temp[p*imgSize+m*imgSize*patternCount],
-					&img[p*M.w()+m*imgSize], sizeof(float)*imgSize);
+	for(int p = 0; p < patternCount; p++) {
+		for(int m = 0; m < imgCount; m++) {
+			memcpy(	&tmp_ptr[blockLength * patternCount * m],
+					img_ptr, sizeof(float)*blockLength);
+			img_ptr += blockLength;
 		}
+		tmp_ptr += blockLength;
+	}
 
 	memcpy(M.ptr(), temp, sizeof(float) * M.n());
-	M.resize(patternCount*blockLength, imgSize);
+	M.resize(patternCount*imgCount, blockLength);
 	free(temp);
 }
 
@@ -274,7 +282,7 @@ void supersample(dev_dense_matrix<float,row_major>& dst,
 
 	supersample(&nv_img, &nv_dst, factor);
 
-	cudaThreadSynchronize();
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
