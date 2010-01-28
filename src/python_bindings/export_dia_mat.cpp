@@ -21,7 +21,7 @@ using namespace boost::python;
 using namespace cuv;
 
 template<class T>
-T*
+boost::shared_ptr<T>
 create_dia_mat(unsigned int h, unsigned int w, boost::python::list& dia_offsets, unsigned int stride, unsigned int rf=1){
 	int num_dia=boost::python::len(dia_offsets);
 	int *dias = new int[num_dia];
@@ -29,20 +29,26 @@ create_dia_mat(unsigned int h, unsigned int w, boost::python::list& dia_offsets,
 		int ls = boost::python::extract<int>(dia_offsets[i]);
 		dias[i]=ls;
 	}
-	T* m = new T(h,w,num_dia,stride,rf);
+	boost::shared_ptr<T> m ( new T(h,w,num_dia,stride,rf));
 	m->set_offsets(dias,dias+num_dia);
 	delete[] dias;
 	return m;
 }
 
 template<class T>
-T*
+boost::shared_ptr<T>
+create_dia_mat_empty(){
+	boost::shared_ptr<T> m(new T());
+	return m;
+}
+template<class T>
+boost::shared_ptr<T>
 create_dia_mat_from_dia_mat(T* other){
 	int *dias = new int[other->num_dia()];
 	for(int i=0; i< other->num_dia(); i++) {
 		dias[i]=other->get_offset(i);
 	}
-	T* m = new T(other->h(),other->w(),other->num_dia(),other->stride(),other->row_fact());
+	boost::shared_ptr<T> m(new T(other->h(),other->w(),other->num_dia(),other->stride(),other->row_fact()));
 	m->set_offsets(dias,dias+other->num_dia());
 	delete[] dias;
 	return m;
@@ -79,7 +85,7 @@ export_diamat_common(const char* name){
 	typedef typename mat::index_type index_type;
 	typedef typename mat::vec_type vec_type;
 
-	class_<mat> matobj(name, init<>());
+	class_<mat,boost::shared_ptr<mat> > matobj(name);
 	matobj
 		//.def("w",   &mat::w,    "width")
 		//.def("h",   &mat::h,    "height")
@@ -95,11 +101,14 @@ export_diamat_common(const char* name){
 		.def("save", (void (*)(mat&,std::string)) dia_io<value_type, index_type>::save_dia_mat, "save to file")
 		.def("load", (void (*)(mat&,std::string)) dia_io<value_type, index_type>::load_dia_mat, "load from file")
 		.def("__call__",  (const value_type& (mat::*)(const typename mat::index_type&, const typename mat::index_type&)const)(&mat::operator()), return_value_policy<copy_const_reference>()) // igitt.
+		.def("__init__",  make_constructor(create_dia_mat<mat>))
+		.def("__init__",  make_constructor(create_dia_mat_empty<mat>))
+		.def("__init__",  make_constructor(create_dia_mat_from_dia_mat<mat>) )
 		;
 
 
-	def((std::string("make_")+name).c_str(),  create_dia_mat<mat>,              (arg("h"),arg("w"),arg("offsets"),arg("stride"),arg("steepness")=1), return_value_policy<manage_new_object>());
-	def((std::string("make_")+name).c_str(),  create_dia_mat_from_dia_mat<mat>, return_value_policy<manage_new_object>());
+	//def((std::string("make_")+name).c_str(),  create_dia_mat<mat>,              (arg("h"),arg("w"),arg("offsets"),arg("stride"),arg("steepness")=1), return_value_policy<manage_new_object>());
+	//def((std::string("make_")+name).c_str(),  create_dia_mat_from_dia_mat<mat>, return_value_policy<manage_new_object>());
 }
 
 template<class T>
