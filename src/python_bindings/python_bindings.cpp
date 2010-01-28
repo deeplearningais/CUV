@@ -19,6 +19,7 @@ void export_dia_matrix();
 BOOST_PYTHON_MODULE(cuv_python){
 	def("initCUDA", initCUDA);
 	def("exitCUDA", exitCUDA);
+	def("saveThreadSync", saveThreadSync);
 	def("initialize_mersenne_twister_seeds", initialize_mersenne_twister_seeds);
 	export_vector();
 	export_vector_ops();
