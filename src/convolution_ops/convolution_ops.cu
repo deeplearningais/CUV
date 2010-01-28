@@ -277,6 +277,8 @@ void supersample(dev_dense_matrix<float,row_major>& dst,
 	int imgPixels = img.w();
 	int dstPixels = imgPixels * (factor * factor);
 
+	cuvAssert(dstSize / factor == imgSize);
+
 	NVMatrix nv_img(img.ptr(), numImages, imgPixels, false);
 	NVMatrix nv_dst(dst.ptr(), numImages, dstPixels, false);
 
