@@ -160,8 +160,10 @@ void export_blockview(){
 template <class M>
 void export_learn_step(){
 	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<typename M::value_type,typename M::memory_layout,typename M::index_type>);
+	def("rprop",(void (*)(M&, M&, M&,M&)) rprop<typename M::value_type, typename M::value_type, typename M::memory_layout,typename M::index_type>);
 	typedef typename M::vec_type V;
 	def("learn_step_weight_decay",(void (*)(V&, V&, const float&, const float&)) learn_step_weight_decay<V>);
+	def("rprop",(void (*)(V&, V&, V&,V&)) rprop<V,V>);
 }
 
 template<class T>
