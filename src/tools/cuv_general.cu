@@ -39,7 +39,7 @@ namespace cuv{
 		cudaThreadExit();
 	}
 
-	void saveThreadSync(){
+	void safeThreadSync(){
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 

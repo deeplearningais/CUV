@@ -32,7 +32,7 @@ namespace cuv{
 	void exitCUDA();
 
 	/// synch threads from plain (non-cuda) C++
-	void saveThreadSync();
+	void safeThreadSync();
 }
 
 #endif /* __CUV_GENERAL_HPP__ */
