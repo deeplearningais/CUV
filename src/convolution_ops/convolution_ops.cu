@@ -276,6 +276,8 @@ void supersample(dev_dense_matrix<float,row_major>& dst,
 	int numImages = img.h();
 	int imgPixels = img.w();
 	int dstPixels = imgPixels * (factor * factor);
+	int imgSize = sqrt(img.w());
+	int dstSize = imgSize * factor;
 
 	cuvAssert(dstSize / factor == imgSize);
 
