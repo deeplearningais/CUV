@@ -63,6 +63,20 @@ template<class V, class M, class I>
 void reorder(host_dense_matrix<V,M,I>& A,
 		   int blockLength);
 
+
+template<class V, class M, class I>
+void superToMax(host_dense_matrix<V,M,I>& bigError,
+		host_dense_matrix<V,M,I>& smallError,
+		host_dense_matrix<V,M,I>& bigImg,
+		host_dense_matrix<V,M,I>& smallImg,
+		int factor);
+
+template<class V, class M, class I>
+void superToMax(dev_dense_matrix<V,M,I>& bigError,
+		dev_dense_matrix<V,M,I>& smallError,
+		dev_dense_matrix<V,M,I>& bigImg,
+		dev_dense_matrix<V,M,I>& smallImg,
+		int factor);
 }
 
 

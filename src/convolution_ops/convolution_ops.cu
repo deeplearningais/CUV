@@ -319,4 +319,46 @@ void supersample(host_dense_matrix<float,row_major>& dst,
 	}
 }
 
+template<>
+void superToMax(dev_dense_matrix<float,row_major>& bigError,
+		dev_dense_matrix<float,row_major>& smallError,
+		dev_dense_matrix<float,row_major>& bigImg,
+		dev_dense_matrix<float,row_major>& smallImg,
+		int factor) {
+	printf("Warning! superToMax() NYI!\n");
+}
+
+template<>
+void superToMax(host_dense_matrix<float,row_major>& bigError,
+		host_dense_matrix<float,row_major>& smallError,
+		host_dense_matrix<float,row_major>& bigImg,
+		host_dense_matrix<float,row_major>& smallImg,
+		int factor) {
+	int numImages = smallImg.h();
+	int imgSize = sqrt(smallImg.w());
+	int dstSize = imgSize * factor;
+
+	cuvAssert(dstSize / factor == imgSize);
+
+	fill(bigError.vec(), 0.0f);
+
+	float* be_ptr = bigError.ptr();
+	float* se_ptr = smallError.ptr();
+	float* bi_ptr = bigImg.ptr();
+	float* si_ptr = smallImg.ptr();
+
+	for(int i = 0; i < numImages; i++) {
+		for(int r = 0; r < dstSize; r++)
+			for(int c = 0; c < dstSize; c++) {
+				float val = si_ptr[(r/factor)*imgSize+c/factor];
+				if(val == bi_ptr[0])
+					be_ptr[0] = se_ptr[(r/factor)*imgSize+c/factor];
+				bi_ptr++;
+				be_ptr++;
+			}
+		si_ptr += smallImg.w();
+		se_ptr += smallImg.w();
+	}
+}
+
 }
