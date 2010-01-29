@@ -186,15 +186,17 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_vec_row_major )
 {
 	dev_dense_matrix<float,  row_major> V(v.h(),v.w()); sequence(V);
 	host_dense_matrix<float, row_major> X(x.h(),x.w()); sequence(X);
+	dev_dense_matrix<float,  row_major> W(v.h(),v.w()); sequence(W);
+	host_dense_matrix<float, row_major> Z(x.h(),x.w()); sequence(Z);
 	dev_vector<float>   v_vec(n); sequence(v_vec);
 	host_vector<float>  x_vec(n); sequence(x_vec);
 	matrix_plus_col(V,v_vec);
 	matrix_plus_col(X,x_vec);
 	for(int i=0;i<n;i++){
 		for(int j=0;j<n;j++){
-			BOOST_CHECK_CLOSE(v(i,j), x(i,j), 0.01);
-			BOOST_CHECK_CLOSE(v(i,j), w(i,j)+v_vec[i], 0.01);
-			BOOST_CHECK_CLOSE(x(i,j), z(i,j)+x_vec[i], 0.01);
+			BOOST_CHECK_CLOSE(V(i,j), X(i,j), 0.01);
+			BOOST_CHECK_CLOSE(V(i,j), W(i,j)+v_vec[i], 0.01);
+			BOOST_CHECK_CLOSE(X(i,j), Z(i,j)+x_vec[i], 0.01);
 		}
 	}
 
