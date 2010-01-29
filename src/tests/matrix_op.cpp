@@ -219,6 +219,24 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( mat_op_divide_col )
+{
+	sequence(v);
+	sequence(x);
+	sequence(z);
+	dev_vector<float>  v_col(n); sequence(v_col); apply_scalar_functor(v_col, SF_ADD, 1.0f);
+	host_vector<float> x_col(n); sequence(x_col); apply_scalar_functor(x_col, SF_ADD, 1.0f);
+
+	matrix_divide_col(v, v_col);
+	matrix_divide_col(x, x_col);
+
+	for(int i=0;i<n;i++)
+		for(int j=0; j<n; j++) {
+			BOOST_CHECK_CLOSE(v(i,j),x(i,j),0.01);
+			BOOST_CHECK_CLOSE(x(i,j),z(i,j)/x_col[i],0.01);
+		}
+}
+
 BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
 {
 	dev_dense_matrix<float,row_major> dA(40, 30);
