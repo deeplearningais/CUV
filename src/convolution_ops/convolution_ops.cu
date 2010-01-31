@@ -270,7 +270,6 @@ void reorder(dev_dense_matrix<float,row_major>& M,
 
 	float* temp;
 	cuvSafeCall(cudaMalloc( (void**) &temp, sizeof(float) * M.n() ));
-	float* tmp_ptr = temp;
 	float* img_ptr = M.ptr();
 
 	dim3 grid(imgCount, patternCount);
@@ -400,4 +399,49 @@ void superToMax(host_dense_matrix<float,row_major>& bigError,
 	}
 }
 
+template<>
+	void copyInto(dev_dense_matrix<float,row_major>& dst,
+			  dev_dense_matrix<float,row_major>&   img,
+			  int padding) {
+	int inputSize = sqrt(img.w());
+	int outputSize = sqrt(dst.w());
+	cuvAssert(inputSize * inputSize == img.w());
+	cuvAssert(outputSize * outputSize == dst.w());
+	cuvAssert(inputSize + 2 * padding == outputSize);
+	cuvAssert(img.h() == dst.h());
+
+	// make NVMatrices with this data
+	NVMatrix nv_dst(dst.ptr(), dst.h(), dst.w(), false);
+	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
+
+	copyInto(&nv_img, &nv_dst, padding, false);
 }
+
+template<>
+	void copyInto(host_dense_matrix<float,row_major>& dst,
+			  host_dense_matrix<float,row_major>&   img,
+			  int padding) {
+	int inputSize = sqrt(img.w());
+	int outputSize = sqrt(dst.w());
+	cuvAssert(inputSize * inputSize == img.w());
+	cuvAssert(outputSize * outputSize == dst.w());
+	cuvAssert(inputSize + 2 * padding == outputSize);
+	cuvAssert(img.h() == dst.h());
+
+	float* img_ptr = img.ptr();
+	float* dst_ptr = dst.ptr();
+	for(int i=0; i<img.h(); i++) {
+		dst_ptr += outputSize * padding;
+		for(int j=0; j<inputSize;j++) {
+			dst_ptr += padding;
+			for(int k=0; k<inputSize;k++) {
+				*dst_ptr++ = *img_ptr++;
+			}
+			dst_ptr += padding;
+		}
+		dst_ptr += outputSize * padding;
+	}
+}
+
+}
+

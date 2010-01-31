@@ -87,6 +87,17 @@ void superToMax(dev_dense_matrix<V,M,I>& bigError,
 		dev_dense_matrix<V,M,I>& bigImg,
 		dev_dense_matrix<V,M,I>& smallImg,
 		int factor);
+
+template<class V, class M, class I>
+void copyInto(dev_dense_matrix<V,M,I>& dst,
+		   dev_dense_matrix<V,M,I>& img,
+		   int padding);
+
+template<class V, class M, class I>
+void copyInto(host_dense_matrix<V,M,I>& dst,
+		   host_dense_matrix<V,M,I>& img,
+		   int padding);
+
 }
 
 

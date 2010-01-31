@@ -113,4 +113,23 @@ BOOST_AUTO_TEST_CASE( reorder_matrix )
 
 	MAT_CMP(dst2, h_dst, 0.1);
 }
+
+BOOST_AUTO_TEST_CASE( copy_into_matrix )
+{
+	const int padding = 5;
+	const int size = n + 2 * padding;
+
+	host_dense_matrix<float, row_major> h_pad(h_img.h(), size * size);
+	dev_dense_matrix<float, row_major> d_pad(d_img.h(), size * size);
+
+	sequence(d_img); apply_scalar_functor(d_img, SF_MULT,0.001f);
+	sequence(h_img); apply_scalar_functor(h_img, SF_MULT,0.001f);
+	sequence(d_pad);
+	sequence(h_pad);
+
+	copyInto(d_pad, d_img, padding);
+	copyInto(h_pad, h_img, padding);
+
+	MAT_CMP(h_pad, d_pad, 0.1);
+}
 }
