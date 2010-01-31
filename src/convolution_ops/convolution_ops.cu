@@ -4,6 +4,7 @@
 #include <nvmatrix.cuh>
 #include <conv.cuh>
 #include <conv2.cuh>
+#include <conv3.cuh>
 #include <conv_util.cuh>
 #include <convCPU.h>
 
@@ -142,8 +143,46 @@ void convolve2(host_dense_matrix<float,row_major>& dst,
  * 			be multiples of 16.
  * dst		holds the target image of the convolution. one row for each
  *			input image. width = dstSize^2
+ *
+ * pads the input appropriately to apply convolution
  */
-// NYI conv3
+
+template<>
+	void convolve3(dev_dense_matrix<float,row_major>& dst,
+			  dev_dense_matrix<float,row_major>&   img,
+			  dev_dense_matrix<float,row_major>&   filter) {
+
+	int numFilters = filter.h();
+	int smallSize = sqrt(img.w()/numFilters);
+	int filterSize = sqrt(filter.w());
+	int bigSize = sqrt(dst.w());
+
+	int padding = filterSize - 1;
+	int paddedSize = smallSize + 2 * padding;
+	int numImages = img.h();
+
+	// make NVMatrices with this data
+	NVMatrix nv_dst(dst.ptr(), dst.h(), dst.w(), false);
+	NVMatrix nv_img(img.ptr(), numImages * numFilters, smallSize * smallSize, false);
+	NVMatrix nv_filter(filter.ptr(), filter.h(), filter.w(), false);
+
+	// make a padded NVmatrix
+	NVZeroMatrix nv_padded(numImages * numFilters, paddedSize * paddedSize, false);
+	copyInto(&nv_img, &nv_padded, padding, false);
+	nv_padded.reshape(numImages, numFilters * paddedSize * paddedSize);
+
+	// execute convolution
+	convolve3_bw(&nv_padded, &nv_filter, &nv_dst);
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
+template<>
+void convolve3(host_dense_matrix<float,row_major>& dst,
+		  host_dense_matrix<float,row_major>&   img,
+		  host_dense_matrix<float,row_major>&   filter) {
+	// TODO
+	printf("convolve3 NYI on host!\n");
+}
 
 
 template<>
