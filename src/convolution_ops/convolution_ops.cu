@@ -134,6 +134,61 @@ void convolve2(host_dense_matrix<float,row_major>& dst,
 	conv2CPU(img.ptr(), filter.ptr(), dst.ptr(), imgSize, filterSize, numImages, numFilters);
 }
 
+template<>
+void gridToMatrix(dev_dense_matrix<float,row_major>& img,
+		  dev_dense_matrix<float,row_major>&   grid,
+		  int poolSize) {
+	int numImages = img.h();
+	int imgPixels = img.w();
+	int regionsPerImage = imgPixels / (poolSize * poolSize);
+	int imgSize = sqrt(img.w());
+
+	// some preliminary checks
+	cuvAssert(imgSize*imgSize == img.w());
+	cuvAssert(grid.h() == numImages*regionsPerImage);
+	cuvAssert(grid.w() == poolSize*poolSize);
+
+	// make nvMatrices with this data
+	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
+	NVMatrix nv_grid(grid.ptr(), grid.h(), grid.w(), false);
+	fill(img.vec(),0);
+
+	gridToMatrix(&nv_img, &nv_grid, poolSize, true);
+
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
+template<>
+void matrixToGrid(dev_dense_matrix<float,row_major>& grid,
+		  dev_dense_matrix<float,row_major>&   img,
+		  int poolSize) {
+	int numImages = img.h();
+	int imgPixels = img.w();
+	int regionsPerImage = imgPixels / (poolSize * poolSize);
+	int imgSize = sqrt(img.w());
+
+	// some preliminary checks
+	cuvAssert(imgSize*imgSize == img.w());
+	cuvAssert(grid.h() == numImages*regionsPerImage);
+	cuvAssert(grid.w() == poolSize*poolSize);
+
+	// make nvMatrices with this data
+	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
+	NVMatrix nv_grid(grid.ptr(), grid.h(), grid.w(), false);
+	fill(grid.vec(),0);
+
+	// transform and calculate maximum
+	matrixToGrid(&nv_img, &nv_grid, poolSize, true);
+
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
+/*template<>*/
+/*void sampleMultnomials(dev_dense_matrix<float,row_major>& grid){*/
+/*    dev_dense_matrix<float,row_major> rnd(grid.h(),1);*/
+/*    fill_rnd_uniform(rnd.vec());*/
+/*}*/
+
 
 /* Convolve N patterns, each consisting of F images/maps with F filters and add
  * them up. Resulting in N target images
