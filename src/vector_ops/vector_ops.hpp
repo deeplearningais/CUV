@@ -26,7 +26,9 @@ namespace cuv{
 		SF_ADD,
 		SF_SUBTRACT,
 		SF_MULT,
-		SF_DIV
+		SF_DIV,
+		SF_MIN,
+		SF_MAX
 	};
 
   enum BinaryFunctor{

@@ -44,6 +44,8 @@ void export_scalar_functors() {
         .value("SUBTRACT", SF_SUBTRACT)
         .value("MULT", SF_MULT)
         .value("DIV", SF_DIV)
+        .value("MIN", SF_MIN)
+        .value("MAX", SF_MAX)
         ;
 
 }

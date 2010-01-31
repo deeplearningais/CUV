@@ -120,6 +120,10 @@ template<class T, class U>
 struct bf_and{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t && u; } };
 template<class T, class U>
 struct bf_or{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t || u; } };
+template<class T, class U>
+struct bf_min{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t<u ? t : u; } };
+template<class T, class U>
+struct bf_max{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t>u ? t : u; } };
 
 // functors with parameter
 template<class T, class U>
@@ -427,6 +431,8 @@ struct apply_scalar_functor_impl{
 			case SF_MULT:      launch_unary_kernel(v,v,uf_base_op<value_type, thrust::multiplies<value_type> >(param)); break;
 			case SF_DIV:       launch_unary_kernel(v,v,uf_base_op<value_type, thrust::divides<value_type> >(param)); break;
 			case SF_SUBTRACT:  launch_unary_kernel(v,v,uf_base_op<value_type, thrust::minus<value_type> >(param)); break;
+			case SF_MIN:       launch_unary_kernel(v,v,uf_base_op<value_type, bf_min<value_type,__arg_value_type> >(param)); break;
+			case SF_MAX:       launch_unary_kernel(v,v,uf_base_op<value_type, bf_max<value_type,__arg_value_type> >(param)); break;
 			default:
 				cuvAssert(false);
 		}
