@@ -131,7 +131,7 @@ void export_binary_functor() {
 
 template <class M>
 void export_pooling(){
-	def("max_pool",(void (*)(M&,M&,int))localMaximum<typename M::value_type,typename M::memory_layout,typename M::index_type>);
+	def("max_pool",(void (*)(M&,M&,int))local_maximum<typename M::value_type,typename M::memory_layout,typename M::index_type>);
 	def("supersample",(void (*)(M&,M&,int))supersample<typename M::value_type,typename M::memory_layout,typename M::index_type>);
 }
 
