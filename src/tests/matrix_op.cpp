@@ -9,6 +9,7 @@
 #include <matrix_ops.hpp>
 #include <matrix_ops/rprop.hpp>
 #include <cuv_test.hpp>
+#include <../random/random.hpp>
 
 using namespace cuv;
 
@@ -351,6 +352,38 @@ BOOST_AUTO_TEST_CASE( mat_op_transpose )
 
 	MAT_CMP(hA, h2A, 0.1);
 	MAT_CMP(hC, h2C, 0.1);
+}
+
+BOOST_AUTO_TEST_CASE( mat_op_argmax )
+{
+	const int n = 517;
+	const int m = 212;
+
+	host_dense_matrix<float> hA(n, m);
+	dev_dense_matrix<float>  dA(n, m);
+	host_vector<int> v(m);
+	dev_vector<int> x(m);
+
+	host_dense_matrix<float,row_major> hB(m, n);
+	dev_dense_matrix<float,row_major>  dB(m, n);
+	host_vector<int> w(m);
+	dev_vector<int> y(m);
+
+	fill_rnd_uniform(hA.vec());
+	fill_rnd_uniform(hB.vec());
+	convert(dA, hA);
+	convert(dB, hB);
+
+	argmax_to_row(v, hA);
+	argmax_to_row(x, dA);
+
+	argmax_to_column(w, hB);
+	argmax_to_column(y, dB);
+
+	for(int i=0; i<m; i++) {
+		BOOST_CHECK_EQUAL(v[i], x[i]);
+		BOOST_CHECK_EQUAL(w[i], y[i]);
+	}
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -76,6 +76,50 @@ void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows, T pa
 	__syncthreads();
 }
 
+
+template<int BLOCK_SIZE, class T, class I>
+__global__
+void argmax_row_kernel(const T* matrix, I* vector, int nCols, int nRows) {
+	__shared__ I shIdx[BLOCK_SIZE*BLOCK_SIZE]; // index of the maximum
+	__shared__ T shVal[BLOCK_SIZE*BLOCK_SIZE]; // value
+
+	int tx = threadIdx.x, bx=blockIdx.x;
+	int ty = threadIdx.y, by=blockIdx.y;
+	if(by*blockDim.y + ty>nCols) return;
+	int off = blockDim.x;
+
+	int idx = by * nRows + bx*blockDim.x + tx;
+	shVal[tx] = matrix[idx];
+	shIdx[tx] = tx;
+
+	for(int my=tx+off; my<nRows; my += off){
+		idx += off;
+		T f = matrix[idx];
+
+		if(f > shVal[tx]) {
+			shVal[tx] = f;
+			shIdx[tx] = my;
+		}
+	}
+	__syncthreads();
+
+	int offset = blockDim.x / 2;
+	while(offset > 0) {
+		if( tx < offset) {
+			if(shVal[tx] < shVal[tx+offset]) {
+				shVal[tx] = shVal[tx+offset];
+				shIdx[tx] = shIdx[tx+offset];
+			}
+		}
+		offset >>= 1;
+		__syncthreads();
+	}
+
+	if (tx == 0)
+		vector[by * blockDim.y + ty] = shIdx[0];
+	__syncthreads();
+}
+
 // "coalesced transpose" with no bank conflicts, example from SDK
 // potential speedup by 5 possible for "fine-grained transpose"
 template<int BLOCK_SIZE, class T>
@@ -423,6 +467,68 @@ namespace cuv{
 	  void reduce_to_row(__vector_type&v, const __matrix_type& m, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld){
 		  reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld);
 	  }
+
+	template<>
+	void argmax_to_row(dev_vector<int>&v, const dev_dense_matrix<float,column_major>& m){
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.w() == v.size());
+		static const int BLOCK_SIZE = 16;
+		dim3 grid(1, m.w());
+		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
+		argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h());
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+
+	template<>
+	void argmax_to_column(dev_vector<int>&v, const dev_dense_matrix<float,row_major>& m){
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.h() == v.size());
+		static const int BLOCK_SIZE = 16;
+		dim3 grid(1, m.h());
+		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
+		argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w());
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+
+	template<>
+	void argmax_to_row(host_vector<int>&v, const host_dense_matrix<float,column_major>& m){
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.w() == v.size());
+		const float* ptr = m.ptr();
+		int* res = v.ptr();
+		for(int i=0; i<m.w();i++) {
+			int idx = 0;
+			float val = *ptr;
+			for(int j=0; j<m.h();j++) {
+				if(*ptr > val) {
+					val = *ptr;
+					idx = j;
+				}
+				ptr++;
+			}
+			*res++ = idx;
+		}
+	}
+
+	template<>
+	void argmax_to_column(host_vector<int>&v, const host_dense_matrix<float,row_major>& m){
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.h() == v.size());
+		const float* ptr = m.ptr();
+		int* res = v.ptr();
+		for(int i=0; i<m.h();i++) {
+			int idx = 0;
+			float val = *ptr;
+			for(int j=0; j<m.w();j++) {
+				if(*ptr > val) {
+					val = *ptr;
+					idx = j;
+				}
+				ptr++;
+			}
+			*res++ = idx;
+		}
+	}
 
 	template<>
 	void transpose(dev_dense_matrix<float,column_major>& dst,

@@ -121,6 +121,14 @@ namespace cuv{
   template<class __matrix_type, class __vector_type> 
 	  void reduce_to_row(__vector_type&, const __matrix_type&, const typename __matrix_type::value_type& factNew=1.f, const typename __matrix_type::value_type& factOld=0.f);
 
+  /// write the index of the maximum for each column of a matrix into a vector
+  template<class __matrix_type, class __vector_type>
+	  void argmax_to_row(__vector_type&, const __matrix_type&);
+
+  /// write the index of the maximum for each row of a matrix into a vector
+  template<class __matrix_type, class __vector_type>
+	  void argmax_to_column(__vector_type&, const __matrix_type&);
+
   // end of wrappers for vector ops
  
   /***************************************************
