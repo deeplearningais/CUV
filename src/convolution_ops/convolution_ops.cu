@@ -1,6 +1,9 @@
 #include "convolution_ops.hpp"
 
 #include <convert/convert.hpp>
+#include <matrix_ops/matrix_ops.hpp>
+#include <conv_util.cuh>
+#include <random/random.hpp>
 #include <nvmatrix.cuh>
 #include <conv.cuh>
 #include <conv2.cuh>
@@ -134,60 +137,101 @@ void convolve2(host_dense_matrix<float,row_major>& dst,
 	conv2CPU(img.ptr(), filter.ptr(), dst.ptr(), imgSize, filterSize, numImages, numFilters);
 }
 
+// images --> blocks
 template<>
-void gridToMatrix(dev_dense_matrix<float,row_major>& img,
+void grid_to_matrix(dev_dense_matrix<float,row_major>& mat,
 		  dev_dense_matrix<float,row_major>&   grid,
 		  int poolSize) {
-	int numImages = img.h();
-	int imgPixels = img.w();
+	int numImages = grid.h();
+	int imgPixels = grid.w();
 	int regionsPerImage = imgPixels / (poolSize * poolSize);
-	int imgSize = sqrt(img.w());
+	int imgSize = sqrt(grid.w());
 
 	// some preliminary checks
-	cuvAssert(imgSize*imgSize == img.w());
-	cuvAssert(grid.h() == numImages*regionsPerImage);
-	cuvAssert(grid.w() == poolSize*poolSize);
+	cuvAssert(imgSize*imgSize == grid.w());
+	cuvAssert(mat.h() == numImages*regionsPerImage);
+	cuvAssert(mat.w() == poolSize*poolSize);
 
 	// make nvMatrices with this data
-	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
+	NVMatrix nv_mat(mat.ptr(), mat.h(), mat.w(), false);
 	NVMatrix nv_grid(grid.ptr(), grid.h(), grid.w(), false);
-	fill(img.vec(),0);
+	fill(mat.vec(),0);
 
-	gridToMatrix(&nv_img, &nv_grid, poolSize, true);
+	gridToMatrix(&nv_grid, &nv_mat, poolSize, true);
 
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
-void matrixToGrid(dev_dense_matrix<float,row_major>& grid,
-		  dev_dense_matrix<float,row_major>&   img,
+void matrix_to_grid(dev_dense_matrix<float,row_major>& grid,
+		  dev_dense_matrix<float,row_major>&   mat,
 		  int poolSize) {
-	int numImages = img.h();
-	int imgPixels = img.w();
+	int numImages = grid.h();
+	int imgPixels = grid.w();
 	int regionsPerImage = imgPixels / (poolSize * poolSize);
-	int imgSize = sqrt(img.w());
+	int imgSize = sqrt(grid.w());
 
 	// some preliminary checks
-	cuvAssert(imgSize*imgSize == img.w());
-	cuvAssert(grid.h() == numImages*regionsPerImage);
-	cuvAssert(grid.w() == poolSize*poolSize);
+	cuvAssert(imgSize*imgSize == grid.w());
+	cuvAssert(mat.h() == numImages*regionsPerImage);
+	cuvAssert(mat.w() == poolSize*poolSize);
 
 	// make nvMatrices with this data
-	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
+	NVMatrix nv_mat(mat.ptr(), mat.h(), mat.w(), false);
 	NVMatrix nv_grid(grid.ptr(), grid.h(), grid.w(), false);
 	fill(grid.vec(),0);
 
 	// transform and calculate maximum
-	matrixToGrid(&nv_img, &nv_grid, poolSize, true);
+	matrixToGrid(&nv_mat, &nv_grid, poolSize, true);
 
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
-/*template<>*/
-/*void sampleMultnomials(dev_dense_matrix<float,row_major>& grid){*/
-/*    dev_dense_matrix<float,row_major> rnd(grid.h(),1);*/
-/*    fill_rnd_uniform(rnd.vec());*/
-/*}*/
+template<>
+void sample_multinomial(dev_dense_matrix<float,row_major>& grid){
+   dev_dense_matrix<float,row_major> rnd(grid.h(),1);
+   fill_rnd_uniform(rnd.vec());
+
+   NVMatrix nv_grid(grid.ptr(),grid.h(),grid.w(),false);
+   NVMatrix nv_rnd(rnd.ptr(),rnd.h(),rnd.w(),false);
+
+   sampleMultinomial(&nv_grid,&nv_rnd,&nv_grid); 
+}
+
+template<>
+void prob_max_pooling(dev_vector<float>& sums,dev_dense_matrix<float,row_major>& grid, int poolSize, bool sample){
+	int numImages = grid.h();
+	int imgPixels = grid.w();
+	int regionsPerImage = imgPixels / (poolSize * poolSize);
+
+	dev_dense_matrix<float,row_major> mat(numImages*regionsPerImage, poolSize*poolSize);
+	grid_to_matrix(mat,grid,poolSize);
+
+	// normalize rows
+	reduce_to_col(sums,mat);                    // sums      = sum(mat, axis=1)
+	apply_scalar_functor(sums,SF_ADD,1.f);      // sums     += 1
+	apply_scalar_functor(sums,SF_INV);          // sums      = 1/sums
+	matrix_times_col(mat,sums);                 // mat[:,i] *= sums
+
+	if(sample){
+		sample_multinomial(mat);
+		reduce_to_col(sums,mat);                // now is 0 or 1
+	}else{
+		apply_scalar_functor(sums,SF_INV);             // sums      = 1/sums
+		apply_scalar_functor(sums,SF_SUBTRACT,1.f);    // sums     -= 1
+	}
+	matrix_to_grid(grid,mat,poolSize);
+}
+
+template<>
+void prob_max_pooling(dev_dense_matrix<float,row_major>& grid, int poolSize, bool sample){
+	int numImages = grid.h();
+	int imgPixels = grid.w();
+	int regionsPerImage = imgPixels / (poolSize * poolSize);
+
+	dev_vector<float> sums(numImages*regionsPerImage);
+	prob_max_pooling(sums, grid, poolSize,sample);
+}
 
 
 /* Convolve N patterns, each consisting of F images/maps with F filters and add

@@ -46,12 +46,20 @@ void convolve3(host_dense_matrix<V,M,I>& dst,
 		   host_dense_matrix<V,M,I>& filter);
 
 template<class V, class M, class I>
-void gridToMatrix(dev_dense_matrix<V,M,I>& img,
-		   dev_dense_matrix<V,M,I>& grid,
+void sample_multinomial(dev_dense_matrix<V,M,I>& grid);
+
+template<class V, class M, class I>
+void prob_max_pooling(dev_dense_matrix<V,M,I>& grid, int poolSize, bool sample);
+template<class V, class M, class I>
+void prob_max_pooling(dev_vector<V,I>& sums, dev_dense_matrix<V,M,I>& grid, int poolSize, bool sample);
+
+template<class V, class M, class I>
+void grid_to_matrix(dev_dense_matrix<V,M,I>& mat,
+		   dev_dense_matrix<V,M,I>& grid,       
 		   int poolSize);
 template<class V, class M, class I>
-void matrixToGrid(dev_dense_matrix<V,M,I>& grid,
-		   dev_dense_matrix<V,M,I>& img,
+void matrix_to_grid(dev_dense_matrix<V,M,I>& grid,
+		   dev_dense_matrix<V,M,I>& mat,
 		   int poolSize);
 template<class V, class M, class I>
 void localMaximum(dev_dense_matrix<V,M,I>& dst,
