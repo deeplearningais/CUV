@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE( convolution )
 	}
 }
 
-BOOST_AUTO_TEST_CASE( local_maximum )
+BOOST_AUTO_TEST_CASE( local_maxima )
 {
 	fill(d_dst, 0.0f);
 	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
@@ -70,8 +70,8 @@ BOOST_AUTO_TEST_CASE( local_maximum )
 	fill(h_dst, 0.0f);
 	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
 
-	localMaximum(h_pooled, h_img, p);
-	localMaximum(d_pooled, d_img, p);
+	local_maximum(h_pooled, h_img, p);
+	local_maximum(d_pooled, d_img, p);
 
 	host_dense_matrix<float, row_major> pooled2(d_pooled.h(), d_pooled.w());
 	convert(pooled2,d_pooled);
@@ -127,8 +127,8 @@ BOOST_AUTO_TEST_CASE( copy_into_matrix )
 	sequence(d_pad);
 	sequence(h_pad);
 
-	copyInto(d_pad, d_img, padding);
-	copyInto(h_pad, h_img, padding);
+	copy_into(d_pad, d_img, padding);
+	copy_into(h_pad, h_img, padding);
 
 	MAT_CMP(h_pad, d_pad, 0.1);
 }

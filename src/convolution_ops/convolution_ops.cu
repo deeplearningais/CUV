@@ -275,7 +275,7 @@ void convolve3(host_dense_matrix<float,row_major>& dst,
 
 
 template<>
-void localMaximum(dev_dense_matrix<float,row_major>& dst,
+void local_maximum(dev_dense_matrix<float,row_major>& dst,
 		  dev_dense_matrix<float,row_major>&   img,
 		  int poolSize) {
 	int numImages = img.h();
@@ -304,7 +304,7 @@ void localMaximum(dev_dense_matrix<float,row_major>& dst,
 }
 
 template<>
-void localMaximum(host_dense_matrix<float,row_major>& dst,
+void local_maximum(host_dense_matrix<float,row_major>& dst,
 		  host_dense_matrix<float,row_major>&   img,
 		  int poolSize) {
 	int numImages = img.h();
@@ -447,7 +447,7 @@ void supersample(host_dense_matrix<float,row_major>& dst,
 }
 
 template<>
-void superToMax(dev_dense_matrix<float,row_major>& bigError,
+void super_to_max(dev_dense_matrix<float,row_major>& bigError,
 		dev_dense_matrix<float,row_major>& smallError,
 		dev_dense_matrix<float,row_major>& bigImg,
 		dev_dense_matrix<float,row_major>& smallImg,
@@ -456,7 +456,7 @@ void superToMax(dev_dense_matrix<float,row_major>& bigError,
 }
 
 template<>
-void superToMax(host_dense_matrix<float,row_major>& bigError,
+void super_to_max(host_dense_matrix<float,row_major>& bigError,
 		host_dense_matrix<float,row_major>& smallError,
 		host_dense_matrix<float,row_major>& bigImg,
 		host_dense_matrix<float,row_major>& smallImg,
@@ -489,7 +489,7 @@ void superToMax(host_dense_matrix<float,row_major>& bigError,
 }
 
 template<>
-	void copyInto(dev_dense_matrix<float,row_major>& dst,
+	void copy_into(dev_dense_matrix<float,row_major>& dst,
 			  dev_dense_matrix<float,row_major>&   img,
 			  int padding) {
 	int inputSize = sqrt(img.w());
@@ -507,7 +507,7 @@ template<>
 }
 
 template<>
-	void copyInto(host_dense_matrix<float,row_major>& dst,
+	void copy_into(host_dense_matrix<float,row_major>& dst,
 			  host_dense_matrix<float,row_major>&   img,
 			  int padding) {
 	int inputSize = sqrt(img.w());

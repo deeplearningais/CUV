@@ -62,12 +62,12 @@ void matrix_to_grid(dev_dense_matrix<V,M,I>& grid,
 		   dev_dense_matrix<V,M,I>& mat,
 		   int poolSize);
 template<class V, class M, class I>
-void localMaximum(dev_dense_matrix<V,M,I>& dst,
+void local_maximum(dev_dense_matrix<V,M,I>& dst,
 		   dev_dense_matrix<V,M,I>& img,
 		   int poolSize);
 
 template<class V, class M, class I>
-void localMaximum(host_dense_matrix<V,M,I>& dst,
+void local_maximum(host_dense_matrix<V,M,I>& dst,
 		   host_dense_matrix<V,M,I>& img,
 		   int poolSize);
 
@@ -91,26 +91,26 @@ void reorder(host_dense_matrix<V,M,I>& A,
 
 
 template<class V, class M, class I>
-void superToMax(host_dense_matrix<V,M,I>& bigError,
+void super_to_max(host_dense_matrix<V,M,I>& bigError,
 		host_dense_matrix<V,M,I>& smallError,
 		host_dense_matrix<V,M,I>& bigImg,
 		host_dense_matrix<V,M,I>& smallImg,
 		int factor);
 
 template<class V, class M, class I>
-void superToMax(dev_dense_matrix<V,M,I>& bigError,
+void super_to_max(dev_dense_matrix<V,M,I>& bigError,
 		dev_dense_matrix<V,M,I>& smallError,
 		dev_dense_matrix<V,M,I>& bigImg,
 		dev_dense_matrix<V,M,I>& smallImg,
 		int factor);
 
 template<class V, class M, class I>
-void copyInto(dev_dense_matrix<V,M,I>& dst,
+void copy_into(dev_dense_matrix<V,M,I>& dst,
 		   dev_dense_matrix<V,M,I>& img,
 		   int padding);
 
 template<class V, class M, class I>
-void copyInto(host_dense_matrix<V,M,I>& dst,
+void copy_into(host_dense_matrix<V,M,I>& dst,
 		   host_dense_matrix<V,M,I>& img,
 		   int padding);
 
