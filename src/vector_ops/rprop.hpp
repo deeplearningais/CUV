@@ -1,9 +1,9 @@
 #ifndef __RPROP_HPP__
 #define __RPROP_HPP__
 
-#include <cuv_general.hpp>
-#include "dev_vector.hpp"
-#include "host_vector.hpp"
+#include <tools/cuv_general.hpp>
+#include <basics/dev_vector.hpp>
+#include <basics/host_vector.hpp>
 
 namespace cuv{
 
