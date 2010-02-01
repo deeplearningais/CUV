@@ -72,6 +72,8 @@ template<class T>
 struct uf_sqrt{  __device__  __host__       T operator()(const T& t)      const{ return sqrt(t); } };
 template<class T>
 struct uf_abs{  __device__  __host__       T operator()(const T& t)      const{ return fabs(t); } };
+template<class T>
+struct uf_smax{  __device__  __host__      T operator()(const T& t)      const{ return ((T)1/t - (T) 1) * t; } };
 
 template<class T>
 struct uf_is_nan{  __device__  __host__     bool operator()(const T& t)      const{ return (t!=t) ; } };
@@ -85,6 +87,7 @@ template<class T>
 struct tf_tanh{  __device__  __host__       T operator()(const T& t, const T& x, const T& y)      const{ return (T) x * tanh((T) y * t); } };
 template<class T>
 struct tf_dtanh{  __device__  __host__      T operator()(const T& t, const T& x, const T& y)      const{ return ((T)x) - (T) y * (t*t); } };
+
 
 template<class T, class binary_functor>
 struct uf_base_op{
@@ -455,6 +458,7 @@ struct apply_scalar_functor_impl{
 			case SF_ENERG:      launch_unary_kernel(v,v, uf_energ<value_type>()); break;
 			case SF_INV:        launch_unary_kernel(v,v, uf_inv<value_type>()); break;
 			case SF_SQRT:       launch_unary_kernel(v,v, uf_sqrt<value_type>()); break;
+			case SF_SMAX:       launch_unary_kernel(v,v, uf_smax<value_type>()); break;
 			case SF_NEGATE:     launch_unary_kernel(v,v, thrust::negate<value_type>()); break;
 			default:
 			 cuvAssert(false);

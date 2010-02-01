@@ -201,10 +201,14 @@ void export_matrix_ops(){
 	export_binary_functor_simple<fdev,udev>();
 	export_reductions<fhost>();
 	export_reductions<fdev>();
+	export_reductions<dev_dense_matrix<float,row_major> >();
+	export_reductions<host_dense_matrix<float,row_major> >();
 	export_learn_step<fhost>();
 	export_learn_step<fdev>();
 	export_blas2<fdev>();
 	export_blas2<fhost>();
+	export_blas2<dev_dense_matrix<float,row_major> >();
+	export_blas2<host_dense_matrix<float,row_major> >();
 	export_blockview<fdev>();
 	export_blockview<fhost>();
 	export_pooling<dev_dense_matrix<float,row_major> >();

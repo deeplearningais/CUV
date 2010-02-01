@@ -39,6 +39,7 @@ void export_scalar_functors() {
         .value("SQRT", SF_SQRT)
         .value("NEGATE", SF_NEGATE)
         .value("ABS", SF_ABS)
+        .value("SMAX", SF_SMAX)
 
         .value("ADD", SF_ADD)
         .value("SUBTRACT", SF_SUBTRACT)

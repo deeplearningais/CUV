@@ -222,8 +222,7 @@ void prob_max_pooling(dev_vector<float>& sums,dev_dense_matrix<float,row_major>&
 		sample_multinomial(mat);
 		reduce_to_col(sums,mat);                // now is 0 or 1
 	}else{
-		apply_scalar_functor(sums,SF_INV);             // sums      = 1/sums
-		apply_scalar_functor(sums,SF_SUBTRACT,1.f);    // sums     -= 1
+		apply_scalar_functor(sums,SF_SMAX);             // sums      = (sums-1)/sums
 	}
 	matrix_to_grid(grid,mat,poolSize);
 }

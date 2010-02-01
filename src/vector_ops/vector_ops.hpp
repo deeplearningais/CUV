@@ -21,6 +21,7 @@ namespace cuv{
 		SF_SQRT,
 		SF_NEGATE,
 		SF_ABS,
+		SF_SMAX,
 
 		// with param
 		SF_ADD,
