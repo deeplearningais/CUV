@@ -3,6 +3,7 @@
 
 #include <cuv_general.hpp>
 #include <thrust/functional.h>
+#include <float.h>
 #include "matrix_ops.hpp"
 
 #define CVT_TRANSPOSE(c) \
@@ -88,9 +89,14 @@ void argmax_row_kernel(const T* matrix, I* vector, int nCols, int nRows) {
 	if(by*blockDim.y + ty>nCols) return;
 	int off = blockDim.x;
 
+	shVal[tx] = (T) -FLT_MAX; // dangerous for some data types
+	shIdx[tx] = 0;
+
 	int idx = by * nRows + bx*blockDim.x + tx;
-	shVal[tx] = matrix[idx];
-	shIdx[tx] = tx;
+	if(tx < nRows) {
+		shVal[tx] = matrix[idx];
+		shIdx[tx] = tx;
+	}
 
 	for(int my=tx+off; my<nRows; my += off){
 		idx += off;
