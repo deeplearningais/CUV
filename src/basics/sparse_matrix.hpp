@@ -89,7 +89,7 @@ namespace cuv{
 				m_offsets.set(idx,val);
 				m_dia2off[val] = idx;
 			}
-			inline std::auto_ptr<vec_type> get_dia(const index_type& i){ return std::auto_ptr<vec_type>(new vec_type(m_stride,  m_vec->ptr() + m_dia2off[i] * m_stride, true)); }
+			inline vec_type* get_dia(const index_type& i){ return new vec_type(m_stride,  m_vec->ptr() + m_dia2off[i] * m_stride, true); }
 			inline const intvec_type& get_offsets()const{return m_offsets;}
 			inline       intvec_type& get_offsets()     {return m_offsets;}
 			inline int get_offset(const index_type& idx)const{
