@@ -186,6 +186,8 @@ export_multinomial_sampling(){
 void export_matrix_ops(){
 	typedef dev_dense_matrix<float,column_major> fdev;
 	typedef host_dense_matrix<float,column_major> fhost;
+	typedef host_dense_matrix<float,row_major> fhostr;
+	typedef dev_dense_matrix<float,row_major> fdevr;
 	typedef dev_dense_matrix<unsigned char,column_major> udev;
 	typedef host_dense_matrix<unsigned char,column_major> uhost;
 
@@ -197,27 +199,33 @@ void export_matrix_ops(){
 	export_scalar_functor<fdev>();
 	export_binary_functor<fdev,fdev>();
 	export_binary_functor<fhost,fhost>();
+	export_nullary_functor<fhostr>();
+	export_nullary_functor<fdevr>();
+	export_scalar_functor<fhostr>();
+	export_scalar_functor<fdevr>();
+	export_binary_functor<fdevr,fdevr>();
+	export_binary_functor<fhostr,fhostr>();
 	export_binary_functor_simple<fhost,uhost>();
 	export_binary_functor_simple<fdev,udev>();
 	export_reductions<fhost>();
 	export_reductions<fdev>();
-	export_reductions<dev_dense_matrix<float,row_major> >();
-	export_reductions<host_dense_matrix<float,row_major> >();
+	export_reductions<fhostr>();
+	export_reductions<fdevr>();
 	export_learn_step<fhost>();
 	export_learn_step<fdev>();
 	export_blas2<fdev>();
 	export_blas2<fhost>();
-	export_blas2<dev_dense_matrix<float,row_major> >();
-	export_blas2<host_dense_matrix<float,row_major> >();
+	export_blas2<fhostr>();
+	export_blas2<fdevr>();
 	export_blockview<fdev>();
 	export_blockview<fhost>();
-	export_pooling<dev_dense_matrix<float,row_major> >();
-	export_pooling<host_dense_matrix<float,row_major> >();
+	export_pooling<fhostr>();
+	export_pooling<fdevr>();
 	// transpose
-	export_transpose<dev_dense_matrix<float,column_major> >();
-	export_transpose<host_dense_matrix<float,column_major> >();
-	export_transpose<dev_dense_matrix<float,row_major> >();
-	export_transpose<host_dense_matrix<float,row_major> >();
+	export_transpose<fhost>();
+	export_transpose<fdev>();
+	export_transpose<fhostr>();
+	export_transpose<fdevr>();
 
 	export_multinomial_sampling<dev_dense_matrix<float,row_major> >();
 
