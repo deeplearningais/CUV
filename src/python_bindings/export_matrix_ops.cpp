@@ -17,6 +17,23 @@ using namespace boost::python;
 using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
+template<class MS, class V,class M, class I>
+struct ms_type {
+};
+template<class V,class M, class I>
+struct ms_type<dev_memory_space,V,M,I> {
+	typedef dev_dense_matrix<V,M,I> type;
+};
+template<class V,class M, class I>
+struct ms_type<host_memory_space,V,M,I> {
+	typedef host_dense_matrix<V,M,I> type;
+};
+
+template<class Mat, class NewVT>
+struct switch_value_type{
+	typedef typename ms_type<typename matrix_traits<Mat>::memory_space_type,NewVT, typename Mat::memory_layout, typename Mat::index_type>::type type;
+};
+
 template<class R, class S, class T>
 void export_blas3() {
 	def("prod",&prod<R,S,T>, (
@@ -131,8 +148,9 @@ void export_binary_functor() {
 
 template <class M>
 void export_pooling(){
-	def("max_pool",(void (*)(M&,M&,int))local_maximum<typename M::value_type,typename M::memory_layout,typename M::index_type>);
-	def("supersample",(void (*)(M&,M&,int))supersample<typename M::value_type,typename M::memory_layout,typename M::index_type>);
+	typedef typename switch_value_type<M,int>::type Mint;
+	def("max_pool",(void (*)(M&,M&,int,Mint*))local_maximum<typename M::value_type,typename M::memory_layout,typename M::index_type>, (arg("dst"),arg("img"),arg("poolSize"),arg("optional_indices")=NULL));
+	def("supersample",(void (*)(M&,M&,int,Mint*))supersample<typename M::value_type,typename M::memory_layout,typename M::index_type>,(arg("dst"),arg("img"),arg("factor"),arg("optional_indices")=NULL));
 }
 
 template <class M>
@@ -219,7 +237,7 @@ void export_matrix_ops(){
 	export_blas2<fdevr>();
 	export_blockview<fdev>();
 	export_blockview<fhost>();
-	export_pooling<fhostr>();
+	//export_pooling<fhostr>();
 	export_pooling<fdevr>();
 	// transpose
 	export_transpose<fhost>();
