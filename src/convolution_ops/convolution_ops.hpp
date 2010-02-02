@@ -64,22 +64,26 @@ void matrix_to_grid(dev_dense_matrix<V,M,I>& grid,
 template<class V, class M, class I>
 void local_maximum(dev_dense_matrix<V,M,I>& dst,
 		   dev_dense_matrix<V,M,I>& img,
-		   int poolSize);
+		   int poolSize,
+		   dev_dense_matrix<int,row_major>* indices = NULL);
 
 template<class V, class M, class I>
 void local_maximum(host_dense_matrix<V,M,I>& dst,
 		   host_dense_matrix<V,M,I>& img,
-		   int poolSize);
+		   int poolSize,
+		   host_dense_matrix<int,row_major>* indices = NULL);
 
 template<class V, class M, class I>
 void supersample(host_dense_matrix<V,M,I>& dst,
 		host_dense_matrix<V,M,I>& img,
-		int factor);
+		int factor,
+		host_dense_matrix<int,row_major>* indices = NULL);
 
 template<class V, class M, class I>
 void supersample(dev_dense_matrix<V,M,I>& dst,
 		dev_dense_matrix<V,M,I>& img,
-		int factor);
+		int factor,
+		dev_dense_matrix<int,row_major>* indices = NULL);
 
 template<class V, class M, class I>
 void reorder(dev_dense_matrix<V,M,I>& A,

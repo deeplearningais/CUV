@@ -277,11 +277,15 @@ void convolve3(host_dense_matrix<float,row_major>& dst,
 	printf("convolve3 NYI on host!\n");
 }
 
+#include <iostream>
+using namespace std;
 
+/* Optinal argument: matrix to store local indices of the maxima */
 template<>
 void local_maximum(dev_dense_matrix<float,row_major>& dst,
 		  dev_dense_matrix<float,row_major>&   img,
-		  int poolSize) {
+		  int poolSize,
+		  dev_dense_matrix<int,row_major>* indices) {
 	int numImages = img.h();
 	int imgPixels = img.w();
 	int regionsPerImage = imgPixels / (poolSize * poolSize);
@@ -304,13 +308,20 @@ void local_maximum(dev_dense_matrix<float,row_major>& dst,
 	gridToMatrix(&nv_img, &nv_trans, poolSize, true);
 	nv_trans.max(1, nv_dst);
 
+	// if necessary, store index of the maximum
+	if(indices != NULL) {
+		dev_dense_matrix<float, column_major> trans(poolSize * poolSize, numImages * regionsPerImage, nv_trans.getDevData(), true);
+		argmax_to_row(indices->vec(), trans);
+	}
+
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
 void local_maximum(host_dense_matrix<float,row_major>& dst,
 		  host_dense_matrix<float,row_major>&   img,
-		  int poolSize) {
+		  int poolSize,
+		  host_dense_matrix<int,row_major>* indices) {
 	int numImages = img.h();
 	int imgPixels = img.w();
 	int imgSize = sqrt(img.w());
@@ -328,6 +339,8 @@ void local_maximum(host_dense_matrix<float,row_major>& dst,
 					}
 				dst.set(i, r*dstSize+c, maxi);
 			}
+	if(indices != NULL)
+		printf("local_maximum indices NYI\n");
 }
 
 __global__
@@ -410,19 +423,33 @@ void reorder(host_dense_matrix<float,row_major>& M,
 template<>
 void supersample(dev_dense_matrix<float,row_major>& dst,
 		dev_dense_matrix<float,row_major>& img,
-		int factor) {
+		int factor,
+		dev_dense_matrix<int,row_major>* indices) {
 	int numImages = img.h();
 	int imgPixels = img.w();
 	int dstPixels = imgPixels * (factor * factor);
 	int imgSize = sqrt(img.w());
 	int dstSize = imgSize * factor;
+	int regionsPerImage = imgPixels;
 
 	cuvAssert(dstSize / factor == imgSize);
 
 	NVMatrix nv_img(img.ptr(), numImages, imgPixels, false);
 	NVMatrix nv_dst(dst.ptr(), numImages, dstPixels, false);
 
-	supersample(&nv_img, &nv_dst, factor);
+	if(indices == NULL) {
+		supersample(&nv_img, &nv_dst, factor);
+	} else {
+		// TODO: This is an awfully slow, naive implementation, basically on CPU
+		dev_dense_matrix<float,row_major> trans(numImages * regionsPerImage, factor * factor);
+		fill(trans, 0.0f);
+
+		for(int i=0; i<trans.h(); i++)
+			trans.set(i, (indices->vec())[i], img(i/regionsPerImage, i%regionsPerImage));
+		NVMatrix nv_trans(trans.ptr(), numImages * regionsPerImage, factor * factor, false);
+		matrixToGrid(&nv_trans, &nv_dst, factor, true);
+	}
+
 
 	cuvSafeCall(cudaThreadSynchronize());
 }
@@ -430,7 +457,8 @@ void supersample(dev_dense_matrix<float,row_major>& dst,
 template<>
 void supersample(host_dense_matrix<float,row_major>& dst,
 		host_dense_matrix<float,row_major>& img,
-		int factor) {
+		int factor,
+		host_dense_matrix<int,row_major>* indices) {
 	int numImages = img.h();
 	int imgSize = sqrt(img.w());
 	int dstSize = imgSize * factor;
@@ -448,6 +476,8 @@ void supersample(host_dense_matrix<float,row_major>& dst,
 			}
 		image += img.w();
 	}
+	if(indices != NULL)
+		printf("supersample indices NYI\n");
 }
 
 template<>
