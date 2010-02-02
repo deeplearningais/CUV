@@ -62,6 +62,8 @@ namespace cuv{
 						dev_dense_matrix<__value_type,column_major,__index_type> d(src.w(),src.h());
 						dst = d;
 					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
 					convert(dst.vec(), src.vec());
 				}
 
@@ -75,6 +77,8 @@ namespace cuv{
 						host_dense_matrix<__value_type,row_major,__index_type> h(src.w(),src.h());
 						dst = h;
 					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
 					convert(dst.vec(), src.vec());
 				}
 
@@ -89,6 +93,8 @@ namespace cuv{
 						dev_dense_matrix<__value_type,row_major,__index_type> d(src.w(),src.h());
 						dst = d;
 					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
 					convert(dst.vec(), src.vec());
 				}
 
@@ -102,6 +108,8 @@ namespace cuv{
 						host_dense_matrix<__value_type,column_major,__index_type> h(src.w(),src.h());
 						dst = h;
 					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
 					convert(dst.vec(), src.vec());
 				}
 
@@ -120,6 +128,8 @@ namespace cuv{
 						host_dense_matrix<__value_type,column_major,__index_type> h(src.h(),src.w());
 						dst = h;
 					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
 					convert(dst.vec(), src.vec());
 				}
 
@@ -133,6 +143,8 @@ namespace cuv{
 						host_dense_matrix<__value_type,row_major,__index_type> h(src.h(),src.w());
 						dst = h;
 					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
 					convert(dst.vec(), src.vec());
 				}
 
@@ -146,6 +158,8 @@ namespace cuv{
 						host_dense_matrix<__value_type,column_major,__index_type> h(src.h(),src.w());
 						dst = h;
 					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
 					convert(dst.vec(), src.vec());
 				}
 
@@ -159,6 +173,8 @@ namespace cuv{
 						dev_dense_matrix<__value_type,column_major,__index_type> h(src.h(),src.w());
 						dst = h;
 					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
 					convert(dst.vec(), src.vec());
 				}
 
@@ -172,6 +188,8 @@ namespace cuv{
 						host_dense_matrix<__value_type,row_major,__index_type> h(src.h(),src.w());
 						dst = h;
 					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
 					convert(dst.vec(), src.vec());
 				}
 
@@ -185,6 +203,8 @@ namespace cuv{
 						dev_dense_matrix<__value_type,row_major,__index_type> h(src.h(),src.w());
 						dst = h;
 					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
 					convert(dst.vec(), src.vec());
 				}
 
@@ -231,6 +251,8 @@ namespace cuv{
 						dst.dealloc();
 						dst = dev_dia_matrix<__value_type,__index_type>(src.h(),src.w(),src.num_dia(),src.stride(),src.row_fact());
 					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
 					cuvAssert(dst.get_offsets().ptr());
 					cuvAssert(dst.vec().ptr());
 					cuv::convert(dst.get_offsets(), src.get_offsets());
