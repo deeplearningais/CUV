@@ -166,6 +166,28 @@ namespace cuv{
 			cuvAssert(num_rows==matrix.h())
 			return new dev_dense_matrix<float,column_major>(num_rows,num_cols, matrix.ptr()+matrix.h()*start_cols,true);
 		}
+	template<>
+		host_dense_matrix<float,row_major>* blockview(
+				host_dense_matrix<float,row_major>& matrix,
+				unsigned int start_rows,
+				unsigned int num_rows,
+				unsigned int start_cols,
+				unsigned int num_cols) {
+			cuvAssert(start_cols==0);
+			cuvAssert(num_cols==matrix.w())
+			return new host_dense_matrix<float,row_major>(num_rows,num_cols, matrix.ptr()+matrix.w()*start_rows,true);
+		}
+	template<>
+		dev_dense_matrix<float,row_major>* blockview(
+				dev_dense_matrix<float,row_major>& matrix,
+				unsigned int start_rows,
+				unsigned int num_rows,
+				unsigned int start_cols,
+				unsigned int num_cols) {
+			cuvAssert(start_cols==0);
+			cuvAssert(num_cols==matrix.w())
+			return new dev_dense_matrix<float,row_major>(num_rows,num_cols, matrix.ptr()+matrix.w()*start_rows,true);
+		}
 
 	template<>
 		void prod(dev_dense_matrix<float,column_major>& dst,
