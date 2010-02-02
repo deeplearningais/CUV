@@ -189,17 +189,18 @@ void matrix_to_grid(dev_dense_matrix<float,row_major>& grid,
 
 template<>
 void sample_multinomial(dev_dense_matrix<float,row_major>& grid){
-   dev_dense_matrix<float,row_major> tmp(grid.h(),grid.w());
-   apply_binary_functor(tmp,grid,BF_COPY);
+   /*dev_dense_matrix<float,row_major> tmp(grid.h(),grid.w());*/
+   /*apply_binary_functor(tmp,grid,BF_COPY);*/
 
    dev_dense_matrix<float,row_major> rnd(grid.h(),1);
    fill_rnd_uniform(rnd.vec());
 
    NVMatrix nv_grid(grid.ptr(),grid.h(),grid.w(),false);
    NVMatrix nv_rnd(rnd.ptr(),rnd.h(),rnd.w(),false);
-   NVMatrix nv_tmp(tmp.ptr(),tmp.h(),tmp.w(),false);
+   /*NVMatrix nv_tmp(tmp.ptr(),tmp.h(),tmp.w(),false);*/
 
-   sampleMultinomial(&nv_tmp,&nv_rnd,&nv_grid); 
+   /*sampleMultinomial(&nv_tmp,&nv_rnd,&nv_grid); */
+   sampleMultinomial(&nv_grid,&nv_rnd,&nv_grid); 
    cuvSafeCall(cudaThreadSynchronize());
 }
 
@@ -222,7 +223,8 @@ void prob_max_pooling(dev_vector<float>& sums,dev_dense_matrix<float,row_major>&
 		sample_multinomial(mat);
 		reduce_to_col(sums,mat);                // now is 0 or 1
 	}else{
-		apply_scalar_functor(sums,SF_SMAX);             // sums      = (sums-1)/sums
+		/*apply_scalar_functor(sums,SF_SMAX);             // sums      = (sums-1)/sums*/
+		reduce_to_col(sums,mat);                
 	}
 	matrix_to_grid(grid,mat,poolSize);
 }

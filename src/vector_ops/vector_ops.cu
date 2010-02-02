@@ -73,7 +73,7 @@ struct uf_sqrt{  __device__  __host__       T operator()(const T& t)      const{
 template<class T>
 struct uf_abs{  __device__  __host__       T operator()(const T& t)      const{ return fabs(t); } };
 template<class T>
-struct uf_smax{  __device__  __host__      T operator()(const T& t)      const{ return ((T)1/t - (T) 1) * t; } };
+struct uf_smax{  __device__  __host__      T operator()(const T& t)      const{ return (((T)1)/t - (T) 1) * t; } };
 
 template<class T>
 struct uf_is_nan{  __device__  __host__     bool operator()(const T& t)      const{ return (t!=t) ; } };
