@@ -123,6 +123,19 @@ namespace cuv{
 					convert(dst.vec(), src.vec());
 				}
 
+			// host (row-major) --> host (row-major)
+			template<class __value_type, class __index_type>
+				static void
+				convert(        host_dense_matrix<__value_type,  row_major, __index_type>& dst,
+						const   host_dense_matrix<__value_type,  row_major, __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()){
+						host_dense_matrix<__value_type,row_major,__index_type> h(src.h(),src.w());
+						dst = h;
+					}
+					convert(dst.vec(), src.vec());
+				}
+
 			// dev (col-major) --> host (col-major) 
 			template<class __value_type, class __index_type>
 				static void
