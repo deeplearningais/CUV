@@ -127,4 +127,44 @@ BOOST_AUTO_TEST_CASE( supersampling_speed )
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
+BOOST_AUTO_TEST_CASE( maxima_plus_index_speed )
+{
+	const int c = 30;
+	const int n = 64;
+	const int p = 4;
+	const int o = n/p;
+
+	host_dense_matrix<float,row_major> h_img(c,n*n);
+	dev_dense_matrix<float,row_major> d_img(c,n*n);
+	host_dense_matrix<float,row_major> h_pooled(c,o*o);
+	dev_dense_matrix<float,row_major> d_pooled(c,o*o);
+	host_dense_matrix<int,row_major> h_indices(c,o*o);
+	dev_dense_matrix<int,row_major> d_indices(c,o*o);
+
+
+	initialize_mersenne_twister_seeds();
+
+	// part 1: calculate matrix indices
+	fill_rnd_uniform(d_img.vec());
+	convert(h_img, d_img);
+
+	MEASURE_TIME(host_max, local_maximum(h_pooled, h_img, p, &h_indices), 10 );
+	MEASURE_TIME(dev_max, local_maximum(d_pooled, d_img, p, &d_indices), 10 );
+
+	printf("Speedup pooling: %3.4f\n", host_max/dev_max);
+
+	// part 2: propagate back to those indices
+	fill_rnd_uniform(d_pooled.vec());
+	convert(h_pooled, d_pooled);
+
+	fill(h_img, 0.f);
+	fill(d_img, 0.f);
+
+	MEASURE_TIME(host_sup, supersample(h_img, h_pooled, p, &h_indices), 10 );
+	MEASURE_TIME(dev_sup, supersample(d_img, d_pooled, p, &d_indices), 10 );
+
+	printf("Speedup: %3.4f\n", host_sup/dev_sup);
+
+}
+
 BOOST_AUTO_TEST_SUITE_END()

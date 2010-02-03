@@ -422,6 +422,22 @@ void reorder(host_dense_matrix<float,row_major>& M,
 	free(temp);
 }
 
+__global__
+void supersample_kernel(float*dst, float* src, int* indices, int len, int factor, int smallLen) {
+	int tx = threadIdx.x, ty = threadIdx.y;
+	int bx = blockIdx.x, by = blockIdx.y;
+
+	dst += by * len*len + tx * len * factor + bx * factor;
+	indices += by * smallLen * smallLen + tx * smallLen + bx;
+	src += by * smallLen * smallLen + tx * smallLen + bx;
+
+	int idx = indices[0]; // coalesced???
+	int row = idx % factor;
+	int col = idx / factor;
+
+	dst[row*len + col] = *src;
+}
+
 /*
  * Supersampling takes a n x (m*m) matrix img with n images of size (m x m)
  * and a factor s. Output is a n x (m*s*m*s) matrix dst with n enlarged images
@@ -447,14 +463,12 @@ void supersample(dev_dense_matrix<float,row_major>& dst,
 	if(indices == NULL) {
 		supersample(&nv_img, &nv_dst, factor);
 	} else {
-		// TODO: This is an awfully slow, naive implementation, basically on CPU
-		dev_dense_matrix<float,row_major> trans(numImages * regionsPerImage, factor * factor);
-		fill(trans, 0.0f);
+		assert(imgSize < 512);
+		fill(dst, 0.0f);
 
-		for(int i=0; i<trans.h(); i++)
-			trans.set(i, (indices->vec())[i], img(i/regionsPerImage, i%regionsPerImage));
-		NVMatrix nv_trans(trans.ptr(), numImages * regionsPerImage, factor * factor, false);
-		matrixToGrid(&nv_trans, &nv_dst, factor, true);
+		dim3 grid(imgSize, img.h());
+		dim3 threads(min(imgSize, 512));
+		supersample_kernel<<<grid,threads>>>(dst.ptr(), img.ptr(), indices->ptr(), dstSize, factor, imgSize);
 	}
 
 	cuvSafeCall(cudaThreadSynchronize());
