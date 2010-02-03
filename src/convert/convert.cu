@@ -323,6 +323,11 @@ CONV_INST(signed char,column_major,row_major);
 CONV_INST(signed char,row_major,   column_major);
 CONV_INST(signed char,row_major,   row_major);
 
+CONV_INST(int,column_major,column_major);
+CONV_INST(int,column_major,row_major);
+CONV_INST(int,row_major,   column_major);
+CONV_INST(int,row_major,   row_major);
+
 CONV_SIMPLE_INST(float,column_major);
 CONV_SIMPLE_INST(unsigned char,column_major);
 CONV_SIMPLE_INST(signed char,column_major);
