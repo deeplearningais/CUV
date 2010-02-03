@@ -311,13 +311,15 @@ namespace cuv{
 	__global__ 
 	void matrix_plus_vector_kernel_row_major (V *A, V2* v,  I h, I w, OP op) {
 			__shared__ float scalar;
-			if (threadIdx.x == 0) {
-				scalar = v[blockIdx.x];
-			}
-			__syncthreads();
-			int stop = w;
-			for (unsigned int i = threadIdx.x; i < stop; i += blockDim.x) {
-				A[blockIdx.x * w + i] = op(A[blockIdx.x * w + i] , scalar);
+			for(int baseidx = blockIdx.x; baseidx < h; baseidx += gridDim.x){
+				if (threadIdx.x == 0) {
+					scalar = v[baseidx];
+				}
+				__syncthreads();
+				for (unsigned int i = threadIdx.x; i < w; i += blockDim.x) {
+					const int k = baseidx * w + i;
+					A[k] = op(A[k] , scalar);
+				}
 			}
 		}
 
@@ -326,7 +328,7 @@ namespace cuv{
 			void matrix_plus_col(dev_dense_matrix<V,row_major,I>& A, const dev_vector<V2,I>& v, const OP& op){
 				cuvAssert(A.h() == v.size());
 				int num_threads = min(512,A.w());
-				int num_blocks  = A.h();
+				int num_blocks  = min(1024,A.h());
 				matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
 				cuvSafeCall(cudaThreadSynchronize());
 			}
