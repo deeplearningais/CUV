@@ -2,6 +2,7 @@
 #include <cblas.h>
 
 #include <cuv_general.hpp>
+#include <3rd_party/CudaConv/nvmatrix.cuh>
 #include <thrust/functional.h>
 #include <float.h>
 #include "matrix_ops.hpp"
@@ -416,13 +417,16 @@ namespace cuv{
 	  }
 	template<class V,class I, class V2>
 	void reduce_to_col(dev_vector<V2,I>&v, const dev_dense_matrix<V,row_major,I>& m, const V& factNew, const V& factOld){
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.h() == v.size());
-		static const int BLOCK_SIZE = 16;
-		dim3 grid(1, m.h());
-		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-		// yes, we abuse the reduce_to_row kernel here :)
-		reduce_to_row_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);
+		/*cuvAssert(m.ptr() != NULL);*/
+		/*cuvAssert(m.h() == v.size());*/
+		/*static const int BLOCK_SIZE = 16;*/
+		/*dim3 grid(1, m.h());                           //TODO: make reduce_to_row kernel use grids*/
+		/*dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);*/
+		/*// yes, we abuse the reduce_to_row kernel here :)*/
+		/*reduce_to_row_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);*/
+		NVMatrix tmp(const_cast<V*>(m.ptr()),(int)m.h(),(int)m.w(),false);
+		NVMatrix dst(v.ptr(),(int)v.size(),(int)1,false);
+		tmp.aggregate(1,dst,256,NVMatrix::SUM);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
