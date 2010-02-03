@@ -49,33 +49,35 @@ template<int BLOCK_SIZE, class T, int OP>
 __global__
 void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows, T param, T factNew, T factOld) {
     __shared__ T shared[BLOCK_SIZE*BLOCK_SIZE];
-	int tx = threadIdx.x, bx=blockIdx.x;
-	int ty = threadIdx.y, by=blockIdx.y;
-	if(by*blockDim.y + ty>nCols) return;
-	int off = blockDim.x;
+	const int tx = threadIdx.x, bx=blockIdx.x;
+	const int ty = threadIdx.y, by=blockIdx.y;
+	unsigned int idx = blockIdx.y * blockDim.y + threadIdx.y;
+	for(; idx<nCols;idx+=blockDim.y*gridDim.y){
+		int off = blockDim.x;
 
-	shared[tx] = 0.f;
-	for(int my=tx; my<nRows; my += off){
-		T f = matrix[by * nRows + bx*blockDim.x + my];
+		shared[tx] = 0.f;
+		for(int my=tx; my<nRows; my += off){
+			T f = matrix[by * nRows + bx*blockDim.x + my];
 
-		if(OP==1)  f*= f;
-		if(OP==2)  f*= param;
-		if(OP==3)  f= -log(f);
-		shared[tx] +=f;
-	}
-	__syncthreads();
+			if(OP==1)  f*= f;
+			if(OP==2)  f*= param;
+			if(OP==3)  f= -log(f);
+			shared[tx] +=f;
+		}
+		__syncthreads();
 
-	int offset = blockDim.x / 2;
-	while(offset > 0) {
-		if( tx < offset)
-			shared[tx] += shared[tx+offset];
-		offset >>= 1;
+		int offset = blockDim.x / 2;
+		while(offset > 0) {
+			if( tx < offset)
+				shared[tx] += shared[tx+offset];
+			offset >>= 1;
+			__syncthreads();
+		}
+
+		if (tx == 0)
+			vector[by * blockDim.y + ty] = vector[by * blockDim.y + ty] * factOld + shared[0] * factNew;
 		__syncthreads();
 	}
-
-	if (tx == 0)
-		vector[by * blockDim.y + ty] = vector[by * blockDim.y + ty] * factOld + shared[0] * factNew;
-	__syncthreads();
 }
 
 
@@ -313,9 +315,9 @@ namespace cuv{
 				scalar = v[blockIdx.x];
 			}
 			__syncthreads();
-			int stop = h;
+			int stop = w;
 			for (unsigned int i = threadIdx.x; i < stop; i += blockDim.x) {
-				A[blockIdx.x * h + i] = op(A[blockIdx.x * h + i] , scalar);
+				A[blockIdx.x * w + i] = op(A[blockIdx.x * w + i] , scalar);
 			}
 		}
 
@@ -323,8 +325,8 @@ namespace cuv{
 		template<class V, class I, class V2, class OP>
 			void matrix_plus_col(dev_dense_matrix<V,row_major,I>& A, const dev_vector<V2,I>& v, const OP& op){
 				cuvAssert(A.h() == v.size());
-				int num_threads = min(512,A.h());
-				int num_blocks  = A.w();
+				int num_threads = min(512,A.w());
+				int num_blocks  = A.h();
 				matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
 				cuvSafeCall(cudaThreadSynchronize());
 			}
