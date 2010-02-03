@@ -1,4 +1,5 @@
 #define BOOST_TEST_MODULE example
+#include <iostream>
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 
@@ -48,8 +49,8 @@ BOOST_AUTO_TEST_CASE( random_normal_nan )
 	for(int iter=0;iter<10000;iter++){
 		add_rnd_normal(large);
 		//add_rnd_normal(x);
-		BOOST_CHECK( ! has_nan(large) );
-		BOOST_CHECK( ! has_inf(large) );
+		BOOST_REQUIRE( ! has_nan(large) );
+		BOOST_REQUIRE( ! has_inf(large) );
 		//BOOST_CHECK( ! has_nan(x) );
 	}
 }

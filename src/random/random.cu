@@ -286,11 +286,11 @@ template<class value_type>
 struct binarize{
 	__device__
 	void operator()(value_type* dst, const int& n) const {
-		unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+		unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 		if( idx >= n ) return;
 		/*__shared__ MersenneTwisterState mtState;*/
 		MersenneTwisterState mtState = gStates[idx];
-		for(int i=idx; i<n; i += __mul24(blockDim.x , gridDim.x))
+		for(int i=idx; i<n; i += blockDim.x * gridDim.x)
 			 dst[i] = ((value_type(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f) < dst[i]);
 		gStates[idx] = mtState;
 	}
@@ -307,10 +307,11 @@ struct rnd_uniform{
  
 	__device__
 	void operator()(value_type* dst, const int& n) const {
-		unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+		unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 		if( idx >= n ) return;
+		/*__shared__ MersenneTwisterState mtState;*/
 		MersenneTwisterState mtState = gStates[idx];
-		for(int i=idx; i<n; i += __mul24(blockDim.x , gridDim.x))
+		for(int i=idx; i<n; i += blockDim.x * gridDim.x)
 			 dst[i] = value_type(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
 		gStates[idx] = mtState;
 	}
@@ -319,6 +320,7 @@ struct rnd_uniform{
 __global__
 void rnd_init_dev() {
 	unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+	/*__shared__ MersenneTwisterState mtState;*/
 	MersenneTwisterState mtState = gStates[idx];
 	MersenneTwisterInitialize(mtState, idx);
 	gStates[idx] = mtState;
@@ -331,18 +333,18 @@ struct rnd_normal {
 	__device__
 		void 
 	operator()(value_type* dst, const int& n) const {
-		unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+		unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 		if( idx >= n ) return;
 		/*__shared__ MersenneTwisterState mtState;*/
 		MersenneTwisterState mtState = gStates[idx];
 		float x,y;
-		for(unsigned int i=idx; i<n; i += __umul24(blockDim.x , gridDim.x)){
+		for(unsigned int i=idx; i<n-1; i += blockDim.x * gridDim.x){
 			 float2 tmp=dst[i]; // move up so it can be done in background while we fetch random numbers
 			 do{
 				 x = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
 				 y = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
 				 BoxMuller(x, y); //transform uniform into two independent standard normals
-			 }while(y==INFINITY || x==INFINITY);
+			 }while(!isfinite(x) || !isfinite(y));
 
 			 dst[i] = make_float2(x+tmp.x,y+tmp.y);
 		}
