@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
 	convert(hV2, dV);
 
 	for(int i=0;i<30;i++)
-		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.01);
+		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.1);
 }
 
 BOOST_AUTO_TEST_CASE( mat_op_reduce_to_row )
@@ -279,7 +279,7 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_row )
 	convert(hV2, dV);
 
 	for(int i=0;i<30;i++)
-		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.01);
+		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.1);
 }
 
 BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_row )
