@@ -1,3 +1,5 @@
+#include <float.h>
+
 #include "convolution_ops.hpp"
 
 #include <convert/convert.hpp>
@@ -332,17 +334,20 @@ void local_maximum(host_dense_matrix<float,row_major>& dst,
 	for(int i=0; i < img.h(); i++)
 		for(int r=0; r<dstSize; r++)
 			for(int c=0; c<dstSize; c++) {
-				float maxi = -1000.f;
+				float maxi = -FLT_MAX;
+				int idx = 0;
 				for(int y=0; y<poolSize; y++)
 					for(int x=0; x<poolSize; x++) {
 						float val = img(i, (r*poolSize+y)*imgSize + c*poolSize+x);
-						if(maxi < val)
+						if(maxi < val) {
 							maxi = val;
+							idx = y+poolSize*x; // transpose here, because dev code also transposes
+						}
 					}
 				dst.set(i, r*dstSize+c, maxi);
+				if(indices != NULL)
+					indices->set(i, r*dstSize+c, idx);
 			}
-	if(indices != NULL)
-		printf("local_maximum indices NYI\n");
 }
 
 __global__
@@ -452,7 +457,6 @@ void supersample(dev_dense_matrix<float,row_major>& dst,
 		matrixToGrid(&nv_trans, &nv_dst, factor, true);
 	}
 
-
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
@@ -470,16 +474,29 @@ void supersample(host_dense_matrix<float,row_major>& dst,
 	float* image = img.ptr();
 	float* target = dst.ptr();
 
-	for(int i = 0; i < numImages; i++) {
-		for(int r = 0; r < dstSize; r++)
-			for(int c = 0; c < dstSize; c++) {
-				target[0] = image[(r/factor)*imgSize+c/factor];
-				target++;
-			}
-		image += img.w();
+	if(indices != NULL) {
+		for(int i = 0; i < numImages; i++) {
+			for(int r = 0; r < imgSize; r++)
+				for(int c = 0; c < imgSize; c++) {
+					int idx = (indices->vec())[r*imgSize+c + i*imgSize*imgSize];
+					int row = idx % factor;
+					int col = idx / factor;
+					target[(r*factor+row)*dstSize + c*factor+col] = image[r*imgSize + c];
+				}
+			target += dst.w();
+			image += img.w();
+		}
+	} else {
+		for(int i = 0; i < numImages; i++) {
+			for(int r = 0; r < dstSize; r++)
+				for(int c = 0; c < dstSize; c++) {
+					target[0] = image[(r/factor)*imgSize+c/factor];
+					target++;
+				}
+			image += img.w();
+		}
 	}
-	if(indices != NULL)
-		printf("supersample indices NYI\n");
+
 }
 
 template<>

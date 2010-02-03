@@ -13,6 +13,7 @@
 #include <random.hpp>
 #include <matrix_ops/rprop.hpp>
 #include <convert.hpp>
+#include <../random/random.hpp>
 
 using namespace cuv;
 
@@ -131,5 +132,41 @@ BOOST_AUTO_TEST_CASE( copy_into_matrix )
 	copy_into(h_pad, h_img, padding);
 
 	MAT_CMP(h_pad, d_pad, 0.1);
+}
+
+BOOST_AUTO_TEST_CASE( local_maxima_index )
+{
+	initialize_mersenne_twister_seeds();
+
+	// part 1: calculate matrix indices
+	fill_rnd_uniform(d_img.vec());
+	convert(h_img, d_img);
+
+	host_dense_matrix<int,row_major> h_indices(c,o*o);
+	dev_dense_matrix<int,row_major> d_indices(c,o*o);
+
+	local_maximum(h_pooled, h_img, p, &h_indices);
+	local_maximum(d_pooled, d_img, p, &d_indices);
+
+	host_dense_matrix<int, row_major> indices2(d_indices.h(), d_indices.w());
+	convert(indices2,d_indices);
+
+	for(int i=0;i<d_indices.h();i++){
+		for(int j=0;j<d_indices.w();j++){
+			BOOST_CHECK_EQUAL( indices2(i,j), h_indices(i,j) );
+		}
+	}
+
+	// part 2: propagate back to those indices
+	fill_rnd_uniform(d_pooled.vec());
+	convert(h_pooled, d_pooled);
+
+	fill(h_img, 0.f);
+	fill(d_img, 0.f);
+
+	supersample(h_img, h_pooled, p, &h_indices);
+	supersample(d_img, d_pooled, p, &d_indices);
+
+	MAT_CMP(d_img, h_img, 0.1);
 }
 }
