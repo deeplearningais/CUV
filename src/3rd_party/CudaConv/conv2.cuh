@@ -107,8 +107,8 @@ __global__ void conv2_bw_fit_4x16_2per(float* imgs, float* filters, float* targe
                 }
 //                targets[0] = prod[0];
 //                targets[numOutputs] = prod[1];
-                targets[MUL24(y, numOutputsX) + x] = prod[0];
-                targets[MUL24(y, numOutputsX) + x + numOutputs] = prod[1];
+                targets[MUL24(y, numOutputsX) + x] += prod[0];
+                targets[MUL24(y, numOutputsX) + x + numOutputs] += prod[1];
             }
 //            targets += !checkBounds || x < numOutputsX - 16 ? 16 : numOutputsX - x;
         }
@@ -182,7 +182,7 @@ __global__ void conv2_bw_fit_4x16_1per(float* imgs, float* filters, float* targe
                     myShImg += 15;
                 }
 
-                targets[MUL24(y, numOutputsX) + x] = prod;
+                targets[MUL24(y, numOutputsX) + x] += prod;
 //                targets[0] = prod;
             }
 //            targets += !checkBounds || x < numOutputsX - 16 ? 16 : numOutputsX - x;
@@ -273,8 +273,8 @@ __global__ void conv2_bw_nofit_4x16_2per(float* imgs, float* filters, float* tar
             if (compute) {
 //                targets[0] = prod[0];
 //                targets[numOutputs] = prod[1];
-                targets[MUL24(y, numOutputsX) + x] = prod[0];
-                targets[MUL24(y, numOutputsX) + x + numOutputs] = prod[1];
+                targets[MUL24(y, numOutputsX) + x] += prod[0];
+                targets[MUL24(y, numOutputsX) + x + numOutputs] += prod[1];
             }
 
 //            targets += !checkOutputBounds || x < numOutputsX - 16 ? 16 : numOutputsX - x;
@@ -352,7 +352,7 @@ __global__ void conv2_bw_fit_16x16_1per(float* imgs, float* filters, float* targ
                     myShImg += 15;
                 }
 
-                targets[0] = prod;
+                targets[0] += prod;
             }
             targets += !checkBounds || x < numOutputsX - 16 ? 16 : numOutputsX - x;
         }
@@ -447,8 +447,8 @@ __global__ void conv2_bw_nofit_dynXYZ_2per(float* imgs, float* filters, float* t
 //        imgs += MUL24(imgSize, bXY);
     }
     if (compute) {
-        targets[0] = prod[0];
-        targets[bXY * bXY] = prod[1];
+        targets[0] += prod[0];
+        targets[bXY * bXY] += prod[1];
     }
 }
 

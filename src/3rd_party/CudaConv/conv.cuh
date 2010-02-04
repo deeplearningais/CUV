@@ -99,8 +99,8 @@ __global__ void conv_bw_fit_4x16_2per(float* imgs, float* filters, float* target
                 }
 
                 if (stride == 1) {
-                    targets[MUL24(y, numOutputsX) + x] = prod[0];
-                    targets[MUL24(y, numOutputsX) + x + numOutputs] = prod[1];
+                    targets[MUL24(y, numOutputsX) + x] += prod[0];
+                    targets[MUL24(y, numOutputsX) + x + numOutputs] += prod[1];
                 } else {
                     targets[MUL24(y, numOutputsX) + x] += prod[0];
                     targets[MUL24(y, numOutputsX) + x + numOutputs] += prod[1];
@@ -182,7 +182,7 @@ __global__ void conv_bw_fit_4x16_1per(float* imgs, float* filters, float* target
 //                    targets[0] += prod;
 //                }
                 if(stride == 1) {
-                    targets[MUL24(y, numOutputsX) + x] = prod;
+                    targets[MUL24(y, numOutputsX) + x] += prod;
                 } else {
                     targets[MUL24(y, numOutputsX) + x] += prod;
                 }
@@ -274,8 +274,8 @@ __global__ void conv_bw_nofit_4x16_2per(float* imgs, float* filters, float* targ
             }
             if (compute) {
                 if (stride == 1) {
-                    targets[MUL24(y, numOutputsX) + x] = prod[0];
-                    targets[MUL24(y, numOutputsX) + x + numOutputs] = prod[1];
+                    targets[MUL24(y, numOutputsX) + x] += prod[0];
+                    targets[MUL24(y, numOutputsX) + x + numOutputs] += prod[1];
                 } else {
                     targets[MUL24(y, numOutputsX) + x] += prod[0];
                     targets[MUL24(y, numOutputsX) + x + numOutputs] += prod[1];

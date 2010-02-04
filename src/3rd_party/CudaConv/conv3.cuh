@@ -177,7 +177,7 @@ __global__ void conv3_bw_fit_16x16(float* imgs, float* filters, float* targets, 
     } while (filters != lastFilter);
 
     if (compute) {
-        targets[0] = prod;
+        targets[0] += prod;
     }
 }
 
@@ -263,7 +263,7 @@ __global__ void conv3_bw_nofit_16x16(float* imgs, float* filters, float* targets
     } while (filters != lastFilter);
 
     if (compute) {
-        targets[0] = prod;
+        targets[0] += prod;
     }
 }
 
@@ -351,7 +351,7 @@ __global__ void conv3_bw_fit_8x16(float* imgs, float* filters, float* targets, c
         filters += filterPixels * stride;
     } while (filters != lastFilter);
     if (compute)
-        targets[0] = prod;
+        targets[0] += prod;
 //        targets[0] = outputPartY * 16 + threadIdx.y;
 }
 
