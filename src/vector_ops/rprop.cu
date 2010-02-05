@@ -15,18 +15,18 @@ __global__ void rprop_kernel(T*W, T* dW, O* dW_old, T* rate, int n) {
 	for (unsigned int i = idx; i < n; i += off){
 		O sn = (O)sgn(dW[i]);
 		O s  = dW_old[i] * sn;
-		T dwn,rn=(T)0, r=rate[i];
+		T dwn, rn=rate[i];
 
 		if ( s > 0) {
-			rn = min( ETA_P * r, DELTA_MAX );
+			rn = min( ETA_P * rn, DELTA_MAX );
 			dwn = sn * rn;
 		}
 		else if ( s < 0) {
-			rn = max( ETA_M * r, DELTA_MIN);
+			rn = max( ETA_M * rn, DELTA_MIN);
 			dwn = 0;
 		}   
 		else {
-			dwn = sn * r;
+			dwn = sn * rn;
 		}   
 		__syncthreads();
 		rate[i]   = rn;
