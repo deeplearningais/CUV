@@ -1,7 +1,7 @@
 #ifndef __RANDOM_HPP__
 #define __RANDOM_HPP__
 
-#include<dev_vector.hpp>
+#include <basics/dev_vector.hpp>
 
 namespace cuv{
 
