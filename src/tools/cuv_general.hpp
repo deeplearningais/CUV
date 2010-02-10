@@ -2,6 +2,8 @@
 #ifndef __CUV_GENERAL_HPP__
 #define __CUV_GENERAL_HPP__
 
+#define MAX_GRID_SIZE 65535
+
 // use this macro to make sure no error occurs when cuda functions are called
 #define cuvSafeCall(X)  \
   if(1){ X; cuv::checkCudaError(#X); } 

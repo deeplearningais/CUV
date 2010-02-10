@@ -509,9 +509,19 @@ namespace cuv{
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 		static const int BLOCK_SIZE = 16;
-		dim3 grid(1, m.w());
-		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-		argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h());
+		unsigned int w = m.w();
+		unsigned int u;
+		float* m_ptr = (float*) m.ptr();
+		int* v_ptr = v.ptr();
+		do {
+			u = min(w, MAX_GRID_SIZE);
+			dim3 grid(1, u);
+			dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
+			argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m_ptr,v_ptr,u,m.h());
+			m_ptr += m.h() * MAX_GRID_SIZE;
+			v_ptr += MAX_GRID_SIZE;
+			w -= MAX_GRID_SIZE;
+		} while(u == MAX_GRID_SIZE);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
@@ -520,9 +530,19 @@ namespace cuv{
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
 		static const int BLOCK_SIZE = 16;
-		dim3 grid(1, m.h());
-		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-		argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w());
+		unsigned int h = m.h();
+		unsigned int u;
+		float* m_ptr = (float*) m.ptr();
+		int* v_ptr = v.ptr();
+		do {
+			u = min(h, MAX_GRID_SIZE);
+			dim3 grid(1, u);
+			dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
+			argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m_ptr,v_ptr,u,m.w());
+			m_ptr += m.w() * MAX_GRID_SIZE;
+			v_ptr += MAX_GRID_SIZE;
+			h -= MAX_GRID_SIZE;
+		} while(u == MAX_GRID_SIZE);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
