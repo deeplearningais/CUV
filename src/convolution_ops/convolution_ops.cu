@@ -599,5 +599,109 @@ template<>
 	}
 }
 
+template<>
+	void max_pooling(host_dense_matrix<float,row_major>& dst,
+			host_dense_matrix<float,row_major>& img,
+			unsigned int poolSize,
+			unsigned int overlap,
+			host_dense_matrix<int,row_major>* indices) {
+	cuvAssert(poolSize > overlap);
+	int numImages = dst.h();
+	cuvAssert(numImages == img.h());
+	int imgSize = sqrt(img.w());
+	cuvAssert(imgSize * imgSize == img.w());
+	int stepSize = poolSize - overlap;
+	int dstSize = (imgSize - poolSize)/stepSize + 1;
+	cuvAssert(dstSize * dstSize == dst.w());
+	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
+
+	float* img_ptr = img.ptr();
+	float* dst_ptr = dst.ptr();
+
+	for(int p=0; p<numImages; p++) {
+		for(int r=0; r<dstSize; r++)
+			for(int c=0; c<dstSize; c++) {
+				float cmax = -FLT_MAX;
+				// loop through pool
+				for(int i=0; i<poolSize; i++)
+					for(int j=0; j<poolSize; j++) {
+						int idx = c*stepSize+j + (r*stepSize+i)*imgSize;
+						float val = img_ptr[idx];
+						if(cmax < val)
+							cmax = val;
+					}
+				*dst_ptr++ = cmax;
+			}
+
+		img_ptr += imgSize * imgSize;
+	}
+}
+
+// naive, but flexible implementation
+// better distinguish between different cases and load image into shared memory
+__global__
+void max_pooling_kernel(float* dst, float* img, int imgSize, int dstSize, int poolSize, int stepSize) {
+	int tx = threadIdx.x, ty = threadIdx.y;
+	int bx = blockIdx.x, by = blockIdx.y;
+
+	int p = tx + by * 256;
+	if(p >= dstSize * dstSize)
+		return;
+
+	img += bx * imgSize * imgSize;
+
+	float cmax = -FLT_MAX;
+	int column = p % dstSize;
+	int row = p / dstSize;
+
+	// loop through pool
+	for(int i=0; i<poolSize; i++)
+		for(int j=0; j<poolSize; j++) {
+			int idx = column*stepSize+j + (row*stepSize+i)*imgSize;
+			float val = img[idx];
+			if(cmax < val)
+				cmax = val;
+		}
+
+	// write result
+	dst += bx * dstSize * dstSize + p;
+	*dst = cmax;
+}
+
+
+/* This implementation only achieves a speedup of 5-10x, and is even
+ * worse if the pools do not overlap. Better use local_maximum() in this
+ * case.
+ */
+
+template<>
+	void max_pooling(dev_dense_matrix<float,row_major>& dst,
+			dev_dense_matrix<float,row_major>& img,
+			unsigned int poolSize,
+			unsigned int overlap,
+			dev_dense_matrix<int,row_major>* indices) {
+
+	cuvAssert(poolSize > overlap);
+	int numImages = dst.h();
+	cuvAssert(numImages == img.h());
+	int imgSize = sqrt(img.w());
+	cuvAssert(imgSize * imgSize == img.w());
+	int stepSize = poolSize - overlap;
+	int dstSize = (imgSize - poolSize)/stepSize + 1;
+	cuvAssert(dstSize * dstSize == dst.w());
+	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
+
+	int numThreads = 256;
+	int numBlocksX = numImages;
+	int numBlocksY = ceil((float) (dstSize * dstSize)/numThreads);
+
+	dim3 grid(numBlocksX, numBlocksY);
+	dim3 threads(numThreads);
+	max_pooling_kernel<<<grid,threads>>>(dst.ptr(), img.ptr(), imgSize, dstSize, poolSize, stepSize);
+
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
+
 }
 

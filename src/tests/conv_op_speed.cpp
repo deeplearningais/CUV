@@ -167,4 +167,29 @@ BOOST_AUTO_TEST_CASE( maxima_plus_index_speed )
 
 }
 
+BOOST_AUTO_TEST_CASE( max_pool_speed )
+{
+	const int n = 96;
+	int p = 2;
+	int l = 0;
+	const int m = (n-p)/(p-l)+1; // resulting image size
+	const int c = 100;
+
+	host_dense_matrix<float,row_major> h_img(c,n*n);
+	host_dense_matrix<float,row_major> h_dst(c,m*m);
+	host_dense_matrix<int,row_major> h_indices(c,m*m);
+
+	dev_dense_matrix<float,row_major> d_img(c,n*n);
+	dev_dense_matrix<float,row_major> d_dst(c,m*m);
+	dev_dense_matrix<int,row_major> d_indices(c,m*m);
+
+	sequence(h_img);
+	sequence(d_img);
+
+	MEASURE_TIME(host, max_pooling(h_dst, h_img, p, l, &h_indices), 10 );
+	MEASURE_TIME(dev, max_pooling(d_dst, d_img, p, l, &d_indices), 10 );
+
+	printf("Speedup: %3.4f\n", host/dev);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

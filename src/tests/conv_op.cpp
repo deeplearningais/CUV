@@ -1,6 +1,7 @@
 #define BOOST_TEST_MODULE example
 #include <cstdio>
 #include <boost/test/included/unit_test.hpp>
+#include <float.h>
 
 #include <cuv_test.hpp>
 #include <cuv_general.hpp>
@@ -169,4 +170,48 @@ BOOST_AUTO_TEST_CASE( local_maxima_index )
 
 	MAT_CMP(d_img, h_img, 0.1);
 }
+
+BOOST_AUTO_TEST_CASE( max_pool_res )
+{
+	initialize_mersenne_twister_seeds();
+
+	const int n = 64;
+	int p = 3;
+	int l = 2;
+	const int m = (n-p)/(p-l)+1; // resulting image size
+	const int c = 6;
+
+	host_dense_matrix<float,row_major> h_img(c,n*n);
+	host_dense_matrix<float,row_major> h_dst(c,m*m);
+	host_dense_matrix<int,row_major> h_indices(c,m*m);
+
+	dev_dense_matrix<float,row_major> d_img(c,n*n);
+	dev_dense_matrix<float,row_major> d_dst(c,m*m);
+	dev_dense_matrix<int,row_major> d_indices(c,m*m);
+
+	fill_rnd_uniform(h_img.vec());
+	convert(d_img, h_img);
+
+	max_pooling(h_dst, h_img, p, l, &h_indices);
+	max_pooling(d_dst, d_img, p, l, &d_indices);
+
+	for(int k=0; k<c; k++) {
+		for(int i=0; i<m; i++) {// loop through output image
+			for(int j=0; j<m; j++) {
+				float cmax = -FLT_MAX;
+				for(int q=0; q<p; q++) { // loop through pool
+					for(int r=0; r<p; r++) {
+						int idx = (j*(p-l) + r) + (i*(p-l) + q)*n;
+						if(cmax < h_img(k,idx))
+							cmax = h_img(k,idx);
+					}
+				}
+				BOOST_CHECK_EQUAL( h_dst(k,i*m+j), cmax );
+			}
+		}
+	}
+
+	MAT_CMP(d_dst, h_dst, 0.1);
+}
+
 }
