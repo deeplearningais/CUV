@@ -148,8 +148,8 @@ BOOST_AUTO_TEST_CASE( maxima_plus_index_speed )
 	fill_rnd_uniform(d_img.vec());
 	convert(h_img, d_img);
 
-	MEASURE_TIME(host_max, local_maximum(h_pooled, h_img, p, &h_indices), 10 );
-	MEASURE_TIME(dev_max, local_maximum(d_pooled, d_img, p, &d_indices), 10 );
+	MEASURE_TIME(host_max, max_pooling(h_pooled, h_img, p, 0, &h_indices), 10 );
+	MEASURE_TIME(dev_max, max_pooling(d_pooled, d_img, p, 0, &d_indices), 10 );
 
 	printf("Speedup pooling: %3.4f\n", host_max/dev_max);
 
@@ -167,11 +167,11 @@ BOOST_AUTO_TEST_CASE( maxima_plus_index_speed )
 
 }
 
-BOOST_AUTO_TEST_CASE( max_pool_speed )
+BOOST_AUTO_TEST_CASE( max_pool_with_overlap )
 {
-	const int n = 96;
-	int p = 2;
-	int l = 0;
+	const int n = 65;
+	int p = 9;
+	int l = 5;
 	const int m = (n-p)/(p-l)+1; // resulting image size
 	const int c = 100;
 

@@ -61,17 +61,6 @@ template<class V, class M, class I>
 void matrix_to_grid(dev_dense_matrix<V,M,I>& grid,
 		   dev_dense_matrix<V,M,I>& mat,
 		   int poolSize);
-template<class V, class M, class I>
-void local_maximum(dev_dense_matrix<V,M,I>& dst,
-		   dev_dense_matrix<V,M,I>& img,
-		   int poolSize,
-		   dev_dense_matrix<int,row_major>* indices = NULL);
-
-template<class V, class M, class I>
-void local_maximum(host_dense_matrix<V,M,I>& dst,
-		   host_dense_matrix<V,M,I>& img,
-		   int poolSize,
-		   host_dense_matrix<int,row_major>* indices = NULL);
 
 template<class V, class M, class I>
 void supersample(host_dense_matrix<V,M,I>& dst,
@@ -122,14 +111,14 @@ template<class V, class M, class I>
 void max_pooling(host_dense_matrix<V,M,I>& dst,
 		host_dense_matrix<V,M,I>& img,
 		unsigned int poolSize,
-		unsigned int overlap,
+		unsigned int overlap = 0,
 		host_dense_matrix<int,row_major>* indices = NULL);
 
 template<class V, class M, class I>
 void max_pooling(dev_dense_matrix<V,M,I>& dst,
 		dev_dense_matrix<V,M,I>& img,
 		unsigned int poolSize,
-		unsigned int overlap,
+		unsigned int overlap = 0,
 		dev_dense_matrix<int,row_major>* indices = NULL);
 
 }

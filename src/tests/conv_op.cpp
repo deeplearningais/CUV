@@ -72,8 +72,8 @@ BOOST_AUTO_TEST_CASE( local_maxima )
 	fill(h_dst, 0.0f);
 	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
 
-	local_maximum(h_pooled, h_img, p);
-	local_maximum(d_pooled, d_img, p);
+	max_pooling(h_pooled, h_img, p);
+	max_pooling(d_pooled, d_img, p);
 
 	host_dense_matrix<float, row_major> pooled2(d_pooled.h(), d_pooled.w());
 	convert(pooled2,d_pooled);
@@ -146,8 +146,8 @@ BOOST_AUTO_TEST_CASE( local_maxima_index )
 	host_dense_matrix<int,row_major> h_indices(c,o*o);
 	dev_dense_matrix<int,row_major> d_indices(c,o*o);
 
-	local_maximum(h_pooled, h_img, p, &h_indices);
-	local_maximum(d_pooled, d_img, p, &d_indices);
+	max_pooling(h_pooled, h_img, p, 0, &h_indices);
+	max_pooling(d_pooled, d_img, p, 0, &d_indices);
 
 	host_dense_matrix<int, row_major> indices2(d_indices.h(), d_indices.w());
 	convert(indices2,d_indices);
