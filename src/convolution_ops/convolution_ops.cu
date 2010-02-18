@@ -424,7 +424,7 @@ void reorder(host_dense_matrix<float,row_major>& M,
 
 __global__
 void supersample_kernel(float*dst, float* src, int* indices, int len, int factor, int smallLen) {
-	int tx = threadIdx.x, ty = threadIdx.y;
+	int tx = threadIdx.x; // ty = threadIdx.y;
 	int bx = blockIdx.x, by = blockIdx.y;
 
 	dst += by * len*len + tx * len * factor + bx * factor;
@@ -453,7 +453,6 @@ void supersample(dev_dense_matrix<float,row_major>& dst,
 	int dstPixels = imgPixels * (factor * factor);
 	int imgSize = sqrt(img.w());
 	int dstSize = imgSize * factor;
-	int regionsPerImage = imgPixels;
 
 	cuvAssert(dstSize / factor == imgSize);
 
@@ -621,16 +620,21 @@ template<>
 	for(int p=0; p<numImages; p++) {
 		for(int r=0; r<dstSize; r++)
 			for(int c=0; c<dstSize; c++) {
+				int imax = 0;
 				float cmax = -FLT_MAX;
 				// loop through pool
 				for(int i=0; i<poolSize; i++)
 					for(int j=0; j<poolSize; j++) {
 						int idx = c*stepSize+j + (r*stepSize+i)*imgSize;
 						float val = img_ptr[idx];
-						if(cmax < val)
+						if(cmax < val) {
 							cmax = val;
+							imax = j*poolSize+i; // transpose due to dev local_maximum() function
+						}
 					}
 				*dst_ptr++ = cmax;
+				if(indices != NULL)
+					indices->set(p, r*dstSize+c, imax);
 			}
 
 		img_ptr += imgSize * imgSize;
@@ -639,9 +643,10 @@ template<>
 
 // naive, but flexible implementation
 // better distinguish between different cases and load image into shared memory
+template<bool INDEX>
 __global__
-void max_pooling_kernel(float* dst, float* img, int imgSize, int dstSize, int poolSize, int stepSize) {
-	int tx = threadIdx.x, ty = threadIdx.y;
+void max_pooling_kernel(float* dst, float* img, int* indices, int imgSize, int dstSize, int poolSize, int stepSize) {
+	int tx = threadIdx.x; // ty = threadIdx.y;
 	int bx = blockIdx.x, by = blockIdx.y;
 
 	int p = tx + by * 256;
@@ -651,6 +656,7 @@ void max_pooling_kernel(float* dst, float* img, int imgSize, int dstSize, int po
 	img += bx * imgSize * imgSize;
 
 	float cmax = -FLT_MAX;
+	int imax = 0;
 	int column = p % dstSize;
 	int row = p / dstSize;
 
@@ -659,15 +665,22 @@ void max_pooling_kernel(float* dst, float* img, int imgSize, int dstSize, int po
 		for(int j=0; j<poolSize; j++) {
 			int idx = column*stepSize+j + (row*stepSize+i)*imgSize;
 			float val = img[idx];
-			if(cmax < val)
+			if(cmax < val) {
 				cmax = val;
+				if(INDEX)
+					imax = j*poolSize+i; // transpose due to dev local_maximum() function
+			}
 		}
 
 	// write result
 	dst += bx * dstSize * dstSize + p;
+	//	indices
+	if(INDEX) {
+		indices += bx * dstSize * dstSize + p;
+		*indices = imax;
+	}
 	*dst = cmax;
 }
-
 
 /* This implementation only achieves a speedup of 5-10x, and is even
  * worse if the pools do not overlap. Better use local_maximum() in this
@@ -697,7 +710,10 @@ template<>
 
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 threads(numThreads);
-	max_pooling_kernel<<<grid,threads>>>(dst.ptr(), img.ptr(), imgSize, dstSize, poolSize, stepSize);
+	if(indices==NULL)
+		max_pooling_kernel<false><<<grid,threads>>>(dst.ptr(), img.ptr(), NULL, imgSize, dstSize, poolSize, stepSize);
+	else
+		max_pooling_kernel<true><<<grid,threads>>>(dst.ptr(), img.ptr(), indices->ptr(), imgSize, dstSize, poolSize, stepSize);
 
 	cuvSafeCall(cudaThreadSynchronize());
 }
