@@ -212,6 +212,13 @@ BOOST_AUTO_TEST_CASE( max_pool_res )
 	}
 
 	MAT_CMP(d_dst, h_dst, 0.1);
+	MAT_CMP(d_indices, h_indices, 0.1);
+
+	// backprop step
+	super_to_max(h_img, h_dst, p, l, &h_indices);
+	super_to_max(d_img, d_dst, p, l, &d_indices);
+
+	MAT_CMP(h_img, d_img, 0.1);
 }
 
 }

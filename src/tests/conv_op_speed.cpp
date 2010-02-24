@@ -189,7 +189,12 @@ BOOST_AUTO_TEST_CASE( max_pool_with_overlap )
 	MEASURE_TIME(host, max_pooling(h_dst, h_img, p, l, &h_indices), 10 );
 	MEASURE_TIME(dev, max_pooling(d_dst, d_img, p, l, &d_indices), 10 );
 
-	printf("Speedup: %3.4f\n", host/dev);
+	printf("Speedup forward: %3.4f\n", host/dev);
+
+	MEASURE_TIME(host_bw, super_to_max(h_img, h_dst, p, l, &h_indices), 10 );
+	MEASURE_TIME(dev_bw, super_to_max(d_img, d_dst, p, l, &d_indices), 10 );
+
+	printf("Speedup backward: %3.4f\n", host_bw/dev_bw);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -84,18 +84,19 @@ void reorder(host_dense_matrix<V,M,I>& A,
 
 
 template<class V, class M, class I>
-void super_to_max(host_dense_matrix<V,M,I>& bigError,
-		host_dense_matrix<V,M,I>& smallError,
-		host_dense_matrix<V,M,I>& bigImg,
-		host_dense_matrix<V,M,I>& smallImg,
-		int factor);
+void super_to_max(host_dense_matrix<V,M,I>& dst,
+		host_dense_matrix<V,M,I>& img,
+		int poolSize,
+		int overlap = 0,
+		host_dense_matrix<int,row_major>* indices = NULL);
+
 
 template<class V, class M, class I>
-void super_to_max(dev_dense_matrix<V,M,I>& bigError,
-		dev_dense_matrix<V,M,I>& smallError,
-		dev_dense_matrix<V,M,I>& bigImg,
-		dev_dense_matrix<V,M,I>& smallImg,
-		int factor);
+void super_to_max(dev_dense_matrix<V,M,I>& dst,
+		dev_dense_matrix<V,M,I>& img,
+		int poolSize,
+		int overlap = 0,
+		dev_dense_matrix<int,row_major>* indices = NULL);
 
 template<class V, class M, class I>
 void copy_into(dev_dense_matrix<V,M,I>& dst,

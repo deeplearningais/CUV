@@ -446,45 +446,119 @@ void supersample(host_dense_matrix<float,row_major>& dst,
 
 }
 
-template<>
-void super_to_max(dev_dense_matrix<float,row_major>& bigError,
-		dev_dense_matrix<float,row_major>& smallError,
-		dev_dense_matrix<float,row_major>& bigImg,
-		dev_dense_matrix<float,row_major>& smallImg,
-		int factor) {
-	printf("Warning! superToMax() NYI!\n");
+__global__
+void super_to_max_kernel(float*dst, float* src, int* indices, int imgSize, int dstSize, int poolSize, int stepSize, int patchSize, int numPatches, int batch) {
+	int tx = threadIdx.x; // ty = threadIdx.y;
+	int bx = blockIdx.x;
+
+	int patch = tx + batch * 256;
+
+	if(patch >= numPatches * numPatches)
+		return;
+
+	int c = patch % (numPatches);
+	int r = patch / (numPatches);
+
+	dst += bx * dstSize * dstSize + c * patchSize * stepSize + r * patchSize * stepSize * dstSize;
+	src += bx * imgSize * imgSize + c * patchSize + r * patchSize * imgSize;
+	indices += bx * imgSize * imgSize + c * patchSize + r * patchSize * imgSize;
+
+	for(int i=0; i<patchSize; i++) {
+		for(int j=0; j<patchSize; j++) {
+			if(c*patchSize+j < imgSize && r*patchSize+i < imgSize) {
+				int idx = indices[0];
+				int row = idx % poolSize;
+				int col = idx / poolSize;
+				dst[col + row*dstSize] += src[0];
+			}
+
+			dst += stepSize;
+			src++;
+			indices++;
+			syncthreads();
+		}
+		dst += dstSize * stepSize - patchSize * stepSize;
+		src += imgSize - patchSize;
+		indices += imgSize - patchSize;
+	}
 }
 
 template<>
-void super_to_max(host_dense_matrix<float,row_major>& bigError,
-		host_dense_matrix<float,row_major>& smallError,
-		host_dense_matrix<float,row_major>& bigImg,
-		host_dense_matrix<float,row_major>& smallImg,
-		int factor) {
-	int numImages = smallImg.h();
-	int imgSize = sqrt(smallImg.w());
-	int dstSize = imgSize * factor;
+void super_to_max(dev_dense_matrix<float,row_major>& dst,
+		dev_dense_matrix<float,row_major>& img,
+		int poolSize,
+		int overlap,
+		dev_dense_matrix<int,row_major>* indices) {
+	cuvAssert(poolSize > overlap);
+	int numImages = dst.h();
+	cuvAssert(numImages == img.h());
+	int imgSize = sqrt(img.w());
+	cuvAssert(imgSize * imgSize == img.w());
+	int stepSize = poolSize - overlap;
+	int dstSize = (imgSize - 1) * stepSize + poolSize;
+	cuvAssert(dstSize * dstSize == dst.w());
+	cuvAssert((dstSize-poolSize)/stepSize + 1 == imgSize);
 
-	cuvAssert(dstSize / factor == imgSize);
+	// we have to split the small image into disjoint "patches", in order to
+	// avoid that data from the same patch is written to identical positions
+	int patchSize = (int) ceil(((float) poolSize)/stepSize);
+	int numPatches = ceil((float) imgSize / patchSize);
 
-	fill(bigError.vec(), 0.0f);
+	if(indices == NULL) {
+		printf("super_to_max() NYI without indices\n");
+		return;
+	}
 
-	float* be_ptr = bigError.ptr();
-	float* se_ptr = smallError.ptr();
-	float* bi_ptr = bigImg.ptr();
-	float* si_ptr = smallImg.ptr();
+	fill(dst, 0.0f);
+
+	int numThreads = 256;
+	int numBlocks = numImages;
+	int numBatches = ceil((float) (numPatches * numPatches)/numThreads); // can't spread this to multiple blocks due to overlapping borders. loop instead
+
+	for(int b = 0; b < numBatches; b++) {
+		dim3 grid(numBlocks);
+		dim3 threads(numThreads);
+		super_to_max_kernel<<<grid,threads>>>(dst.ptr(), img.ptr(), indices->ptr(), imgSize, dstSize, poolSize, stepSize, patchSize, numPatches, b);
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+}
+
+template<>
+void super_to_max(host_dense_matrix<float,row_major>& dst,
+		host_dense_matrix<float,row_major>& img,
+		int poolSize,
+		int overlap,
+		host_dense_matrix<int,row_major>* indices) {
+	cuvAssert(poolSize > overlap);
+	int numImages = dst.h();
+	cuvAssert(numImages == img.h());
+	int imgSize = sqrt(img.w());
+	cuvAssert(imgSize * imgSize == img.w());
+	int stepSize = poolSize - overlap;
+	int dstSize = (imgSize - 1) * stepSize + poolSize;
+	cuvAssert(dstSize * dstSize == dst.w());
+	cuvAssert((dstSize-poolSize)/stepSize + 1 == imgSize);
+
+	fill(dst, 0.0f);
+
+	float* img_ptr = img.ptr();
+	int* idx_ptr = indices->ptr();
+	float* dst_ptr = dst.ptr();
 
 	for(int i = 0; i < numImages; i++) {
-		for(int r = 0; r < dstSize; r++)
-			for(int c = 0; c < dstSize; c++) {
-				float val = si_ptr[(r/factor)*imgSize+c/factor];
-				if(val == bi_ptr[0])
-					be_ptr[0] = se_ptr[(r/factor)*imgSize+c/factor];
-				bi_ptr++;
-				be_ptr++;
+		for(int r = 0; r < imgSize; r++) {
+			for(int c = 0; c < imgSize; c++) {
+				int idx = *idx_ptr;
+				int row = idx % poolSize;
+				int col = idx / poolSize;
+				dst_ptr[col + row * dstSize] += *img_ptr;
+				img_ptr++;
+				idx_ptr++;
+				dst_ptr += stepSize;
 			}
-		si_ptr += smallImg.w();
-		se_ptr += smallImg.w();
+			dst_ptr += overlap + (stepSize - 1) * dstSize;
+		}
+		dst_ptr += overlap * dstSize;
 	}
 }
 
