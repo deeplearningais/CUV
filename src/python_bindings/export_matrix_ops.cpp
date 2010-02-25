@@ -149,7 +149,7 @@ void export_binary_functor() {
 template <class M>
 void export_pooling(){
 	typedef typename switch_value_type<M,int>::type Mint;
-	def("max_pool",(void (*)(M&,M&,int,Mint*))local_maximum<typename M::value_type,typename M::memory_layout,typename M::index_type>, (arg("dst"),arg("img"),arg("poolSize"),arg("optional_indices")=object()));
+	def("max_pool",(void (*)(M&,M&,unsigned int,unsigned int,Mint*))max_pooling<typename M::value_type,typename M::memory_layout,typename M::index_type>, (arg("dst"),arg("img"),arg("poolSize"),arg("overlap"),arg("optional_indices")=object()));
 	def("supersample",(void (*)(M&,M&,int,Mint*))supersample<typename M::value_type,typename M::memory_layout,typename M::index_type>,(arg("dst"),arg("img"),arg("factor"),arg("optional_indices")=object()));
 }
 
