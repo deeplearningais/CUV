@@ -733,9 +733,7 @@ template<>
 		cuvAssert(filter->w() == poolSize);
 		cuvAssert(filter->h() == poolSize);
 		cuvAssert(sizeof(float) * filter->n() <= CONST_SIZE);
-		printf("copying filter to dev (%i)\n", filter->n());
 		CUDA_SAFE_CALL( cudaMemcpyToSymbol(c_filter, filter->ptr(), sizeof(float) * filter->n(), 0, cudaMemcpyDeviceToDevice) );
-		cout << *filter << endl;
 	}
 
 	dim3 grid(numBlocksX, numBlocksY);
