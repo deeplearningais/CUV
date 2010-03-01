@@ -611,7 +611,8 @@ template<>
 			host_dense_matrix<float,row_major>& img,
 			unsigned int poolSize,
 			unsigned int overlap,
-			host_dense_matrix<int,row_major>* indices) {
+			host_dense_matrix<int,row_major>* indices,
+			host_dense_matrix<float,row_major>* filter) {
 	cuvAssert(poolSize > overlap);
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
@@ -621,6 +622,10 @@ template<>
 	int dstSize = (imgSize - poolSize)/stepSize + 1;
 	cuvAssert(dstSize * dstSize == dst.w());
 	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
+	if(filter!=NULL) {
+		cuvAssert(filter->w() == poolSize);
+		cuvAssert(filter->h() == poolSize);
+	}
 
 	float* img_ptr = img.ptr();
 	float* dst_ptr = dst.ptr();
@@ -635,6 +640,8 @@ template<>
 					for(int j=0; j<poolSize; j++) {
 						int idx = c*stepSize+j + (r*stepSize+i)*imgSize;
 						float val = img_ptr[idx];
+						if(filter!=NULL)
+							val *= (*filter)(i,j);
 						if(cmax < val) {
 							cmax = val;
 							imax = j*poolSize+i; // transpose due to dev local_maximum() function
@@ -649,9 +656,12 @@ template<>
 	}
 }
 
+#define CONST_SIZE 512
+__device__ __constant__ float c_filter[CONST_SIZE];
+
 // naive, but flexible implementation
 // better distinguish between different cases and load image into shared memory
-template<bool INDEX>
+template<bool INDEX, bool FILTER>
 __global__
 void max_pooling_kernel(float* dst, float* img, int* indices, int imgSize, int dstSize, int poolSize, int stepSize) {
 	int tx = threadIdx.x; // ty = threadIdx.y;
@@ -673,6 +683,8 @@ void max_pooling_kernel(float* dst, float* img, int* indices, int imgSize, int d
 		for(int j=0; j<poolSize; j++) {
 			int idx = column*stepSize+j + (row*stepSize+i)*imgSize;
 			float val = img[idx];
+			if(FILTER)
+				val *= (float) c_filter[i*poolSize+j];
 			if(cmax < val) {
 				cmax = val;
 				if(INDEX)
@@ -700,7 +712,8 @@ template<>
 			dev_dense_matrix<float,row_major>& img,
 			unsigned int poolSize,
 			unsigned int overlap,
-			dev_dense_matrix<int,row_major>* indices) {
+			dev_dense_matrix<int,row_major>* indices,
+			dev_dense_matrix<float, row_major>* filter) {
 
 	cuvAssert(poolSize > overlap);
 	int numImages = dst.h();
@@ -716,12 +729,25 @@ template<>
 	int numBlocksX = numImages;
 	int numBlocksY = ceil((float) (dstSize * dstSize)/numThreads);
 
+	if(filter!=NULL) {
+		cuvAssert(filter->w() == poolSize);
+		cuvAssert(filter->h() == poolSize);
+		cuvAssert(sizeof(float) * filter->n() <= CONST_SIZE);
+		printf("copying filter to dev (%i)\n", filter->n());
+		CUDA_SAFE_CALL( cudaMemcpyToSymbol(c_filter, filter->ptr(), sizeof(float) * filter->n(), 0, cudaMemcpyDeviceToDevice) );
+		cout << *filter << endl;
+	}
+
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 threads(numThreads);
-	if(indices==NULL)
-		max_pooling_kernel<false><<<grid,threads>>>(dst.ptr(), img.ptr(), NULL, imgSize, dstSize, poolSize, stepSize);
-	else
-		max_pooling_kernel<true><<<grid,threads>>>(dst.ptr(), img.ptr(), indices->ptr(), imgSize, dstSize, poolSize, stepSize);
+	if(indices==NULL && filter==NULL)
+		max_pooling_kernel<false, false><<<grid,threads>>>(dst.ptr(), img.ptr(), NULL, imgSize, dstSize, poolSize, stepSize);
+	else if(indices==NULL && filter!=NULL)
+		max_pooling_kernel<false, true><<<grid,threads>>>(dst.ptr(), img.ptr(), NULL, imgSize, dstSize, poolSize, stepSize);
+	else if(indices!=NULL && filter==NULL)
+		max_pooling_kernel<true, false><<<grid,threads>>>(dst.ptr(), img.ptr(), indices->ptr(), imgSize, dstSize, poolSize, stepSize);
+	else if(indices!=NULL && filter!=NULL)
+		max_pooling_kernel<true, true><<<grid,threads>>>(dst.ptr(), img.ptr(), indices->ptr(), imgSize, dstSize, poolSize, stepSize);
 
 	cuvSafeCall(cudaThreadSynchronize());
 }

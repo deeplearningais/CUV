@@ -113,14 +113,16 @@ void max_pooling(host_dense_matrix<V,M,I>& dst,
 		host_dense_matrix<V,M,I>& img,
 		unsigned int poolSize,
 		unsigned int overlap = 0,
-		host_dense_matrix<int,row_major>* indices = NULL);
+		host_dense_matrix<int,row_major>* indices = NULL,
+		host_dense_matrix<V,M,I>* filter = NULL);
 
 template<class V, class M, class I>
 void max_pooling(dev_dense_matrix<V,M,I>& dst,
 		dev_dense_matrix<V,M,I>& img,
 		unsigned int poolSize,
 		unsigned int overlap = 0,
-		dev_dense_matrix<int,row_major>* indices = NULL);
+		dev_dense_matrix<int,row_major>* indices = NULL,
+		dev_dense_matrix<V,M,I>* filter = NULL);
 
 }
 
