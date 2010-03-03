@@ -15,6 +15,7 @@ void export_dense_matrix();
 void export_matrix_ops();
 void export_random();
 void export_dia_matrix();
+void export_convolution_ops();
 
 BOOST_PYTHON_MODULE(cuv_python){
 	def("initCUDA", initCUDA);
@@ -27,4 +28,5 @@ BOOST_PYTHON_MODULE(cuv_python){
 	export_matrix_ops();
 	export_random();
 	export_dia_matrix();
+	export_convolution_ops();
 }
