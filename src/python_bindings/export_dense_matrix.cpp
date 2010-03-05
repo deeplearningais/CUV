@@ -268,22 +268,29 @@ void export_dense_matrix(){
 	export_dense_matrix_pushpull<unsigned char,column_major,column_major>("cmuc");
 	export_dense_matrix_pushpull<unsigned char,row_major,row_major>("rmuc");
 
+	export_dense_matrix_pushpull<int,column_major,column_major>("cmi");
+	export_dense_matrix_pushpull<int,row_major,row_major>("rmi");
+
 	// numpy --> host matrix
+	export_dense_matrix_views<int>();
 	export_dense_matrix_views<float>();
 	export_dense_matrix_views<signed char>();
 	export_dense_matrix_views<unsigned char>();
 
 	// numpy --> dev matrix
+	export_numpy2dev_dense_mats<int>();
 	export_numpy2dev_dense_mats<float>();
 	export_numpy2dev_dense_mats<signed char>();
 	export_numpy2dev_dense_mats<unsigned char>();
 
 	// dev matrix --> numpy matrix
+	export_dev_dense_mat2numpys<int>();
 	export_dev_dense_mat2numpys<float>();
 	export_dev_dense_mat2numpys<signed char>();
 	export_dev_dense_mat2numpys<unsigned char>();
 	
 	// host matrix --> numpy matrix
+	export_host_dense_mat2numpys<int>();
 	export_host_dense_mat2numpys<float>();
 
 	// dev cm -> dev rm
