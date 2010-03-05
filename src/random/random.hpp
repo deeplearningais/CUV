@@ -10,7 +10,7 @@ namespace cuv{
 	template<class T> void add_rnd_normal(T&);   ///< add random numbers (normally distributed, mean 0, std 1) to a matrix/vector
 	//template<class T> void fill_rnd_normal(T&);   ///< fill a matrix/vector with  numbers (normally distributed, mean 0, std 1)
 
-	void initialize_mersenne_twister_seeds();     ///< call this _once_ to initialize the mersenne twister seeds
+	void initialize_mersenne_twister_seeds(unsigned int seed = 0); ///< call this _once_ to initialize the mersenne twister seeds
 
 } // cuv
 

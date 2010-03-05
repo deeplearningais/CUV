@@ -355,7 +355,7 @@ struct rnd_normal {
 
 namespace cuv{
 	// Initialize seeds for the Mersenne Twister
-	void initialize_mersenne_twister_seeds() {
+	void initialize_mersenne_twister_seeds(unsigned int seed) {
 		mt_struct_stripped *mtStripped = new mt_struct_stripped[MT_RNG_COUNT];
 		FILE *datFile = fopen((std::string(QUOTEME(RANDOM_PATH))+"/MersenneTwister.dat").c_str(), "rb");
 		if(!datFile){
@@ -367,7 +367,7 @@ namespace cuv{
 
 		// Seed the structure with low-quality random numbers. Twisters will need "warming up"
 		// before the RNG quality improves.
-		srand(time(0));
+		srand(seed?seed:time(0));
 		for(int i = 0; i < MT_RNG_COUNT; ++ i) {
 			mtStripped[i].seed = rand();
 		}
