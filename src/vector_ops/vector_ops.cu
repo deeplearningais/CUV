@@ -89,9 +89,9 @@ template<class T>
 struct bf_sigm_temp{ __device__  __host__       T operator()(const T& t, const T& temp) const{ return ((T)1)/(((T)1)+exp(-t / (T)(temp))); } };
 
 template<class T>
-struct tf_tanh{  __device__  __host__       T operator()(const T& t, const T& x, const T& y)      const{ return (T) x * tanh((T) y * t); } };
+struct tf_tanh{  __device__  __host__       T operator()(const T& x, const T& a, const T& b)      const{ return a * tanh(b * x); } };
 template<class T>
-struct tf_dtanh{  __device__  __host__      T operator()(const T& t, const T& x, const T& y)      const{ return ((T)x) - (T) y * (t*t); } };
+struct tf_dtanh{  __device__  __host__      T operator()(const T& x, const T& a, const T& b)      const{ return b/a * (a+x) * (a-x); } };
 
 
 template<class T, class binary_functor>
