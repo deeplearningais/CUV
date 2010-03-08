@@ -1,6 +1,7 @@
 #include "rprop.hpp"
 
-#define sgn(a) (copysign(1.f,a))
+//#define sgn(a) (copysign(1.f,a))
+#define sgn(a) ((a==0) ? 0 : copysign(1.f,a))
 
 #define ETA_P 1.2f
 #define ETA_M 0.5f
@@ -10,8 +11,8 @@
 
 template<class T, class O>
 __global__ void rprop_kernel(T*W, T* dW, O* dW_old, T* rate, int n) {
-	const unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
-	int off = __mul24(blockDim.x , gridDim.x);
+	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	int off = blockDim.x * gridDim.x;
 	for (unsigned int i = idx; i < n; i += off){
 		O sn = (O)sgn(dW[i]);
 		O s  = dW_old[i] * sn;
