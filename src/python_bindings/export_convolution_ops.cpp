@@ -17,6 +17,25 @@ using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
 
+// TODO: Refactor this: its also in export_matrix_ops.cpp
+template<class MS, class V,class M, class I>
+struct ms_type {
+};
+template<class V,class M, class I>
+struct ms_type<dev_memory_space,V,M,I> {
+	typedef dev_dense_matrix<V,M,I> type;
+};
+template<class V,class M, class I>
+struct ms_type<host_memory_space,V,M,I> {
+	typedef host_dense_matrix<V,M,I> type;
+};
+template<class Mat, class NewVT>
+struct switch_value_type{
+	typedef typename ms_type<typename matrix_traits<Mat>::memory_space_type,NewVT, typename Mat::memory_layout, typename Mat::index_type>::type type;
+};
+// end: to be refactored
+
+
 template <class M>
 void export_convolve(){
 	def("convolve",(void (*)(M&,M&, M&))convolve<typename M::value_type,typename M::memory_layout,typename M::index_type>, (
@@ -38,28 +57,25 @@ void export_convolve(){
 }
 
 template <class M>
-void export_convolve_2(){
-	def("convolve",(void (*)(M&,M&, M&))convolve<>, (
-														arg("dst"),
-														arg("img"),
-														arg("filter"))
-													);
-	def("convolve2",(void (*)(M&,M&, M&, int))convolve2<>, (
-																arg("dst"),
-																arg("img"),
-																arg("filter"),
-																arg("numFilters"))
-															);
-	def("convolve3",(void (*)(M&,M&, M&))convolve3<>, (
-														arg("dst"),
-														arg("img"),
-														arg("filter"))
-													);
+void export_super_to_max(){
+	typedef typename switch_value_type<M,int>::type Mint;
+	def("super_to_max",(void (*)(M&,M&, int, int, Mint*))super_to_max<typename M::value_type, typename M::memory_layout, typename M::index_type>, (
+															arg("dst"),
+															arg("img"),
+															arg("poolsize")),
+															arg("overlap"),
+															arg("indices")
+														);
+
+
 }
 
 void export_convolution_ops(){
 	export_convolve< host_dense_matrix<float,row_major> >();
 	export_convolve< dev_dense_matrix<float,row_major> >();
+	export_super_to_max< host_dense_matrix<float,row_major> >();
+	export_super_to_max< dev_dense_matrix<float,row_major>  >();
+
 }
 
 
