@@ -107,6 +107,7 @@ export_dense_matrix_common(std::string name){
 		.def("set",    (void (mat::*)(const index_type&, const index_type&, const value_type&))(&mat::set), "set a value in the matrix")
 		//.def("vec",    (vec_type* (mat::*)())(&mat::vec_ptr), "internal memory vector", return_internal_reference<>())
 		.def("at",    (value_type (mat::*)(const index_type&,const index_type&))(&mat::operator()), "value at this position")
+		.def("resize", (void (mat::*)(const index_type&, const index_type&)) (&mat::resize), "resize dimensions")
 		.add_property("h", &mat::h)
 		.add_property("w", &mat::w)
 		.add_property("n", &mat::n)
