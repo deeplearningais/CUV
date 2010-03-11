@@ -70,11 +70,23 @@ void export_super_to_max(){
 
 }
 
+template <class M>
+void export_copy_into(){
+	def("copy_into",(void (*)(M&,M&, int))copy_into<typename M::value_type, typename M::memory_layout, typename M::index_type>, (
+															arg("dst"),
+															arg("img"),
+															arg("padding"))
+														);
+}
+
 void export_convolution_ops(){
 	export_convolve< host_dense_matrix<float,row_major> >();
 	export_convolve< dev_dense_matrix<float,row_major> >();
 	export_super_to_max< host_dense_matrix<float,row_major> >();
 	export_super_to_max< dev_dense_matrix<float,row_major>  >();
+	export_copy_into< host_dense_matrix<float,row_major> >();
+	export_copy_into< dev_dense_matrix<float,row_major>  >();
+
 
 }
 
