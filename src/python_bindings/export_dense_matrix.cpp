@@ -55,6 +55,27 @@ void export_rm_view(){
 }
 
 /*
+ * Create CM view of RM dev matrix
+ */
+template<class T,class I>
+dev_dense_matrix<T,column_major,I>*
+	make_cm_view(dev_dense_matrix<T,row_major,I> &m,int h, int w){
+	if (w==-1) {
+		w=m.h();
+		}
+	if (h==-1) {
+		h=m.w();
+	}
+	cuvAssert(w*h==m.h()*m.w());
+	return new dev_dense_matrix<T,column_major,I>(h,w,m.ptr(),true);
+}
+
+template<class T,class I>
+void export_cm_view(){
+	def("make_cm_view",make_cm_view<T,I>,(bp::arg ("matrix"),bp::arg("height")=-1,bp::arg("width")=-1),return_value_policy<manage_new_object>());
+}
+
+/*
  * Create VIEWs at the same location in memory
  */
 template<class T,class S>
@@ -296,6 +317,9 @@ void export_dense_matrix(){
 
 	// dev cm -> dev rm
 	export_rm_view<float,unsigned  int>();
+
+	// dev rm -> dev cm
+	export_cm_view<float,unsigned  int>();
 }
 
 
