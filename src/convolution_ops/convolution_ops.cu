@@ -387,8 +387,11 @@ void supersample(dev_dense_matrix<float,row_major>& dst,
 	int dstPixels = imgPixels * (factor * factor);
 	int imgSize = sqrt(img.w());
 	int dstSize = imgSize * factor;
-
+	
 	cuvAssert(dstSize / factor == imgSize);
+	
+	cuvAssert(img.w()  *factor * factor == dst.w());
+	cuvAssert(img.h()== dst.h());
 
 	NVMatrix nv_img(img.ptr(), numImages, imgPixels, false);
 	NVMatrix nv_dst(dst.ptr(), numImages, dstPixels, false);
@@ -416,6 +419,8 @@ void supersample(host_dense_matrix<float,row_major>& dst,
 	int imgSize = sqrt(img.w());
 	int dstSize = imgSize * factor;
 
+	cuvAssert(img.w()  *factor * factor == dst.w());
+	cuvAssert(img.h()== dst.h());
 	cuvAssert(dstSize / factor == imgSize);
 
 	float* image = img.ptr();

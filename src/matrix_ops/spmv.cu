@@ -96,11 +96,12 @@ namespace cuv{
 		/*    }*/
 		template<class value_type, class index_type>
 			void spmv(dev_vector<value_type,index_type>& dst, dev_dia_matrix<value_type,index_type>& A, dev_vector<value_type,index_type>& v, char transA, const float& factAv, const float& factC){
-				if(transA=='t'){
-					cuvAssert(A.w() == dst.size());
-				}else{
-					cuvAssert(A.h() == dst.size());
-				}
+				// TODO: find a good assert
+				/*if(transA=='t'){*/
+					/*cuvAssert(A.w() == dst.size());*/
+				/*}else{*/
+					/*cuvAssert(A.h() == dst.size());*/
+				/*}*/
 				spmv_dia_device(A,v,dst,transA,factAv,factC);
 			}
 
@@ -193,6 +194,11 @@ namespace cuv{
 			cuvAssert(transB == 'n');
 			cuvAssert(dst.w() == B.w());
 			cuvAssert(dst.vec_ptr());
+			if(transA=='t'){
+				cuvAssert(A.w() == dst.h());
+			}else{
+				cuvAssert(A.h() == dst.h());
+			}
 			const int num_at_same_time = min(MAX_NUM_IMGS_AT_ONCE, B.w());
 			for(int i=0; i<dst.w(); i += num_at_same_time){
 				dev_vector<float> dst_v(dst.h() * min(dst.w()-i,num_at_same_time), dst.vec().ptr()+i*dst.h(), true);
