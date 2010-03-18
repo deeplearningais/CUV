@@ -355,6 +355,7 @@ struct rnd_normal {
 
 namespace cuv{
 	// Initialize seeds for the Mersenne Twister
+	static bool g_mersenne_twister_initialized = false;
 	void initialize_mersenne_twister_seeds(unsigned int seed) {
 		mt_struct_stripped *mtStripped = new mt_struct_stripped[MT_RNG_COUNT];
 		FILE *datFile = fopen((std::string(QUOTEME(RANDOM_PATH))+"/MersenneTwister.dat").c_str(), "rb");
@@ -380,6 +381,8 @@ namespace cuv{
 
 		cuvSafeCall(cudaThreadSynchronize());
 		delete[] mtStripped;
+
+		g_mersenne_twister_initialized = true;
 	}
 
 	__global__ void kBinarize  (float* dst,int n, binarize<float> rng)    { rng(dst,n); }
@@ -389,6 +392,7 @@ namespace cuv{
 	template<>
 	void rnd_binarize(dev_vector<float>& v){
 		cuvAssert(v.ptr());
+		cuvAssert(g_mersenne_twister_initialized);
 
 		binarize<float> rng;
 		dim3 threads(512,1);
@@ -413,6 +417,7 @@ namespace cuv{
 	template<>
 	void fill_rnd_uniform(dev_vector<float>& v){
 		cuvAssert(v.ptr());
+		cuvAssert(g_mersenne_twister_initialized);
 
 		rnd_uniform<float> rng(0.f,1.f);
 		dim3 threads(512,1);
@@ -434,6 +439,7 @@ namespace cuv{
 	}
 	template<>
 	void add_rnd_normal(dev_vector<float>& v){
+		cuvAssert(g_mersenne_twister_initialized);
 		cuvAssert(v.ptr());
 		cuvAssert((v.size()%2) == 0);
 		rnd_normal<float2> rng;
