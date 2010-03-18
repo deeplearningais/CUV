@@ -171,6 +171,7 @@ namespace cuv{
 				  const float& factC){
 			cuvAssert(transB == 'n');
 			cuvAssert(dst.w() == B.w());
+			cuvAssert(dst.h() == A.h());
 			for(int i=0;i<dst.w();i++){
 				host_vector<float> dst_v(dst.h(), dst.vec().ptr()+i*dst.h(), true);
 				host_vector<float> src_v(B.h(),   B.vec().ptr()+i*B.h(), true);
@@ -187,6 +188,7 @@ namespace cuv{
 				  const float& factC){
 			cuvAssert(transB == 'n');
 			cuvAssert(dst.w() == B.w());
+			cuvAssert(dst.h() == A.h());
 			cuvAssert(dst.vec_ptr());
 			const int num_at_same_time = min(MAX_NUM_IMGS_AT_ONCE, B.w());
 			for(int i=0; i<dst.w(); i += num_at_same_time){
