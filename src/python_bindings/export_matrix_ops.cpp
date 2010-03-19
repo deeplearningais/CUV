@@ -179,10 +179,13 @@ void export_blockview(){
 template <class M>
 void export_learn_step(){
 	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<typename M::value_type,typename M::memory_layout,typename M::index_type>);
-	def("rprop",(void (*)(M&, M&, M&,M&)) rprop<typename M::value_type, typename M::value_type, typename M::memory_layout,typename M::index_type>);
+	def("rprop",
+			(void (*)(M&, M&, M&,M&, const float&))
+			rprop<typename M::value_type, typename M::value_type, typename M::memory_layout,typename M::index_type>,
+			(arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("cost")=0));
 	typedef typename M::vec_type V;
 	def("learn_step_weight_decay",(void (*)(V&, V&, const float&, const float&)) learn_step_weight_decay<V>);
-	def("rprop",(void (*)(V&, V&, V&,V&)) rprop<V,V>);
+	def("rprop",(void (*)(V&, V&, V&,V&, const float&)) rprop<V,V>);
 }
 
 template<class T>
@@ -197,7 +200,7 @@ export_multinomial_sampling(){
 	def("sample_multinomial",(void (*)(M&))sample_multinomial<typename M::value_type,typename M::memory_layout, typename M::index_type>);
 	def("grid_to_matrix",    (void (*)(M&,M&,int))grid_to_matrix<typename M::value_type,typename M::memory_layout, typename M::index_type>);
 	def("matrix_to_grid",    (void (*)(M&,M&,int))matrix_to_grid<typename M::value_type,typename M::memory_layout, typename M::index_type>);
-	def("prob_max_pooling",    (void (*)(typename M::vec_type&,M&,int,bool))prob_max_pooling<typename M::value_type,typename M::memory_layout, typename M::index_type>, (arg("pooled_layer"),arg("detection_layer"),arg("poolSize"),arg("sample")));
+	def("prob_max_pooling",    (void (*)(typename M::vec_type&,M&,int,bool))prob_max_pooling<typename M::value_type,typename M::memory_layout, typename M::index_type>, (arg("sums"),arg("detection_layer"),arg("poolSize"),arg("sample")));
 	def("prob_max_pooling",    (void (*)(M&,int,bool))prob_max_pooling<typename M::value_type,typename M::memory_layout, typename M::index_type>, (arg("detection_layer"),arg("poolSize"),arg("sample")));
 }
 
