@@ -114,6 +114,9 @@ template<>
 	cuvAssert(numFilters%16 == 0);
 	cuvAssert(filterSize*filterSize*numFilters == filter.w());
 	cuvAssert(imgSize*imgSize == img.w());
+
+	if (!(dstSize == (imgSize - filterSize + 1)))
+		std::cout << "destSize should be " << imgSize - filterSize + 1 << " but is " << dstSize;
 	cuvAssert(dstSize == imgSize - filterSize + 1);
 
 	// make NVMatrices with this data
@@ -498,9 +501,15 @@ void super_to_max(dev_dense_matrix<float,row_major>& dst,
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
 	int imgSize = sqrt(img.w());
+	if(imgSize * imgSize != img.w()){
+			cout << std::endl<<"Error: imgSize x imgSize (" <<imgSize<<")²="<< imgSize*imgSize<<" should be img.w = "<<img.w()<<std::endl;
+		}
 	cuvAssert(imgSize * imgSize == img.w());
 	int stepSize = poolSize - overlap;
 	int dstSize = (imgSize - 1) * stepSize + poolSize;
+	if(dstSize * dstSize != dst.w()){
+				cout << std::endl<<"Error: dstSize x dstSize (" <<dstSize<<")²="<< dstSize*dstSize<<" should be dst.w = "<<dst.w()<<std::endl;
+			}
 	cuvAssert(dstSize * dstSize == dst.w());
 	cuvAssert((dstSize-poolSize)/stepSize + 1 == imgSize);
 
@@ -619,6 +628,8 @@ template<>
 			host_dense_matrix<int,row_major>* indices,
 			host_dense_matrix<float,row_major>* filter) {
 	cuvAssert(poolSize > overlap);
+	//cuvAssert( dst.w() == indices.w());
+	//cuvAssert( dst.h() == indices.h());
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
 	int imgSize = sqrt(img.w());
@@ -755,6 +766,137 @@ template<>
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
+/*
+ * Block size 16x16.
+ */
+__global__ void strip_padding_kernel(float* targets, float* images, const int imgSize, const int paddingSize, const int numImages) {
+    const int imgIdx = blockIdx.y;
+
+    //check if index is still in matrix
+    if (imgIdx < numImages) {
+        const int targetSize = imgSize - 2 * paddingSize;
+        // move pointer by imgIdx images
+        images += imgIdx * imgSize * imgSize;
+
+        // move pointer by imgIdx images
+        targets += imgIdx * targetSize * targetSize;
+
+        // what is this pixels index in the source image
+        int px = blockIdx.x * blockDim.x + threadIdx.x;
+
+        // pixels coordinates
+        int x = px % imgSize;
+        int y = px / imgSize;
+        if ( x >= paddingSize && x < paddingSize+targetSize &&
+        	 y >= paddingSize && y < paddingSize+targetSize){
+            // move source pointer to this pixels index in source umage
+            images+=px;
+
+        	// move target pointer to target position,
+        	targets	+=	(y-paddingSize)*targetSize+(x-paddingSize);
+
+        	// copy contents
+        	*targets = *images;
+        }
+    }
+}
+
+/*
+ * strip padding removes a border of padding size from each picture_row
+ *
+ */
+template<>
+	void strip_padding(dev_dense_matrix<float,row_major>& dst,
+					   dev_dense_matrix<float,row_major>& img,
+					   unsigned int padding) {
+	int inputSize = sqrt(img.w());
+	int imgWidth = inputSize;
+	int outputSize = sqrt(dst.w());
+	int numImages = img.h();
+	cuvAssert(inputSize * inputSize == img.w());
+	cuvAssert(outputSize * outputSize == dst.w());
+	cuvAssert(inputSize - 2 * padding == outputSize);
+	cuvAssert(img.h() == dst.h());
+	int numThreads = 256;
+	int numBlocksX = ceil((float) (imgWidth * imgWidth)/numThreads);
+	int numBlocksY = numImages;
+	dim3 grid(numBlocksX, numBlocksY);
+	dim3 dimBlock(numThreads,1);
+	strip_padding_kernel<<<grid,dimBlock>>>(dst.ptr(), img.ptr(), imgWidth, numImages, padding);
+}
+
+template<>
+	void strip_padding(host_dense_matrix<float,row_major>& dst,
+					   host_dense_matrix<float,row_major>& img,
+					   unsigned int padding) {
+	int inputSize = sqrt(img.w());
+	int imgWidth = inputSize;
+	int outputSize = sqrt(dst.w());
+	int numImages = img.h();
+	cuvAssert(inputSize * inputSize == img.w());
+	cuvAssert(outputSize * outputSize == dst.w());
+	cuvAssert(inputSize - 2 * padding == outputSize);
+	cuvAssert(img.h() == dst.h());
+	fill(dst, 0.0f);
+
+
+	int x,y, idx, idx_padded;
+	float val;
+	int stripped_width = imgWidth - 2 * padding;
+
+	for (int imgIdx = 0; imgIdx < img.h(); imgIdx++){
+		for(int px = 0; px < img.w(); px++){
+			x = px % inputSize;
+			y = px / inputSize;
+			if ( x >=padding && x < padding+stripped_width &&
+				 y >=padding && y < padding+stripped_width)
+			{
+				idx 		=	y*inputSize+x;
+				idx_padded 	=	(y-padding)*stripped_width+(x-padding);
+				val = img(imgIdx, idx);
+				dst.set(imgIdx, idx_padded, val);
+			}
+		}
+	}
 
 }
 
+/*
+ * Block size 16x16.
+ */
+__global__ void row_ncopy_kernel(float* targets, float* row, const int imgSize, const int n) {
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    //check if index is still in matrix
+    if (idx < imgSize) {
+    	row += idx;
+    	targets += idx;
+    	for(int i=0; i < n ;i++){
+    	     *targets = *row;
+    	     targets += imgSize;
+    	}
+    }
+}
+
+/*
+ * copy 1st row n times in 1 one column
+ */
+
+template<>
+	void row_ncopy(dev_dense_matrix<float,row_major>& dst,
+				   dev_vector<float>& row,
+				   unsigned int n) {
+	int inputSize = row.size();
+	cuvAssert(n == dst.h());
+	cuvAssert(n <= 4096);
+	fill(dst, 0.0f);
+
+	int numThreads = 256;
+	int numBlocksX = ceil(inputSize/numThreads);
+	int numBlocksY = 1;
+	dim3 grid(numBlocksX, numBlocksY);
+	dim3 dimBlock(numThreads,1);
+	row_ncopy_kernel<<<grid,dimBlock>>>(dst.ptr(), row.ptr(), inputSize, n);
+}
+
+}

@@ -124,6 +124,20 @@ void max_pooling(dev_dense_matrix<V,M,I>& dst,
 		dev_dense_matrix<int,row_major>* indices = NULL,
 		dev_dense_matrix<V,M,I>* filter = NULL);
 
+template<class V, class M, class I>
+void strip_padding(dev_dense_matrix<V,M,I>& dst,
+				   dev_dense_matrix<V,M,I>& img,
+				   unsigned int padding);
+
+template<class V, class M, class I>
+void strip_padding(host_dense_matrix<V,M,I>& dst,
+				   host_dense_matrix<V,M,I>& img,
+				   unsigned int padding);
+
+template<class V, class M, class I>
+void row_ncopy(dev_dense_matrix<V,M,I>& dst,
+			   dev_vector<V,I>& row,
+			   unsigned int n);
 }
 
 

@@ -71,12 +71,28 @@ void export_super_to_max(){
 }
 
 template <class M>
-void export_copy_into(){
+void export_padding_ops(){
 	def("copy_into",(void (*)(M&,M&, int))copy_into<typename M::value_type, typename M::memory_layout, typename M::index_type>, (
 															arg("dst"),
 															arg("img"),
 															arg("padding"))
 														);
+
+	def("strip_padding",(void (*)(M&,M&, unsigned int))strip_padding<typename M::value_type, typename M::memory_layout, typename M::index_type>, (
+															arg("dst"),
+															arg("img"),
+															arg("padding"))
+														);
+}
+
+template <class M, class V>
+void export_row_ncopy(){
+	def("row_ncopy",(void (*)(M&,V&, unsigned int))row_ncopy<typename M::value_type, typename M::memory_layout, typename M::index_type>, (
+															arg("dst"),
+															arg("img"),
+															arg("rows"))
+														);
+
 }
 
 void export_convolution_ops(){
@@ -84,10 +100,10 @@ void export_convolution_ops(){
 	export_convolve< dev_dense_matrix<float,row_major> >();
 	export_super_to_max< host_dense_matrix<float,row_major> >();
 	export_super_to_max< dev_dense_matrix<float,row_major>  >();
-	export_copy_into< host_dense_matrix<float,row_major> >();
-	export_copy_into< dev_dense_matrix<float,row_major>  >();
-
-
+	export_padding_ops< host_dense_matrix<float,row_major> >();
+	export_padding_ops< dev_dense_matrix<float,row_major>  >();
+	export_padding_ops< dev_dense_matrix<float,row_major>  >();
+	export_row_ncopy< dev_dense_matrix<float,row_major>, dev_vector<float>  >();
 }
 
 
