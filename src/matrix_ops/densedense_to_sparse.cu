@@ -233,7 +233,7 @@ namespace cuv{
 					grid = dim3(bd.blocks().len);
 				else{
 					static const int div = BLOCKS_LARGE_GRID_Y;
-					cuvAssert( bd.blocks().len % div == 0 ); 
+					cuvAssert( bd.blocks().len % div == 0 );
 					int i = bd.blocks().len/div;
 					grid = dim3(div,i);
 				}
@@ -242,7 +242,7 @@ namespace cuv{
 				cuvAssert(dst.w() == B.h());
 				cuvAssert(dst.h() == A.h());
 				cuvAssert(A.w()   == B.w());
-				cuvAssert(A.w() % SPARSE_DIA_BLOCK_SIZE  == 0);
+				/*cuvAssert(A.w() % SPARSE_DIA_BLOCK_SIZE  == 0);*/
 				/*cout << "dMultiplyAdd: block:" << block.x << ", "<<block.y<<"; grid: "<<grid.x<<endl;*/
 #ifndef NDEBUG
 				/*float theoret_speedup = (dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE)) / (float)(bd.blocks().len);*/
