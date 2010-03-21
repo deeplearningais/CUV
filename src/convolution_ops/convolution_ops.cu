@@ -1,3 +1,9 @@
+/** 
+ * @file convolution_ops.cu
+ * @brief Operations used for convolution and max-pooling
+ * @ingroup convolution
+ * @date 2010-03-21
+ */
 #include <float.h>
 
 #include "convolution_ops.hpp"
@@ -15,13 +21,14 @@
 
 namespace cuv{
 
-/* Convolve N patterns (images) with F filters, resulting in N*F target images
+/**
+ * Convolve N patterns (images) with F filters, resulting in N*F target images.
  *
- * img		contains one input pattern in each row
- * filters	contains one filter in each row, number of filters must
- * 			be multiples of 16.
- * dst		holds the target images of the convolution. one row for each
- *			input image. width = dstSize^2 * numFilters
+ * @param img		contains one input pattern in each row
+ * @param filters	contains one filter in each row, number of filters must
+ * 			        be multiples of 16.
+ * @param dst		holds the target images of the convolution. one row for each
+ *			        input image. width = dstSize^2 * numFilters
  */
 template<>
 	void convolve(dev_dense_matrix<float,row_major>& dst,
@@ -48,6 +55,9 @@ template<>
 	cuvSafeCall(cudaThreadSynchronize());
 	}
 
+/**
+  * @copydoc convolve(dev_dense_matrix<float,row_major>&,dev_dense_matrix<float,row_major>&,dev_dense_matrix<float,row_major>&)
+  */
 template<>
 void convolve(host_dense_matrix<float,row_major>& dst,
 		  host_dense_matrix<float,row_major>&   img,
