@@ -1,3 +1,10 @@
+/** 
+ * @file host_dia_matrix.hpp
+ * @brief sparse matrix in DIA format on host
+ * @ingroup basics
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #ifndef __HOST_SPARSE_MATRIX_HPP__
 #define __HOST_SPARSE_MATRIX_HPP__
 

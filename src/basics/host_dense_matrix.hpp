@@ -1,3 +1,10 @@
+/** 
+ * @file host_dense_matrix.hpp
+ * @brief dense matrix on host
+ * @ingroup basics
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #ifndef __H_DENSE_MATRIX_H__
 #define __H_DENSE_MATRIX_H__
 

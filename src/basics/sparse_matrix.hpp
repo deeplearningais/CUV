@@ -1,3 +1,10 @@
+/** 
+ * @file sparse_matrix.hpp
+ * @brief base class for sparse matrices in DIA format
+ * @ingroup basics
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #ifndef __SPARSE_MATRIX_HPP__
 #define __SPARSE_MATRIX_HPP__
 #include <vector>

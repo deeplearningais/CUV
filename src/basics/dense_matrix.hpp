@@ -1,3 +1,10 @@
+/** 
+ * @file dense_matrix.hpp
+ * @brief base class for dence matrices
+ * @ingroup basics
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #ifndef __DENSE_MATRIX_HPP__
 #define __DENSE_MATRIX_HPP__
 #include <basics/vector.hpp>

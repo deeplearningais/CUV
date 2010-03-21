@@ -1,3 +1,10 @@
+/** 
+ * @file vector.hpp
+ * @brief base class for vectors
+ * @ingroup basics
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #ifndef __VECTOR_HPP__
 #define __VECTOR_HPP__
 

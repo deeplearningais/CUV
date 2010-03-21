@@ -1,3 +1,10 @@
+/** 
+ * @file matrix.hpp
+ * @brief general base class for 2D matrices
+ * @ingroup basics
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #ifndef __MATRIX_HPP__
 #define __MATRIX_HPP__
 

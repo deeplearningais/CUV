@@ -1,3 +1,10 @@
+/** 
+ * @file dev_vector.hpp
+ * @brief vector on device
+ * @ingroup basics
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #ifndef __DEV_VECTOR_HPP__
 #define __DEV_VECTOR_HPP__
 

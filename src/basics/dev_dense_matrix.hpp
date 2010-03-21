@@ -1,3 +1,10 @@
+/** 
+ * @file dev_dense_matrix.hpp
+ * @brief dense matrix on device
+ * @ingroup basics
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #ifndef __DEV_DENSE_MATRIX_H__
 #define __DEV_DENSE_MATRIX_H__
 #include <tools/cuv_general.hpp>

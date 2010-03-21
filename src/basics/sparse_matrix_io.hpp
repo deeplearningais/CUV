@@ -1,3 +1,10 @@
+/** 
+ * @file sparse_matrix_io.hpp
+ * @brief serialization of vectors and sparse matrices on host
+ * @ingroup basics
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #ifndef __SPARSE_MATRIX_IO_HPP__
 
 #include <boost/serialization/array.hpp>

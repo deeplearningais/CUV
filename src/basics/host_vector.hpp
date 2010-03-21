@@ -1,3 +1,10 @@
+/** 
+ * @file host_vector.hpp
+ * @brief vector on host
+ * @ingroup basics
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #ifndef __HOST_VECTOR_HPP__
 #define __HOST_VECTOR_HPP__
 

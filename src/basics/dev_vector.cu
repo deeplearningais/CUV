@@ -1,3 +1,10 @@
+/** 
+ * @file dev_vector.cu
+ * @brief implementation details for vector on device
+ * @ingroup basics
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #include <iostream>
 #include <stdexcept>
 #include <cuda.h>
