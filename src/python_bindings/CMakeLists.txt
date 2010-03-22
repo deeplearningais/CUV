@@ -21,6 +21,7 @@ ADD_LIBRARY(cuv_python SHARED
 	export_vector_ops.cpp
 	export_random.cpp
 	export_convolution_ops.cpp
+	export_image_ops.cpp
     )
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES OUTPUT_NAME "cuv_python")
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES PREFIX "")
@@ -33,6 +34,7 @@ TARGET_LINK_LIBRARIES( cuv_python
 		cuv_random
 		cuv_matrix_ops
 		cuv_convolution_ops
+		cuv_image_ops
         ${Boost_LIBRARIES}
         ${PYTHON_LIBRARY}
         ${CUDA_CUBLAS_LIBRARIES}

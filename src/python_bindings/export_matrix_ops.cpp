@@ -217,6 +217,8 @@ void export_matrix_ops(){
 	export_blas3<fhost,fhost,fhost>();
 	export_nullary_functor<fhost>();
 	export_nullary_functor<fdev>();
+	export_nullary_functor<uhost>();
+	export_nullary_functor<udev>();
 	export_scalar_functor<fhost>();
 	export_scalar_functor<fdev>();
 	export_binary_functor<fdev,fdev>();
