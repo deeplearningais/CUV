@@ -7,6 +7,10 @@ ADD_CUSTOM_COMMAND(
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/spmv.cu ${CMAKE_CURRENT_SOURCE_DIR}/spmv_kernel.cuh ${CMAKE_CURRENT_SOURCE_DIR}/make_spmv_header.pl
 	)
 
+ADD_CUSTOM_TARGET(
+	generateheader
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/spmv_kernel_inst.cuh)
+
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR} )
 CUDA_INCLUDE_DIRECTORIES( ${CBLAS_INCLUDE_DIRECTORY} )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} )
@@ -16,8 +20,9 @@ CUDA_ADD_LIBRARY(cuv_matrix_ops STATIC
 	densedense_to_sparse.cu
 	matrix_ops.cu
 	spmv.cu
-	${CMAKE_CURRENT_SOURCE_DIR}/spmv_kernel_inst.cuh
   )
+ADD_DEPENDENCIES(cuv_matrix_ops generateheader)
+
 CUDA_ADD_CUBLAS_TO_TARGET(cuv_matrix_ops)
 TARGET_LINK_LIBRARIES(cuv_matrix_ops ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY} ${BLAS_LIBRARIES} cuda_conv )
 install(TARGETS cuv_matrix_ops
