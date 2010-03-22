@@ -1,3 +1,9 @@
+/** 
+ * @file basic.cpp
+ * @brief tests construction and access of basic vectors and matrices
+ * @author Hannes Schulz
+ * @date 2010-03-21
+ */
 #define BOOST_TEST_MODULE example
 #include <boost/test/included/unit_test.hpp>
 
@@ -24,29 +30,49 @@ struct Fix{
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 
+/** 
+ * @test
+ * @brief create dense device matrix.
+ */
 BOOST_AUTO_TEST_CASE( create_dev_plain )
 {
 	dev_dense_matrix<float> m(16,16);
 }
 
+/** 
+ * @test 
+ * @brief view on a device vector (at same position in memory).
+ */
 BOOST_AUTO_TEST_CASE( create_dev_view )
 {
 	dev_dense_matrix<float> m(16,16);
 	dev_dense_matrix<float> m2(16,16,new dev_vector<float>(m.n(), m.ptr(), true));
 }
 
+/** 
+ * @test 
+ * @brief create a matrix using same width/height as another.
+ */
 BOOST_AUTO_TEST_CASE( create_dev_from_mat )
 {
 	dev_dense_matrix<float> m(16,16);
 	dev_dense_matrix<float> m2(&m);
 }
 
+/** 
+ * @test 
+ * @brief creation of dense host matrix and a view.
+ */
 BOOST_AUTO_TEST_CASE( create_host )
 {
 	host_dense_matrix<float> m(16,16);
 	host_dense_matrix<float> m2(16,16,new host_vector<float>(m.n(),m.ptr(),true));
 }
 
+/** 
+ * @test 
+ * @brief setting and getting for device and host vectors.
+ */
 BOOST_AUTO_TEST_CASE( set_vector_elements )
 {
 	for(int i=0; i < N; i++) {
