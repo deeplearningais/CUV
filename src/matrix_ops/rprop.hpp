@@ -23,14 +23,16 @@ template<class V, class O, class M, class I>
 void rprop(dev_dense_matrix<V,M,I>& W,
 		   dev_dense_matrix<V,M,I>& dW, 
 		   dev_dense_matrix<O,M,I>& dW_old,
-		   dev_dense_matrix<V,M,I>& rate, const float& cost=0){ rprop(W.vec(),dW.vec(),dW_old.vec(), rate.vec(),cost); 
+		   dev_dense_matrix<V,M,I>& rate,
+		   const float& decay = 0.0f){ rprop(W.vec(),dW.vec(),dW_old.vec(), rate.vec(), decay);
 }
 
 template<class V, class O, class M, class I>
 void rprop(host_dense_matrix<V,M,I>&  W,
 		   host_dense_matrix<V,M,I>& dW, 
 		   host_dense_matrix<O,M,I>& dW_old,
-		   host_dense_matrix<V,M,I>& rate, const float& cost=0){ rprop(W.vec(),dW.vec(),dW_old.vec(), rate.vec(),cost); 
+		   host_dense_matrix<V,M,I>& rate,
+		   const float& decay = 0.0f){ rprop(W.vec(),dW.vec(),dW_old.vec(), rate.vec(), decay);
 }
 }
 

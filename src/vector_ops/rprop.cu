@@ -10,7 +10,7 @@
 
 
 template<class T, class S>
-__global__ void rprop_kernel(T*W, T* dW, S* dW_old, T* rate, int n,float cost) {
+__global__ void rprop_kernel(T*W, T* dW, S* dW_old, T* rate, int n, T decay) {
 	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	int off = blockDim.x * gridDim.x;
 	for (unsigned int i = idx; i < n; i += off){
@@ -32,7 +32,7 @@ __global__ void rprop_kernel(T*W, T* dW, S* dW_old, T* rate, int n,float cost) {
 		__syncthreads();
 		rate[i]   = rn;
 		dW_old[i] = (S)sgn(dwn);
-		W[i]     = (1-cost) * W[i] + dwn;
+		W[i]      = ((T) 1 - rn * decay) * W[i] + dwn;
 	}
 } 
 
@@ -52,20 +52,20 @@ namespace cuv{
 
 	template<class V, class S, class I>
 	void
-	rprop_impl(dev_vector<V,I>& W, dev_vector<V,I>& dW, dev_vector<S,I>& dW_old, dev_vector<V,I>& rate, float cost){
-		cuvAssert(cost <1);
-		cuvAssert(cost >=0);
+	rprop_impl(dev_vector<V,I>& W, dev_vector<V,I>& dW, dev_vector<S,I>& dW_old, dev_vector<V,I>& rate, V decay){
+		cuvAssert(decay < 1);
+		cuvAssert(decay >= 0);
 		int num_threads = 512;
 		int num_blocks  = min(512,(int)ceil((float)dW.size() / num_threads));
-		rprop_kernel<<< num_threads, num_blocks>>>(W.ptr(), dW.ptr(), dW_old.ptr(), rate.ptr(), dW.size(), cost);
+		rprop_kernel<<< num_threads, num_blocks>>>(W.ptr(), dW.ptr(), dW_old.ptr(), rate.ptr(), dW.size(), decay);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
 	template<class V, class S, class I>
 	void
-	rprop_impl(host_vector<V,I>& W, host_vector<V,I>& dW, host_vector<S,I>& dW_old, host_vector<V,I>& rate, const float& cost){
-		cuvAssert(cost <1);
-		cuvAssert(cost >=0);
+	rprop_impl(host_vector<V,I>& W, host_vector<V,I>& dW, host_vector<S,I>& dW_old, host_vector<V,I>& rate, V decay){
+		cuvAssert(decay <1);
+		cuvAssert(decay >=0);
 		for (unsigned int i = 0; i < dW.size(); i++){
 			S sn = (S)sgn(dW[i]);
 			S s  = dW_old[i] * sn;
@@ -85,18 +85,18 @@ namespace cuv{
 			/*__synchthreads();*/
 			rate.set(i,rn);
 			dW_old.set(i,(S)sgn(dwn));
-			W.set(i, (1-cost)*W[i]  + dwn);
+			W.set(i, ((V) 1 - rn * decay) * W[i]  + dwn);
 		}
 	}
 
 	template<class __vector_type, class __old_vector_type>
-	void rprop(__vector_type& W, __vector_type& dW, __old_vector_type& dW_old, __vector_type& rate, const float& cost){
+	void rprop(__vector_type& W, __vector_type& dW, __old_vector_type& dW_old, __vector_type& rate, const float &decay){
 		cuvAssert(dW.ptr());
 		cuvAssert(dW_old.ptr());
 		cuvAssert(rate.ptr());
 		cuvAssert(dW.size() == dW_old.size());
 		cuvAssert(dW.size() ==  rate.size());
-		rprop_impl(W,dW,dW_old,rate,cost);
+		rprop_impl(W,dW,dW_old,rate,decay);
 	}
 
 
@@ -123,8 +123,8 @@ namespace cuv{
 	}
 
 #define RPROP_INSTANTIATE(V,S) \
-	template void rprop( host_vector<V>&, host_vector<V>&, host_vector<S>&, host_vector<V>&, const float& cost); \
-	template void rprop( dev_vector<V>&,  dev_vector<V>&, dev_vector<S>&, dev_vector<V>&, const float& cost);    
+	template void rprop( host_vector<V>&, host_vector<V>&, host_vector<S>&, host_vector<V>&m, const float&); \
+	template void rprop( dev_vector<V>&,  dev_vector<V>&, dev_vector<S>&, dev_vector<V>&, const float&);
 #define LSWD_INSTANTIATE(V) \
 	template void learn_step_weight_decay( host_vector<V>&, host_vector<V>&, const float&,const float&); \
 	template void learn_step_weight_decay( dev_vector<V>&,  dev_vector<V>&, const float&,const float&);
