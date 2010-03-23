@@ -220,6 +220,23 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col_min )
+{
+	sequence(v);
+	sequence(x);
+	dev_vector<float>  v_col(n); sequence(v_col);
+	host_vector<float> x_col(n); sequence(x_col);
+	reduce_to_col(v_col,v,RF_MAX);
+	reduce_to_col(x_col,x,RF_MAX);
+	for(int i=0;i<n;i++){
+		float v_correct = -INT_MAX;
+		for(int j=0;j<n;j++)
+			v_correct = std::max(v_correct,v(i,j));
+		BOOST_CHECK_CLOSE(v_correct,v_col[i],0.01);
+		BOOST_CHECK_CLOSE(v_col[i],x_col[i],0.01);
+	}
+}
+
 BOOST_AUTO_TEST_CASE( mat_op_divide_col )
 {
 	sequence(v);
