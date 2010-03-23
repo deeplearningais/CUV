@@ -39,6 +39,8 @@ namespace cuv{
 	  BF_MULT,
 	  BF_DIV,
 	  BF_COPY,
+	  BF_MIN,
+	  BF_MAX,
 
 	  // w/ param
 	  BF_AXPY,

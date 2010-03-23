@@ -58,6 +58,8 @@ void export_binary_functors(){
         .value("MULT", BF_MULT)
         .value("DIV", BF_DIV)
         .value("COPY", BF_COPY)
+        .value("MIN", BF_MIN)
+        .value("MAX", BF_MAX)
 
         .value("AXPY", BF_AXPY)
         .value("XPBY", BF_XPBY)

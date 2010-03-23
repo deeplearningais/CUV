@@ -340,6 +340,8 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 		case BF_SUBTRACT: thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_minus<V1,V2>()); break;
 		case BF_MULT:     thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_multiplies<V1,V2>()); break;
 		case BF_DIV:      thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_divides<V1,V2>()); break;
+		case BF_MIN:      thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_min<V1,V2>()); break;
+		case BF_MAX:      thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_max<V1,V2>()); break;
 		case BF_COPY:     thrust::copy(w_ptr, w_ptr+v.size(), v_ptr); break;
 		default: cuvAssert(false);
 	}
@@ -351,6 +353,8 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 		case BF_SUBTRACT: launch_binary_kernel(v,w,bf_minus<V1,V2>()); break;
 		case BF_MULT:     launch_binary_kernel(v,w,bf_multiplies<V1,V2>()); break;
 		case BF_DIV:      launch_binary_kernel(v,w,bf_divides<V1,V2>()); break;
+		case BF_MIN:      launch_binary_kernel(v,w,bf_min<V1,V2>()); break;
+		case BF_MAX:      launch_binary_kernel(v,w,bf_max<V1,V2>()); break;
 		case BF_COPY:     thrust::copy(w_ptr, w_ptr+v.size(), v_ptr); break;
 		default: cuvAssert(false);
 	}
