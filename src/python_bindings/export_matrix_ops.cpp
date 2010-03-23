@@ -161,7 +161,7 @@ void export_reductions(){
 	def("has_nan",(bool (*)(M&)) has_nan<typename M::value_type,typename M::memory_layout,typename M::index_type>);
 	def("norm2",(float (*)(typename M::vec_type&)) norm2<typename M::vec_type>);
 	def("norm2",(float (*)(M&)) norm2<typename M::value_type,typename M::memory_layout,typename M::index_type>);
-	def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"),arg("matrix"),arg("factor_new")=1.f,arg("factor_old")=0.f));
+	def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"),arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=1.f,arg("factor_old")=0.f));
 	def("reduce_to_row", reduce_to_row<M,typename M::vec_type>,(arg("vector"),arg("matrix"),arg("factor_new")=1.f,arg("factor_old")=0.f));
 }
 
@@ -206,6 +206,10 @@ export_multinomial_sampling(){
 
 
 void export_matrix_ops(){
+    enum_<cuv::reduce_functor>("reduce_functor")
+        .value("ADD", RF_ADD)
+        .value("ADD_SQUARED", RF_ADD_SQUARED)
+        ;
 	typedef dev_dense_matrix<float,column_major> fdev;
 	typedef host_dense_matrix<float,column_major> fhost;
 	typedef host_dense_matrix<float,row_major> fhostr;

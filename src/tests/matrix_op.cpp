@@ -209,8 +209,8 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col )
 	sequence(x);
 	dev_vector<float>  v_col(n); sequence(v_col);
 	host_vector<float> x_col(n); sequence(x_col);
-	reduce_to_col(v_col,v,1.f,0.5f);
-	reduce_to_col(x_col,x,1.f,0.5f);
+	reduce_to_col(v_col,v,RF_ADD,1.f,0.5f);
+	reduce_to_col(x_col,x,RF_ADD,1.f,0.5f);
 	for(int i=0;i<n;i++){
 		float v_correct = 0;
 		for(int j=0;j<n;j++)
@@ -250,8 +250,8 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
 	sequence(hA);
 	sequence(hV);
 
-	reduce_to_col(dV,dA,1.f,0.5f);
-	reduce_to_col(hV,hA,1.f,0.5f);
+	reduce_to_col(dV,dA,RF_ADD,1.f,0.5f);
+	reduce_to_col(hV,hA,RF_ADD,1.f,0.5f);
 
 	host_vector<float> hV2(dV.size());
 	convert(hV2, dV);

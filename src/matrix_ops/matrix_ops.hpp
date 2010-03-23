@@ -113,9 +113,14 @@ namespace cuv{
   template<class V,class M, class I> float mean(host_dense_matrix<V,M,I>& v) {return mean(v.vec());}
   template<class V,class M, class I> float var(host_dense_matrix<V,M,I>& v)  {return var(v.vec());}
 
+  enum reduce_functor{
+	  RF_ADD,
+	  RF_ADD_SQUARED,
+  };
+
   /// sum all columns of a matrix to get one sum-column
   template<class __matrix_type, class __vector_type> 
-	  void reduce_to_col(__vector_type&, const __matrix_type&, const typename __matrix_type::value_type& factNew=1.f, const typename __matrix_type::value_type& factOld=0.f);
+	  void reduce_to_col(__vector_type&, const __matrix_type&, reduce_functor rf=RF_ADD, const typename __matrix_type::value_type& factNew=1.f, const typename __matrix_type::value_type& factOld=0.f);
 
   /// sum all rows of a matrix to get one sum-row
   template<class __matrix_type, class __vector_type> 

@@ -19,7 +19,7 @@ namespace cuv
 	 * @param src unsigned char where original images are taken from
 	 * @param src_image_size  width and height of image in source
 	 * @param dst_image_size  width and height of image in destination
-	 * @param num_maps  how many maps there are in src/target
+	 * @param num_maps  how many maps there are in src
 	 * @param xshift how much to shift right
 	 * @param yshift how much to shift down
 	 */
@@ -27,7 +27,7 @@ namespace cuv
 	void image_move(__matrix_typeA& dst, const __matrix_typeB& src, 
 			const unsigned int& src_image_size, 
 			const unsigned int& dst_image_size, 
-			const unsigned int& num_maps,
+			const unsigned int& src_num_maps,
 			const int& xshift, 
 			const int& yshift);
 };
