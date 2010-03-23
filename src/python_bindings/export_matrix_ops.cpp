@@ -169,6 +169,7 @@ template <class M>
 void export_blas2(){
 	def("matrix_plus_col", matrix_plus_col<M,typename M::vec_type>);
 	def("matrix_times_col", matrix_times_col<M,typename M::vec_type>);
+	def("matrix_divide_col", matrix_divide_col<M,typename M::vec_type>);
 }
 
 template <class M>
@@ -209,6 +210,8 @@ void export_matrix_ops(){
     enum_<cuv::reduce_functor>("reduce_functor")
         .value("ADD", RF_ADD)
         .value("ADD_SQUARED", RF_ADD_SQUARED)
+        .value("MIN", RF_MIN)
+        .value("MAX", RF_MAX)
         ;
 	typedef dev_dense_matrix<float,column_major> fdev;
 	typedef host_dense_matrix<float,column_major> fhost;

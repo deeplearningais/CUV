@@ -116,6 +116,8 @@ namespace cuv{
   enum reduce_functor{
 	  RF_ADD,
 	  RF_ADD_SQUARED,
+	  RF_MAX,
+	  RF_MIN,
   };
 
   /// sum all columns of a matrix to get one sum-column
