@@ -328,7 +328,8 @@ void rnd_init_dev() {
 
 template<class value_type>
 struct rnd_normal {
-	rnd_normal() { }
+	const float m_std;
+	rnd_normal(const float& std):m_std(std) { }
  
 	__device__
 		void 
@@ -346,7 +347,7 @@ struct rnd_normal {
 				 BoxMuller(x, y); //transform uniform into two independent standard normals
 			 }while(!isfinite(x) || !isfinite(y));
 
-			 dst[i] = make_float2(x+tmp.x,y+tmp.y);
+			 dst[i] = make_float2(x+m_std*tmp.x,y+m_std*tmp.y);
 		}
 		__syncthreads();
 		gStates[idx] = mtState;
@@ -427,7 +428,7 @@ namespace cuv{
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<>
-	void add_rnd_normal(host_vector<float>& v){
+	void add_rnd_normal(host_vector<float>& v, const float& std){
 	   cuvAssert(v.ptr());
 	   host_vector<float>::value_type* ptr = v.ptr();
 	   typedef boost::mt19937 rng_type;
@@ -435,14 +436,14 @@ namespace cuv{
 	   boost::normal_distribution<float> nd;
 	   boost::variate_generator<rng_type, boost::normal_distribution<float> > die(rng, nd);
 	   for(int i=0;i<v.size();i++)
-		   *ptr++ += die();
+		   *ptr++ += std*die();
 	}
 	template<>
-	void add_rnd_normal(dev_vector<float>& v){
+	void add_rnd_normal(dev_vector<float>& v, const float& std){
 		cuvAssert(g_mersenne_twister_initialized);
 		cuvAssert(v.ptr());
 		cuvAssert((v.size()%2) == 0);
-		rnd_normal<float2> rng;
+		rnd_normal<float2> rng(std);
 		dim3 threads(512,1);
 		dim3 grid(MT_RNG_COUNT/512,1,1);
 		using namespace std;
