@@ -363,7 +363,7 @@ void convolve_bw(NVMatrix* images, NVMatrix* filters, NVMatrix* targets) {
     assert(!images->isTrans());
     assert(!filters->isTrans());
     assert(!targets->isTrans());
-    assert(imgSize > filterSize);
+    assert(imgSize >= filterSize);
 
     _convolve_bw(images->getDevData(), filters->getDevData(), targets->getDevData(),
                  numCases, numFilters, imgSize, filterSize, 1);
