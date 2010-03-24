@@ -88,7 +88,8 @@ void super_to_max(host_dense_matrix<V,M,I>& dst,
 		host_dense_matrix<V,M,I>& img,
 		int poolSize,
 		int overlap = 0,
-		host_dense_matrix<int,row_major>* indices = NULL);
+		host_dense_matrix<int,row_major>* indices = NULL,
+		host_dense_matrix<V,M,I>* filter = NULL);
 
 
 template<class V, class M, class I>
@@ -96,7 +97,8 @@ void super_to_max(dev_dense_matrix<V,M,I>& dst,
 		dev_dense_matrix<V,M,I>& img,
 		int poolSize,
 		int overlap = 0,
-		dev_dense_matrix<int,row_major>* indices = NULL);
+		dev_dense_matrix<int,row_major>* indices = NULL,
+		dev_dense_matrix<V,M,I>* filter = NULL);
 
 template<class V, class M, class I>
 void copy_into(dev_dense_matrix<V,M,I>& dst,

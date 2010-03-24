@@ -464,6 +464,10 @@ void supersample(host_dense_matrix<float,row_major>& dst,
 
 }
 
+#define CONST_SIZE 512
+__device__ __constant__ float c_filter[CONST_SIZE];
+
+template<bool FILTER>
 __global__
 void super_to_max_kernel(float*dst, float* src, int* indices, int imgSize, int dstSize, int poolSize, int stepSize, int patchSize, int numPatches, int batch) {
 	int tx = threadIdx.x; // ty = threadIdx.y;
@@ -487,7 +491,10 @@ void super_to_max_kernel(float*dst, float* src, int* indices, int imgSize, int d
 				int idx = indices[0];
 				int row = idx % poolSize;
 				int col = idx / poolSize;
-				dst[col + row*dstSize] += src[0];
+				float val = src[0];
+				if(FILTER)
+					val *= (float) c_filter[row*poolSize+col];
+				dst[col + row*dstSize] += val;
 			}
 
 			dst += stepSize;
@@ -506,7 +513,8 @@ void super_to_max(dev_dense_matrix<float,row_major>& dst,
 		dev_dense_matrix<float,row_major>& img,
 		int poolSize,
 		int overlap,
-		dev_dense_matrix<int,row_major>* indices) {
+		dev_dense_matrix<int,row_major>* indices,
+		dev_dense_matrix<float, row_major>* filter) {
 	cuvAssert(poolSize > overlap);
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
@@ -533,6 +541,13 @@ void super_to_max(dev_dense_matrix<float,row_major>& dst,
 		return;
 	}
 
+	if(filter!=NULL) {
+		cuvAssert(filter->w() == poolSize);
+		cuvAssert(filter->h() == poolSize);
+		cuvAssert(sizeof(float) * filter->n() <= CONST_SIZE);
+		CUDA_SAFE_CALL( cudaMemcpyToSymbol(c_filter, filter->ptr(), sizeof(float) * filter->n(), 0, cudaMemcpyDeviceToDevice) );
+	}
+
 	fill(dst, 0.0f);
 
 	int numThreads = 256;
@@ -542,7 +557,10 @@ void super_to_max(dev_dense_matrix<float,row_major>& dst,
 	for(int b = 0; b < numBatches; b++) {
 		dim3 grid(numBlocks);
 		dim3 threads(numThreads);
-		super_to_max_kernel<<<grid,threads>>>(dst.ptr(), img.ptr(), indices->ptr(), imgSize, dstSize, poolSize, stepSize, patchSize, numPatches, b);
+		if(filter==NULL)
+			super_to_max_kernel<false><<<grid,threads>>>(dst.ptr(), img.ptr(), indices->ptr(), imgSize, dstSize, poolSize, stepSize, patchSize, numPatches, b);
+		else
+			super_to_max_kernel<true><<<grid,threads>>>(dst.ptr(), img.ptr(), indices->ptr(), imgSize, dstSize, poolSize, stepSize, patchSize, numPatches, b);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 }
@@ -552,7 +570,8 @@ void super_to_max(host_dense_matrix<float,row_major>& dst,
 		host_dense_matrix<float,row_major>& img,
 		int poolSize,
 		int overlap,
-		host_dense_matrix<int,row_major>* indices) {
+		host_dense_matrix<int,row_major>* indices,
+		host_dense_matrix<float, row_major>* filter) {
 	cuvAssert(poolSize > overlap);
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
@@ -575,7 +594,10 @@ void super_to_max(host_dense_matrix<float,row_major>& dst,
 				int idx = *idx_ptr;
 				int row = idx % poolSize;
 				int col = idx / poolSize;
-				dst_ptr[col + row * dstSize] += *img_ptr;
+				float val = *img_ptr;
+				if(filter != NULL)
+					val *= (float) (filter->ptr())[row*poolSize+col];
+				dst_ptr[col + row * dstSize] += val;
 				img_ptr++;
 				idx_ptr++;
 				dst_ptr += stepSize;
@@ -681,9 +703,6 @@ template<>
 		img_ptr += imgSize * imgSize;
 	}
 }
-
-#define CONST_SIZE 512
-__device__ __constant__ float c_filter[CONST_SIZE];
 
 // naive, but flexible implementation
 // better distinguish between different cases and load image into shared memory
