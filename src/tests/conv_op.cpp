@@ -41,6 +41,7 @@ struct Fix{
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
+
 BOOST_AUTO_TEST_CASE( convolution )
 {
 	fill(d_dst, 0.0f);
@@ -63,6 +64,7 @@ BOOST_AUTO_TEST_CASE( convolution )
 		}
 	}
 }
+
 
 BOOST_AUTO_TEST_CASE( local_maxima )
 {
@@ -219,6 +221,83 @@ BOOST_AUTO_TEST_CASE( max_pool_res )
 	super_to_max(d_img, d_dst, p, l, &d_indices);
 
 	MAT_CMP(h_img, d_img, 0.1);
+}
+
+
+BOOST_AUTO_TEST_CASE( row_ncopy )
+{
+	sequence(d_img);
+	sequence(h_img);
+
+	d_img.resize(1, d_img.w()*d_img.h());
+	h_img.resize(1, h_img.w()*h_img.h());
+
+	int n=128;
+
+	host_dense_matrix<float, row_major> erg_h(n, h_img.w());
+	dev_dense_matrix<float, row_major> erg_d(n, d_img.w());
+	fill(erg_d, 0.0f);
+	fill(erg_h, 0.0f);
+	for(int idx = 0; idx < erg_h.w(); idx++ ){
+		for (int idy = 0; idy < n; idy++){
+			erg_h.set(idy,idx, *(h_img.vec().ptr() + idx));
+		}
+	}
+
+
+	cuv::row_ncopy(erg_d, d_img.vec(), n);
+
+	for(int i=0;i<erg_h.h();i++){
+		for(int j=0;j<erg_h.w();j++){
+			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
+			if (i>1){
+				BOOST_CHECK_CLOSE( erg_d(i,j), erg_d(i-1,j), 0.001 );
+			}
+		}
+	}
+
+}
+
+BOOST_AUTO_TEST_CASE( strip_padding )
+{
+
+	sequence(d_img);
+	//apply_scalar_functor(d_img,   SF_MULT,0.001f);
+
+	int padding=2;
+
+	int img_width 		= sqrt(d_img.w());
+	int stripped_width  = img_width-2*padding;
+	host_dense_matrix<float, row_major> erg_h(d_img.h(), stripped_width*stripped_width);
+	dev_dense_matrix<float, row_major> erg_d(d_img.h(), stripped_width*stripped_width);
+	fill(erg_d, 0.0f);
+	fill(erg_h, 0.0f);
+
+	cuv::strip_padding(erg_d, d_img, padding);
+
+	int x,y, idx, idx_padded;
+	float val;
+	for (int img=0; img<d_img.h(); img++){
+		for(int px=0; px<d_img.w(); px++){
+			x = px % img_width;
+			y = px / img_width;
+			if ( x >=padding && x < padding+stripped_width &&
+				 y >=padding && y < padding+stripped_width){
+				idx 		=	y*img_width+x;
+				idx_padded 	=	(y-padding)*stripped_width+(x-padding);
+
+				val = d_img(img,idx);
+				erg_h.set(img,idx_padded, val);
+			}
+		}
+	}
+	//std::cout << h_img ;
+
+	for(int i=0;i<erg_h.h();i++){
+		for(int j=0;j<erg_h.w();j++){
+			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
+		}
+	}
 }
 
 }
