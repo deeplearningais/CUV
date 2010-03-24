@@ -516,6 +516,24 @@ norm1(__vector_type& v){
 }
 template<class __vector_type>
 float
+maximum(__vector_type& v){
+	typedef typename __vector_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	ptr_type v_ptr(v.ptr());
+	float init=-INT_MAX;
+	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_max<float,value_type>());
+}
+template<class __vector_type>
+float
+minimum(__vector_type& v){
+	typedef typename __vector_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	ptr_type v_ptr(v.ptr());
+	float init=INT_MAX;
+	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_min<float,value_type>());
+}
+template<class __vector_type>
+float
 mean(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
@@ -559,6 +577,8 @@ var(__vector_type& v){
 #define SIMPLE_NORM(X) \
 	template bool has_inf<X>(X&); \
 	template bool has_nan<X>(X&); \
+	template float minimum<X>(X&); \
+	template float maximum<X>(X&); \
 	template float norm1<X>(X&); \
 	template float norm2<X>(X&); \
 	template float mean<X>(X&);  \

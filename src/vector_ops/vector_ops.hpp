@@ -136,6 +136,8 @@ namespace cuv{
   template<class __vector_type1> bool has_nan(__vector_type1& v);
   template<class __vector_type1> float norm2(__vector_type1& v);
   template<class __vector_type1> float norm1(__vector_type1& v);
+  template<class __vector_type1> float minimum(__vector_type1& v);
+  template<class __vector_type1> float maximum(__vector_type1& v);
   template<class __vector_type1> float mean(__vector_type1& v);
   template<class __vector_type1> float var(__vector_type1& v);
 
