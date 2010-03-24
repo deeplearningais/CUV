@@ -59,12 +59,13 @@ void export_convolve(){
 template <class M>
 void export_super_to_max(){
 	typedef typename switch_value_type<M,int>::type Mint;
-	def("super_to_max",(void (*)(M&,M&, int, int, Mint*))super_to_max<typename M::value_type, typename M::memory_layout, typename M::index_type>, (
+	def("super_to_max",(void (*)(M&,M&, int, int, Mint*,M*))super_to_max<typename M::value_type, typename M::memory_layout, typename M::index_type>, (
 															arg("dst"),
 															arg("img"),
-															arg("poolsize")),
+															arg("poolsize"),
 															arg("overlap"),
-															arg("indices")
+															arg("indices"),
+															arg("filter"))
 														);
 
 
