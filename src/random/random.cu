@@ -347,7 +347,7 @@ struct rnd_normal {
 				 BoxMuller(x, y); //transform uniform into two independent standard normals
 			 }while(!isfinite(x) || !isfinite(y));
 
-			 dst[i] = make_float2(x+m_std*tmp.x,y+m_std*tmp.y);
+			 dst[i] = make_float2(x*m_std+tmp.x,y*m_std+tmp.y);
 		}
 		__syncthreads();
 		gStates[idx] = mtState;
