@@ -64,8 +64,8 @@ void export_super_to_max(){
 															arg("img"),
 															arg("poolsize"),
 															arg("overlap"),
-															arg("indices"),
-															arg("filter"))
+															arg("indices")=object(),
+															arg("filter")=object())
 														);
 
 
