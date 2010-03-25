@@ -14,7 +14,7 @@ __global__ void rprop_kernel(T*W, T* dW, S* dW_old, T* rate, int n, T decay) {
 	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	int off = blockDim.x * gridDim.x;
 	for (unsigned int i = idx; i < n; i += off){
-		S sn = (S)sgn(dW[i]);
+		S sn = (S)sgn(dW[i] - decay*W[i]);
 		S s  = dW_old[i] * sn;
 		T dwn, rn=rate[i];
 
@@ -32,7 +32,7 @@ __global__ void rprop_kernel(T*W, T* dW, S* dW_old, T* rate, int n, T decay) {
 		__syncthreads();
 		rate[i]   = rn;
 		dW_old[i] = (S)sgn(dwn);
-		W[i]      = ((T) 1 - rn * decay) * W[i] + dwn;
+		W[i]      = W[i] + dwn;
 	}
 } 
 
