@@ -44,7 +44,11 @@ void export_vector(){
 	export_vector_common<dev_vector<unsigned char> >("dev_vector_uc");
 	export_vector_common<host_vector<unsigned char> >("host_vector_uc");
 
+	export_vector_common<dev_vector<int> >("dev_vector_int");
+	export_vector_common<host_vector<int> >("host_vector_int");
+
 	export_vector_conversion<float>();
 	export_vector_conversion<unsigned char>();
+	export_vector_conversion<int>();
 }
 

@@ -615,6 +615,8 @@ SIMPLE_INSTANTIATOR1( host_vector<signed char>, signed char );
 
 SIMPLE_INSTANTIATOR( host_vector<int> );
 SIMPLE_INSTANTIATOR1( host_vector<int>, int );
+SIMPLE_INSTANTIATOR( dev_vector<int> );
+SIMPLE_INSTANTIATOR1( dev_vector<int>, int );
 
 SIMPLE_2(host_vector<float>,host_vector<unsigned char>);
 } // cuv
