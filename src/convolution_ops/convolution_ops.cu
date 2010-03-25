@@ -18,6 +18,9 @@
 #include <conv3.cuh>
 #include <conv_util.cuh>
 #include <convCPU.h>
+#include <iostream>
+using namespace std;
+
 
 namespace cuv{
 
@@ -293,9 +296,6 @@ void convolve3(host_dense_matrix<float,row_major>& dst,
 	// TODO
 	printf("convolve3 NYI on host!\n");
 }
-
-#include <iostream>
-using namespace std;
 
 __global__
 void reorder_kernel(float*dst, float* src, int len) {
@@ -769,6 +769,10 @@ template<>
 	int dstSize = (imgSize - poolSize)/stepSize + 1;
 	cuvAssert(dstSize * dstSize == dst.w());
 	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
+	if(indices){
+		cuvAssert(indices->w() == numImages);
+		cuvAssert(indices->h() == imgSize*imgSize / (poolSize*poolSize));
+	}
 
 	int numThreads = 256;
 	int numBlocksX = numImages;
@@ -778,8 +782,9 @@ template<>
 		cuvAssert(filter->w() == poolSize);
 		cuvAssert(filter->h() == poolSize);
 		cuvAssert(sizeof(float) * filter->n() <= CONST_SIZE);
-		CUDA_SAFE_CALL( cudaMemcpyToSymbol(c_filter, filter->ptr(), sizeof(float) * filter->n(), 0, cudaMemcpyDeviceToDevice) );
+		cuvSafeCall( cudaMemcpyToSymbol(c_filter, filter->ptr(), sizeof(float) * filter->n(), 0, cudaMemcpyDeviceToDevice) );
 	}
+	cuvSafeCall(cudaThreadSynchronize());
 
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 threads(numThreads);
