@@ -81,6 +81,32 @@ __device__ uchar1 get_pixel(bool inrange, unsigned int index, uchar1 oorcolor, c
 }
 
 /**
+ * @brief fetch a pixel using texture memory/global memory depending on template param
+ */
+template<bool UseCache>
+__device__ uchar4 get_pixel(unsigned int index, const uchar4* base, uchar4 orgcolor, float dst)
+{
+		uchar4 p = fetch_x<UseCache>(base, index);
+		p.x  = dst*orgcolor.x + (1.f-dst)*p.x;
+		p.y  = dst*orgcolor.y + (1.f-dst)*p.y;
+		p.z  = dst*orgcolor.z + (1.f-dst)*p.z;
+		return p;
+}
+
+/**
+ * @brief fetch a pixel using texture memory/global memory depending on template param
+ */
+template<bool UseCache>
+__device__ uchar1 get_pixel(unsigned int index, const uchar1* base, uchar1 orgcolor, float dst)
+{
+		/*return dst*fetch_x<UseCache>(base, index) + (1.f-dst)*orgcolor.x;*/
+		uchar1 p = fetch_x<UseCache>(base, index);
+		p.x  = dst*orgcolor.x + (1.f-dst)*p.x;
+		return p;
+}
+
+
+/**
  * @brief set a pixel to gray
  */
 __device__ void set_default_color(uchar4& p){ p = make_uchar4(128,128,128,0); }
@@ -128,8 +154,6 @@ move_image_kernel(dst_pixel* dst, const pixel* src, char xshift, char yshift, un
 	
 	const int iw = blockDim.x;                  // Determine input map width
 
-	pixel default_color;
-	set_default_color(default_color);
 	
 	// Get x- and y-position of the input maps represented by the current thread
 	const int mapx = threadIdx.x;
@@ -140,6 +164,8 @@ move_image_kernel(dst_pixel* dst, const pixel* src, char xshift, char yshift, un
 	int patx, paty;
 	float patxf = 0.0f, patyf = 0.0f;
 	bool inrange;
+	pixel default_color = fetch_x<UseCache>(src, patwidth*patwidth*blockIdx.y);
+
 	if (enlarge)
 	{
 		// Calculate x- and y-position on the input pattern for this thread
@@ -157,6 +183,11 @@ move_image_kernel(dst_pixel* dst, const pixel* src, char xshift, char yshift, un
 		// Determine if the map pixel represented by the current thread shows a pixel of the pattern
 		// (inrange=true) or is filled with the default color (inrange=false)
 		inrange = (mapx >= xshift) && (mapy >= yshift) && (mapx < iw+xshift) && (mapy < iw+yshift);
+		if(!inrange){
+			char xn = max(2,min(patx,patwidth-2));
+			char yn = max(2,min(paty,patwidth-2));
+			default_color = get_pixel<UseCache>(patwidth*patwidth*blockIdx.y + patwidth*yn + xn,src, default_color,min(1.f,max(0.f,0.13f*(float)(abs(patx-xn)+abs(paty-yn))) ));
+		}
 	}
 	else
 	{
@@ -170,6 +201,11 @@ move_image_kernel(dst_pixel* dst, const pixel* src, char xshift, char yshift, un
 		// Determine if the map pixel represented by the current thread shows a pixel of the pattern
 		// (inrange=true) or is filled with the default color (inrange=false)
 		inrange = (patx >= 0) && (patx < patwidth) && (paty >= 0) && (paty < patwidth);
+		if(!inrange){
+			char xn = max(2,min(patx,patwidth-2));
+			char yn = max(2,min(paty,patwidth-2));
+			default_color = get_pixel<UseCache>(patwidth*patwidth*blockIdx.y + patwidth*yn + xn,src, default_color,min(1.f,max(0.f,0.13f*(float)(abs(patx-xn)+abs(paty-yn)) )));
+		}
 	}
 
 	// Get index of processed pattern in the current mini batch
@@ -177,7 +213,7 @@ move_image_kernel(dst_pixel* dst, const pixel* src, char xshift, char yshift, un
 
 	pixel pixel1, pixel2, pixel3, pixel4;
 	pixel ipx;
-	uchar4 graypx, grayipx;
+	uchar4 graypx,grayipx;
 
 	// Fetch colors of four adjacent pixels from texture.
 	// If out of range, use default color defined above.

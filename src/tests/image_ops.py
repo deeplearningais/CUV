@@ -20,7 +20,7 @@ def gray_test(ni):
     src = cp.push(to_cmuc(np.tile(ni,(1,4))))
     dst = cp.dev_matrix_cmf(src.h,src.w)
     cp.fill(dst,0)
-    cp.image_move(dst,src,128,128,1,0,0)
+    cp.image_move(dst,src,128,128,1,-10,-4)
     res = cp.pull(dst)
     #set_trace()
     plt.matshow(res[0:128**2,0].reshape(128,128))
@@ -28,11 +28,11 @@ def gray_test(ni):
     plt.show()
 
 def color_test(ni):
-    ts = 128*2
+    ts = 128
     src = cp.push(to_cmuc(np.tile(ni,(1,4))))
     dst = cp.dev_matrix_cmf(ts**2*3,src.w)
     cp.fill(dst,0)
-    cp.image_move(dst,src,128,ts,4,-10,10)
+    cp.image_move(dst,src,128,ts,4,-10,-4)
     res = cp.pull(dst)
     plt.matshow(res[0:ts**2,0].reshape(ts,ts), cmap = plt.cm.bone_r)
     plt.matshow(res[ts**2:2*ts**2,0].reshape(ts,ts), cmap = plt.cm.bone_r)
@@ -42,8 +42,8 @@ def color_test(ni):
 def run():
     pic = Image.open("tests/data/colored_square.jpg").resize((128,128)).convert("RGBA")
     pig = Image.open("tests/data/gray_square.gif").resize((128,128)).convert("L")
-    color_test(np.asarray(pic).reshape(128**2*4,1))
-    #gray_test( np.asarray(pig).reshape(128**2  ,1))
+    #color_test(np.asarray(pic).reshape(128**2*4,1))
+    gray_test( np.asarray(pig).reshape(128**2  ,1))
 
 if __name__ == "__main__":
     run()
