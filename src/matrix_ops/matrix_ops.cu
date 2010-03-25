@@ -70,27 +70,37 @@ void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows, T pa
 	for(; idx<nCols;idx+=blockDim.y*gridDim.y){
 		int off = blockDim.x;
 
-		shared[tx] = 0.f;
+		if     (OP==cuv::RF_MIN) shared[tx] =  INT_MAX;
+		else if(OP==cuv::RF_MAX) shared[tx] = -INT_MAX;
+		else                     shared[tx] =  0;
 		for(int my=tx; my<nRows; my += off){
 			T f = matrix[by * nRows + bx*blockDim.x + my];
 
-			if(OP==1)  f*= f;
-			if(OP==2)  f*= param;
-			if(OP==3)  f= -log(f);
-			shared[tx] +=f;
+			if(OP==cuv::RF_ADD)          shared[tx] += f;
+			if(OP==cuv::RF_ADD_SQUARED)  shared[tx] += f*f;
+			if(OP==cuv::RF_MAX)          shared[tx] = max(shared[tx],f);
+			if(OP==cuv::RF_MIN)          shared[tx] = min(shared[tx],f);
 		}
 		__syncthreads();
 
 		int offset = blockDim.x / 2;
 		while(offset > 0) {
-			if( tx < offset)
-				shared[tx] += shared[tx+offset];
+			if( tx < offset){
+				if(OP==cuv::RF_ADD)          shared[tx] += shared[tx+offset];
+				if(OP==cuv::RF_ADD_SQUARED)  shared[tx] += shared[tx+offset];
+				if(OP==cuv::RF_MAX)          shared[tx]  = max(shared[tx],shared[tx+offset]);
+				if(OP==cuv::RF_MIN)          shared[tx]  = min(shared[tx],shared[tx+offset]);
+			}
 			offset >>= 1;
 			__syncthreads();
 		}
 
-		if (tx == 0)
-			vector[by * blockDim.y + ty] = vector[by * blockDim.y + ty] * factOld + shared[0] * factNew;
+		if (tx == 0){
+			if(OP==cuv::RF_MIN || OP==cuv::RF_MAX)
+				vector[by * blockDim.y + ty] = shared[0] ;
+			else
+				vector[by * blockDim.y + ty] = vector[by * blockDim.y + ty] * factOld + shared[0] * factNew;
+		}
 		__syncthreads();
 	}
 }
@@ -451,13 +461,13 @@ namespace cuv{
 	  }
 	template<int rf,class V,class I, class V2>
 	void reduce_to_col(dev_vector<V2,I>&v, const dev_dense_matrix<V,row_major,I>& m, const V& factNew, const V& factOld){
-		/*cuvAssert(m.ptr() != NULL);*/
-		/*cuvAssert(m.h() == v.size());*/
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.h() == v.size());
 		/*static const int BLOCK_SIZE = 16;*/
 		/*dim3 grid(1, m.h());                           //TODO: make reduce_to_row kernel use grids*/
 		/*dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);*/
 		/*// yes, we abuse the reduce_to_row kernel here :)*/
-		/*reduce_to_row_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);*/
+		/*reduce_to_row_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);*/
 		cuvAssert(rf == RF_ADD); // what else does alex support?
 		NVMatrix tmp(const_cast<V*>(m.ptr()),(int)m.h(),(int)m.w(),false);
 		NVMatrix dst(v.ptr(),(int)v.size(),(int)1,false);
@@ -487,8 +497,9 @@ namespace cuv{
 	  }
 
   namespace reduce_to_row_impl{
-	  template<class V,class I, class V2>
+	  template<int rf,class V,class I, class V2>
 	  void reduce_to_row(host_vector<V2,I>&v, const host_dense_matrix<V,row_major,I>& m, const V& factNew, const V& factOld){
+		  cuvAssert(rf==RF_ADD);
 		  cuvAssert(m.ptr() != NULL);
 		  cuvAssert(m.w()   == v.size());
 		  const  V* A_ptr = m.ptr();
@@ -504,8 +515,9 @@ namespace cuv{
 			  }
 		  }
 	  }
-	  template<class V,class I, class V2>
+	  template<int rf,class V,class I, class V2>
 	  void reduce_to_row(host_vector<V2,I>&v, const host_dense_matrix<V,column_major,I>& m, const V& factNew, const V& factOld) {
+		  cuvAssert(rf==RF_ADD);
 		  cuvAssert(m.ptr() != NULL);
 		  cuvAssert(m.w()   == v.size());
 		  const  V* A_ptr = m.ptr();
@@ -522,17 +534,17 @@ namespace cuv{
 		  }
 	  }
 
-	template<class V,class I, class V2>
+	template<int rf, class V,class I, class V2>
 	void reduce_to_row(dev_vector<V2,I>&v, const dev_dense_matrix<V,column_major,I>& m, const V& factNew, const V& factOld){
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 		static const int BLOCK_SIZE = 16;
 		dim3 grid(1, m.w());
 		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-		reduce_to_row_kernel<BLOCK_SIZE,V,0><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
+		reduce_to_row_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
-	template<class V,class I, class V2>
+	template<int rf,class V,class I, class V2>
 		void reduce_to_row(dev_vector<V2,I>&v, const dev_dense_matrix<V,row_major,I>& m, const V& factNew, const V& factOld){
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w()   == v.size());
@@ -540,14 +552,29 @@ namespace cuv{
 		dim3 grid(ceil((float)m.w()/(BLOCK_SIZE/2)), 1);
 		dim3 threads(BLOCK_SIZE/2,BLOCK_SIZE*2);
 		// yes, we abuse the reduce_to_col kernel here :)
-		reduce_to_col_kernel<BLOCK_SIZE,V,RF_ADD><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);
+		reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
   }
   template<class __matrix_type, class __vector_type>
-	  void reduce_to_row(__vector_type&v, const __matrix_type& m, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld){
-		  reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld);
+	  void reduce_to_row(__vector_type&v, const __matrix_type& m,reduce_functor rf, const typename __matrix_type::value_type& factNew,   const typename __matrix_type::value_type& factOld){
+		  switch(rf){
+			  case RF_ADD: 
+				  reduce_to_row_impl::reduce_to_row<RF_ADD>(v,m,factNew,factOld);
+				  break;
+			  case RF_ADD_SQUARED: 
+				  reduce_to_row_impl::reduce_to_row<RF_ADD_SQUARED>(v,m,factNew,factOld);
+				  break;
+			  case RF_MIN: 
+				  reduce_to_row_impl::reduce_to_row<RF_MIN>(v,m,factNew,factOld);
+				  break;
+			  case RF_MAX: 
+				  reduce_to_row_impl::reduce_to_row<RF_MAX>(v,m,factNew,factOld);
+				  break;
+			  default:
+				  throw std::runtime_error("supplied reduce_functor does not exist");
+		  }
 	  }
 
 	template<>
@@ -704,16 +731,16 @@ namespace cuv{
   template void matrix_divide_col(host_dense_matrix<V,M>&, const host_vector<V>&);
 
 #define INSTANTIATE_REDCOL(V,M) \
-  template void reduce_to_row(dev_vector<V>&, const dev_dense_matrix<V,M>&, const V&,const V&); \
+  template void reduce_to_row(dev_vector<V>&, const dev_dense_matrix<V,M>&, reduce_functor,  const V&,const V&); \
   template void reduce_to_col(dev_vector<V>&, const dev_dense_matrix<V,M>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(host_vector<V>&, const host_dense_matrix<V,M>&, const V&,const V&); \
+  template void reduce_to_row(host_vector<V>&, const host_dense_matrix<V,M>&, reduce_functor,  const V&,const V&); \
   template void reduce_to_col(host_vector<V>&, const host_dense_matrix<V,M>&,reduce_functor,  const V&,const V&);
 
 #define INSTANTIATE_REDROW(V,M) \
   template void reduce_to_col(dev_vector<V>&, const dev_dense_matrix<V,M>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(dev_vector<V>&, const dev_dense_matrix<V,M>&, const V&,const V&); \
+  template void reduce_to_row(dev_vector<V>&, const dev_dense_matrix<V,M>&, reduce_functor,  const V&,const V&); \
   template void reduce_to_col(host_vector<V>&, const host_dense_matrix<V,M>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(host_vector<V>&, const host_dense_matrix<V,M>&, const V&,const V&);
+  template void reduce_to_row(host_vector<V>&, const host_dense_matrix<V,M>&, reduce_functor,  const V&,const V&);
 
   INSTANTIATE_MV(float, column_major);
   INSTANTIATE_MV(float, row_major);

@@ -289,8 +289,8 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_row )
 	sequence(hA);
 	sequence(hV);
 
-	reduce_to_row(dV,dA,1.f,0.5f);
-	reduce_to_row(hV,hA,1.f,0.5f);
+	reduce_to_row(dV,dA,RF_ADD,1.f,0.5f);
+	reduce_to_row(hV,hA,RF_ADD,1.f,0.5f);
 
 	host_vector<float> hV2(dV.size());
 	convert(hV2, dV);
@@ -311,8 +311,8 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_row )
 	sequence(hA);
 	sequence(hV);
 
-	reduce_to_row(dV,dA,1.f,0.5f);
-	reduce_to_row(hV,hA,1.f,0.5f);
+	reduce_to_row(dV,dA,RF_ADD,1.f,0.5f);
+	reduce_to_row(hV,hA,RF_ADD,1.f,0.5f);
 
 	host_vector<float> hV2(dV.size());
 	convert(hV2, dV);

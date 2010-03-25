@@ -130,7 +130,7 @@ namespace cuv{
 
   /// sum all rows of a matrix to get one sum-row
   template<class __matrix_type, class __vector_type> 
-	  void reduce_to_row(__vector_type&, const __matrix_type&, const typename __matrix_type::value_type& factNew=1.f, const typename __matrix_type::value_type& factOld=0.f);
+	  void reduce_to_row(__vector_type&, const __matrix_type&, reduce_functor rf=RF_ADD, const typename __matrix_type::value_type& factNew=1.f, const typename __matrix_type::value_type& factOld=0.f);
 
   /// write the index of the maximum for each column of a matrix into a vector
   template<class __matrix_type, class __vector_type>
