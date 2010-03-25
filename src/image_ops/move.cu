@@ -184,15 +184,16 @@ move_image_kernel(dst_pixel* dst, const pixel* src, char xshift, char yshift, un
 		// (inrange=true) or is filled with the default color (inrange=false)
 		inrange = (mapx >= xshift) && (mapy >= yshift) && (mapx < iw+xshift) && (mapy < iw+yshift);
 		if(!inrange){
-			char xn = max(2,min(patx,patwidth-2));
-			char yn = max(2,min(paty,patwidth-2));
+			char xn = max(1,min(patx,(int)patwidth-2));
+			char yn = max(1,min(paty,(int)patwidth-2));
 			default_color = get_pixel<UseCache>(patwidth*patwidth*blockIdx.y + patwidth*yn + xn,src, default_color,min(1.f,max(0.f,0.13f*(float)(abs(patx-xn)+abs(paty-yn))) ));
 		}
 	}
 	else
 	{
 		// Determines at which x- and y-position of the map the pattern starts
-		const int offset = iw/2 - patwidth/2;
+		/*const int offset = iw/2 - patwidth/2;*/
+		const int offset = 0;
 
 		// Calculate x- and y-position on the input pattern for this thread
 		patx = mapx - offset - xshift;
@@ -202,8 +203,8 @@ move_image_kernel(dst_pixel* dst, const pixel* src, char xshift, char yshift, un
 		// (inrange=true) or is filled with the default color (inrange=false)
 		inrange = (patx >= 0) && (patx < patwidth) && (paty >= 0) && (paty < patwidth);
 		if(!inrange){
-			char xn = max(2,min(patx,patwidth-2));
-			char yn = max(2,min(paty,patwidth-2));
+			char xn = max(1,min(patx,(int)patwidth-2));
+			char yn = max(1,min(paty,(int)patwidth-2));
 			default_color = get_pixel<UseCache>(patwidth*patwidth*blockIdx.y + patwidth*yn + xn,src, default_color,min(1.f,max(0.f,0.13f*(float)(abs(patx-xn)+abs(paty-yn)) )));
 		}
 	}
