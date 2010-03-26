@@ -140,7 +140,20 @@ template<class V, class M, class I>
 void row_ncopy(dev_dense_matrix<V,M,I>& dst,
 			   dev_vector<V,I>& row,
 			   unsigned int n);
+
+template<class V, class M, class I>
+void row_ncopy(host_dense_matrix<V,M,I>& dst,
+			   host_vector<V,I>& row,
+			   unsigned int n);
+
+template<class V, class M, class I>
+void filter_inverse(   dev_dense_matrix<V,M,I>& dst,
+					   dev_dense_matrix<V,M,I>& filter,
+					   unsigned int fs);
+
+template<class V, class M, class I>
+void filter_inverse(   host_dense_matrix<V,M,I>& dst,
+					   host_dense_matrix<V,M,I>& filter,
+					   unsigned int fs);
 }
-
-
 #endif /* __CONVOLUTION_OPS_HPP__ */

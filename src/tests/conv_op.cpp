@@ -38,6 +38,17 @@ struct Fix{
 	}
 };
 
+#define MEASURE_TIME(MSG, OPERATION, ITERS)     \
+	float MSG;                                  \
+	if(1){                                      \
+		Timing tim;                             \
+		for(int i=0;i<ITERS;i++){               \
+			OPERATION ;                         \
+		}                                       \
+		tim.update(ITERS);                      \
+		printf("%s [%s] took %4.4f us/pass\n", #MSG, #OPERATION, 1000000.0f*tim.perf()); \
+		MSG = 1000000.0f*tim.perf();            \
+	}
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
@@ -292,6 +303,70 @@ BOOST_AUTO_TEST_CASE( strip_padding )
 		}
 	}
 	//std::cout << h_img ;
+
+	for(int i=0;i<erg_h.h();i++){
+		for(int j=0;j<erg_h.w();j++){
+			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
+		}
+	}
+}
+
+BOOST_AUTO_TEST_CASE( reverse_filters )
+{
+
+
+
+
+	host_dense_matrix<float, row_major> filter_h(c*f, g*g);
+	dev_dense_matrix<float, row_major> filter_d(c*f, g*g);
+
+	host_dense_matrix<float, row_major> erg_h(c, f*g*g);
+	dev_dense_matrix<float, row_major> erg_d(c, f*g*g);
+
+	fill(filter_h, 0.0f);
+	fill(filter_d, 0.0f);
+	fill(erg_h, 0.0f);
+	fill(erg_d, 0.0f);
+
+	host_vector<float> one_filter_h(g*g);
+	dev_vector<float> one_filter_d(g*g);
+
+	sequence(one_filter_h);
+	sequence(one_filter_d);
+
+	cuv::row_ncopy(filter_d, one_filter_d, c*f);
+	cuv::row_ncopy(filter_h, one_filter_h,c*f);
+
+	filter_d.resize(c, f*g*g);
+	filter_h.resize(c, f*g*g);
+
+	filter_inverse(erg_d,filter_d, g*g);
+
+	float* f_h_ptr;
+	int fs = g*g;
+	int row_offset=0;
+	f_h_ptr = filter_h.ptr();
+	int f_h_w = filter_h.w();
+	int numCases = filter_h.h();
+
+	// iterate on every filter in a row
+	for(int filter = 0; filter < f*g*g; filter = filter+g*g){
+		// iterate on every element of the filter
+		for(int y = 0; y < fs; y++){
+			// every filterrow
+			for(int nC = 0; nC <numCases; nC++){
+				row_offset = nC*f_h_w;
+				*(erg_h.ptr()+row_offset+filter+y) = *(f_h_ptr+row_offset+(fs-1)+filter-y);
+			}
+
+		}
+	}
+
+	std::cout << filter_d << std::endl << std::endl;
+
+
+
+	std::cout << erg_d ;
 
 	for(int i=0;i<erg_h.h();i++){
 		for(int j=0;j<erg_h.w();j++){

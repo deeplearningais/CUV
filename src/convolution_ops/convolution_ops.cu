@@ -21,7 +21,6 @@
 #include <iostream>
 using namespace std;
 
-
 namespace cuv{
 
 /**
@@ -926,11 +925,121 @@ template<>
 	fill(dst, 0.0f);
 
 	int numThreads = 256;
-	int numBlocksX = ceil(inputSize/numThreads);
+	int numBlocksX = ceil((float)inputSize/numThreads);
 	int numBlocksY = 1;
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 dimBlock(numThreads,1);
 	row_ncopy_kernel<<<grid,dimBlock>>>(dst.ptr(), row.ptr(), inputSize, n);
+}
+
+
+template<>
+	void row_ncopy(host_dense_matrix<float,row_major>& erg_h,
+				   host_vector<float>& row,
+				   unsigned int n) {
+
+	cuvAssert(n == erg_h.h());
+	cuvAssert(n <= 4096);
+	fill(erg_h, 0.0f);
+
+	fill(erg_h, 0.0f);
+	for(int idx = 0; idx < erg_h.w(); idx++ ){
+		for (int idy = 0; idy < n; idy++){
+			erg_h.set(idy,idx, *(row.ptr() + idx));
+		}
+	}
+}
+
+template<>
+	void filter_inverse(host_dense_matrix<float, row_major>& dst,
+					    host_dense_matrix<float, row_major>& filter,
+					    unsigned int fs){
+		int f = filter.w() / fs;
+		float* f_h_ptr = filter.ptr();
+		int row_offset=0;
+		int f_h_w = filter.w();
+		int numCases = filter.h();
+
+		// iterate on every filter in a row
+		for(int filter = 0; filter < f*fs; filter = filter+fs){
+			// iterate on every element of the filter
+			for(int y = 0; y < fs; y++){
+				// every filterrow
+				for(int nC = 0; nC <numCases; nC++){
+					row_offset = nC*f_h_w;
+					*(dst.ptr()+row_offset+filter+y) = *(f_h_ptr+row_offset+(fs-1)+filter-y);
+				}
+
+			}
+		}
+}
+
+/*
+ * this is limited to 22 x 22 filter kernels yet
+ */
+__global__ void filter_inverse_kernel(float* dst, float* src, const int w, const int h, const int fs) {
+
+	const int col_idx = threadIdx.x;
+	const int row_idx = blockIdx.y;
+
+	// load weights in shared memory
+	__shared__  float filter[512];
+
+	int px_adr_glob = 0;
+
+	// check if col idx is less than the number of cells in one row and less than the number of cells at all (at bottom of matrix)
+	if( (col_idx < w) && (row_idx * w + col_idx <= w*h*fs)){
+		// I. load pixels in a coalesced way
+
+		// global memory adress for pixel
+		px_adr_glob = row_idx * w + col_idx;
+
+		//load filter element
+		*(filter+col_idx) =  *(src+px_adr_glob);
+
+		// wait until everything is loaded
+		__syncthreads();
+
+		// II. now write with hopefully only few bank conflicts
+		int filter_start = (col_idx / fs) * fs;
+		int filter_element_idx = col_idx % fs;
+
+		*(dst+px_adr_glob) = *(filter + filter_start + (fs-1) - filter_element_idx);
+	}
+
+}
+
+template<>
+void filter_inverse(   dev_dense_matrix<float, row_major>& dst,
+					   dev_dense_matrix<float, row_major>& filter,
+					   unsigned int fs){
+		cuvAssert(dst.h() == filter.h())
+		cuvAssert(dst.w() == filter.w())
+
+		int num_filter = filter.w() / fs;
+		cuvAssert(sqrt(fs) <= 22)
+
+		float* f_h_ptr = filter.ptr();
+		int f_h_w = filter.w();
+		int numCases = filter.h();
+
+		// we put as many filter in a row of width 512 as possible
+		int numFiltersPerRow = 512 / fs;
+		int numRows = ceil((float)(num_filter*filter.h()) / numFiltersPerRow);
+
+			std::cout << "resizing from " << num_filter << "x" << filter.h() << " to " << numFiltersPerRow << " x " << numRows << std::endl;
+		filter.resize(numRows, numFiltersPerRow*fs);
+
+
+		int numThreads = 512;
+		int numBlocksX = ceil((float)filter.w()/numThreads);
+		int numBlocksY = filter.h();
+		dim3 grid(numBlocksX, numBlocksY);
+		dim3 dimBlock(numThreads,1);
+
+		std::cout << "filter.h =  " << filter.h() << std::endl;
+		filter_inverse_kernel<<<grid,dimBlock>>>(dst.ptr(), filter.ptr(), filter.w(), filter.h(), fs);
+		filter.resize(numCases, f_h_w);
 }
 
 }

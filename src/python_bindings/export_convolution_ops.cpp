@@ -91,8 +91,12 @@ void export_row_ncopy(){
 	def("row_ncopy",(void (*)(M&,V&, unsigned int))row_ncopy<typename M::value_type, typename M::memory_layout, typename M::index_type>, (
 															arg("dst"),
 															arg("img"),
-															arg("rows"))
-														);
+															arg("rows")));
+	def("filter_inverse",(void (*)(M&,M&, unsigned int))filter_inverse<typename M::value_type, typename M::memory_layout, typename M::index_type>, (
+																arg("dst"),
+																arg("filter"),
+																arg("fs")));
+
 
 }
 
@@ -102,7 +106,7 @@ void export_convolution_ops(){
 	export_super_to_max< host_dense_matrix<float,row_major> >();
 	export_super_to_max< dev_dense_matrix<float,row_major>  >();
 	export_padding_ops< host_dense_matrix<float,row_major> >();
-	export_padding_ops< dev_dense_matrix<float,row_major>  >();
+	export_padding_ops< host_dense_matrix<float,row_major>  >();
 	export_padding_ops< dev_dense_matrix<float,row_major>  >();
 	export_row_ncopy< dev_dense_matrix<float,row_major>, dev_vector<float>  >();
 }
