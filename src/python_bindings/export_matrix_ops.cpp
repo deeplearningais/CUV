@@ -258,6 +258,7 @@ void export_matrix_ops(){
 	export_blas2<fdevr>();
 	export_blockview<fdev>();
 	export_blockview<fhost>();
+	export_blockview<fdevr>();
 	//export_pooling<fhostr>();
 	export_pooling<fdevr>();
 	// transpose
