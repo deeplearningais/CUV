@@ -202,7 +202,13 @@ void reorder(dev_dense_matrix<V,M,I>& A,
 
 /**
   * @copydoc reorder(dev_dense_matrix<V,M,I>& A, int blockLength);
-
+/**
+ * @brief For a matrix with n maps in a row it returns a matrix where these maps are summed up into one map per row
+ * @param dst holds the target matrix
+ * @param mat is a matrix with n maps of the same size in a row
+ * @param image_size the size of one map in that rows
+ *
+ */
   */
 template<class V, class M, class I>
 void reorder(host_dense_matrix<V,M,I>& A,
@@ -252,41 +258,101 @@ void max_pooling(dev_dense_matrix<V,M,I>& dst,
 		dev_dense_matrix<int,row_major>* indices = NULL,
 		dev_dense_matrix<V,M,I>* filter = NULL);
 
+
+/**
+ * @brief Strips the padding inserted by copy_into
+ * @param dst holds the stripped images. One row for each
+ *            input image. width = dstSize^2 * numFilters
+ * @param img contains one padded input pattern in each row
+ * @param padding size of the padding
+ *
+ */
 template<class V, class M, class I>
 void strip_padding(dev_dense_matrix<V,M,I>& dst,
 				   dev_dense_matrix<V,M,I>& img,
 				   unsigned int padding);
 
+/**
+ * @brief Strips the padding inserted by copy_into
+ * @param dst holds the stripped images. One row for each
+ *            input image. width = dstSize^2 * numFilters
+ * @param img contains one padded input pattern in each row
+ * @param padding size of the padding
+ *
+ */
 template<class V, class M, class I>
 void strip_padding(host_dense_matrix<V,M,I>& dst,
 				   host_dense_matrix<V,M,I>& img,
 				   unsigned int padding);
 
+
+/**
+ * @brief Fills a matrix with n copies of a given image
+ * @param dst holds the target matrix with the n rows each containing the same source row
+ * @param row is a vector containing the one row to be copied
+ * @param n how often the row should be copied
+ *
+ */
 template<class V, class M, class I>
 void row_ncopy(dev_dense_matrix<V,M,I>& dst,
 			   dev_vector<V,I>& row,
 			   unsigned int n);
 
+/**
+ * @brief Fills a matrix with n copies of a given image
+ * @param dst holds the target matrix with the n rows each containing the same source row
+ * @param row is a vector containing the one row to be copied
+ * @param n how often the row should be copied
+ *
+ */
 template<class V, class M, class I>
 void row_ncopy(host_dense_matrix<V,M,I>& dst,
 			   host_vector<V,I>& row,
 			   unsigned int n);
 
+/**
+ * @brief Inverts the filters in a filter matrix consisting of m filters in a row with n rows.
+ * @param dst holds the target matrix with the inverted filters
+ * @param filter is a matrix with m filters in a row and n rows
+ * @param fs the filter size
+ *
+ */
 template<class V, class M, class I>
 void filter_inverse(   dev_dense_matrix<V,M,I>& dst,
 					   dev_dense_matrix<V,M,I>& filter,
 					   unsigned int fs);
 
+/**
+ * @brief Inverts the filters in a filter matrix consisting of m filters in a row with n rows.
+ * @param dst holds the target matrix with the inverted filters
+ * @param filter is a matrix with m filters in a row and n rows
+ * @param fs the filter size
+ *
+ */
 template<class V, class M, class I>
 void filter_inverse(   host_dense_matrix<V,M,I>& dst,
 					   host_dense_matrix<V,M,I>& filter,
 					   unsigned int fs);
 
+/**
+ * @brief For a matrix with n maps in a row it returns a matrix where these maps are summed up into one map per row
+ * @param dst holds the target matrix
+ * @param mat is a matrix with n maps of the same size in a row
+ * @param image_size the size of one map in that rows
+ *
+ */
 template<class V, class M, class I>
 void add_maps_h(	dev_dense_matrix<V,M,I>& dst,
 					dev_dense_matrix<V,M,I>& mat,
 					unsigned int image_size);
 
+/**
+ * @brief For a matrix with n maps in a row it returns a matrix where these maps are summed up into one map per row
+ * @param dst holds the target matrix
+ * @param mat is a matrix with n maps of the same size in a row
+ * @param image_size the size of one map in that rows
+ *
+ */
 template<class V, class M, class I>
 void add_maps_h(	host_dense_matrix<V,M,I>& dst,
 					host_dense_matrix<V,M,I>& mat,
