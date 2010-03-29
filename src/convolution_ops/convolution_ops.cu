@@ -20,6 +20,10 @@
 #include <convCPU.h>
 #include <iostream>
 using namespace std;
+#ifdef __CDT_PARSER__
+#define __shared__
+#define __global__
+#endif
 
 namespace cuv{
 
@@ -983,16 +987,80 @@ void filter_inverse(   dev_dense_matrix<float, row_major>& dst,
 			std::cout << "resizing from " << num_filter << "x" << filter.h() << " to " << numFiltersPerRow << " x " << numRows << std::endl;
 		filter.resize(numRows, numFiltersPerRow*fs);
 
-
 		int numThreads = 512;
 		int numBlocksX = ceil((float)filter.w()/numThreads);
 		int numBlocksY = filter.h();
 		dim3 grid(numBlocksX, numBlocksY);
 		dim3 dimBlock(numThreads,1);
 
-		std::cout << "filter.h =  " << filter.h() << std::endl;
+//		std::cout << "filter.h =  " << filter.h() << std::endl;
 		filter_inverse_kernel<<<grid,dimBlock>>>(dst.ptr(), filter.ptr(), filter.w(), filter.h(), fs);
 		filter.resize(numCases, f_h_w);
 }
+
+__global__ void add_maps_h_kernel(float* dst, float* img, const int img_w, const int imagesize) {
+
+	int px = threadIdx.x +  blockDim.x * blockIdx.x;
+	int row = blockIdx.y;
+
+	int num_maps = img_w / imagesize;
+
+	__shared__ float summedMaps[512];
+
+	// sum up in fast shared mem
+	for(int i = 0; i < num_maps; i++){
+		summedMaps[px] += *(img + row * img_w		// goto row in matrix
+								+ px				// pixel
+								+ i * imagesize);   // iterate on images
+	}
+
+	// move result to global mem
+	*(dst + row * img_w + px) = *(summedMaps + row * img_w + px);
+}
+
+template<>
+void add_maps_h(	dev_dense_matrix<float, row_major>& dst,
+					dev_dense_matrix<float, row_major>& mat,
+					unsigned int image_size){
+
+		int num_images = mat.w() / image_size;
+		cuvAssert(dst.w() == image_size);
+		cuvAssert(dst.h() == mat.h());
+		cuvAssert(num_images * image_size == mat.w());
+
+		int numThreads = 512;
+		int numBlocksX = ceil((float)mat.w()/numThreads);
+		int numBlocksY = mat.h();
+		dim3 grid(numBlocksX, numBlocksY);
+		dim3 dimBlock(numThreads,1);
+
+		add_maps_h_kernel<<<grid,dimBlock>>>(dst.ptr(), mat.ptr(), mat.w(), image_size);
+}
+
+template<>
+void add_maps_h(	host_dense_matrix<float, row_major>& dst,
+					host_dense_matrix<float, row_major>& mat,
+					unsigned int image_size){
+
+		int num_images = mat.w() / image_size;
+		cuvAssert(dst.w() == image_size);
+		cuvAssert(dst.h() == mat.h());
+		cuvAssert(num_images * image_size == mat.w());
+
+		float* e_ptr = dst.ptr();
+		float* i_ptr = mat.ptr();
+
+		// host solution
+		for (int row = 0; row<mat.h(); row++){
+			for(int px = 0; px < image_size; px++){
+				for(int img = 0; img < num_images; img++){
+					*(e_ptr + row*dst.w() + px) += *(i_ptr + row * dst.w()  // move to right row
+															 + img * image_size // move to img
+															 + px);				// move to pixel in img
+				}
+			}
+		}
+}
+
 
 }

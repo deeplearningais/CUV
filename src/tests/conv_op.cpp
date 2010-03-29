@@ -375,4 +375,47 @@ BOOST_AUTO_TEST_CASE( reverse_filters )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( add_maps )
+{
+	// c, n x n = 2, 64 x 64 - represents two (delta) maps that contribute to one destination delta map
+	// the destination delta map is calculated as the sum of the individual delta maps
+	sequence(h_img);
+	sequence(d_img);
+
+	// contains a map in each row where the summed pixels are stored
+	host_dense_matrix<float, row_major> erg_h(c, n);
+	dev_dense_matrix<float, row_major> erg_d(c, n);
+
+	fill(erg_h, 0.0f);
+	fill(erg_d, 0.0f);
+
+
+	float* e_ptr = erg_h.ptr();
+	float* i_ptr = h_img.ptr();
+	int imagesize = 64;
+
+	// host solution
+	for (int row = 0; row<c; row++){
+		for(int px = 0; px < n; px++){
+			for(int img = 0; img < n; img++){
+				*(e_ptr + row*erg_h.w() + px) += *(i_ptr + row*erg_h.w()    // mv to correct row in matrix
+														 + img * imagesize  // iterate on image/delta maps
+														 + px);				// iterate on pixels of destination map
+			}
+		}
+	}
+
+	add_maps_h(erg_d, d_img, n);
+
+	std::cout << erg_d ;
+
+	for(int i=0;i<erg_h.h();i++){
+		for(int j=0;j<erg_h.w();j++){
+			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
+		}
+	}
 }
+
+}
+
+

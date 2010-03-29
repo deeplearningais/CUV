@@ -281,5 +281,15 @@ template<class V, class M, class I>
 void filter_inverse(   host_dense_matrix<V,M,I>& dst,
 					   host_dense_matrix<V,M,I>& filter,
 					   unsigned int fs);
+
+template<class V, class M, class I>
+void add_maps_h(	dev_dense_matrix<V,M,I>& dst,
+					dev_dense_matrix<V,M,I>& mat,
+					unsigned int image_size);
+
+template<class V, class M, class I>
+void add_maps_h(	host_dense_matrix<V,M,I>& dst,
+					host_dense_matrix<V,M,I>& mat,
+					unsigned int image_size);
 }
 #endif /* __CONVOLUTION_OPS_HPP__ */
