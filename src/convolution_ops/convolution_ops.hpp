@@ -202,14 +202,14 @@ void reorder(dev_dense_matrix<V,M,I>& A,
 
 /**
   * @copydoc reorder(dev_dense_matrix<V,M,I>& A, int blockLength);
-/**
+ *
  * @brief For a matrix with n maps in a row it returns a matrix where these maps are summed up into one map per row
  * @param dst holds the target matrix
  * @param mat is a matrix with n maps of the same size in a row
  * @param image_size the size of one map in that rows
  *
  */
-  */
+
 template<class V, class M, class I>
 void reorder(host_dense_matrix<V,M,I>& A,
 		   int blockLength);
