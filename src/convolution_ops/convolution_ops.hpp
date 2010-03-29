@@ -13,6 +13,10 @@ namespace cuv{
  * Wrappers for Alex' CUDA convolution functions
  */
 
+/** @defgroup convolution_ops Convolution and pooling operations
+* @{
+*/
+
 /**
  * Convolve N patterns (images) with F filters, resulting in N*F target images.
  *
@@ -201,7 +205,6 @@ void reorder(dev_dense_matrix<V,M,I>& A,
 		   int blockLength);
 
 /**
-  * @copydoc reorder(dev_dense_matrix<V,M,I>& A, int blockLength);
  *
  * @brief For a matrix with n maps in a row it returns a matrix where these maps are summed up into one map per row
  * @param dst holds the target matrix
@@ -358,4 +361,6 @@ void add_maps_h(	host_dense_matrix<V,M,I>& dst,
 					host_dense_matrix<V,M,I>& mat,
 					unsigned int image_size);
 }
+
+/** @} */ //end group convolution_ops
 #endif /* __CONVOLUTION_OPS_HPP__ */
