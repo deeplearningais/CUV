@@ -5,15 +5,47 @@ namespace cuv{
 
 	/** 
 	 * @brief Scalar Functors for vectors and matrices
+	 *  Applied pointwise to a vector/matrix.
+	 *  Each entry x is transformed according to the given formular.
+	 *
+	 *  Without scalar parameters:
+	 *
+	 *	@li SF_EXP computes exp(x)
+	 *	@li SF_LOG computes log(x)
+	 * 	@li SF_SIGN computes sign(x)
+	 * 	@li SF_SIGM computes 1/(1+exp(-x))
+	 * 	@li SF_DSIGM computes x * (1-x)
+	 * 	@li SF_TANH computes tanh(x)
+	 *  @li SF_SQUARE computes x*x
+	 *  @li SF_SUBLIN computes 1-x
+	 *  @li SF_ENERG computes -log(x) 
+	 *  @li SF_INV computes 1/x 
+	 *  @li SF_SQRT computes sqrt(x)
+	 *  @li SF_NEGATE computes -x
+	 *  @li SF_ABS computes absolute value of x
+	 *  @li SF_SMAX computes (1/x -1) * x
+	 *
+	 * 	With one scalar parameter a:
+	 *  @li SF_ADD computes x + a
+	 *  @li SF_SUBTRACT computes x - a
+	 *  @li SF_MULT computes x * a
+	 *	@li SF_DIV computes x / a
+	 *	@li SF_MIN computes min(x,a)
+	 *	@li SF_MAX computes max(x,a)
+	 *
+	 * 	With two scalar parameters a and b:
+	 *
+	 * 	@li SF_DTANH computes a/b * (a+x) + (a-x) 
 	 */
+	 
 	enum ScalarFunctor{
 		// w/o params
 		SF_EXP,
-		SF_EXACT_EXP,
+		//SF_EXACT_EXP,
 		SF_LOG,
 		SF_SIGN,
 		SF_SIGM,
-		SF_EXACT_SIGM,
+		//SF_EXACT_SIGM,
 		SF_DSIGM,
 		SF_TANH,
 		SF_DTANH,
@@ -35,6 +67,29 @@ namespace cuv{
 		SF_MAX
 	};
 
+	/** 
+	 * @brief Binary functors for vectors and matrices
+	 *  Applied pointwise to a vector/matrix.
+	 *  The target entry x is calculated from the two source entries x,y according to the given formular.
+	 *
+	 *  Without scalar parameters:
+	 *
+	 * 	@li BF_ADD computes  x + y
+	 * 	@li BF_SUBTRACT computes x - y
+	 * 	@li BF_MULT computes x * y
+	 * 	@li BF_DIV computes x / y
+	 * 	@li BF_COPY computes y
+	 * 	@li BF_MIN computes min(x,y)
+	 * 	@li BF_MAX computes max(x,y)
+	 *
+	 *  With one scalar parameter a:
+	 *  @li BF_AXPY computes a * x + y
+	 *  @li BF_XPBY computes x + a * y
+	 *
+	 *  With two scalar parameters a and b:
+	 *  @li BF_AXPBY computes a * x + b * y
+	 *
+	 */
   enum BinaryFunctor{
 	  // w/o params
 	  BF_ADD,
@@ -51,6 +106,11 @@ namespace cuv{
 	  BF_AXPBY
   };
 
+  /** 
+   * @brief Nullary functors for vectors and matrices.
+   * @li NF_FILL fills vector/matrix with parameter a
+   * @li NF_SEQ fills vector/matrix with sequence of numbers starting from 1
+   */
   enum NullaryFunctor{
 	  NF_FILL,
 	  NF_SEQ
