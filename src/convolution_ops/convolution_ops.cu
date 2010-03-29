@@ -23,15 +23,6 @@ using namespace std;
 
 namespace cuv{
 
-/**
- * Convolve N patterns (images) with F filters, resulting in N*F target images.
- *
- * @param img		contains one input pattern in each row
- * @param filters	contains one filter in each row, number of filters must
- * 			        be multiples of 16.
- * @param dst		holds the target images of the convolution. one row for each
- *			        input image. width = dstSize^2 * numFilters
- */
 template<>
 	void convolve(dev_dense_matrix<float,row_major>& dst,
 			  dev_dense_matrix<float,row_major>&   img,
@@ -57,9 +48,6 @@ template<>
 	cuvSafeCall(cudaThreadSynchronize());
 	}
 
-/**
-  * @copydoc convolve(dev_dense_matrix<float,row_major>&,dev_dense_matrix<float,row_major>&,dev_dense_matrix<float,row_major>&)
-  */
 template<>
 void convolve(host_dense_matrix<float,row_major>& dst,
 		  host_dense_matrix<float,row_major>&   img,
@@ -98,20 +86,7 @@ void convolve(host_dense_matrix<float,row_major>& dst,
 	}
 }
 
-/* Convolve N patterns (images), each with a different set of F filters,
- * resulting in N*F target images
- *
- * img		contains one input pattern in each row
- * filters	contains F filters in each row, number of filters must
- * 			be multiples of 16.
- * dst		holds the target images of the convolution. one row for each
- *			input image. width = dstSize^2 * numFilters
- *
- * This routine can be used to compute the weight gradients: img contains the
- * activations from the lower layers filters are the error maps from the upper
- * layer. dst will then contain weight gradients for each pattern per row (sum
- * each column up).
- */
+
 template<>
 	void convolve2(dev_dense_matrix<float,row_major>& dst,
 			  dev_dense_matrix<float,row_major>&   img,
@@ -257,16 +232,6 @@ void prob_max_pooling(dev_dense_matrix<float,row_major>& grid, int poolSize, boo
 }
 
 
-/* Convolve N patterns, each consisting of F images/maps with F filters and add
- * them up. Resulting in N target images
- *
- * img		contains F input pattern in each row
- * filters	contains one filter in each row, number of filters must
- * 			be multiples of 16.
- * dst		holds the target image of the convolution. one row for each
- *			input image. width = dstSize^2
- */
-
 template<>
 	void convolve3(dev_dense_matrix<float,row_major>& dst,
 			  dev_dense_matrix<float,row_major>&   img,
@@ -309,18 +274,6 @@ void reorder_kernel(float*dst, float* src, int len) {
 	}
 }
 
-/* sort the images in a matrix in a different order
- * input:  A1 B1 C1 D1
- *         A2 B2 C2 D2
- *         A3 B3 C3 D3
- * , where A1 is an image with blockLength pixels
- * output: A1
- *         A2
- *         A3
- *         B1
- *         B2
- *         ..
- */
 template<>
 void reorder(dev_dense_matrix<float,row_major>& M,
 		  int blockLength) {
