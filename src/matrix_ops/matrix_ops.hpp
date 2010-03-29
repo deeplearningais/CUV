@@ -11,7 +11,11 @@ namespace cuv{
    * Wrappers for Vector Ops
    ****************************************
    */
-  
+
+ /** @defgroup functors_matrices Pointwise Functors on Matrices
+  * @{
+  */
+
   /** 
    * @brief Apply a pointwise nullary functor to a matrix.
    * 
@@ -159,25 +163,12 @@ namespace cuv{
   template<class V,class M, class I>
 	  void copy(host_dense_matrix<V,M,I>& dst, host_dense_matrix<V,M,I>& src){ apply_binary_functor(dst.vec(),src.vec(),BF_COPY); }
 
+ /** @} */ // end of group functors_matrices
 
-  /** 
-   * @brief Transpose a matrix
-   * 
-   * @param dst Destination matrix 
-   * @param src Source matrix 
-   * 
-   */
-  template<class V,class M, class I> void transpose(dev_dense_matrix<V,M,I>&  dst, dev_dense_matrix<V,M,I>&  src);
-  /**
-   * @copydoc transpose(dev_dense_matrix<V,M,I>&  dst, dev_dense_matrix<V,M,I>&  src)
-   */
-  template<class V,class M, class I> void transpose(host_dense_matrix<V,M,I>& dst, host_dense_matrix<V,M,I>& src);
 
-  /*
-   * reductions
-   *
-   */
-
+ /** @defgroup reductions_matrices Functors reducing a matrix to a scalar
+  * @{
+  */
   /** 
    * @brief Check whether a float matrix contains "Inf" or "-Inf"
    * 
@@ -278,6 +269,22 @@ namespace cuv{
    */
   template<class V,class M, class I> float var(host_dense_matrix<V,M,I>& v)  {return var(v.vec());}
 
+
+ /** @} */ // end of group reductions_matrices
+
+
+ /** @defgroup reductions Reductions from matrix to row or column
+  * @{
+  */
+
+  /** 
+   * @brief Reduce functor to reduce a matrix to a row or column
+   * 
+   * 	- RF_ADD adds columns/rows
+   * 	- RF_ADD_SQUARED adds squared entries of columns/rows
+   * 	- RF_MAX uses maximum in colum (when reducing to row) or row (when reducing to column)
+   * 	- RF_MIN uses minimum in colum (when reducing to row) or row (when reducing to column)
+   */
   enum reduce_functor{
 	  RF_ADD,
 	  RF_ADD_SQUARED,
@@ -336,7 +343,7 @@ namespace cuv{
   template<class __matrix_type, class __vector_type>
 	  void argmax_to_column(__vector_type& dst, const __matrix_type& src);
 
-  // end of wrappers for vector ops
+ /** @} */ // end of group reductions
 
 
   /***************************************************
@@ -365,6 +372,9 @@ namespace cuv{
   /***************************************************
    * BLAS3 stuff
    ***************************************************/
+ /** @defgroup blas3 BLAS3
+  * @{
+  */
   /** 
    * @brief Matrix multiplication and other BLAS3 functionality.
    * 
@@ -385,9 +395,14 @@ namespace cuv{
   template<class __matrix_type, class __matrix_type2, class __matrix_type3>
 	  void prod(__matrix_type& dst, __matrix_type2& A, __matrix_type3& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
 
+  /** @} */ // end group blas3
+
   /***************************************************
    * BLAS2 stuff
    ***************************************************/
+ /** @defgroup blas2 BLAS2
+  * @{
+  */
   /** 
    * @brief Calculates product of a sparse matrix and a vector. 
    * 
@@ -436,6 +451,21 @@ namespace cuv{
    */
   template<class __matrix_type, class __vector_type>
 	  void matrix_divide_col(__matrix_type& A, const __vector_type& v);
+
+  /** 
+   * @brief Transpose a matrix
+   * 
+   * @param dst Destination matrix 
+   * @param src Source matrix 
+   * 
+   */
+  template<class V,class M, class I> void transpose(dev_dense_matrix<V,M,I>&  dst, dev_dense_matrix<V,M,I>&  src);
+  /**
+   * @copydoc transpose(dev_dense_matrix<V,M,I>&  dst, dev_dense_matrix<V,M,I>&  src)
+   */
+  template<class V,class M, class I> void transpose(host_dense_matrix<V,M,I>& dst, host_dense_matrix<V,M,I>& src);
+
+  /** @} */ // end group blas2
 } // cuv
 
 #endif

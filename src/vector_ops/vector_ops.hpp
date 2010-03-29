@@ -116,6 +116,10 @@ namespace cuv{
 	  NF_SEQ
   };
 
+/** @defgroup functors_vectors Pointwise functors on vectors
+ *   @{
+ */
+
  /** 
   * @brief Apply a pointwise nullary functor to a vector.
   * 
@@ -246,12 +250,12 @@ namespace cuv{
   void copy(__vector_type& dst, __vector_type& src){
 	  apply_binary_functor(dst,src,BF_COPY);
   }
+ /** @} */ //end group functors_vectors
 
+/** @defgroup reductions_vectors Functors reducing a vector to a scalar
+ *   @{
+ */
 
-  /*
-   * reductions
-   *
-   */
   /** 
    * @brief Check whether a float vector contains "Inf" or "-Inf"
    * 
@@ -317,6 +321,7 @@ namespace cuv{
    */
   template<class __vector_type1> float var(__vector_type1& v);
 
+ /** @} */ //end group reductions_vectors
 
 } // cuv
 
