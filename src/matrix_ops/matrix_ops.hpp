@@ -12,18 +12,13 @@ namespace cuv{
    ****************************************
    */
   
-  /*
-   * Pointwise Null-ary Functor
-   * v = sf()
+  /** 
+   * @brief Apply a pointwise nullary functor to a matrix.
+   * 
+   * @param m		Target matrix 
+   * @param sf 	NullaryFunctor to apply 
+   * 
    */
-
-	/** 
-	 * @brief Apply a pointwise nullary functor to a matrix.
-	 * 
-	 * @param m		Target matrix 
-	 * @param sf 	NullaryFunctor to apply 
-	 * 
-	 */
   template<class V,class M,class I> 
 	  void apply_0ary_functor(dev_dense_matrix<V,M,I>& m, const NullaryFunctor& sf){ apply_0ary_functor(m.vec(),sf); }
   /** 
