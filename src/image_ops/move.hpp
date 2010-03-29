@@ -5,6 +5,7 @@ namespace cuv
 {
 
 	/** 
+	 * @defgroup imageops Operations on Images
 	 * @brief Write a moved version of each image (a column in src) to dst.
 	 *
 	 * Assumptions: 
@@ -22,6 +23,8 @@ namespace cuv
 	 * @param num_maps  how many maps there are in src
 	 * @param xshift how much to shift right
 	 * @param yshift how much to shift down
+	 *
+	 * @}
 	 */
 	template<class __matrix_typeA, class __matrix_typeB>
 	void image_move(__matrix_typeA& dst, const __matrix_typeB& src, 

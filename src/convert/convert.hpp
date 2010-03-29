@@ -7,11 +7,17 @@
 
 namespace cuv{
 
-	/*
-	 * Convert matrices or vectors
-	 *  this looks a bit weird here, but what the hell.
-	 *  Positive: it hides CUDA operations which have to be compiled by nvcc.
-	 *  Negative: we have to instantiate _every_possible_use_ of this function in convert.cu.
+	 /** @defgroup convert Convert matrices and vectors between different formats
+ 	 * @{
+	 * @brief Convert matrices and vectors between different formats
+	 * 
+	 * @param dst Destination
+	 * @param src Source
+	 *
+	 * Converts between:
+	 * 	-Column major an row major
+	 * 	-Host and device matrices - which actually copies the memory to and from the GPU!
+	 *@}
 	 */
 	template<class Dst, class Src>
 	void convert(Dst& dst, const Src& src);

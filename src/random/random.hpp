@@ -5,12 +5,44 @@
 
 namespace cuv{
 
-	template<class T> void fill_rnd_uniform(T&);  ///< fill a matrix/vector with random numbers (uniformly distributed btw. 0,1)
-	template<class T> void rnd_binarize(T&);      ///< binarize a vector by 1 or 0 with probability given by current values
-	template<class T> void add_rnd_normal(T&,const float& std=1.0f);   ///< add random numbers (normally distributed, mean 0, std 1) to a matrix/vector
+ /** @defgroup random Random functions for matrices and vectors
+  * @{
+  */
+
+	/** 
+	 * @brief Fill a matrix/vector with random numbers uniformly distributed between zero and one
+	 * 
+	 * @param Destionation matrix/vector
+	 */
+	template<class T> void fill_rnd_uniform(T&);  
+
+	/** 
+	 * @brief	 Binarize a matrix/vector to 1 or 0 with probability given by current values
+	 * 
+	 * @param 	Destionation matrix/vector 
+	 */
+	template<class T> void rnd_binarize(T&);      
+
+	/** 
+	 * @brief  Add random numbers (normally distributed, mean 0) to a matrix/vector
+	 * 
+	 * @param  Destination matrix/vector
+	 * @param std Standard deviation of normal distribution used
+	 */
+	template<class T> void add_rnd_normal(T&,const float& std=1.0f);  
+
 	//template<class T> void fill_rnd_normal(T&);   ///< fill a matrix/vector with  numbers (normally distributed, mean 0, std 1)
 
-	void initialize_mersenne_twister_seeds(unsigned int seed = 0); ///< call this _once_ to initialize the mersenne twister seeds
+	/** 
+	 * @brief Initialize Mersenne twister to generate random numbers on GPU
+	 * 
+	 * @param seed Seed for initialization
+	 *
+	 * This function has to be called exactly _once_ before making use of any random functions.
+	 */
+	void initialize_mersenne_twister_seeds(unsigned int seed = 0); 
+
+ /** @} */ // end of group random
 
 } // cuv
 

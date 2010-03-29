@@ -270,12 +270,12 @@ namespace cuv{
   template<class V,class M, class I> float var(host_dense_matrix<V,M,I>& v)  {return var(v.vec());}
 
 
- /** @} */ // end of group reductions_matrices
+  /** @} */ // end of group reductions_matrices
 
 
- /** @defgroup reductions Reductions from matrix to row or column
-  * @{
-  */
+  /** @defgroup reductions Reductions from matrix to row or column
+   * @{
+   */
 
   /** 
    * @brief Reduce functor to reduce a matrix to a row or column
