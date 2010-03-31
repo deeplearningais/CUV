@@ -726,8 +726,8 @@ template<>
 	cuvAssert(dstSize * dstSize == dst.w());
 	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
 	if(indices){
-		cuvAssert(indices->w() == numImages);
-		cuvAssert(indices->h() == imgSize*imgSize / (poolSize*poolSize));
+		cuvAssert(indices->w() == dst.w());
+		cuvAssert(indices->h() == dst.h());
 	}
 
 	int numThreads = 256;
