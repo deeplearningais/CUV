@@ -10,6 +10,8 @@
 
 namespace cuv{
 
+/** Parent struct that host/device traits inherit from
+ */
 	template<class T>
 	struct vector_traits{
 		typedef memory_space memory_space_type;
@@ -17,12 +19,17 @@ namespace cuv{
 	template<class V, class I>
 	class host_vector;
 
+/**
+ * @brief Basic vector class
+ *
+ * This vector class is the parent of all other vector classes and has all the basic attributes that all matrices share.
+ * This class is never actually instanciated.
+ */
 template<class __value_type, class __index_type>
 class vector{
-
 	public:
-	  typedef __value_type value_type;
-	  typedef __index_type index_type;
+	  typedef __value_type value_type;	 ///< Type of the entries of matrix
+	  typedef __index_type index_type;	 ///< Type of indices
 	  template <class Archive, class V, class I> friend void serialize(Archive&, host_vector<V,I>&, unsigned int) ;
 	  
 	protected:
@@ -34,23 +41,44 @@ class vector{
 	  /*
 	   * Member Access
 	   */
-	  inline const value_type* ptr()const{ return m_ptr;  }
-	  inline       value_type* ptr()     { return m_ptr;  }
-	  inline size_t size() const         { return m_size; }
-	  inline size_t memsize()       const{ return size() * sizeof(value_type); }
+	  inline const value_type* ptr()const{ return m_ptr;  }	///< Return pointer to matrix entries
+	  inline       value_type* ptr()     { return m_ptr;  } ///< Return pointer to matrix entries
+	  inline size_t size() const         { return m_size; } ///< Return length of vector
+	  inline size_t memsize()       const{ return size() * sizeof(value_type); } ///< Return size of vector in memory
 	  /*
 	   * Construction
 	   */
-	  vector():m_ptr(NULL),m_is_view(false),m_size(0) {}
+	  vector():m_ptr(NULL),m_is_view(false),m_size(0) {} ///< Empty constructor. Creates empty vector (allocates no memory)
+	  /** 
+	   * @brief Creates vector of lenght s and allocates memory
+	   * 
+	   * @param s Length of vector
+	   */
 	  vector(size_t s):m_ptr(NULL),m_is_view(false),m_size(s) { alloc(); }
+	  /** 
+	   * @brief Creates vector from pointer to entries.
+	   * 
+	   * @param s Length of vector
+	   * @param p Pointer to entries 
+	   * @param is_view If true will not take responsibility of memory at p. Otherwise will dealloc p on destruction.
+	   */
 	  vector(size_t s,value_type* p, bool is_view):m_ptr(p),m_is_view(is_view),m_size(s) {}
-	  ~vector(){ dealloc(); }
+	  ~vector(){ dealloc(); } ///< Deallocate memory if is_view is false.
 	  /*
 	   * Memory Management
 	   */
-	  void alloc(){};
-	  void dealloc(){};
+	  virtual void alloc(){}; ///< Does nothing
+	  virtual void dealloc(){}; ///< Does nothing
 
+		/** 
+		 * @brief Assignment operator. Assigns memory belonging to source to destination and sets source memory pointer to NULL (if source is not a view)
+		 * 
+		 * @param o Source matrix
+		 * 
+		 * @return Matrix of same size and type of o that now owns vector of entries of o.
+		 *
+		 * If source vector is a view, the returned vector is a view, too.
+		 */
 	  vector<value_type,index_type>& 
 		  operator=(const vector<value_type,index_type>& o){
 			  if(this==&o) return *this;

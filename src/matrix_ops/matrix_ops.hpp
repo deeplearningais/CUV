@@ -139,7 +139,7 @@ namespace cuv{
 	  void apply_binary_functor(dev_dense_matrix<V,M,I>& v, dev_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf, const P& param, const P& param2)
 	  {apply_binary_functor(v.vec(),w.vec(),bf,param,param2);}
   /**
-   * @copydoc void apply_binary_functor(dev_dense_matrix<V,M,I>& v, dev_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf, const P& param, const P& param2)
+   * @copydoc apply_binary_functor(dev_dense_matrix<V,M,I>& v, dev_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf, const P& param, const P& param2)
    */
   template<class V,class M,class I,class V2,class P>
 	  void apply_binary_functor(host_dense_matrix<V,M,I>& v, host_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf, const P& param, const P& param2)

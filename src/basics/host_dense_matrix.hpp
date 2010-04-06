@@ -14,18 +14,21 @@
 
 namespace cuv{
 	template<class __value_type, class __mem_layout=cuv::column_major, class __index_type=unsigned int>
+		/** 
+		 * @brief Class for dense host(=CPU memory) matrices.
+		 */
 	class host_dense_matrix 
 	:        public dense_matrix<__value_type, __mem_layout, __index_type>{
 		public:
-			typedef dense_matrix<__value_type, __mem_layout, __index_type>         base_type;
-			typedef host_vector<__value_type, __index_type>                        vec_type;
-			typedef typename dense_matrix<__value_type,__mem_layout,__index_type>::memory_layout  memory_layout;
-			typedef typename matrix<__value_type,__index_type>::value_type        value_type;
-			typedef typename matrix<__value_type,__index_type>::index_type        index_type;
+			typedef dense_matrix<__value_type, __mem_layout, __index_type>         base_type; ///< Basic dense matrix type
+			typedef host_vector<__value_type, __index_type>                        vec_type; ///< Basic vector type used
+			typedef typename dense_matrix<__value_type,__mem_layout,__index_type>::memory_layout  memory_layout; ///< Memory layout trait
+			using typename base_type::value_type;
+			using typename base_type::index_type;
 			using matrix<__value_type, __index_type>::m_width;
 			using matrix<__value_type, __index_type>::m_height;
 		protected:
-			vec_type* m_vec;
+			vec_type* m_vec; ///< Pointer to vector containing matrix entries
 		private:
 			inline const value_type operator()(const index_type& i, const index_type& j, column_major) const;
 			inline const value_type operator()(const index_type& i, const index_type& j, row_major)    const;
@@ -38,33 +41,76 @@ namespace cuv{
 			 * Member access
 			 */
 			// do _not_ return a reference, we want to be compatible with device memory classes and there references do not work
-			inline const value_type operator()(const index_type& i, const index_type& j) const; 
-			inline       value_type operator()(const index_type& i, const index_type& j);
-			inline size_t memsize()       const { cuvAssert(m_vec); return m_vec->memsize(); }
-			inline const value_type* ptr()const { cuvAssert(m_vec); return m_vec->ptr(); }
-			inline       value_type* ptr()      { cuvAssert(m_vec); return m_vec->ptr(); }
-			inline const vec_type& vec()  const { return *m_vec; }
-			inline       vec_type& vec()        { return *m_vec; }
-			inline const vec_type* vec_ptr()  const { return m_vec; }
-			inline       vec_type* vec_ptr()        { return m_vec; }
-			inline 		 void set(const index_type& i, const index_type& j, const value_type& val);
+			inline const value_type operator()(const index_type& i, const index_type& j) const; ///< Read entry at position (i,j)
+			inline       value_type operator()(const index_type& i, const index_type& j); ///< Read entry at position (i,j)
+			inline size_t memsize()       const { cuvAssert(m_vec); return m_vec->memsize(); } ///< Return matrix size in memory
+			inline const value_type* ptr()const { cuvAssert(m_vec); return m_vec->ptr(); } ///< Return pointer to matrix entries
+			inline       value_type* ptr()      { cuvAssert(m_vec); return m_vec->ptr(); } ///< Return pointer to matrix entries
+			inline const vec_type& vec()  const { return *m_vec; } ///< Return reference to vector containing matrix entries
+			inline       vec_type& vec()        { return *m_vec; } ///< Return reference to vector containing matrix entries
+			inline const vec_type* vec_ptr()  const { return m_vec; } ///< Return pointer to vector containing matrix entries
+			inline       vec_type* vec_ptr()        { return m_vec; } ///< Return pointer to vector containing matrix entries
+			inline 		 void set(const index_type& i, const index_type& j, const value_type& val); ///< Set entry at position (i,j)
 
 			/*
 			 * Life cycle
 			 */
+
+			/** 
+			 * @brief Creates matrix of same type and size as given matrix
+			 * 
+			 * @param m Matrix of type and size used for returned matrix
+			 *
+			 * Allocates memory for entries in main memory.
+			 *
+			 * @return Matrix of size m.h() x m.w() and same type as matrix m.
+			 */
+
 			template<class V, class I>
 				host_dense_matrix(const matrix<V,I>* m)
 				:  base_type(m->h(),m->w()), m_vec(NULL)
 				{ 
 					this->alloc(); 
 				}
+			/** 
+			 * @brief Creates matrix of weight w and height h.
+			 * 
+			 * @param h Height of matrix
+			 * @param w Width of matrix
+			 */
 			host_dense_matrix(const index_type& h, const index_type& w) 
 				:	base_type(h,w), m_vec(NULL){ alloc(); }
+			/** 
+			 * @brief Creates matrix as view on given host vector.
+			 * 
+			 * @param h Heights of matrix
+			 * @param w Width of matrix
+			 * @param p Pointer to vector containing matrix entries.
+			 *
+			 * This function does not allocate any memory but uses the memory belonging to p.
+			 * No responsibility for the memory that p points to is taken, i.e. when returned matrix is destoyed, the vector p is not destroyed.
+			 *
+			 */
 			host_dense_matrix(const index_type& h, const index_type& w, host_vector<value_type,index_type>* p) 
 				:	base_type(h,w), m_vec(p) {} // do not alloc!
+			/** 
+			 * @brief Creates matrix from given host vector.
+			 * 
+			 * @param h Heights of matrix
+			 * @param w Width of matrix
+			 * @param p  Pointer to vector containing matrix entries.
+			 * @param is_view If true will not take responsibility of memory at p. Otherwise will dealloc p on destruction.
+			 */
 			host_dense_matrix(const index_type& h, const index_type& w, value_type* p, bool is_view)
 				:	base_type(h,w) { m_vec = new vec_type(h*w,p,is_view); }
-			~host_dense_matrix(){ dealloc(); }
+			~host_dense_matrix(){ dealloc(); } ///< Destructor: Deallocate matrix memory if is_view is false
+			/** 
+			 * @brief Assignment operator. Assigns vector belonging to source to destination and sets source vector to NULL
+			 * 
+			 * @param o Source matrix
+			 * 
+			 * @return Matrix of same size and type of o that now owns vector of entries of o.
+			 */
 			host_dense_matrix<value_type,memory_layout,index_type>& 
 				operator=(host_dense_matrix<value_type,memory_layout,index_type>& o){
 					if(this==&o) return *this;
@@ -78,8 +124,8 @@ namespace cuv{
 			/*
 			 * Memory Management
 			 */
-			void alloc();
-			void dealloc();
+			void alloc(); ///< Allocate memory for matrix entries
+			void dealloc(); ///< Deallocate memory for matrix entries. Does nothing if is_view is true.
 
 	};
 
@@ -159,6 +205,12 @@ namespace cuv{
 #include <iostream>
 namespace std{
 	template<class T, class M, class I>
+	/** 
+	 * @brief Return stream containing matrix entries for debugging
+	 * 
+	 * @param o Output stream
+	 * @param w2 Matrix to output
+	 */
 	ostream& 
 	operator<<(ostream& o, const cuv::host_dense_matrix<T,M,I>& w2){
 		cout << "Host-Dense-Matrix: "<<endl;

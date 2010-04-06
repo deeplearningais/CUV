@@ -21,7 +21,7 @@ namespace cuv{
  * Convolve N patterns (images) with F filters, resulting in N*F target images.
  *
  * @param img		contains one input pattern in each row
- * @param filters	contains one filter in each row, number of filters must
+ * @param filter	contains one filter in each row, number of filters must
  * 			        be multiples of 16.
  * @param dst		holds the target images of the convolution. one row for each
  *			        input image. width = dstSize^2 * numFilters
@@ -32,7 +32,7 @@ void convolve(dev_dense_matrix<V,M,I>& dst,
 		   dev_dense_matrix<V,M,I>& filter);
 
 /**
-  * @copydoc convolve(dev_dense_matrix<float,row_major>&,dev_dense_matrix<float,row_major>&,dev_dense_matrix<float,row_major>&)
+  * @copydoc convolve(dev_dense_matrix<V,M,I>& dst,dev_dense_matrix<V,M,I>& img,dev_dense_matrix<V,M,I>& filter)
   */
 template<class V, class M, class I>
 void convolve(host_dense_matrix<V,M,I>& dst,
@@ -204,15 +204,25 @@ template<class V, class M, class I>
 void reorder(dev_dense_matrix<V,M,I>& A,
 		   int blockLength);
 
-/**
- *
- * @brief For a matrix with n maps in a row it returns a matrix where these maps are summed up into one map per row
- * @param dst holds the target matrix
- * @param mat is a matrix with n maps of the same size in a row
- * @param image_size the size of one map in that rows
- *
- */
 
+/**
+ * @brief Reorder blocks in a matrix
+ * 
+ * @param A target matrix 
+ * @param blockLength size of each block
+ *
+ * sort the images in a matrix in a different order
+ * input:  A1 B1 C1 D1
+ *         A2 B2 C2 D2
+ *         A3 B3 C3 D3
+ * 		   where A1 is an image with blockLength pixels
+ * output: A1
+ *         A2
+ *         A3
+ *         B1
+ *         B2
+ *         ..
+ */
 template<class V, class M, class I>
 void reorder(host_dense_matrix<V,M,I>& A,
 		   int blockLength);

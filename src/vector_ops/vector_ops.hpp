@@ -123,7 +123,7 @@ namespace cuv{
  /** 
   * @brief Apply a pointwise nullary functor to a vector.
   * 
-  * @param m		Target vector 
+  * @param v		Target vector 
   * @param sf 	NullaryFunctor to apply 
   * 
   */
@@ -134,7 +134,7 @@ namespace cuv{
   /** 
    * @brief Apply a pointwise nullary functor with a scalar parameter to a vector.
    * 
-   * @param m	Target vector 
+   * @param v	Target vector 
    * @param sf	NullaryFunctor to apply 
    * @param param	scalar parameter 
    * 
@@ -167,7 +167,7 @@ namespace cuv{
   /** 
    * @brief Apply a pointwise unary functor to a vector
    * 
-   * @param m Target vector 
+   * @param v Target vector 
    * @param sf ScalarFunctor to apply 
    * 
    */
@@ -180,25 +180,25 @@ namespace cuv{
   /** 
    * @brief Apply pointwise unary functor with one scalar parameter to a vector
    * 
-   * @param m Target vector
+   * @param v Target vector
    * @param sf ScalarFunctor to apply
    * @param p scalar parameter
    * 
    */
   template<class __vector_type, class __value_type>
   void
-  apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& param);
+  apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& p);
   /** 
    * @brief Apply pointwise unary functor with to scalar parameters to a vector
    * 
-   * @param m Target vector
+   * @param v Target vector
    * @param sf ScalarFunctor to apply 
    * @param p first scalar parameter 
    * @param p2 second scalar parameter
    */
   template<class __vector_type, class __value_type>
   void
-  apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& param, const __value_type& param2);
+  apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& p, const __value_type& p2);
 
   /** 
    * @brief Apply pointwise binary functor to a pair of matrices

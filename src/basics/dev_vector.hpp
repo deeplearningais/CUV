@@ -18,37 +18,56 @@ class dev_vector
 :    public vector<__value_type, __index_type>
 {
 	public:
-		typedef __value_type                       value_type;
-		typedef __index_type                       index_type;
-		typedef vector<__value_type, __index_type> base_type;
-		typedef dev_memory_space                   memspace_type;
+		typedef vector<__value_type, __index_type> base_type; ///< Vector base type
+		typedef dev_memory_space                   memspace_type; ///< Type of memory used: host/device
 		using base_type::m_ptr;
+		using typename base_type::value_type;
+		using typename base_type::index_type;
 	public:
 		/*
 		 * Construction
 		 */
-		dev_vector(){}
-		dev_vector(size_t s)
+		dev_vector(){} ///< Calles default constructor of parent class
+		/** 
+		 * @brief Creates a device vector of length s and allocates memory
+		 * 
+		 * @param s Length of vector
+		 */
+		dev_vector(index_type s)
 			:   base_type(s) { alloc(); }
-		dev_vector(size_t s, value_type* p, bool is_view)
+		/** 
+		 * @brief Creates device vector from device pointer
+		 * 
+		 * @param s Length of vector
+		 * @param p Device pointer to entries
+		 * @param is_view If true will not take responsibility of memory at p. Otherwise will dealloc p on destruction.
+		 *
+		 * Does not allocate any memory.
+		 */
+		dev_vector(index_type s, value_type* p, bool is_view)
 			:   base_type(s,p,is_view) {} // do not alloc!
-		~dev_vector(){dealloc();}
+		~dev_vector(){dealloc();} ///< Deallocate memory if not a view
+
 		/*
 		 * Member access
 		 */
-		value_type operator[](size_t t)const;
+		value_type operator[](index_type t)const; ///< Return entry at position t
+
 		/* 
 		 * Memory management
 		 */
-		void alloc();
-		void dealloc();
-
-		void set(const index_type& i, const value_type& val);
+		void alloc(); ///< Allocate device memory
+		void dealloc(); ///< Deallocate device memory if not a view
+		void set(const index_type& i, const value_type& val); ///< Set entry i to val
 };
 
+/** 
+ * @brief Trait that indicates whether device or host memory is used.
+ */
 template<class V, class I>
 struct vector_traits<dev_vector<V,I> >{
-	typedef dev_memory_space memory_space_type;
+	typedef dev_memory_space memory_space_type;  ///< Trait for memory type (host/device)
+
 };
 
 } // cuv
