@@ -41,14 +41,29 @@ class vector{
 	  /*
 	   * Member Access
 	   */
-	  inline const value_type* ptr()const{ return m_ptr;  }	///< Return pointer to matrix entries
-	  inline       value_type* ptr()     { return m_ptr;  } ///< Return pointer to matrix entries
-	  inline size_t size() const         { return m_size; } ///< Return length of vector
-	  inline size_t memsize()       const{ return size() * sizeof(value_type); } ///< Return size of vector in memory
+	  /** 
+	   * @brief Return pointer to matrix entries
+	   */
+	  inline const value_type* ptr()const{ return m_ptr;  }	
+	  /** 
+	   * @brief Return pointer to matrix entries
+	   */
+	  inline       value_type* ptr()     { return m_ptr;  }
+	  /** 
+	   * @brief Return length of vector
+	   */
+	  inline size_t size() const         { return m_size; }
+	  /** 
+	   * @brief Return size of vector in memory
+	   */
+	  inline size_t memsize()       const{ return size() * sizeof(value_type); } 
 	  /*
 	   * Construction
 	   */
-	  vector():m_ptr(NULL),m_is_view(false),m_size(0) {} ///< Empty constructor. Creates empty vector (allocates no memory)
+	  /** 
+	   * @brief Empty constructor. Creates empty vector (allocates no memory)
+	   */
+	  vector():m_ptr(NULL),m_is_view(false),m_size(0) {} 
 	  /** 
 	   * @brief Creates vector of lenght s and allocates memory
 	   * 
@@ -62,13 +77,24 @@ class vector{
 	   * @param p Pointer to entries 
 	   * @param is_view If true will not take responsibility of memory at p. Otherwise will dealloc p on destruction.
 	   */
-	  vector(size_t s,value_type* p, bool is_view):m_ptr(p),m_is_view(is_view),m_size(s) {}
-	  ~vector(){ dealloc(); } ///< Deallocate memory if is_view is false.
+	  virtual vector(size_t s,value_type* p, bool is_view):m_ptr(p),m_is_view(is_view),m_size(s) {
+		  alloc();
+	  }
+	  /** 
+	   * @brief Deallocate memory if is_view is false.
+	   */
+	  virtual ~vector(){ dealloc(); } 
 	  /*
 	   * Memory Management
 	   */
-	  virtual void alloc(){}; ///< Does nothing
-	  virtual void dealloc(){}; ///< Does nothing
+	  /** 
+	   * @brief Does nothing
+	   */
+	  virtual void alloc(){}; 
+	  /** 
+	   * @brief Does nothing
+	   */
+	  virtual void dealloc(){}; 
 
 		/** 
 		 * @brief Assignment operator. Assigns memory belonging to source to destination and sets source memory pointer to NULL (if source is not a view)

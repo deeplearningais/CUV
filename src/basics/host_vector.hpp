@@ -31,7 +31,12 @@ class host_vector
 
 		host_vector() ///< Creates host vector of size 0
 			:   base_type(0) {}
-		host_vector(index_type s)///< Creates host vector of length s and allocates memory
+		/** 
+		 * @brief Creates host vector of length s and allocates memory
+		 * 
+		 * @param s Length of vector
+		 */
+		host_vector(index_type s)
 			:   base_type(s) { alloc(); }
 		/** 
 		 * @brief Creates host vector from pointer
@@ -54,11 +59,17 @@ class host_vector
 		/*
 		 * Memory Management
 		 */
-		void alloc() ///< Allocate host memory
+		/** 
+		 * @brief Allocate host memory
+		 */
+		void alloc() 
 		{
 			m_ptr = new value_type[this->size()];
 		}
-		void dealloc() ///< Deallocate host memory if not a view
+		/** 
+		 * @brief Deallocate host memory if not a view
+		 */
+		void dealloc() 
 		{
 			if(m_ptr && !m_is_view){
 				delete[] m_ptr;
@@ -66,7 +77,13 @@ class host_vector
 			m_ptr = NULL;
 		}
 
-		void set(const index_type& i, const value_type& val) ///< Set entry i to val
+		/** 
+		 * @brief Set entry i to val
+		 * 
+		 * @param i Index of which entry to change 
+		 * @param val New value of entry
+		 */
+		void set(const index_type& i, const value_type& val)
 			{ m_ptr[i] = val; }
 };
 
@@ -75,7 +92,8 @@ class host_vector
  */
 template<class V, class I>
 struct vector_traits<host_vector<V,I> >{
-	typedef dev_memory_space memory_space_type;
+	typedef dev_memory_space memory_space_type; ///< Trait for memory type (host/device)
+
 };
 
 } // cuv

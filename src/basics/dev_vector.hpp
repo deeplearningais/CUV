@@ -56,9 +56,21 @@ class dev_vector
 		/* 
 		 * Memory management
 		 */
-		void alloc(); ///< Allocate device memory
-		void dealloc(); ///< Deallocate device memory if not a view
-		void set(const index_type& i, const value_type& val); ///< Set entry i to val
+		/** 
+		 * @brief Allocate device memory
+		 */
+		void alloc(); 
+		/** 
+		 * @brief Deallocate device memory if not a view
+		 */
+		void dealloc(); 
+		/** 
+		 * @brief Set entry i to val
+		 * 
+		 * @param i Index of which entry to change 
+		 * @param val New value of entry
+		 */
+		void set(const index_type& i, const value_type& val); 
 };
 
 /** 

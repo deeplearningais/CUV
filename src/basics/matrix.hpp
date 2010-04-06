@@ -8,11 +8,13 @@
 #ifndef __MATRIX_HPP__
 #define __MATRIX_HPP__
 namespace cuv{
-/** Parent struct that host/device and column major/row major traits inherit from
+/** 
+ * @brief Trait that indicates whether device or host memory is used.
  */
 	template<class T>
 	struct matrix_traits{
-		typedef memory_space memory_space_type;
+		typedef memory_space memory_space_type;  ///< Trait for memory type (host/device)
+
 	};
 	template<class V, class I>
 	class host_dia_matrix;
@@ -31,8 +33,8 @@ class matrix
 		  typedef __index_type index_type;	///< Type of indices
 		  template <class Archive, class V, class I> friend void serialize(Archive&, host_dia_matrix<V,I>&, unsigned int) ; ///< serialization function to save matrix
 	  protected:
-		  index_type m_width;
-		  index_type m_height;
+		  index_type m_width; ///< Width of matrix
+		  index_type m_height; ///< Heigth of matrix
 		public:
 		  /** 
 		   * @brief Basic constructor: set width and height of matrix but do not allocate any memory
