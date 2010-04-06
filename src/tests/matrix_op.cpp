@@ -34,9 +34,9 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 BOOST_AUTO_TEST_CASE( vec_ops_unary1 )
 {
 	apply_scalar_functor(v, SF_EXP);
-	apply_scalar_functor(v, SF_EXACT_EXP);
+	//apply_scalar_functor(v, SF_EXACT_EXP);
 	apply_scalar_functor(x, SF_EXP);
-	apply_scalar_functor(x, SF_EXACT_EXP);
+	//apply_scalar_functor(x, SF_EXACT_EXP);
 }
 
 BOOST_AUTO_TEST_CASE( vec_ops_binary1 )

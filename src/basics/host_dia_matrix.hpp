@@ -22,10 +22,10 @@ namespace cuv{
 		  typedef host_vector<__value_type, __index_type>          vec_type;				///< Basic vector type of matrix
 		  typedef host_vector<int, unsigned int>                   intvec_type;				///< Type of offsets for diagonals
 		  typedef dia_matrix<__value_type, __index_type, vec_type, intvec_type> base_type;	///< Basic matrix type
-		  typedef host_dia_matrix<value_type,index_type>  		   my_type;					///< Type of this matix
-		  using typename base_type::value_type;
-		  using typename base_type::index_type;
+		  typedef typename base_type::value_type value_type;
+		  typedef typename base_type::index_type index_type;
 		  using base_type::m_row_fact;
+		  typedef host_dia_matrix<value_type,index_type>  		   my_type;					///< Type of this matix
 		protected:
 		public:
 		  ~host_dia_matrix(){} 	///< Empty destructor. Does nothing

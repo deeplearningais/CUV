@@ -23,12 +23,12 @@ void export_0ary_functors(){
 }
 void export_scalar_functors() {
     enum_<cuv::ScalarFunctor>("scalar_functor")
-        .value("EXACT_EXP", SF_EXACT_EXP)
+        //.value("EXACT_EXP", SF_EXACT_EXP)
         .value("EXP", SF_EXP)
         .value("LOG", SF_LOG)
         .value("SIGN", SF_SIGN)
         .value("SIGM", SF_SIGM)
-        .value("EXACT_SIGM", SF_EXACT_SIGM)
+        //.value("EXACT_SIGM", SF_EXACT_SIGM)
         .value("DSIGM", SF_DSIGM)
         .value("TANH", SF_TANH)
         .value("DTANH", SF_DTANH)

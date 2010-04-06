@@ -77,7 +77,7 @@ class vector{
 	   * @param p Pointer to entries 
 	   * @param is_view If true will not take responsibility of memory at p. Otherwise will dealloc p on destruction.
 	   */
-	  virtual vector(size_t s,value_type* p, bool is_view):m_ptr(p),m_is_view(is_view),m_size(s) {
+	  vector(size_t s,value_type* p, bool is_view):m_ptr(p),m_is_view(is_view),m_size(s) {
 		  alloc();
 	  }
 	  /** 

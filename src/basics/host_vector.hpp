@@ -20,8 +20,8 @@ class host_vector
 	public:
 		typedef vector<__value_type, __index_type> base_type; ///< Vector base type
 		typedef host_memory_space                  memspace_type; ///< Type of memory used: host/device
-		using typename base_type::value_type;
-		using typename base_type::index_type;
+		typedef typename base_type::value_type value_type;
+		typedef typename base_type::index_type index_type;
 		using base_type::m_ptr;
 		using base_type::m_is_view;
 	public:

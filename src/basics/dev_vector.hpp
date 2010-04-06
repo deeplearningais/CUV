@@ -21,8 +21,8 @@ class dev_vector
 		typedef vector<__value_type, __index_type> base_type; ///< Vector base type
 		typedef dev_memory_space                   memspace_type; ///< Type of memory used: host/device
 		using base_type::m_ptr;
-		using typename base_type::value_type;
-		using typename base_type::index_type;
+		typedef typename base_type::value_type value_type;
+		typedef typename base_type::index_type index_type;
 	public:
 		/*
 		 * Construction
@@ -51,7 +51,7 @@ class dev_vector
 		/*
 		 * Member access
 		 */
-		value_type operator[](index_type t)const; ///< Return entry at position t
+		value_type operator[](index_type idx)const; ///< Return entry at position t
 
 		/* 
 		 * Memory management

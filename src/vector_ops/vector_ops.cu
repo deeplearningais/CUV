@@ -455,7 +455,7 @@ struct apply_scalar_functor_impl{
 		typedef typename __vector_type::value_type value_type;
 	  switch(sf){
 			case SF_EXP:        launch_unary_kernel(v,v, uf_exp<value_type>()); break;
-			case SF_EXACT_EXP:  launch_unary_kernel(v,v, uf_exact_exp<value_type>()); break;
+			/*case SF_EXACT_EXP:  launch_unary_kernel(v,v, uf_exact_exp<value_type>()); break;*/
 			case SF_LOG:        launch_unary_kernel(v,v, uf_log<value_type>()); break;
 			case SF_SIGN:       launch_unary_kernel(v,v, uf_sign<value_type>()); break;
 			case SF_SIGM:       launch_unary_kernel(v,v, uf_sigm<value_type>()); break;

@@ -22,9 +22,9 @@ namespace cuv{
 		  typedef dev_vector<__value_type, __index_type>          vec_type;					///< Basic vector type of matrix
 		  typedef dev_vector<int>                                 intvec_type;				///< Type of offsets for diagonals
 		  typedef dia_matrix<__value_type, __index_type, vec_type, intvec_type> base_type;	///< Basic matrix type
+		  typedef typename base_type::value_type value_type;
+		  typedef typename base_type::index_type index_type;
 		  typedef dev_dia_matrix<value_type,index_type>            my_type;					///< Type of this matix
-		  using typename base_type::value_type;
-		  using typename base_type::index_type;
 		  using base_type::m_row_fact;
 		protected:
 		public:

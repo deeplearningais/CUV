@@ -22,8 +22,8 @@ namespace cuv{
 		  typedef __mem_layout        memory_layout;
 		  typedef dev_vector<__value_type, __index_type>                        vec_type;	///< Basic vector type used
 		  typedef dense_matrix<__value_type, __mem_layout, __index_type>        base_type;	///< Basic dense matrix type
-		  using typename base_type::value_type;
-		  using typename base_type::index_type;
+		  typedef typename base_type::value_type value_type;
+		  typedef typename base_type::index_type index_type;
 		  using base_type::m_width;
 		  using base_type::m_height;
 		protected:
@@ -147,27 +147,27 @@ namespace cuv{
 	 *
 	 */
 	template<class V, class M, class I>
-	const typename matrix<V,I>::value_type
+	const typename dev_dense_matrix<V,M,I>::value_type
 	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j, const column_major& x) const{ return (*m_vec)[ this->h()*j + i]; }
 
 	template<class V, class M, class I>
-	const typename matrix<V,I>::value_type
+	const typename dev_dense_matrix<V,M,I>::value_type
 	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j, const row_major& x)    const{ return (*m_vec)[ this->w()*i + j]; }
 
 	template<class V, class M, class I>
-	const typename matrix<V,I>::value_type
+	const typename dev_dense_matrix<V,M,I>::value_type
 	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j)    const{ return (*this)(i,j,memory_layout()); }
 
 	template<class V, class M, class I>
-	typename matrix<V,I>::value_type
+	typename dev_dense_matrix<V,M,I>::value_type
 	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j, const column_major& x) { return (*m_vec)[ this->h()*j + i]; }
 
 	template<class V, class M, class I>
-	typename matrix<V,I>::value_type
+	typename dev_dense_matrix<V,M,I>::value_type
 	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j, const row_major& x)    { return (*m_vec)[ this->w()*i + j]; }
 
 	template<class V, class M, class I>
-	typename matrix<V,I>::value_type
+	typename dev_dense_matrix<V,M,I>::value_type
 	dev_dense_matrix<V,M,I>::operator()(const index_type& i, const index_type& j)    { return (*this)(i,j,memory_layout()); }
 
 	/** 
