@@ -27,8 +27,8 @@ namespace cuv{
 		  typedef __vec_type    vec_type; ///< Basic vector type of matrix
 		  typedef __intvec_type intvec_type; ///< Type of offsets for diagonals
 		  typedef matrix<__value_type, __index_type> base_type; ///< Basic matrix type
-		  typedef typename matrix<__value_type, __index_type>::value_type value_type;///< Type of matrix entries
-		  typedef typename matrix<__value_type, __index_type>::index_type index_type;///< Type of indices
+		  typedef typename base_type::value_type value_type;///< Type of matrix entries
+		  typedef typename base_type::index_type index_type;///< Type of indices
 		//protected:
 		public:
 		  int m_num_dia;                        ///< number of diagonals stored
@@ -63,11 +63,11 @@ namespace cuv{
 				cuvAssert(m_row_fact>0);
 				alloc();
 			}
-			~dia_matrix() ///< Deallocate matrix if is_view is false.
-			{
-				dealloc();
-			}
-			void dealloc() ///< Deallocate matrix entries if is_vies is false. This calls deallocation of the vector storing entries.
+			//~dia_matrix() ///< Deallocate matrix 
+			//{
+				//dealloc();
+			//}
+			void dealloc() ///< Deallocate matrix entries. This calls deallocation of the vector storing entries.
 			{
 				if(m_vec)
 					delete m_vec;

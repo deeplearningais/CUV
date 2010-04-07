@@ -28,7 +28,7 @@ namespace cuv{
 		  using base_type::m_row_fact;
 		protected:
 		public:
-		  ~dev_dia_matrix(){} 	///< Calls destructor of parent class to deallocate memory
+		  //~dev_dia_matrix(){} 	///< Calls destructor of parent class to deallocate memory
 		  dev_dia_matrix(){}	///< Calls default constructor of parent class
 			/** 
 			 * @brief Creates diagonal matrix of given size, with given number of diagonals and stride.

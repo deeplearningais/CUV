@@ -18,17 +18,18 @@ namespace cuv{
 		 * @brief Class for dense host(=CPU memory) matrices.
 		 */
 	class host_dense_matrix 
-	:        public dense_matrix<__value_type, __mem_layout, __index_type>{
+	:        public dense_matrix<__value_type, __mem_layout, host_vector<__value_type, __index_type>, __index_type>{
 		public:
-			typedef dense_matrix<__value_type, __mem_layout, __index_type>         base_type; ///< Basic dense matrix type
+		  	typedef __mem_layout        memory_layout;
 			typedef host_vector<__value_type, __index_type>                        vec_type; ///< Basic vector type used
-			typedef typename dense_matrix<__value_type,__mem_layout,__index_type>::memory_layout  memory_layout; ///< Memory layout trait
+			typedef dense_matrix<__value_type, __mem_layout, vec_type, __index_type>         base_type; ///< Basic dense matrix type
 			typedef typename base_type::value_type value_type;
 			typedef typename base_type::index_type index_type;
 			using base_type::m_width;
 			using base_type::m_height;
-		protected:
-			vec_type* m_vec; ///< Pointer to vector containing matrix entries
+			using base_type::m_vec;
+		//protected:
+			//vec_type* m_vec; ///< Pointer to vector containing matrix entries
 		private:
 			inline const value_type operator()(const index_type& i, const index_type& j, column_major) const;
 			inline const value_type operator()(const index_type& i, const index_type& j, row_major)    const;
@@ -68,9 +69,8 @@ namespace cuv{
 
 			template<class V, class I>
 				host_dense_matrix(const matrix<V,I>* m)
-				:  base_type(m->h(),m->w()), m_vec(NULL)
+				:  base_type(m->h(),m->w())
 				{ 
-					this->alloc(); 
 				}
 			/** 
 			 * @brief Creates matrix of weight w and height h.
@@ -79,7 +79,7 @@ namespace cuv{
 			 * @param w Width of matrix
 			 */
 			host_dense_matrix(const index_type& h, const index_type& w) 
-				:	base_type(h,w), m_vec(NULL){ alloc(); }
+				:	base_type(h,w){}
 			/** 
 			 * @brief Creates matrix as view on given host vector.
 			 * 
@@ -91,8 +91,8 @@ namespace cuv{
 			 * No responsibility for the memory that p points to is taken, i.e. when returned matrix is destoyed, the vector p is not destroyed.
 			 *
 			 */
-			host_dense_matrix(const index_type& h, const index_type& w, host_vector<value_type,index_type>* p) 
-				:	base_type(h,w), m_vec(p) {} // do not alloc!
+			host_dense_matrix(const index_type& h, const index_type& w, host_vector<value_type,index_type>* p, bool is_view = false) 
+				:	base_type(h,w,p->ptr()) {} // do not alloc!
 			/** 
 			 * @brief Creates matrix from given host vector.
 			 * 
@@ -101,9 +101,9 @@ namespace cuv{
 			 * @param p  Pointer to vector containing matrix entries.
 			 * @param is_view If true will not take responsibility of memory at p. Otherwise will dealloc p on destruction.
 			 */
-			host_dense_matrix(const index_type& h, const index_type& w, value_type* p, bool is_view)
-				:	base_type(h,w) { m_vec = new vec_type(h*w,p,is_view); }
-			~host_dense_matrix(){ dealloc(); } ///< Destructor: Deallocate matrix memory if is_view is false
+			host_dense_matrix(const index_type& h, const index_type& w, value_type* p, bool is_view = false)
+				:	base_type(h,w,p,is_view) { }
+			//~host_dense_matrix(){ dealloc(); } ///< Destructor: Deallocate matrix memory if is_view is false
 			/** 
 			 * @brief Assignment operator. Assigns vector belonging to source to destination and sets source vector to NULL
 			 * 
@@ -115,7 +115,7 @@ namespace cuv{
 				operator=(host_dense_matrix<value_type,memory_layout,index_type>& o){
 					if(this==&o) return *this;
 					this->dealloc();
-					(dense_matrix<value_type,memory_layout,index_type>&) (*this)  = (dense_matrix<value_type,memory_layout,index_type>&) o; // copy width, height
+					(dense_matrix<value_type,memory_layout,vec_type,index_type>&) (*this)  = (dense_matrix<value_type,memory_layout,vec_type,index_type>&) o; // copy width, height
 					m_vec   = o.m_vec;
 					o.m_vec = NULL;                // transfer ownership of memory
 					return *this;
@@ -124,8 +124,8 @@ namespace cuv{
 			/*
 			 * Memory Management
 			 */
-			void alloc(); ///< Allocate memory for matrix entries
-			void dealloc(); ///< Deallocate memory for matrix entries. Does nothing if is_view is true.
+			//void alloc(); ///< Allocate memory for matrix entries
+			//void dealloc(); ///< Deallocate memory for matrix entries. Does nothing if is_view is true.
 
 	};
 
@@ -133,20 +133,19 @@ namespace cuv{
 	 * memory allocation
 	 *
 	 */
-	template<class V, class M, class I>
-	void
-	host_dense_matrix<V,M,I>::alloc() { 
-		cuvAssert(!m_vec);
-		m_vec = new host_vector<value_type,index_type>(this->n()); 
-	}
+	//template<class V, class M, class I>
+	//void
+	//host_dense_matrix<V,M,I>::alloc() { 
+		//m_vec = new host_vector<value_type,index_type>(this->n()); 
+	//}
 
-	template<class V, class M, class I>
-	void
-	host_dense_matrix<V,M,I>::dealloc() {
-		if(m_vec)
-			delete m_vec;
-		m_vec = NULL;
-	}
+	//template<class V, class M, class I>
+	//void
+	//host_dense_matrix<V,M,I>::dealloc() {
+		//if(m_vec)
+			//delete m_vec;
+		//m_vec = NULL;
+	//}
 
 
 	/*

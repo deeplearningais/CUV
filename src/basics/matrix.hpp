@@ -46,6 +46,9 @@ class matrix
 			: m_width(w), m_height(h)
 			{
 			}
+		  virtual ~matrix(){ ///< Destructor calls dealloc.
+			  dealloc();
+		  }
 		  /** 
 		   * @brief Resizing matrix: changing width and height without changing memory layout
 		   * 
@@ -60,6 +63,8 @@ class matrix
 		  inline index_type w()const  { return m_width;                } ///< Return matrix width
 		  inline index_type h()const  { return m_height;               } ///< Return matrix height
 		  inline index_type n()const  { return w()*h();                } ///< Return number of entries in matrix
+		  virtual void alloc() {}; ///< Does nothing
+		  virtual void dealloc() {}; ///< Does nothing
 	};
 }
 

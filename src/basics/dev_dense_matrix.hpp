@@ -17,17 +17,18 @@ namespace cuv{
 		 * @brief Class for dense device(=GPU memory) matrices.
 		 */
 	class dev_dense_matrix
-	:        public dense_matrix<__value_type, __mem_layout, __index_type>{
+	:        public dense_matrix<__value_type, __mem_layout, dev_vector<__value_type,__index_type>,__index_type>{
 		public:
 		  typedef __mem_layout        memory_layout;
 		  typedef dev_vector<__value_type, __index_type>                        vec_type;	///< Basic vector type used
-		  typedef dense_matrix<__value_type, __mem_layout, __index_type>        base_type;	///< Basic dense matrix type
+		  typedef dense_matrix<__value_type, __mem_layout,vec_type, __index_type>        base_type;	///< Basic dense matrix type
 		  typedef typename base_type::value_type value_type;
 		  typedef typename base_type::index_type index_type;
 		  using base_type::m_width;
 		  using base_type::m_height;
-		protected:
-		  vec_type* m_vec; ///< Pointer to vector containing matrix entries
+		  using base_type::m_vec;
+		//protected:
+		  //vec_type* m_vec; ///< Pointer to vector containing matrix entries
 		private:
 		  inline const value_type operator()(const index_type& i, const index_type& j, const column_major& x) const;
 		  inline const value_type operator()(const index_type& i, const index_type& j, const row_major& x)    const;
@@ -64,9 +65,9 @@ namespace cuv{
 			 */
 			  template<class V, class I>
 			  dev_dense_matrix(const matrix<V,I>* m)
-			  :  base_type(m->h(),m->w()), m_vec(NULL)
+			  :  base_type(m->h(),m->w())
 			  { 
-				  this->alloc(); 
+				  //this->alloc(); 
 			  }
 
 			/** 
@@ -76,7 +77,7 @@ namespace cuv{
 			 * @param w Width of matrix
 			 */
 			  dev_dense_matrix(const index_type& h, const index_type& w)
-				:  base_type(h,w), m_vec(NULL) { alloc(); }
+				:  base_type(h,w){}
 
 			/** 
 			 * @brief Creates matrix as view on given host vector.
@@ -89,8 +90,8 @@ namespace cuv{
 			 * No responsibility for the memory that p points to is taken, i.e. when returned matrix is destoyed, the vector p is not destroyed.
 			 *
 			 */
-			  dev_dense_matrix(const index_type& h, const index_type& w, dev_vector<value_type,index_type>* p)
-				:  base_type(h,w), m_vec(p) { } // do not alloc!
+			  dev_dense_matrix(const index_type& h, const index_type& w, dev_vector<value_type,index_type>* p, bool is_view = false)
+				:  base_type(h,w,p->ptr(),is_view) { } // do not alloc!
 			/** 
 			 * @brief Creates matrix from given host vector.
 			 * 
@@ -99,9 +100,9 @@ namespace cuv{
 			 * @param p  Pointer to vector containing matrix entries.
 			 * @param is_view If true will not take responsibility of memory at p. Otherwise will dealloc p on destruction.
 			 */
-			  dev_dense_matrix(const index_type& h, const index_type& w, value_type* p, bool is_view)
-				:	base_type(h,w) { m_vec = new vec_type(h*w,p,is_view); }
-			  ~dev_dense_matrix(){ dealloc(); } ///< Destructor: Deallocate matrix memory if is_view is false
+			  dev_dense_matrix(const index_type& h, const index_type& w, value_type* p, bool is_view = false)
+				:	base_type(h,w,p,is_view) {}
+			  //~dev_dense_matrix(){ dealloc(); } ///< Destructor: Deallocate matrix memory if is_view is false
 
 			/** 
 			 * @brief Assignment operator. Assigns vector belonging to source to destination and sets source vector to NULL
@@ -114,7 +115,7 @@ namespace cuv{
 			  operator=(dev_dense_matrix<value_type,memory_layout,index_type>& o){
 				  if(this==&o) return *this;
 				  this->dealloc();
-				  (dense_matrix<value_type,memory_layout,index_type>&) (*this)  = (dense_matrix<value_type,memory_layout,index_type>&) o; // copy width, height
+					  (dense_matrix<value_type,memory_layout,vec_type,index_type>&) (*this)  = (dense_matrix<value_type,memory_layout,vec_type,index_type>&) o; // copy width, height
 				  m_vec   = o.m_vec;
 				  o.m_vec = NULL;                // transfer ownership of memory
 				  return *this;
@@ -126,20 +127,20 @@ namespace cuv{
 			  /** 
 			   * @brief Allocate memory for matrix entries 
 			   */
-		  void alloc() 
-		  {   
-			  cuvAssert(!m_vec);
-			  m_vec = new dev_vector<value_type,index_type>(this->n());
-		  }
+		  //void alloc() 
+		  //{   
+			  //cuvAssert(!m_vec);
+			  //m_vec = new dev_vector<value_type,index_type>(this->n());
+		  //}
 		  /** 
 		   * @brief Deallocate memory for matrix entries. Does nothing if is_view is true.
 		   */
-		  void dealloc() 
-		  {
-			  if(m_vec)
-				  delete m_vec;
-			  m_vec = NULL;
-		  };
+		  //void dealloc() 
+		  //{
+			  //if(m_vec)
+				  //delete m_vec;
+			  //m_vec = NULL;
+		  //};
 	};
 
 	/*

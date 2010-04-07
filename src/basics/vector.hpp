@@ -35,7 +35,7 @@ class vector{
 	protected:
 	  value_type* m_ptr;
 	  bool        m_is_view;
-	  size_t      m_size;
+	 index_type      m_size;
 	
 	public:
 	  /*
@@ -52,7 +52,7 @@ class vector{
 	  /** 
 	   * @brief Return length of vector
 	   */
-	  inline size_t size() const         { return m_size; }
+	  inline index_type size() const         { return m_size; }
 	  /** 
 	   * @brief Return size of vector in memory
 	   */
@@ -69,7 +69,7 @@ class vector{
 	   * 
 	   * @param s Length of vector
 	   */
-	  vector(size_t s):m_ptr(NULL),m_is_view(false),m_size(s) { alloc(); }
+	  vector(index_type s):m_ptr(NULL),m_is_view(false),m_size(s) { alloc(); }
 	  /** 
 	   * @brief Creates vector from pointer to entries.
 	   * 
@@ -77,7 +77,7 @@ class vector{
 	   * @param p Pointer to entries 
 	   * @param is_view If true will not take responsibility of memory at p. Otherwise will dealloc p on destruction.
 	   */
-	  vector(size_t s,value_type* p, bool is_view):m_ptr(p),m_is_view(is_view),m_size(s) {
+	  vector(index_type s,value_type* p, bool is_view):m_ptr(p),m_is_view(is_view),m_size(s) {
 		  alloc();
 	  }
 	  /** 

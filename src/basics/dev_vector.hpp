@@ -46,7 +46,6 @@ class dev_vector
 		 */
 		dev_vector(index_type s, value_type* p, bool is_view)
 			:   base_type(s,p,is_view) {} // do not alloc!
-		~dev_vector(){dealloc();} ///< Deallocate memory if not a view
 
 		/*
 		 * Member access

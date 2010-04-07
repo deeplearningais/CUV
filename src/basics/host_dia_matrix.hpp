@@ -28,8 +28,8 @@ namespace cuv{
 		  typedef host_dia_matrix<value_type,index_type>  		   my_type;					///< Type of this matix
 		protected:
 		public:
-		  ~host_dia_matrix(){} 	///< Empty destructor. Does nothing
-		  host_dia_matrix(){}	///< Empty constuctor. Does nothing
+		  //~host_dia_matrix(){} 	///< Empty destructor. Does nothing
+		  host_dia_matrix(){}	///< Empty constuctor. Calls constructor of parent class
 
 			/** 
 			 * @brief Creates diagonal matrix of given size, with given number of diagonals and stride.

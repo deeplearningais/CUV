@@ -86,10 +86,11 @@ vec_view(pyublas::numpy_vector<T> v){
 template<class T, class Mto, class Mfrom>
 host_dense_matrix<T, Mto>*
 mat_view(pyublas::numpy_matrix<T, Mfrom> m){
-	host_vector<T>* vec = new host_vector<T>(m.size1()*m.size2(),m.as_ublas().data().data(),true);
+	typedef typename host_dense_matrix<T,Mto>::index_type index_type;
+	host_vector<T>* vec = new host_vector<T>((index_type)m.size1()*m.size2(),m.as_ublas().data().data(),true);
 	const bool same = boost::is_same<Mto, typename ublas2matrix_traits<Mfrom>::storage_type >::value;
-	if(same) return new host_dense_matrix<T,Mto>(m.size1(), m.size2(), vec);
-	else     return new host_dense_matrix<T,Mto>(m.size2(), m.size1(), vec);
+	if(same) return new host_dense_matrix<T,Mto>((index_type)m.size1(), (index_type)m.size2(), vec);
+	else     return new host_dense_matrix<T,Mto>((index_type)m.size2(), (index_type)m.size1(), vec);
 }
 /*
  * Create COPYs at another location in memory
@@ -97,10 +98,11 @@ mat_view(pyublas::numpy_matrix<T, Mfrom> m){
 template<class T, class Mto, class Mfrom>
 host_dense_matrix<T, Mto>*
 copy(pyublas::numpy_matrix<T, boost::numeric::ublas::column_major> m){
+	typedef typename host_dense_matrix<T,Mto>::index_type index_type;
 	const bool same = boost::is_same<Mto, typename ublas2matrix_traits<Mfrom>::storage_type >::value;
 	host_dense_matrix<T,Mto>* mat;
-	if(same) new host_dense_matrix<T,Mto>(m.size1(), m.size2());
-	else     new host_dense_matrix<T,Mto>(m.size2(), m.size1());
+	if(same) new host_dense_matrix<T,Mto>((index_type)m.size1(), (index_type)m.size2());
+	else     new host_dense_matrix<T,Mto>((index_type)m.size2(), (index_type)m.size1());
     memcpy(mat->ptr(), m.as_ublas().data().data(), mat->n() * sizeof(T));
     return mat;
 }
