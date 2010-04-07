@@ -67,25 +67,26 @@ namespace cuv{
 		cuvAssert(decay <1);
 		cuvAssert(decay >=0);
 		for (unsigned int i = 0; i < dW.size(); i++){
-			S sn = (S)sgn(dW[i]);
+			S sn = (S)sgn(dW[i] - decay*W[i]);
 			S s  = dW_old[i] * sn;
-			V dwn,rn=(V)0, r = rate[i];
+			V dwn,rn = rate[i];
 
 			if (s > 0) {
-				rn = min( ETA_P * r , DELTA_MAX );
+				rn = min( ETA_P * rn , DELTA_MAX );
 				dwn = sn * rn;
 			}
 			else if (s < 0) {
-				rn = max( ETA_M * r, DELTA_MIN);
+				rn = max( ETA_M * rn, DELTA_MIN);
 				dwn = 0;
 			}   
 			else {
-				dwn = sn * r;
+				dwn = sn * rn;
 			}
 			/*__synchthreads();*/
 			rate.set(i,rn);
 			dW_old.set(i,(S)sgn(dwn));
-			W.set(i, ((V) 1 - rn * decay) * W[i]  + dwn);
+			W.set(i,W[i] + dwn);
+			
 		}
 	}
 
