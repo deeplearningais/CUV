@@ -5,7 +5,7 @@
 #include <boost/test/floating_point_comparison.hpp>
 
 #include <cuv_general.hpp>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include <dev_dia_matrix.hpp>
 #include <host_dia_matrix.hpp>
 #include <convert.hpp>
@@ -37,9 +37,9 @@ static const int nm = m/n;
 
 struct Fix{
 	host_dia_matrix<float>   A;
-	host_dense_matrix<float> A_;
-	host_dense_matrix<float> B,B_,BLarge;
-	host_dense_matrix<float> C,C_,CLarge;
+	dense_matrix<float,column_major,host_memory_space> A_;
+	dense_matrix<float,column_major,host_memory_space> B,B_,BLarge;
+	dense_matrix<float,column_major,host_memory_space> C,C_,CLarge;
 	Fix()
 	:   A(n,m,fs*fs*nm,n,rf)
 	,   A_(n,m)
@@ -78,18 +78,18 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 {
 	if(n*m > 1000*1000)
 		return;
-	host_dense_matrix<float> Ahostdense(n,m);
+	dense_matrix<float,column_major,host_memory_space> Ahostdense(n,m);
 	convert(Ahostdense,A);
 
-	dev_dense_matrix<float> Adevdense(n,m);
+	dense_matrix<float,column_major,dev_memory_space> Adevdense(n,m);
 	convert(Adevdense,Ahostdense);
 
 	dev_dia_matrix<float>   Adevdia(n,m,A.num_dia(),A.stride(),rf);
 	convert(Adevdia,A);
 
-	dev_dense_matrix<float> CLarge2(CLarge.h(), CLarge.w());
+	dense_matrix<float,column_major,dev_memory_space> CLarge2(CLarge.h(), CLarge.w());
 	convert(CLarge2,CLarge);
-	dev_dense_matrix<float> BLarge2(BLarge.h(), BLarge.w());
+	dense_matrix<float,column_major,dev_memory_space> BLarge2(BLarge.h(), BLarge.w());
 	convert(BLarge2,BLarge);
 
 	float factAv = 2.f, factC = 1.3f;
@@ -109,9 +109,9 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dia )
 {
 	dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride(),rf);
 	convert(A2,A);
-	dev_dense_matrix<float> CLarge2(CLarge.h(), CLarge.w());
+	dense_matrix<float,column_major,dev_memory_space> CLarge2(CLarge.h(), CLarge.w());
 	convert(CLarge2,CLarge);
-	dev_dense_matrix<float> BLarge2(BLarge.h(), BLarge.w());
+	dense_matrix<float,column_major,dev_memory_space> BLarge2(BLarge.h(), BLarge.w());
 	convert(BLarge2,BLarge);
 
 	float factAv = 2.f, factC = 1.3f;

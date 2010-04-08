@@ -14,7 +14,7 @@ namespace cuv{
  */
 	template<class T>
 	struct vector_traits{
-		typedef memory_space memory_space_type;
+		//typedef memory_space memory_space_type;
 	};
 	template<class V, class I>
 	class host_vector;

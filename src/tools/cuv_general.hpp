@@ -21,6 +21,9 @@ namespace cuv{
 	struct host_memory_space : public memory_space {};
 	struct dev_memory_space  : public memory_space {};
 
+	template<class __value_type, class __index_type, class  __memory_space_type>
+	struct matrix_traits{ };
+
 	/// fail with an error message, a stack trace and a runtime_exception (the nicest failures you've seen ^^!)
 	void cuvAssertFailed(const char *msg);
 	

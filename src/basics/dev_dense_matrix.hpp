@@ -174,11 +174,11 @@ namespace cuv{
 	/** 
 	 * @brief Matrix traits for memory type (host/device) and memory layout (row major/column major)
 	 */
-	template<class V, class M, class I>
-		struct matrix_traits<dev_dense_matrix<V,M,I> >{
-			typedef dev_memory_space memory_space_type; ///< Trait for memory type (host/device)
-			typedef M                memory_layout_type; ///< Trait for memory layout (row major / column major)
-		};
+	//template<class V, class M, class I>
+		//struct matrix_traits<dev_dense_matrix<V,M,I> >{
+			//typedef dev_memory_space memory_space_type; ///< Trait for memory type (host/device)
+			//typedef M                memory_layout_type; ///< Trait for memory layout (row major / column major)
+		//};
 
 
 	/*

@@ -168,9 +168,9 @@ namespace cuv{
 	}
 
 	template<>
-		void prod(host_dense_matrix<float,column_major>& dst,
+		void prod(dense_matrix<float,column_major,host_memory_space>& dst,
 				  host_dia_matrix<float>&                  A,
-				  host_dense_matrix<float,column_major>&   B,
+				  dense_matrix<float,column_major,host_memory_space>&   B,
 				  char transA,
 				  char transB,
 				  const float& factAB,
@@ -184,9 +184,9 @@ namespace cuv{
 			}
 		}
 	template<>
-		void prod(dev_dense_matrix<float,column_major>& dst,
+		void prod(dense_matrix<float,column_major,dev_memory_space>& dst,
 				  dev_dia_matrix<float>&                  A,
-				  dev_dense_matrix<float,column_major>&   B,
+				  dense_matrix<float,column_major,dev_memory_space>&   B,
 				  char transA,
 				  char transB,
 				  const float& factAB,

@@ -4,8 +4,7 @@
 #include <boost/test/floating_point_comparison.hpp>
 
 #include <cuv_general.hpp>
-#include <dev_dense_matrix.hpp>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include <host_dia_matrix.hpp>
 #include <vector_ops.hpp>
 #include <convert.hpp>
@@ -28,10 +27,10 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( convert_pushpull )
 {
-	dev_dense_matrix<float,column_major> dfc(32,16);
-	host_dense_matrix<float,row_major>  hfr(16,32);
-	dev_dense_matrix<float,row_major> dfr(32,16);
-	host_dense_matrix<float,column_major>  hfc(16,32);
+	dense_matrix<float,column_major,dev_memory_space> dfc(32,16);
+	dense_matrix<float,row_major,host_memory_space>  hfr(16,32);
+	dense_matrix<float,row_major,dev_memory_space> dfr(32,16);
+	dense_matrix<float,column_major,host_memory_space>  hfc(16,32);
 
 	// dfc <--> hfr
 	convert(dfc, hfr);
@@ -44,8 +43,8 @@ BOOST_AUTO_TEST_CASE( convert_pushpull )
 
 BOOST_AUTO_TEST_CASE( create_dev_plain2 )
 {
-	dev_dense_matrix<float,column_major> dfc(16,16); // "wrong" size
-	host_dense_matrix<float,row_major>  hfr(16,32);
+	dense_matrix<float,column_major,dev_memory_space> dfc(16,16); // "wrong" size
+	dense_matrix<float,row_major,host_memory_space>  hfr(16,32);
 	convert(dfc, hfr);                               // should make dfc correct size
 	convert(hfr, dfc);
 	BOOST_CHECK( hfr.w() == dfc.h());
@@ -54,8 +53,8 @@ BOOST_AUTO_TEST_CASE( create_dev_plain2 )
 
 BOOST_AUTO_TEST_CASE( create_dev_plain3 )
 {
-	dev_dense_matrix<float,column_major> dfc(32,16); 
-	host_dense_matrix<float,row_major>  hfr(16,16);  // "wrong" size
+	dense_matrix<float,column_major,dev_memory_space> dfc(32,16); 
+	dense_matrix<float,row_major,host_memory_space>  hfr(16,16);  // "wrong" size
 	convert(hfr, dfc);
 	convert(dfc, hfr);                               // should make dfc correct size
 	BOOST_CHECK( hfr.w() == dfc.h());
@@ -65,7 +64,7 @@ BOOST_AUTO_TEST_CASE( create_dev_plain3 )
 BOOST_AUTO_TEST_CASE( dia2host )
 {
 	host_dia_matrix<float>                 hdia(32,32,3,32);
-	host_dense_matrix<float,column_major>  hdns(32,32);
+	dense_matrix<float,column_major,host_memory_space>  hdns(32,32);
 	std::vector<int> off;
 	off.push_back(0);
 	off.push_back(1);

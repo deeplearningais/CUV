@@ -4,8 +4,7 @@
 #include <pyublas/numpy.hpp>
 #include  <boost/type_traits/is_base_of.hpp>
 
-#include <dev_dense_matrix.hpp>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include <matrix_ops/matrix_ops.hpp>
 #include <convert.hpp>
 #include <random/random.hpp>
@@ -35,8 +34,8 @@ void export_functions() {
 }
 
 void export_random(){
-	typedef dev_dense_matrix<float,column_major> fdev;
-	typedef host_dense_matrix<float,column_major> fhost;
+	typedef dense_matrix<float,column_major,dev_memory_space> fdev;
+	typedef dense_matrix<float,column_major,host_memory_space> fhost;
 	export_functions<fdev>();
 	export_functions<fhost>();
 	}

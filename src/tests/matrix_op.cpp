@@ -3,8 +3,7 @@
 #include <boost/test/floating_point_comparison.hpp>
 
 #include <cuv_general.hpp>
-#include <dev_dense_matrix.hpp>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include <convert.hpp>
 #include <matrix_ops.hpp>
 #include <matrix_ops/rprop.hpp>
@@ -16,8 +15,8 @@ using namespace cuv;
 struct Fix{
 	static const int n=256;
 	static const int N=n*n;
-	dev_dense_matrix<float> a,b,u,v,w;
-	host_dense_matrix<float> s,t,r,x,z;
+	dense_matrix<float,column_major,dev_memory_space> a,b,u,v,w;
+	dense_matrix<float,column_major,host_memory_space> s,t,r,x,z;
 	Fix()
 	:   a(1,n),b(1,n),u(n,n),v(n,n),w(n,n)
 	,   s(1,n),t(1,n),r(n,n),x(n,n),z(n,n)
@@ -134,7 +133,7 @@ BOOST_AUTO_TEST_CASE( mat_op_mm )
 	prod(u,v,w,'n','t');
 	prod(r,x,z,'n','t');
 
-	host_dense_matrix<float> u2(u.h(), u.w());
+	dense_matrix<float,column_major,host_memory_space> u2(u.h(), u.w());
 	convert(u2,u);
 	for(int i=0;i<256;i++){
 		for(int j=0;j<256;j++){
@@ -152,7 +151,7 @@ BOOST_AUTO_TEST_CASE( mat_op_mmdim1 )
 	prod(b,a,w,'n','t');
 	prod(t,s,z,'n','t');
 
-	host_dense_matrix<float> b2(b.h(), b.w());
+	dense_matrix<float,column_major,host_memory_space> b2(b.h(), b.w());
 	convert(b2,b);
 
 	for(int i=0;i<256;i++) {
@@ -185,10 +184,10 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_vec )
 
 BOOST_AUTO_TEST_CASE( mat_op_mat_plus_vec_row_major )
 {
-	dev_dense_matrix<float,  row_major> V(v.h(),v.w()); sequence(V);
-	host_dense_matrix<float, row_major> X(x.h(),x.w()); sequence(X);
-	dev_dense_matrix<float,  row_major> W(v.h(),v.w()); sequence(W);
-	host_dense_matrix<float, row_major> Z(x.h(),x.w()); sequence(Z);
+	dense_matrix<float,row_major,dev_memory_space> V(v.h(),v.w()); sequence(V);
+	dense_matrix<float,row_major,host_memory_space> X(x.h(),x.w()); sequence(X);
+	dense_matrix<float,row_major,dev_memory_space> W(v.h(),v.w()); sequence(W);
+	dense_matrix<float,row_major,host_memory_space> Z(x.h(),x.w()); sequence(Z);
 	dev_vector<float>   v_vec(n); sequence(v_vec);
 	host_vector<float>  x_vec(n); sequence(x_vec);
 	matrix_plus_col(V,v_vec);
@@ -257,9 +256,9 @@ BOOST_AUTO_TEST_CASE( mat_op_divide_col )
 
 BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
 {
-	dev_dense_matrix<float,row_major> dA(40, 30);
+	dense_matrix<float,row_major,dev_memory_space> dA(40, 30);
 	dev_vector<float> dV(40);
-	host_dense_matrix<float,row_major> hA(40, 30);
+	dense_matrix<float,row_major,host_memory_space> hA(40, 30);
 	host_vector<float> hV(40);
 
 	sequence(dA);
@@ -279,9 +278,9 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
 
 BOOST_AUTO_TEST_CASE( mat_op_reduce_to_row )
 {
-	dev_dense_matrix<float> dA(40, 30);
+	dense_matrix<float,column_major,dev_memory_space> dA(40, 30);
 	dev_vector<float> dV(30);
-	host_dense_matrix<float> hA(40, 30);
+	dense_matrix<float,column_major,host_memory_space> hA(40, 30);
 	host_vector<float> hV(30);
 
 	sequence(dA);
@@ -301,9 +300,9 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_row )
 
 BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_row )
 {
-	dev_dense_matrix<float,row_major> dA(40, 30);
+	dense_matrix<float,row_major,dev_memory_space> dA(40, 30);
 	dev_vector<float> dV(30);
-	host_dense_matrix<float,row_major> hA(40, 30);
+	dense_matrix<float,row_major,host_memory_space> hA(40, 30);
 	host_vector<float> hV(30);
 
 	sequence(dA);
@@ -324,8 +323,8 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_row )
 
 BOOST_AUTO_TEST_CASE( mat_op_view )
 {
-	host_dense_matrix<float>* h2 = blockview(x,0,n,1,2);
-	dev_dense_matrix<float>*  d2 = blockview(v,0,n,1,2);
+	dense_matrix<float,column_major,host_memory_space>* h2 = blockview(x,(unsigned int)0,(unsigned int)n,(unsigned int)1,(unsigned int)2);
+	dense_matrix<float,column_major,dev_memory_space>*  d2 = blockview(v,(unsigned int)0,(unsigned int)n,(unsigned int)1,(unsigned int)2);
 	sequence(x);
 	sequence(v);
 	BOOST_CHECK_EQUAL(h2->h(), x.h());
@@ -345,10 +344,10 @@ BOOST_AUTO_TEST_CASE( mat_op_transpose )
 	const int n = 8;
 	const int m = 3;
 
-	host_dense_matrix<float> hA(n, m), hB(m, n);
-	dev_dense_matrix<float>  dA(n, m), dB(m, n);
-	host_dense_matrix<float, row_major> hC(n, m), hD(m, n);
-	dev_dense_matrix<float, row_major>  dC(n, m), dD(m, n);
+	dense_matrix<float,column_major,host_memory_space> hA(n, m), hB(m, n);
+	dense_matrix<float,column_major,dev_memory_space>  dA(n, m), dB(m, n);
+	dense_matrix<float,row_major,host_memory_space> hC(n, m), hD(m, n);
+	dense_matrix<float,row_major,dev_memory_space>  dC(n, m), dD(m, n);
 
 	sequence(hB); sequence(dB);
 	sequence(hD); sequence(dD);
@@ -358,8 +357,8 @@ BOOST_AUTO_TEST_CASE( mat_op_transpose )
 	transpose(hC, hD);
 	transpose(dC, dD);
 
-	host_dense_matrix<float> h2A(dA.w(), dA.h()); convert(h2A, dA);
-	host_dense_matrix<float, row_major> h2C(dC.w(), dC.h()); convert(h2C, dC);
+	dense_matrix<float,column_major,host_memory_space> h2A(dA.w(), dA.h()); convert(h2A, dA);
+	dense_matrix<float,row_major,host_memory_space> h2C(dC.w(), dC.h()); convert(h2C, dC);
 
 	for(int i=0;i<n;i++)
 		for(int j=0;j<m;j++){
@@ -376,13 +375,13 @@ BOOST_AUTO_TEST_CASE( mat_op_argmax )
 	const int n = 517;
 	const int m = 212;
 
-	host_dense_matrix<float> hA(n, m);
-	dev_dense_matrix<float>  dA(n, m);
+	dense_matrix<float,column_major,host_memory_space> hA(n, m);
+	dense_matrix<float,column_major,dev_memory_space>  dA(n, m);
 	host_vector<int> v(m);
 	dev_vector<int> x(m);
 
-	host_dense_matrix<float,row_major> hB(m, n);
-	dev_dense_matrix<float,row_major>  dB(m, n);
+	dense_matrix<float,row_major,host_memory_space> hB(m, n);
+	dense_matrix<float,row_major,dev_memory_space>  dB(m, n);
 	host_vector<int> w(m);
 	dev_vector<int> y(m);
 

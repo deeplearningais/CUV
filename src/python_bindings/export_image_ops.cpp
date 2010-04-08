@@ -3,8 +3,7 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 
-#include <dev_dense_matrix.hpp>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 
 #include <image_ops/move.hpp>
 
@@ -21,6 +20,6 @@ void export_move(){
 }
 
 void export_image_ops(){
-	export_move<dev_dense_matrix<float>,dev_dense_matrix<unsigned char> >();
-	export_move<dev_dense_matrix<unsigned char>,dev_dense_matrix<unsigned char> >();
+	export_move<dense_matrix<float,column_major,dev_memory_space>,dense_matrix<unsigned char,column_major,dev_memory_space> >();
+	export_move<dense_matrix<unsigned char,column_major,dev_memory_space>,dense_matrix<unsigned char,column_major,dev_memory_space> >();
 }

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <thrust/device_ptr.h>
 #include <thrust/host_vector.h>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include "densedense_to_sparse.hpp"
 
 // stuff from NVIDIA SDK
@@ -175,8 +175,8 @@ namespace cuv{
 			void densedense_to_dia(
 					host_dia_matrix<value_type,index_type>& dst,
 					const host_block_descriptor<value_type,index_type>& bd,
-					const host_dense_matrix<value_type,cuv::column_major,index_type>& A,
-					const host_dense_matrix<value_type,cuv::column_major,index_type>& B,
+					const dense_matrix<value_type,cuv::column_major,host_memory_space,index_type>& A,
+					const dense_matrix<value_type,cuv::column_major,host_memory_space,index_type>& B,
 					const value_type& factAB,
 					const value_type& factC){
 				cuvAssert(dst.w() == B.h());
@@ -222,8 +222,8 @@ namespace cuv{
 			void densedense_to_dia(
 					dev_dia_matrix<value_type,index_type>& dst,
 					const dev_block_descriptor<value_type,index_type>& bd,
-					const dev_dense_matrix<value_type,cuv::column_major,index_type>& A,
-					const dev_dense_matrix<value_type,cuv::column_major,index_type>& B,
+					const dense_matrix<value_type,cuv::column_major,dev_memory_space,index_type>& A,
+					const dense_matrix<value_type,cuv::column_major,dev_memory_space,index_type>& B,
 					const value_type& factAB,
 					const value_type& factC
 					){
@@ -281,14 +281,14 @@ namespace cuv{
 	template void densedense_to_dia(                                \
 			dev_dia_matrix<V>& ,                                  \
 			const dev_block_descriptor<V>& ,                      \
-			const dev_dense_matrix<V,cuv::column_major>& ,        \
-			const dev_dense_matrix<V,cuv::column_major>&,         \
+			const dense_matrix<V,cuv::column_major,dev_memory_space>& ,        \
+			const dense_matrix<V,cuv::column_major,dev_memory_space>&,         \
 			const V&,const V&);       \
 	template void densedense_to_dia(                                \
 			host_dia_matrix<V>& ,                                  \
 			const host_block_descriptor<V>& ,                      \
-			const host_dense_matrix<V,cuv::column_major>& ,        \
-			const host_dense_matrix<V,cuv::column_major>&,         \
+			const dense_matrix<V,cuv::column_major,host_memory_space>& ,        \
+			const dense_matrix<V,cuv::column_major,host_memory_space>&,         \
 			const V&,const V&);       
 
 INST_DD2DIA(float);

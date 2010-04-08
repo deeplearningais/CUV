@@ -5,7 +5,7 @@
 #include <boost/test/floating_point_comparison.hpp>
 
 #include <cuv_general.hpp>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include <dev_dia_matrix.hpp>
 #include <host_dia_matrix.hpp>
 #include <convert.hpp>
@@ -37,8 +37,8 @@ static const int nm = m/n;
 
 struct Fix{
 	dev_dia_matrix<float>   C;
-	dev_dense_matrix<float> A;
-	dev_dense_matrix<float> B;
+	dense_matrix<float,column_major,dev_memory_space> A;
+	dense_matrix<float,column_major,dev_memory_space> B;
 	Fix()
 	:   C(n,m,fs*fs*nm,n)
 	,   A(n,k)
@@ -70,9 +70,9 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_host_host )
 	fill(C.vec(),0);
 
 	host_dia_matrix<float>   C2(C.h(),C.w(),C.num_dia(),C.stride());
-	host_dense_matrix<float> C2dense(C.h(),C.w());
-	host_dense_matrix<float,column_major> A2(A.h(),A.w());
-	host_dense_matrix<float,column_major> B2(B.h(),B.w());
+	dense_matrix<float,column_major,host_memory_space> C2dense(C.h(),C.w());
+	dense_matrix<float,column_major,host_memory_space> A2(A.h(),A.w());
+	dense_matrix<float,column_major,host_memory_space> B2(B.h(),B.w());
 	convert(C2,C);
 	convert(A2,A);
 	convert(B2,B);
@@ -90,8 +90,8 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_dev_host )
 	fill(C.vec(),0);
 
 	host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride());
-	host_dense_matrix<float,column_major> A2(A.h(),A.w());
-	host_dense_matrix<float,column_major> B2(B.h(),B.w());
+	dense_matrix<float,column_major,host_memory_space> A2(A.h(),A.w());
+	dense_matrix<float,column_major,host_memory_space> B2(B.h(),B.w());
 	convert(C2,C);
 	convert(A2,A);
 	convert(B2,B);
@@ -110,9 +110,9 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_sparse_dense )
 	fill(C.vec(),0);
 
 	// make a dev_dense_matrix equivalent to the dia-matrix
-	dev_dense_matrix<float,column_major> Cd(C.h(),C.w());
+	dense_matrix<float,column_major,dev_memory_space> Cd(C.h(),C.w());
 	host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride());
-	host_dense_matrix<float> C_2(C.h(),C.w());
+	dense_matrix<float,column_major,host_memory_space> C_2(C.h(),C.w());
 	convert(C2,C);  // dev->host
 	convert(C_2,C2); // dia->dense
 	convert(Cd,C_2); // host->dev

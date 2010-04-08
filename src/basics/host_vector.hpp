@@ -14,6 +14,7 @@
 namespace cuv{
 
 template<class __value_type, class __index_type=unsigned int>
+//template<class __value_type, class __index_type>
 class host_vector
 :    public vector<__value_type, __index_type>
 {
@@ -96,6 +97,10 @@ struct vector_traits<host_vector<V,I> >{
 
 };
 
+//template<class __value_type,class __index_type>
+//struct matrix_traits<__value_type, __index_type,host_memory_space> {
+	//typedef host_vector<__value_type, __index_type>  vector_type;
+//};
 } // cuv
 
 #endif

@@ -8,7 +8,7 @@ INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/random )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR} )
 
 ADD_EXECUTABLE( test_basic basic.cpp )
-TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools )
+TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools cuv_matrix_ops )
 
 ADD_EXECUTABLE( test_convert convert.cpp )
 TARGET_LINK_LIBRARIES( test_convert cuv_basics cuv_tools cuv_convert)

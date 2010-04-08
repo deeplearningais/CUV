@@ -2,7 +2,7 @@
 #define __DENSEDENSE_TO_SPARSE_HPP__
 
 
-#include <dev_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include <dev_dia_matrix.hpp>
 #include <host_dia_matrix.hpp>
 

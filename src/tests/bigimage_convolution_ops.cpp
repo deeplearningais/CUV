@@ -10,8 +10,7 @@
 #include <limits>
 
 #include <cuv_general.hpp>
-#include <dev_dense_matrix.hpp>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include <vector_ops.hpp>
 #include <vector_ops/rprop.hpp>
 #include <convolution_ops.hpp>
@@ -29,8 +28,8 @@ struct Fix{
 	static const int g = 8;    // filter size
 	static const int k = (n-g+1);//n-g+1;// target image size
 	static const int o = n/p;  // pooling output size
-	dev_dense_matrix<float, row_major>  d_img,d_filter,d_dst,d_pooled;
-	host_dense_matrix<float, row_major> h_img,h_filter,h_dst,h_pooled;
+	dense_matrix<float, row_major, dev_memory_space>  d_img,d_filter,d_dst,d_pooled;
+	dense_matrix<float, row_major, host_memory_space> h_img,h_filter,h_dst,h_pooled;
 	Fix()
 		:   d_img(c,n*n), d_filter(c,f*g*g), d_dst(c,f*k*k), d_pooled(c,o*o)
 		,   h_img(c,n*n), h_filter(c,f*g*g), h_dst(c,f*k*k), h_pooled(c,o*o)
@@ -100,7 +99,7 @@ BOOST_AUTO_TEST_CASE( blur )
     convolve2(d_dst,d_img,d_filter, f);
 //	convolve(h_dst,h_img,h_filter);
 //
-	host_dense_matrix<float, row_major> dst2(d_dst.h(), d_dst.w());
+	dense_matrix<float, row_major, host_memory_space> dst2(d_dst.h(), d_dst.w());
     convert(dst2,d_dst);
 
     //cvNamedWindow("org", CV_WINDOW_AUTOSIZE);

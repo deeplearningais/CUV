@@ -3,8 +3,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <cuv_general.hpp>
-#include <dev_dense_matrix.hpp>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include <vector_ops.hpp>
 #include <matrix_ops.hpp>
 #include <convolution_ops.hpp>
@@ -57,8 +56,8 @@ BOOST_AUTO_TEST_CASE( reorder_speed )
 	int x = 10;
 	int y = 16;
 
-	host_dense_matrix<float, row_major> A(y,x*size);
-	dev_dense_matrix<float, row_major> dev_A(y,x*size);
+	dense_matrix<float, row_major, host_memory_space> A(y,x*size);
+	dense_matrix<float, row_major, dev_memory_space> dev_A(y,x*size);
 
 	sequence(A);
 	sequence(dev_A);
@@ -79,13 +78,13 @@ void conv_speed_test(int inputSize, int filterSize, int numFilters, int numImage
 	printf("Convolving %i images of size %ix%i with %i filters of size %ix%i.\n", c, n,n, f, g,g);
 	printf("Result are %i*%i images of size %ix%i\n", c,f, k,k);
 
-	dev_dense_matrix<float, row_major>  d_img(c, n*n);
-	dev_dense_matrix<float, row_major>  d_filter(f, g*g);
-	dev_dense_matrix<float, row_major>  d_dst(c, f*k*k);
+	dense_matrix<float, row_major, dev_memory_space>  d_img(c, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  d_filter(f, g*g);
+	dense_matrix<float, row_major, dev_memory_space>  d_dst(c, f*k*k);
 
-	host_dense_matrix<float, row_major>  h_img(c, n*n);
-	host_dense_matrix<float, row_major>  h_filter(f, g*g);
-	host_dense_matrix<float, row_major>  h_dst(c, f*k*k);
+	dense_matrix<float, row_major, host_memory_space>  h_img(c, n*n);
+	dense_matrix<float, row_major, host_memory_space>  h_filter(f, g*g);
+	dense_matrix<float, row_major, host_memory_space>  h_dst(c, f*k*k);
 
 	fill(d_dst, 0.0f);
 	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
@@ -114,10 +113,10 @@ BOOST_AUTO_TEST_CASE( supersampling_speed )
 	int imgs = 20;
 	int factor = 8;
 
-	host_dense_matrix<float, row_major> A(imgs,size*size);
-	host_dense_matrix<float, row_major> B(imgs,size*size*factor*factor);
-	dev_dense_matrix<float, row_major> dev_A(imgs,size*size);
-	dev_dense_matrix<float, row_major> dev_B(imgs,size*size*factor*factor);
+	dense_matrix<float, row_major, host_memory_space> A(imgs,size*size);
+	dense_matrix<float, row_major, host_memory_space> B(imgs,size*size*factor*factor);
+	dense_matrix<float, row_major, dev_memory_space> dev_A(imgs,size*size);
+	dense_matrix<float, row_major, dev_memory_space> dev_B(imgs,size*size*factor*factor);
 
 	sequence(A);
 	sequence(dev_A);
@@ -134,12 +133,12 @@ BOOST_AUTO_TEST_CASE( maxima_plus_index_speed )
 	const int p = 4;
 	const int o = n/p;
 
-	host_dense_matrix<float,row_major> h_img(c,n*n);
-	dev_dense_matrix<float,row_major> d_img(c,n*n);
-	host_dense_matrix<float,row_major> h_pooled(c,o*o);
-	dev_dense_matrix<float,row_major> d_pooled(c,o*o);
-	host_dense_matrix<int,row_major> h_indices(c,o*o);
-	dev_dense_matrix<int,row_major> d_indices(c,o*o);
+	dense_matrix<float,row_major, host_memory_space> h_img(c,n*n);
+	dense_matrix<float,row_major, host_memory_space> d_img(c,n*n);
+	dense_matrix<float,row_major, host_memory_space> h_pooled(c,o*o);
+	dense_matrix<float,row_major, host_memory_space> d_pooled(c,o*o);
+	dense_matrix<int,row_major, host_memory_space> h_indices(c,o*o);
+	dense_matrix<int,row_major, host_memory_space> d_indices(c,o*o);
 
 
 	initialize_mersenne_twister_seeds();
@@ -175,13 +174,13 @@ BOOST_AUTO_TEST_CASE( max_pool_with_overlap )
 	const int m = (n-p)/(p-l)+1; // resulting image size
 	const int c = 100;
 
-	host_dense_matrix<float,row_major> h_img(c,n*n);
-	host_dense_matrix<float,row_major> h_dst(c,m*m);
-	host_dense_matrix<int,row_major> h_indices(c,m*m);
+	dense_matrix<float,row_major, host_memory_space> h_img(c,n*n);
+	dense_matrix<float,row_major, host_memory_space> h_dst(c,m*m);
+	dense_matrix<int,row_major, host_memory_space> h_indices(c,m*m);
 
-	dev_dense_matrix<float,row_major> d_img(c,n*n);
-	dev_dense_matrix<float,row_major> d_dst(c,m*m);
-	dev_dense_matrix<int,row_major> d_indices(c,m*m);
+	dense_matrix<float,row_major, host_memory_space> d_img(c,n*n);
+	dense_matrix<float,row_major, host_memory_space> d_dst(c,m*m);
+	dense_matrix<int,row_major, host_memory_space> d_indices(c,m*m);
 
 	sequence(h_img);
 	sequence(d_img);

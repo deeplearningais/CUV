@@ -2,8 +2,7 @@
 #define __MATRIX_OPS_HPP__
 
 #include <vector_ops/vector_ops.hpp>
-#include <basics/dev_dense_matrix.hpp>
-#include <basics/host_dense_matrix.hpp>
+#include <basics/dense_matrix.hpp>
 
 namespace cuv{
 
@@ -23,8 +22,8 @@ namespace cuv{
    * @param sf 	NullaryFunctor to apply 
    * 
    */
-  template<class V,class M,class I> 
-	  void apply_0ary_functor(dev_dense_matrix<V,M,I>& m, const NullaryFunctor& sf){ apply_0ary_functor(m.vec(),sf); }
+  template<class V, class M, class T, class I> 
+	  void apply_0ary_functor(dense_matrix<V,M,T,I>& m, const NullaryFunctor& sf){ apply_0ary_functor(m.vec(),sf); }
   /** 
    * @brief Apply a pointwise nullary functor with a scalar parameter to a matrix.
    * 
@@ -33,18 +32,8 @@ namespace cuv{
    * @param param	scalar parameter 
    * 
    */
-  template<class V,class M,class I,class P> 
-	  void apply_0ary_functor(dev_dense_matrix<V,M,I>& m, const NullaryFunctor& sf, const P& param){apply_0ary_functor(m.vec(),sf,param);}
-  /**
-   * @copydoc apply_0ary_functor(dev_dense_matrix<V,M,I>& m, const NullaryFunctor& sf)
-   */
-  template<class V,class M,class I> 
-	  void apply_0ary_functor(host_dense_matrix<V,M,I>& m, const NullaryFunctor& sf){ apply_0ary_functor(m.vec(),sf); }
-  /**
-   * @copydoc apply_0ary_functor(dev_dense_matrix<V,M,I>& m, const NullaryFunctor& sf,const P& param)
-   */
-  template<class V,class M,class I,class P> 
-	  void apply_0ary_functor(host_dense_matrix<V,M,I>& m, const NullaryFunctor& sf, const P& param){apply_0ary_functor(m.vec(),sf,param);}
+  template<class V, class M, class T, class I,class P> 
+	  void apply_0ary_functor(dense_matrix<V,M,T,I>& m, const NullaryFunctor& sf, const P& param){apply_0ary_functor(m.vec(),sf,param);}
 
   /** 
    * @brief Apply a pointwise unary functor to a matrix
@@ -53,13 +42,8 @@ namespace cuv{
    * @param sf ScalarFunctor to apply 
    * 
    */
-  template<class V,class M,class I> 
-	  void apply_scalar_functor(dev_dense_matrix<V,M,I>& m, const ScalarFunctor& sf){apply_scalar_functor(m.vec(),sf);}
-  /**
-   * @copydoc apply_scalar_functor(dev_dense_matrix<V,M,I>& m, const ScalarFunctor& sf)
-   */
-  template<class V,class M,class I> 
-	  void apply_scalar_functor(host_dense_matrix<V,M,I>& m, const ScalarFunctor& sf){apply_scalar_functor(m.vec(),sf);}
+  template<class V, class M, class T, class I> 
+	  void apply_scalar_functor(dense_matrix<V,M,T,I>& m, const ScalarFunctor& sf){apply_scalar_functor(m.vec(),sf);}
 
   /** 
    * @brief Apply pointwise unary functor with one scalar parameter to a matrix
@@ -69,13 +53,8 @@ namespace cuv{
    * @param p scalar parameter
    * 
    */
-  template<class V,class M,class I,class P> 
-	  void apply_scalar_functor(dev_dense_matrix<V,M,I>& m, const ScalarFunctor& sf, const P& p) {apply_scalar_functor(m.vec(),sf,p);};
-  /**
-   * @copydoc apply_scalar_functor(dev_dense_matrix<V,M,I>& m, const ScalarFunctor& sf, const P& p)
-   */
-  template<class V,class M,class I,class P> 
-	  void apply_scalar_functor(host_dense_matrix<V,M,I>& m, const ScalarFunctor& sf, const P& p) {apply_scalar_functor(m.vec(),sf,p);};
+  template<class V, class M, class T, class I,class P> 
+	  void apply_scalar_functor(dense_matrix<V,M,T,I>& m, const ScalarFunctor& sf, const P& p) {apply_scalar_functor(m.vec(),sf,p);};
 
   /** 
    * @brief Apply pointwise unary functor with to scalar parameters to a matrix
@@ -85,13 +64,8 @@ namespace cuv{
    * @param p first scalar parameter 
    * @param p2 second scalar parameter
    */
-  template<class V,class M,class I,class P>
-	  void apply_scalar_functor(dev_dense_matrix<V,M,I>& m, const ScalarFunctor& sf, const P& p, const P& p2) {apply_scalar_functor(m.vec(),sf,p,p2);};
-  /**
-   * @copydoc apply_scalar_functor(dev_dense_matrix<V,M,I>& m, const ScalarFunctor& sf, const P& p, const P& p2) 
-   */
-  template<class V,class M,class I,class P>
-	  void apply_scalar_functor(host_dense_matrix<V,M,I>& m, const ScalarFunctor& sf, const P& p, const P& p2) {apply_scalar_functor(m.vec(),sf,p,p2);};
+  template<class V, class M, class T, class I,class P>
+	  void apply_scalar_functor(dense_matrix<V,M,T,I>& m, const ScalarFunctor& sf, const P& p, const P& p2) {apply_scalar_functor(m.vec(),sf,p,p2);};
 
   /** 
    * @brief Apply pointwise binary functor to a pair of matrices
@@ -101,13 +75,8 @@ namespace cuv{
    * @param bf BinaryFunctor to apply
    * 
    */
-  template<class V,class M,class I,class V2> 
-	  void apply_binary_functor(dev_dense_matrix<V,M,I>& v, dev_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf){apply_binary_functor(v.vec(),w.vec(),bf);}
-  /**
-   * @copydoc apply_binary_functor(dev_dense_matrix<V,M,I>& v, dev_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf)
-   */
-  template<class V,class M,class I,class V2> 
-	  void apply_binary_functor(host_dense_matrix<V,M,I>& v, host_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf){apply_binary_functor(v.vec(),w.vec(),bf);}
+  template<class V, class M, class T, class I,class V2> 
+	  void apply_binary_functor(dense_matrix<V,M,T,I>& v, dense_matrix<V2,M,T,I>& w, const BinaryFunctor& bf){apply_binary_functor(v.vec(),w.vec(),bf);}
 
   /** 
    * @brief Apply pointwise binary functor with one scalar parameter to a pair of matrices 
@@ -117,13 +86,8 @@ namespace cuv{
    * @param bf	 BinaryFunctor to apply
    * @param param Scalar parameter 
    */
-  template<class V,class M,class I,class V2,class P>
-	  void apply_binary_functor(dev_dense_matrix<V,M,I>& v, dev_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf, const P& param){apply_binary_functor(v.vec(),w.vec(),bf,param);}
-  /**
-   * @copydoc apply_binary_functor(dev_dense_matrix<V,M,I>& v, dev_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf, const P& param)
-   */
-  template<class V,class M,class I,class V2,class P>
-	  void apply_binary_functor(host_dense_matrix<V,M,I>& v, host_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf, const P& param){apply_binary_functor(v.vec(),w.vec(),bf,param);}
+  template<class V, class M, class T, class I,class V2,class P>
+	  void apply_binary_functor(dense_matrix<V,M,T,I>& v, dense_matrix<V2,M,T,I>& w, const BinaryFunctor& bf, const P& param){apply_binary_functor(v.vec(),w.vec(),bf,param);}
 
   /** 
    * @brief Apply pointwise binary functor with two scalar parameters to a pair of matrices 
@@ -135,14 +99,8 @@ namespace cuv{
    * @param param2 Secont scalar parameter 
    *
    */
-  template<class V,class M,class I,class V2,class P>
-	  void apply_binary_functor(dev_dense_matrix<V,M,I>& v, dev_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf, const P& param, const P& param2)
-	  {apply_binary_functor(v.vec(),w.vec(),bf,param,param2);}
-  /**
-   * @copydoc apply_binary_functor(dev_dense_matrix<V,M,I>& v, dev_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf, const P& param, const P& param2)
-   */
-  template<class V,class M,class I,class V2,class P>
-	  void apply_binary_functor(host_dense_matrix<V,M,I>& v, host_dense_matrix<V2,M,I>& w, const BinaryFunctor& bf, const P& param, const P& param2)
+  template<class V, class M, class T, class I,class V2,class P>
+	  void apply_binary_functor(dense_matrix<V,M,T,I>& v, dense_matrix<V2,M,T,I>& w, const BinaryFunctor& bf, const P& param, const P& param2)
 	  {apply_binary_functor(v.vec(),w.vec(),bf,param,param2);}
 
   // convenience wrappers
@@ -155,13 +113,8 @@ namespace cuv{
    * 
    * This is a convenience wrapper that applies the binary functor BF_COPY 
    */
-  template<class V,class M, class I>
-	  void copy(dev_dense_matrix<V,M,I>& dst, dev_dense_matrix<V,M,I>& src){ apply_binary_functor(dst.vec(),src.vec(),BF_COPY); }
-  /**
-   * @copydoc copy(dev_dense_matrix<V,M,I>& dst, dev_dense_matrix<V,M,I>& src)
-   */
-  template<class V,class M, class I>
-	  void copy(host_dense_matrix<V,M,I>& dst, host_dense_matrix<V,M,I>& src){ apply_binary_functor(dst.vec(),src.vec(),BF_COPY); }
+  template<class V, class M, class T, class I>
+	  void copy(dense_matrix<V,M,T,I>& dst, dense_matrix<V,M,T,I>& src){ apply_binary_functor(dst.vec(),src.vec(),BF_COPY); }
 
  /** @} */ // end of group functors_matrices
 
@@ -176,7 +129,7 @@ namespace cuv{
    * 
    * @return true if v contains "Inf" or "-Inf", false otherwise 
    */
-  template<class V,class M, class I> bool has_inf(dev_dense_matrix<V,M,I>& v){return has_inf(v.vec());}
+  template<class V, class M, class T, class I> bool has_inf(dense_matrix<V,M,T,I>& v){return has_inf(v.vec());}
   /** 
    * @brief Check whether a float matrix contains "NaN"
    * 
@@ -184,7 +137,7 @@ namespace cuv{
    * 
    * @return true if v contains "NaN", false otherwise 
    */
-  template<class V,class M, class I> bool has_nan(dev_dense_matrix<V,M,I>& v){return has_nan(v.vec());}
+  template<class V, class M, class T, class I> bool has_nan(dense_matrix<V,M,T,I>& v){return has_nan(v.vec());}
 
   /** 
    * @brief Return the two-norm or Euclidean norm of a matrix 
@@ -193,7 +146,7 @@ namespace cuv{
    * 
    * @return Two-norm of v 
    */
-  template<class V,class M, class I> float norm2(dev_dense_matrix<V,M,I>& v){return norm2(v.vec());}
+  template<class V, class M, class T, class I> float norm2(dense_matrix<V,M,T,I>& v){return norm2(v.vec());}
 
   /** 
    * @brief Return the one-norm or sum-norm of a matrix 
@@ -202,7 +155,7 @@ namespace cuv{
    * 
    * @return one-norm of v 
    */
-  template<class V,class M, class I> float norm1(dev_dense_matrix<V,M,I>& v){return norm1(v.vec());}
+  template<class V, class M, class T, class I> float norm1(dense_matrix<V,M,T,I>& v){return norm1(v.vec());}
   /** 
    * @brief Return the minimum entry of a matrix 
    * 
@@ -210,7 +163,7 @@ namespace cuv{
    * 
    * @return Minimum entry of v 
    */
-  template<class V,class M, class I> float minimum(dev_dense_matrix<V,M,I>& v){return minimum(v.vec());}
+  template<class V, class M, class T, class I> float minimum(dense_matrix<V,M,T,I>& v){return minimum(v.vec());}
   /** 
    * @brief Return the maximum entry of a matrix 
    * 
@@ -218,7 +171,7 @@ namespace cuv{
    * 
    * @return Maximum entry of v 
    */
-  template<class V,class M, class I> float maximum(dev_dense_matrix<V,M,I>& v){return maximum(v.vec());}
+  template<class V, class M, class T, class I> float maximum(dense_matrix<V,M,T,I>& v){return maximum(v.vec());}
   /** 
    * @brief Return the mean of the entries of a matrix 
    * 
@@ -226,7 +179,7 @@ namespace cuv{
    * 
    * @return Mean of entries of v 
    */
-  template<class V,class M, class I> float mean(dev_dense_matrix<V,M,I>& v) {return mean(v.vec());}
+  template<class V, class M, class T, class I> float mean(dense_matrix<V,M,T,I>& v) {return mean(v.vec());}
   /** 
    * @brief Return the variation of the entries of a matrix 
    * 
@@ -234,40 +187,7 @@ namespace cuv{
    * 
    * @return Variation of entries of v 
    */
-  template<class V,class M, class I> float var(dev_dense_matrix<V,M,I>& v)  {return var(v.vec());}
-
-  /**
-   * @copydoc has_inf(dev_dense_matrix<V,M,I>& v)
-   */
-  template<class V,class M, class I> bool has_inf(host_dense_matrix<V,M,I>& v){return has_inf(v.vec());}
-  /**
-   * @copydoc has_nan(dev_dense_matrix<V,M,I>& v)
-   */
-  template<class V,class M, class I> bool has_nan(host_dense_matrix<V,M,I>& v){return has_nan(v.vec());}
-  /**
-   * @copydoc norm2(dev_dense_matrix<V,M,I>& v)
-   */
-  template<class V,class M, class I> float norm2(host_dense_matrix<V,M,I>& v){return norm2(v.vec());}
-  /**
-   * @copydoc norm1(dev_dense_matrix<V,M,I>& v)
-   */
-  template<class V,class M, class I> float norm1(host_dense_matrix<V,M,I>& v){return norm1(v.vec());}
-  /**
-   * @copydoc minimum(dev_dense_matrix<V,M,I>& v)
-   */
-  template<class V,class M, class I> float minimum(host_dense_matrix<V,M,I>& v){return minimum(v.vec());}
-  /**
-   * @copydoc minimum(dev_dense_matrix<V,M,I>& v)
-   */
-  template<class V,class M, class I> float maximum(host_dense_matrix<V,M,I>& v){return maximum(v.vec());}
-  /**
-   * @copydoc mean(dev_dense_matrix<V,M,I>& v)
-   */
-  template<class V,class M, class I> float mean(host_dense_matrix<V,M,I>& v) {return mean(v.vec());}
-  /**
-   * @copydoc var(dev_dense_matrix<V,M,I>& v)
-   */
-  template<class V,class M, class I> float var(host_dense_matrix<V,M,I>& v)  {return var(v.vec());}
+  template<class V, class M, class T, class I> float var(dense_matrix<V,M,T,I>& v)  {return var(v.vec());}
 
 
   /** @} */ // end of group reductions_matrices
@@ -365,8 +285,13 @@ namespace cuv{
    * 	For row major matrices, this only works with start_cols=0 and num_cols=matrix.w().
    * 	For column major matrices, this only works with start_rows=0 and num_rows=matrix.h().
    */
-  template<class __matrix_type>
-	  __matrix_type* blockview(__matrix_type & matrix, typename __matrix_type::index_type start_rows, typename __matrix_type::index_type num_rows ,typename __matrix_type::index_type start_cols, typename __matrix_type::index_type num_cols);
+  template<class __value_type, class __memory_layout, class __memory_space_type, class __index_type>
+	  dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type>* blockview(
+	  dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type> & matrix,
+			  __index_type start_rows,
+			  __index_type num_rows ,
+			  __index_type start_cols,
+			  __index_type num_cols);
 
 
   /***************************************************
@@ -459,11 +384,7 @@ namespace cuv{
    * @param src Source matrix 
    * 
    */
-  template<class V,class M, class I> void transpose(dev_dense_matrix<V,M,I>&  dst, dev_dense_matrix<V,M,I>&  src);
-  /**
-   * @copydoc transpose(dev_dense_matrix<V,M,I>&  dst, dev_dense_matrix<V,M,I>&  src)
-   */
-  template<class V,class M, class I> void transpose(host_dense_matrix<V,M,I>& dst, host_dense_matrix<V,M,I>& src);
+  template<class V, class M, class T, class I> void transpose(dense_matrix<V,M,T,I>&  dst, dense_matrix<V,M,T,I>&  src);
 
   /** @} */ // end group blas2
 } // cuv

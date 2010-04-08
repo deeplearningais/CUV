@@ -3,8 +3,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <cuv_general.hpp>
-#include <dev_dense_matrix.hpp>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include <vector_ops.hpp>
 #include <matrix_ops.hpp>
 #include <timing.hpp>
@@ -41,8 +40,8 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	static const int n = 1024; 
-	dev_dense_matrix<float>  u,v,w;
-	host_dense_matrix<float> r,x,z;
+	dense_matrix<float,column_major,dev_memory_space>  u,v,w;
+	dense_matrix<float,column_major,host_memory_space> r,x,z;
 	Fix()
 	:   u(n,n),v(n,n),w(n,n)
 	,   r(n,n),x(n,n),z(n,n)
@@ -81,8 +80,8 @@ BOOST_AUTO_TEST_CASE( mat_plus_vec )
 
 BOOST_AUTO_TEST_CASE( mat_plus_vec_row_maj )
 {
-	dev_dense_matrix<float,  row_major> V(v.h(),v.w()); sequence(V);
-	host_dense_matrix<float, row_major> X(x.h(),x.w()); sequence(X);
+	dense_matrix<float,row_major,dev_memory_space> V(v.h(),v.w()); sequence(V);
+	dense_matrix<float,row_major,host_memory_space> X(x.h(),x.w()); sequence(X);
 	dev_vector<float>   v_vec(n); sequence(v_vec);
 	host_vector<float>  x_vec(n); sequence(x_vec);
 	MEASURE_TIME(dev,  matrix_plus_col(V,v_vec), 10);
@@ -95,8 +94,8 @@ BOOST_AUTO_TEST_CASE( mat_transpose )
 	const int n = 256;
 	const int m = 4096;
 
-	dev_dense_matrix<float> V(n,m), W(m,n); sequence(V);
-	host_dense_matrix<float> X(n,m), Y(m,n); sequence(X);
+	dense_matrix<float,column_major,dev_memory_space> V(n,m), W(m,n); sequence(V);
+	dense_matrix<float,column_major,host_memory_space> X(n,m), Y(m,n); sequence(X);
 
 	MEASURE_TIME(dev,  transpose(W,V), 10);
 	MEASURE_TIME(host, transpose(Y,X), 10);

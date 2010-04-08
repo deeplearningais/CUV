@@ -4,8 +4,7 @@
 #include <stdexcept>
 #include <cuv_general.hpp>
 
-#include <basics/dev_dense_matrix.hpp>
-#include <basics/host_dense_matrix.hpp>
+#include <basics/dense_matrix.hpp>
 
 #include "move.hpp"
 using namespace std;
@@ -259,7 +258,7 @@ namespace cuv
 	namespace image_move_impl
 	{
 		template<class __value_typeA, class __value_typeB>
-		void image_move(dev_dense_matrix<__value_typeA,column_major>& dst, const dev_dense_matrix<__value_typeB,column_major>& src, 
+		void image_move(dense_matrix<__value_typeA,column_major,dev_memory_space>& dst, const dense_matrix<__value_typeB,column_major,dev_memory_space>& src, 
 			const unsigned int& src_image_size, 
 			const unsigned int& dst_image_size,
 			const unsigned int& src_num_maps,
@@ -299,7 +298,7 @@ namespace cuv
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 		template<class __value_typeA, class __value_typeB>
-		void image_move(host_dense_matrix<__value_typeA,column_major>& dst, const host_dense_matrix<__value_typeB,column_major>& src, const unsigned int& image_width, const unsigned int& image_height, const unsigned int& num_maps, const char& xshift, const char& yshift){
+		void image_move(dense_matrix<__value_typeA,column_major,host_memory_space>& dst, const dense_matrix<__value_typeB,column_major,host_memory_space>& src, const unsigned int& image_width, const unsigned int& image_height, const unsigned int& num_maps, const char& xshift, const char& yshift){
 			throw std::runtime_error("not implemented");
 		}
 		
@@ -311,9 +310,9 @@ namespace cuv
 
 #define INST(A,B) \
 	template      \
-	void image_move(dev_dense_matrix<A,column_major>&,const dev_dense_matrix<B,column_major>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
+	void image_move(dense_matrix<A,column_major,dev_memory_space>&,const dense_matrix<B,column_major,dev_memory_space>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
 	template      \
-	void image_move(host_dense_matrix<A,column_major>&,const host_dense_matrix<B,column_major>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
+	void image_move(dense_matrix<A,column_major,host_memory_space>&,const dense_matrix<B,column_major,host_memory_space>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
 
 	INST(float,unsigned char);
 	INST(unsigned char,unsigned char);

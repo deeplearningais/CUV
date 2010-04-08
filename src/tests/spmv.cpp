@@ -4,7 +4,7 @@
 #include <cuv_test.hpp>
 
 #include <cuv_general.hpp>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include <dev_dia_matrix.hpp>
 #include <host_dia_matrix.hpp>
 #include <convert.hpp>
@@ -21,9 +21,9 @@ static const int rf = 2;
 
 struct Fix{
 	host_dia_matrix<float>   A;
-	host_dense_matrix<float> A_;
-	host_dense_matrix<float> B,B_;
-	host_dense_matrix<float> C,C_;
+	dense_matrix<float,column_major,host_memory_space> A_;
+	dense_matrix<float,column_major,host_memory_space> B,B_;
+	dense_matrix<float,column_major,host_memory_space> C,C_;
 	Fix()
 	:   A(n,m,7,max(n,m),rf)
 	,   A_(n,m)
@@ -62,9 +62,9 @@ BOOST_AUTO_TEST_CASE( spmv_dev_correctness_trans )
 	sequence(C.vec());
 	dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride(),rf);
 	convert(A2,A);
-	dev_dense_matrix<float> C2(C.h(),C.w());
+	dense_matrix<float,column_major,dev_memory_space> C2(C.h(),C.w());
 	convert(C2,C);
-	dev_dense_matrix<float> B2(B.h(),B.w());
+	dense_matrix<float,column_major,dev_memory_space> B2(B.h(),B.w());
 	convert(B2,B);
 
 	prod(B ,A, C, 't','n');
@@ -75,9 +75,9 @@ BOOST_AUTO_TEST_CASE( spmv_dev_correctness )
 {
  dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride(),rf);
  convert(A2,A);
- dev_dense_matrix<float> C2(C.h(),C.w());
+ dense_matrix<float,column_major,dev_memory_space> C2(C.h(),C.w());
  convert(C2,C);
- dev_dense_matrix<float> B2(B.h(),B.w());
+ dense_matrix<float,column_major,dev_memory_space> B2(B.h(),B.w());
  convert(B2,B);
 
  float factAv = 2.f, factC = 1.3f;

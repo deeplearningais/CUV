@@ -14,6 +14,7 @@
 namespace cuv{
 
 template<class __value_type, class __index_type=unsigned int>
+//template<class __value_type, class __index_type>
 class dev_vector
 :    public vector<__value_type, __index_type>
 {
@@ -81,6 +82,11 @@ struct vector_traits<dev_vector<V,I> >{
 
 };
 
+
+//template<class __value_type,class __index_type>
+//struct matrix_traits<__value_type, __index_type,dev_memory_space> {
+	//typedef dev_vector<__value_type, __index_type>  vector_type;
+//};
 } // cuv
 
 #endif
