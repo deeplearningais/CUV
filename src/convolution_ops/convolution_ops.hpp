@@ -5,7 +5,6 @@
 
 #include <vector_ops/vector_ops.hpp>
 #include <basics/dense_matrix.hpp>
-#include <basics/host_dense_matrix.hpp>
 
 namespace cuv{
 
@@ -31,14 +30,6 @@ void convolve(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& img,
 		   dense_matrix<V,M,T,I>& filter);
 
-/**
-  * @copydoc convolve(dense_matrix<V,M,T,I>& dst,dense_matrix<V,M,T,I>& img,dense_matrix<V,M,T,I>& filter)
-  */
-//template<class V, class M, class T, class I>
-//void convolve(host_dense_matrix<V,M,T,I>& dst,
-		   //host_dense_matrix<V,M,T,I>& img,
-		   //host_dense_matrix<V,M,T,I>& filter);
-
 
 /** 
  * @brief Convolve N patterns (images), each with a different set of numFilters filters,
@@ -62,14 +53,6 @@ void convolve2(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& filter,
 		   int numFilters);
 
-/**
-  * @copydoc convolve2(dense_matrix<V,M,T,I>& dst, dense_matrix<V,M,T,I>& img, dense_matrix<V,M,T,I>& filter, int numFilters);
-  */
-//template<class V, class M, class T, class I>
-//void convolve2(host_dense_matrix<V,M,T,I>& dst,
-		   //host_dense_matrix<V,M,T,I>& img,
-		   //host_dense_matrix<V,M,T,I>& filter,
-		   //int numFilters);
 
 /** 
  * @brief Convolve N patterns (images), each consisting of F images/maps with F filters
@@ -87,14 +70,6 @@ template<class V, class M, class T, class I>
 void convolve3(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& img,
 		   dense_matrix<V,M,T,I>& filter);
-
-/**
-  * @copydoc convolve3(dense_matrix<V,M,T,I>& dst, dense_matrix<V,M,T,I>& img, dense_matrix<V,M,T,I>& filter);
-  */
-//template<class V, class M, class T, class I>
-//void convolve3(host_dense_matrix<V,M,T,I>& dst,
-		   //host_dense_matrix<V,M,T,I>& img,
-		   //host_dense_matrix<V,M,T,I>& filter);
 /** 
  * @brief Sample from several multinomial distributions
  * 
@@ -170,11 +145,6 @@ void matrix_to_grid(dense_matrix<V,M,T,I>& grid,
 		   dense_matrix<V,M,T,I>& mat,
 		   int poolSize);
 
-//template<class V, class M, class T, class I>
-//void supersample(host_dense_matrix<V,M,T,I>& dst,
-		//host_dense_matrix<V,M,T,I>& img,
-		//int factor,
-		//host_dense_matrix<int,row_major>* indices = NULL);
 
 template<class V, class M, class T, class I>
 void supersample(dense_matrix<V,M,T,I>& dst,
@@ -205,37 +175,6 @@ void reorder(dense_matrix<V,M,T,I>& A,
 		   int blockLength);
 
 
-/**
- * @brief Reorder blocks in a matrix
- * 
- * @param A target matrix 
- * @param blockLength size of each block
- *
- * sort the images in a matrix in a different order
- * input:  A1 B1 C1 D1
- *         A2 B2 C2 D2
- *         A3 B3 C3 D3
- * 		   where A1 is an image with blockLength pixels
- * output: A1
- *         A2
- *         A3
- *         B1
- *         B2
- *         ..
- */
-//template<class V, class M, class T, class I>
-//void reorder(host_dense_matrix<V,M,T,I>& A,
-		   //int blockLength);
-
-
-//template<class V, class M, class T, class I>
-//void super_to_max(host_dense_matrix<V,M,T,I>& dst,
-		//host_dense_matrix<V,M,T,I>& img,
-		//int poolSize,
-		//int overlap = 0,
-		//host_dense_matrix<int,row_major>* indices = NULL,
-		//host_dense_matrix<V,M,T,I>* filter = NULL);
-
 
 template<class V, class M, class T, class I>
 void super_to_max(dense_matrix<V,M,T,I>& dst,
@@ -250,18 +189,6 @@ void copy_into(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& img,
 		   int padding);
 
-//template<class V, class M, class T, class I>
-//void copy_into(host_dense_matrix<V,M,T,I>& dst,
-		   //host_dense_matrix<V,M,T,I>& img,
-		   //int padding);
-
-//template<class V, class M, class T, class I>
-//void max_pooling(host_dense_matrix<V,M,T,I>& dst,
-		//host_dense_matrix<V,M,T,I>& img,
-		//unsigned int poolSize,
-		//unsigned int overlap = 0,
-		//host_dense_matrix<int,row_major>* indices = NULL,
-		//host_dense_matrix<V,M,T,I>* filter = NULL);
 
 template<class V, class M, class T, class I>
 void max_pooling(dense_matrix<V,M,T,I>& dst,
@@ -285,18 +212,6 @@ void strip_padding(dense_matrix<V,M,T,I>& dst,
 				   dense_matrix<V,M,T,I>& img,
 				   unsigned int padding);
 
-/**
- * @brief Strips the padding inserted by copy_into
- * @param dst holds the stripped images. One row for each
- *            input image. width = dstSize^2 * numFilters
- * @param img contains one padded input pattern in each row
- * @param padding size of the padding
- *
- */
-//template<class V, class M, class T, class I>
-//void strip_padding(host_dense_matrix<V,M,T,I>& dst,
-				   //host_dense_matrix<V,M,T,I>& img,
-				   //unsigned int padding);
 
 
 /**
@@ -335,17 +250,6 @@ void filter_inverse(   dense_matrix<V,M,T,I>& dst,
 					   dense_matrix<V,M,T,I>& filter,
 					   unsigned int fs);
 
-/**
- * @brief Inverts the filters in a filter matrix consisting of m filters in a row with n rows.
- * @param dst holds the target matrix with the inverted filters
- * @param filter is a matrix with m filters in a row and n rows
- * @param fs the filter size
- *
- */
-//template<class V, class M, class T, class I>
-//void filter_inverse(   host_dense_matrix<V,M,T,I>& dst,
-					   //host_dense_matrix<V,M,T,I>& filter,
-					   //unsigned int fs);
 
 /**
  * @brief For a matrix with n maps in a row it returns a matrix where these maps are summed up into one map per row
@@ -359,17 +263,6 @@ void add_maps_h(	dense_matrix<V,M,T,I>& dst,
 					dense_matrix<V,M,T,I>& mat,
 					unsigned int image_size);
 
-/**
- * @brief For a matrix with n maps in a row it returns a matrix where these maps are summed up into one map per row
- * @param dst holds the target matrix
- * @param mat is a matrix with n maps of the same size in a row
- * @param image_size the size of one map in that rows
- *
- */
-//template<class V, class M, class T, class I>
-//void add_maps_h(	host_dense_matrix<V,M,T,I>& dst,
-					//host_dense_matrix<V,M,T,I>& mat,
-					//unsigned int image_size);
 }
 
 /** @} */ //end group convolution_ops

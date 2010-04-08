@@ -2,9 +2,7 @@
 #define __CONVERT_HPP__
 
 #include <tools/cuv_general.hpp>
-#include <basics/dev_dense_matrix.hpp>
-#include <basics/host_dense_matrix.hpp>
-
+#include <basics/dense_matrix.hpp>
 namespace cuv{
 
 	 /** @defgroup convert Convert matrices and vectors between different formats

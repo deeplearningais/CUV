@@ -3,8 +3,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <cuv_general.hpp>
-#include <dev_dense_matrix.hpp>
-#include <host_dense_matrix.hpp>
+#include <dense_matrix.hpp>
 #include <vector_ops.hpp>
 #include <timing.hpp>
 #include <random.hpp>

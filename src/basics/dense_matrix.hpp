@@ -18,12 +18,6 @@ namespace cuv{
 	struct column_major : public memory_layout_tag{}; ///< Trait for column major matrices
 	struct row_major    : public memory_layout_tag{}; ///< Trait for row major matrices
 	
-	//template<class __value_type, class __index_type=unsigned int>
-		//class dev_vector;
-
-	//template<class __value_type, class __index_type=unsigned int>
-		//class host_vector;
-
 	template<class __value_type,class __index_type>
 	struct matrix_traits<__value_type, __index_type,dev_memory_space> {
 		typedef dev_vector<__value_type, __index_type>  vector_type;
@@ -37,7 +31,6 @@ namespace cuv{
 	 * @brief Parent class for dense matrices
 	 */
 	template<class __value_type, class __mem_layout, class __memory_space_type, class __index_type = unsigned int >
-	//template<class __value_type, class __mem_layout, class __vec_type, class __index_type>
 	class dense_matrix 
 	:        public matrix<__value_type, __index_type>{
 	  public:
