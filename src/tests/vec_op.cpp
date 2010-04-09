@@ -11,7 +11,7 @@
 using namespace cuv;
 
 struct Fix{
-	dev_vector<float> v,w;
+	vector<float,dev_memory_space> v,w;
 	static const int N = 8092;
 	Fix()
 	:   v(N),w(N)
@@ -114,11 +114,11 @@ BOOST_AUTO_TEST_CASE( vec_ops_0ary1 )
 BOOST_AUTO_TEST_CASE( vec_ops_lswd )
 {
 	sequence(v);
-	dev_vector<float> v_old(N);
+	vector<float,dev_memory_space> v_old(N);
 	copy(v_old,v);
 	sequence(w);
-	host_vector<float> v2(N); sequence(v2);
-	host_vector<float> w2(N); sequence(w2);
+	vector<float,host_memory_space> v2(N); sequence(v2);
+	vector<float,host_memory_space> w2(N); sequence(w2);
 	learn_step_weight_decay(v,w,0.1f,0.05f);
 	learn_step_weight_decay(v2,w2,0.1f,0.05f);
 	for(int i=0;i<N;i++){
@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_lswd )
 }
 BOOST_AUTO_TEST_CASE( vec_ops_has_inf )
 {
-	host_vector<float> v2(N); fill(v2,0);
+	vector<float,host_memory_space> v2(N); fill(v2,0);
 	fill(v,0);
 	bool no  = has_inf(v);
 	bool no2 = has_inf(v2);
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_has_inf )
 }
 BOOST_AUTO_TEST_CASE( vec_ops_is_nan )
 {
-	host_vector<float> v2(N); fill(v2,0);
+	vector<float,host_memory_space> v2(N); fill(v2,0);
 	fill(v,0);
 	bool no  = has_nan(v);
 	bool no2 = has_nan(v2);
@@ -181,20 +181,20 @@ BOOST_AUTO_TEST_CASE( vec_ops_norms )
 
 BOOST_AUTO_TEST_CASE( vec_rprop )
 {
-	dev_vector<signed char> dW_old(N);
-	dev_vector<float>       W(N);
-	dev_vector<float>       dW(N);
-	dev_vector<float>       rate(N);
+	vector<signed char,dev_memory_space> dW_old(N);
+	vector<float,dev_memory_space>       W(N);
+	vector<float,dev_memory_space>       dW(N);
+	vector<float,dev_memory_space>       rate(N);
 	fill(W,0.f);
 	sequence(dW);           apply_scalar_functor(dW, SF_ADD, -256.f);
 	sequence(dW_old);       
 	fill(rate, 1.f);
 	rprop(W,dW,dW_old,rate);
 
-	host_vector<signed char> h_dW_old(N);
-	host_vector<float>       h_W(N);
-	host_vector<float>       h_dW(N);
-	host_vector<float>       h_rate(N);
+	vector<signed char,host_memory_space> h_dW_old(N);
+	vector<float,host_memory_space>       h_W(N);
+	vector<float,host_memory_space>       h_dW(N);
+	vector<float,host_memory_space>       h_rate(N);
 	fill(h_W,0.f);
 	sequence(h_dW);         apply_scalar_functor(h_dW, SF_ADD, -256.f);
 	sequence(h_dW_old);     

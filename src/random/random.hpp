@@ -1,8 +1,6 @@
 #ifndef __RANDOM_HPP__
 #define __RANDOM_HPP__
 
-#include <basics/dev_vector.hpp>
-
 namespace cuv{
 
  /** @defgroup random Random functions for matrices and vectors

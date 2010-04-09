@@ -1,7 +1,6 @@
 #include <iostream>
 #include <boost/any.hpp>
-#include <host_dia_matrix.hpp>
-#include <dev_dia_matrix.hpp>
+#include <dia_matrix.hpp>
 #include "matrix_ops.hpp"
 #include <texture.h>
 #include <boost/preprocessor/arithmetic/inc.hpp>
@@ -55,9 +54,9 @@ namespace cuv{
 #include "spmv_kernel_inst.cuh"
 
 		template <typename value_type, typename index_type>
-			void spmv_dia_device(const dev_dia_matrix<value_type,index_type>& A, 
-					const dev_vector<value_type>& v, 
-					dev_vector<value_type>& dst, 
+			void spmv_dia_device(const dia_matrix<value_type,dev_memory_space,index_type>& A, 
+					const vector<value_type,dev_memory_space>& v, 
+					vector<value_type,dev_memory_space>& dst, 
 					char transA,
 					const value_type& factAv,
 					const value_type& factC)
@@ -69,9 +68,9 @@ namespace cuv{
 			}
 
 		/*template <bool transA, typename value_type, typename index_type>*/
-		/*    void spmv_dia_tex_device(const dev_dia_matrix<value_type,index_type>& A, */
-		/*            const dev_vector<value_type>& v, */
-		/*            dev_vector<value_type>& dst)*/
+		/*    void spmv_dia_tex_device(const dia_matrix<value_type,dev_memory_space,index_type>& A, */
+		/*            const vector<value_type,dev_memory_space>& v, */
+		/*            vector<value_type,dev_memory_space>& dst)*/
 		/*    {*/
 		/*        const unsigned int BLOCK_SIZE = 256;*/
 		/*        const dim3 grid = make_large_grid(A.h(),BLOCK_SIZE);*/
@@ -95,7 +94,7 @@ namespace cuv{
 		/*        unbind_x(v.ptr());*/
 		/*    }*/
 		template<class value_type, class index_type>
-			void spmv(dev_vector<value_type,index_type>& dst, dev_dia_matrix<value_type,index_type>& A, dev_vector<value_type,index_type>& v, char transA, const float& factAv, const float& factC){
+			void spmv(vector<value_type,dev_memory_space,index_type>& dst, dia_matrix<value_type,dev_memory_space,index_type>& A, vector<value_type,dev_memory_space,index_type>& v, char transA, const float& factAv, const float& factC){
 				// TODO: find a good assert
 				/*if(transA=='t'){*/
 					/*cuvAssert(A.w() == dst.size());*/
@@ -110,8 +109,8 @@ namespace cuv{
 		 *  Host Code
 		 ****************************************************************/
 		template<class value_type, class index_type>
-			void spmv(host_vector<value_type,index_type>& dst, host_dia_matrix<value_type,index_type>& A, host_vector<value_type,index_type>& v, char transA, const float& factAv, const float& factC){
-				const host_vector<int>& offsets = A.get_offsets();
+			void spmv(vector<value_type,host_memory_space,index_type>& dst, dia_matrix<value_type,host_memory_space,index_type>& A, vector<value_type,host_memory_space,index_type>& v, char transA, const float& factAv, const float& factC){
+				const vector<int,host_memory_space>& offsets = A.get_offsets();
 				const int num_diags             = A.num_dia();
 				const int A_h                   = A.h();
 				const int A_w                   = A.w();
@@ -169,7 +168,7 @@ namespace cuv{
 
 	template<>
 		void prod(dense_matrix<float,column_major,host_memory_space>& dst,
-				  host_dia_matrix<float>&                  A,
+				  dia_matrix<float,host_memory_space>&                  A,
 				  dense_matrix<float,column_major,host_memory_space>&   B,
 				  char transA,
 				  char transB,
@@ -178,14 +177,14 @@ namespace cuv{
 			cuvAssert(transB == 'n');
 			cuvAssert(dst.w() == B.w());
 			for(int i=0;i<dst.w();i++){
-				host_vector<float> dst_v(dst.h(), dst.vec().ptr()+i*dst.h(), true);
-				host_vector<float> src_v(B.h(),   B.vec().ptr()+i*B.h(), true);
+				vector<float,host_memory_space> dst_v(dst.h(), dst.vec().ptr()+i*dst.h(), true);
+				vector<float,host_memory_space> src_v(B.h(),   B.vec().ptr()+i*B.h(), true);
 				spmv(dst_v,A,src_v,transA,factAB,factC);
 			}
 		}
 	template<>
 		void prod(dense_matrix<float,column_major,dev_memory_space>& dst,
-				  dev_dia_matrix<float>&                  A,
+				  dia_matrix<float,dev_memory_space>&                  A,
 				  dense_matrix<float,column_major,dev_memory_space>&   B,
 				  char transA,
 				  char transB,
@@ -201,8 +200,8 @@ namespace cuv{
 			}
 			const int num_at_same_time = min(MAX_NUM_IMGS_AT_ONCE, B.w());
 			for(int i=0; i<dst.w(); i += num_at_same_time){
-				dev_vector<float> dst_v(dst.h() * min(dst.w()-i,num_at_same_time), dst.vec().ptr()+i*dst.h(), true);
-				dev_vector<float> src_v(B.h()   * min(B.w()-i,  num_at_same_time), B.vec().ptr()+i*B.h(), true);
+				vector<float,dev_memory_space> dst_v(dst.h() * min(dst.w()-i,num_at_same_time), dst.vec().ptr()+i*dst.h(), true);
+				vector<float,dev_memory_space> src_v(B.h()   * min(B.w()-i,  num_at_same_time), B.vec().ptr()+i*B.h(), true);
 				spmv(dst_v,A,src_v,transA,factAB,factC);
 			}
 		}
@@ -210,6 +209,6 @@ namespace cuv{
 		void spmv(__vector_type& dst, __matrix_type& A, __vector_type& v, char transA, const float& factAv, const float& factC){
 			spmv_impl::spmv(dst,A,v,transA,factAv,factC);
 		}
-	template void spmv<host_dia_matrix<float>, host_vector<float> >(host_vector<float>&dst, host_dia_matrix<float>& A, host_vector<float>& v, char, const float&, const float&);
-	template void spmv<dev_dia_matrix<float>, dev_vector<float> >(dev_vector<float>&dst, dev_dia_matrix<float>& A, dev_vector<float>& v, char, const float&, const float&);
+	template void spmv<dia_matrix<float,host_memory_space>, vector<float,host_memory_space> >(vector<float,host_memory_space>&dst, dia_matrix<float,host_memory_space>& A, vector<float,host_memory_space>& v, char, const float&, const float&);
+	template void spmv<dia_matrix<float,dev_memory_space>, vector<float,dev_memory_space> >(vector<float,dev_memory_space>&dst, dia_matrix<float,dev_memory_space>& A, vector<float,dev_memory_space>& v, char, const float&, const float&);
 }

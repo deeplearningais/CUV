@@ -8,8 +8,6 @@
 #ifndef __DENSE_MATRIX_HPP__
 #define __DENSE_MATRIX_HPP__
 #include <basics/vector.hpp>
-#include <basics/host_vector.hpp>
-#include <basics/dev_vector.hpp>
 #include <basics/matrix.hpp>
 #include <tools/cuv_general.hpp>
 
@@ -18,15 +16,15 @@ namespace cuv{
 	struct column_major : public memory_layout_tag{}; ///< Trait for column major matrices
 	struct row_major    : public memory_layout_tag{}; ///< Trait for row major matrices
 	
-	template<class __value_type,class __index_type>
-	struct matrix_traits<__value_type, __index_type,dev_memory_space> {
-		typedef dev_vector<__value_type, __index_type>  vector_type;
-	};
+	//template<class __value_type,class __index_type>
+	//struct matrix_traits<__value_type, __index_type,dev_memory_space> {
+		//typedef dev_vector<__value_type, __index_type>  vector_type;
+	//};
 
-	template<class __value_type,class __index_type>
-	struct matrix_traits<__value_type, __index_type,host_memory_space> {
-		typedef host_vector<__value_type, __index_type>  vector_type;
-	};
+	//template<class __value_type,class __index_type>
+	//struct matrix_traits<__value_type, __index_type,host_memory_space> {
+		//typedef host_vector<__value_type, __index_type>  vector_type;
+	//};
 	/** 
 	 * @brief Parent class for dense matrices
 	 */
@@ -34,13 +32,14 @@ namespace cuv{
 	class dense_matrix 
 	:        public matrix<__value_type, __index_type>{
 	  public:
-		  typedef matrix_traits<__value_type,__index_type,__memory_space_type> my_matrix_traits;
+		  //typedef matrix_traits<__value_type,__index_type,__memory_space_type> my_matrix_traits;
 		  typedef __mem_layout                       					  memory_layout; ///< Memory layout type: column_major or row_major
 		  typedef __memory_space_type									  memory_space_type;
 		  typedef matrix<__value_type, __index_type>					  base_type; ///< Basic matrix type
 		  typedef typename base_type::value_type 						  value_type; ///< Type of matrix entries
 		  typedef typename base_type::index_type 						  index_type; ///< Type of indices
-		  typedef typename my_matrix_traits::vector_type  					  vec_type; ///< Basic vector type used
+		  //typedef typename my_matrix_traits::vector_type  					  vec_type; ///< Basic vector type used
+		  typedef vector<value_type,memory_space_type,index_type>	  vec_type; ///< Basic vector type used
 		  using base_type::m_width;
 		  using base_type::m_height;
 		  vec_type* m_vec;                      ///< stores the actual data 

@@ -6,8 +6,7 @@
 
 #include <cuv_general.hpp>
 #include <dense_matrix.hpp>
-#include <dev_dia_matrix.hpp>
-#include <host_dia_matrix.hpp>
+#include <dia_matrix.hpp>
 #include <convert.hpp>
 #include <matrix_ops/matrix_ops.hpp>
 #include <timing.hpp>
@@ -36,7 +35,7 @@ static const int nm = m/n;
 	}
 
 struct Fix{
-	host_dia_matrix<float>   A;
+	dia_matrix<float,host_memory_space>   A;
 	dense_matrix<float,column_major,host_memory_space> A_;
 	dense_matrix<float,column_major,host_memory_space> B,B_,BLarge;
 	dense_matrix<float,column_major,host_memory_space> C,C_,CLarge;
@@ -84,7 +83,7 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 	dense_matrix<float,column_major,dev_memory_space> Adevdense(n,m);
 	convert(Adevdense,Ahostdense);
 
-	dev_dia_matrix<float>   Adevdia(n,m,A.num_dia(),A.stride(),rf);
+	dia_matrix<float,dev_memory_space>   Adevdia(n,m,A.num_dia(),A.stride(),rf);
 	convert(Adevdia,A);
 
 	dense_matrix<float,column_major,dev_memory_space> CLarge2(CLarge.h(), CLarge.w());
@@ -107,7 +106,7 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 }
 BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dia )
 {
-	dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride(),rf);
+	dia_matrix<float,dev_memory_space> A2(n,m,A.num_dia(),A.stride(),rf);
 	convert(A2,A);
 	dense_matrix<float,column_major,dev_memory_space> CLarge2(CLarge.h(), CLarge.w());
 	convert(CLarge2,CLarge);

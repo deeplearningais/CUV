@@ -168,8 +168,8 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_vec )
 {
 	sequence(v); sequence(w);
 	sequence(x); sequence(z);
-	dev_vector<float>   v_vec(n); sequence(v_vec);
-	host_vector<float>  x_vec(n); sequence(x_vec);
+	vector<float,dev_memory_space>   v_vec(n); sequence(v_vec);
+	vector<float,host_memory_space>  x_vec(n); sequence(x_vec);
 	matrix_plus_col(v,v_vec);
 	matrix_plus_col(x,x_vec);
 	for(int i=0;i<n;i++){
@@ -188,8 +188,8 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_vec_row_major )
 	dense_matrix<float,row_major,host_memory_space> X(x.h(),x.w()); sequence(X);
 	dense_matrix<float,row_major,dev_memory_space> W(v.h(),v.w()); sequence(W);
 	dense_matrix<float,row_major,host_memory_space> Z(x.h(),x.w()); sequence(Z);
-	dev_vector<float>   v_vec(n); sequence(v_vec);
-	host_vector<float>  x_vec(n); sequence(x_vec);
+	vector<float,dev_memory_space>   v_vec(n); sequence(v_vec);
+	vector<float,host_memory_space>  x_vec(n); sequence(x_vec);
 	matrix_plus_col(V,v_vec);
 	matrix_plus_col(X,x_vec);
 	for(int i=0;i<n;i++){
@@ -206,8 +206,8 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col )
 {
 	sequence(v);
 	sequence(x);
-	dev_vector<float>  v_col(n); sequence(v_col);
-	host_vector<float> x_col(n); sequence(x_col);
+	vector<float,dev_memory_space>  v_col(n); sequence(v_col);
+	vector<float,host_memory_space> x_col(n); sequence(x_col);
 	reduce_to_col(v_col,v,RF_ADD,1.f,0.5f);
 	reduce_to_col(x_col,x,RF_ADD,1.f,0.5f);
 	for(int i=0;i<n;i++){
@@ -223,8 +223,8 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col_min )
 {
 	sequence(v);
 	sequence(x);
-	dev_vector<float>  v_col(n); sequence(v_col);
-	host_vector<float> x_col(n); sequence(x_col);
+	vector<float,dev_memory_space>  v_col(n); sequence(v_col);
+	vector<float,host_memory_space> x_col(n); sequence(x_col);
 	reduce_to_col(v_col,v,RF_MAX);
 	reduce_to_col(x_col,x,RF_MAX);
 	for(int i=0;i<n;i++){
@@ -241,8 +241,8 @@ BOOST_AUTO_TEST_CASE( mat_op_divide_col )
 	sequence(v);
 	sequence(x);
 	sequence(z);
-	dev_vector<float>  v_col(n); sequence(v_col); apply_scalar_functor(v_col, SF_ADD, 1.0f);
-	host_vector<float> x_col(n); sequence(x_col); apply_scalar_functor(x_col, SF_ADD, 1.0f);
+	vector<float,dev_memory_space>  v_col(n); sequence(v_col); apply_scalar_functor(v_col, SF_ADD, 1.0f);
+	vector<float,host_memory_space> x_col(n); sequence(x_col); apply_scalar_functor(x_col, SF_ADD, 1.0f);
 
 	matrix_divide_col(v, v_col);
 	matrix_divide_col(x, x_col);
@@ -257,9 +257,9 @@ BOOST_AUTO_TEST_CASE( mat_op_divide_col )
 BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
 {
 	dense_matrix<float,row_major,dev_memory_space> dA(40, 30);
-	dev_vector<float> dV(40);
+	vector<float,dev_memory_space> dV(40);
 	dense_matrix<float,row_major,host_memory_space> hA(40, 30);
-	host_vector<float> hV(40);
+	vector<float,host_memory_space> hV(40);
 
 	sequence(dA);
 	sequence(dV);
@@ -269,7 +269,7 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
 	reduce_to_col(dV,dA,RF_ADD,1.f,0.5f);
 	reduce_to_col(hV,hA,RF_ADD,1.f,0.5f);
 
-	host_vector<float> hV2(dV.size());
+	vector<float,host_memory_space> hV2(dV.size());
 	convert(hV2, dV);
 
 	for(int i=0;i<30;i++)
@@ -279,9 +279,9 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
 BOOST_AUTO_TEST_CASE( mat_op_reduce_to_row )
 {
 	dense_matrix<float,column_major,dev_memory_space> dA(40, 30);
-	dev_vector<float> dV(30);
+	vector<float,dev_memory_space> dV(30);
 	dense_matrix<float,column_major,host_memory_space> hA(40, 30);
-	host_vector<float> hV(30);
+	vector<float,host_memory_space> hV(30);
 
 	sequence(dA);
 	sequence(dV);
@@ -291,7 +291,7 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_row )
 	reduce_to_row(dV,dA,RF_ADD,1.f,0.5f);
 	reduce_to_row(hV,hA,RF_ADD,1.f,0.5f);
 
-	host_vector<float> hV2(dV.size());
+	vector<float,host_memory_space> hV2(dV.size());
 	convert(hV2, dV);
 
 	for(int i=0;i<30;i++)
@@ -301,9 +301,9 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_row )
 BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_row )
 {
 	dense_matrix<float,row_major,dev_memory_space> dA(40, 30);
-	dev_vector<float> dV(30);
+	vector<float,dev_memory_space> dV(30);
 	dense_matrix<float,row_major,host_memory_space> hA(40, 30);
-	host_vector<float> hV(30);
+	vector<float,host_memory_space> hV(30);
 
 	sequence(dA);
 	sequence(dV);
@@ -313,7 +313,7 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_row )
 	reduce_to_row(dV,dA,RF_ADD,1.f,0.5f);
 	reduce_to_row(hV,hA,RF_ADD,1.f,0.5f);
 
-	host_vector<float> hV2(dV.size());
+	vector<float,host_memory_space> hV2(dV.size());
 	convert(hV2, dV);
 
 	for(int i=0;i<30;i++)
@@ -377,13 +377,13 @@ BOOST_AUTO_TEST_CASE( mat_op_argmax )
 
 	dense_matrix<float,column_major,host_memory_space> hA(n, m);
 	dense_matrix<float,column_major,dev_memory_space>  dA(n, m);
-	host_vector<int> v(m);
-	dev_vector<int> x(m);
+	vector<int,host_memory_space> v(m);
+	vector<int,dev_memory_space> x(m);
 
 	dense_matrix<float,row_major,host_memory_space> hB(m, n);
 	dense_matrix<float,row_major,dev_memory_space>  dB(m, n);
-	host_vector<int> w(m);
-	dev_vector<int> y(m);
+	vector<int,host_memory_space> w(m);
+	vector<int,dev_memory_space> y(m);
 
 	fill_rnd_uniform(hA.vec());
 	fill_rnd_uniform(hB.vec());

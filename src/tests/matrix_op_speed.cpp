@@ -71,8 +71,8 @@ BOOST_AUTO_TEST_CASE( mat_plus_vec )
 {
 	sequence(v);
 	sequence(x);
-	dev_vector<float> v_vec(n); sequence(v_vec);
-	host_vector<float> x_vec(n); sequence(x_vec);
+	vector<float,dev_memory_space> v_vec(n); sequence(v_vec);
+	vector<float,host_memory_space> x_vec(n); sequence(x_vec);
 	MEASURE_TIME(dev,  matrix_plus_col(v,v_vec), 10);
 	MEASURE_TIME(host, matrix_plus_col(x,x_vec), 10);
 	printf("Speedup: %3.4f\n", host/dev);
@@ -82,8 +82,8 @@ BOOST_AUTO_TEST_CASE( mat_plus_vec_row_maj )
 {
 	dense_matrix<float,row_major,dev_memory_space> V(v.h(),v.w()); sequence(V);
 	dense_matrix<float,row_major,host_memory_space> X(x.h(),x.w()); sequence(X);
-	dev_vector<float>   v_vec(n); sequence(v_vec);
-	host_vector<float>  x_vec(n); sequence(x_vec);
+	vector<float,dev_memory_space>   v_vec(n); sequence(v_vec);
+	vector<float,host_memory_space>  x_vec(n); sequence(x_vec);
 	MEASURE_TIME(dev,  matrix_plus_col(V,v_vec), 10);
 	MEASURE_TIME(host, matrix_plus_col(X,x_vec), 10);
 	printf("Speedup: %3.4f\n", host/dev);

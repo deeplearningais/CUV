@@ -3,8 +3,7 @@
 
 
 #include <dense_matrix.hpp>
-#include <dev_dia_matrix.hpp>
-#include <host_dia_matrix.hpp>
+#include <dia_matrix.hpp>
 
 #define SPARSE_DIA_BLOCK_SIZE 16
 #define SPARSE_DIA_BLOCK_SIZE_LEN (2*SPARSE_DIA_BLOCK_SIZE+2)
@@ -22,7 +21,7 @@ namespace cuv{
 		public:
 			typedef __value_type value_type;
 			typedef __index_type index_type;
-			typedef host_dia_matrix<value_type,index_type> diamat_type;
+			typedef dia_matrix<value_type,host_memory_space,index_type> diamat_type;
 			host_block_descriptor(const diamat_type&){}
 	};
 	template<class __value_type, class __index_type=unsigned int>
@@ -30,7 +29,7 @@ namespace cuv{
 		public:
 			typedef __value_type value_type;
 			typedef __index_type index_type;
-			typedef dev_dia_matrix<value_type,index_type> diamat_type;
+			typedef dia_matrix<value_type,dev_memory_space,index_type> diamat_type;
 		protected:
 			struct block{
 				int              startx,starty;

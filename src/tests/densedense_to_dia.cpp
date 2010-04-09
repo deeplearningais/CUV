@@ -5,8 +5,7 @@
 #include <cuv_test.hpp>
 #include <cuv_general.hpp>
 #include <dense_matrix.hpp>
-#include <dev_dia_matrix.hpp>
-#include <host_dia_matrix.hpp>
+#include <dia_matrix.hpp>
 #include <convert.hpp>
 #include <matrix_ops/matrix_ops.hpp>
 #include <matrix_ops/densedense_to_sparse.hpp>
@@ -21,7 +20,7 @@ static const int k = 16;
 static const int rf = 4;
 
 struct Fix{
-	dev_dia_matrix<float>   C;
+	dia_matrix<float,dev_memory_space>   C;
 	dense_matrix<float,column_major,dev_memory_space> C_;
 	dense_matrix<float,column_major,dev_memory_space> A,A_;
 	dense_matrix<float,column_major,dev_memory_space> B,B_;
@@ -49,7 +48,7 @@ struct Fix{
 		sequence(B_);
 
 		sequence(C.vec());
-		host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride(),rf);
+		dia_matrix<float,host_memory_space> C2(C.h(),C.w(),C.num_dia(),C.stride(),rf);
 		dense_matrix<float,column_major,host_memory_space> C_2(C.h(),C.w());
 		convert(C2,C);  // dev->host
 		convert(C_2,C2); // dia->dense
@@ -100,7 +99,7 @@ BOOST_AUTO_TEST_CASE( dd2s_correctness_host )
 	sequence(B);
 
 	dense_matrix<float,column_major,host_memory_space> Chdense(C.h(),C.w());
-	host_dia_matrix<float>   Chdia(C.h(),C.w(),C.num_dia(),C.stride(),rf);
+	dia_matrix<float,host_memory_space>   Chdia(C.h(),C.w(),C.num_dia(),C.stride(),rf);
 	dense_matrix<float,column_major,host_memory_space> Ah(A.h(),A.w());
 	dense_matrix<float,column_major,host_memory_space> Bh(B.h(),B.w());
 	convert(Chdia,C);
@@ -126,7 +125,7 @@ BOOST_AUTO_TEST_CASE( dd2s_cmp_dev_host )
 	sequence(A);
 	sequence(B);
 
-	host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride(),rf);
+	dia_matrix<float,host_memory_space> C2(C.h(),C.w(),C.num_dia(),C.stride(),rf);
 	dense_matrix<float,column_major,host_memory_space> A2(A.h(),A.w());
 	dense_matrix<float,column_major,host_memory_space> B2(B.h(),B.w());
 	convert(C2,C);

@@ -327,8 +327,8 @@ BOOST_AUTO_TEST_CASE( reverse_filters )
 	fill(erg_h, 0.0f);
 	fill(erg_d, 0.0f);
 
-	host_vector<float> one_filter_h(g*g);
-	dev_vector<float> one_filter_d(g*g);
+	vector<float,host_memory_space> one_filter_h(g*g);
+	vector<float,dev_memory_space> one_filter_d(g*g);
 
 	sequence(one_filter_h);
 	sequence(one_filter_d);

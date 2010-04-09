@@ -5,8 +5,7 @@
 
 #include <timing.hpp>
 #include <cuv_general.hpp>
-#include <dev_vector.hpp>
-#include <host_vector.hpp>
+#include <vector.hpp>
 #include <vector_ops.hpp>
 #include <../random/random.hpp>
 
@@ -26,8 +25,8 @@
 using namespace cuv;
 
 struct Fix{
-	dev_vector<float> v;
-	host_vector<float> x;
+	vector<float,dev_memory_space> v;
+	vector<float,host_memory_space> x;
 	static const int n = 150*150*96;
 	Fix()
 		:v(n),x(n) // needs large sample number.

@@ -1,5 +1,4 @@
-#include <dev_dia_matrix.hpp>
-#include <host_dia_matrix.hpp>
+#include <dia_matrix.hpp>
 #include <vector_ops/vector_ops.hpp>
 #include <convert.hpp>
 
@@ -14,10 +13,10 @@ namespace cuv{
 			// host  --> dev 
 			template<class __value_type, class __index_type>
 				static void
-				convert(        dev_vector <__value_type,   __index_type>& dst, 
-						const host_vector<__value_type,  __index_type>& src){
+				convert(        vector <__value_type,   dev_memory_space, __index_type>& dst, 
+						const vector<__value_type, host_memory_space,  __index_type>& src){
 					if(        dst.size() != src.size()){
-						dev_vector<__value_type,__index_type> d(src.size());
+						vector<__value_type,dev_memory_space, __index_type> d(src.size());
 						dst = d;
 					}
 					cuvSafeCall(cudaMemcpy(dst.ptr(),src.ptr(),dst.memsize(),cudaMemcpyHostToDevice));
@@ -26,10 +25,10 @@ namespace cuv{
 			// dev  --> host  
 			template<class __value_type, class __index_type>
 				static void
-				convert(        host_vector<__value_type,  __index_type>& dst, 
-						const dev_vector<__value_type,  __index_type>& src){
+				convert(        vector<__value_type, host_memory_space,  __index_type>& dst, 
+						const vector<__value_type,  dev_memory_space, __index_type>& src){
 					if( dst.size() != src.size()){
-						host_vector<__value_type,__index_type> h(src.size());
+						vector<__value_type, host_memory_space,__index_type> h(src.size());
 						dst = h;
 					}
 					cuvSafeCall(cudaMemcpy(dst.ptr(),src.ptr(),dst.memsize(),cudaMemcpyDeviceToHost));
@@ -38,10 +37,10 @@ namespace cuv{
 			// host  --> host
 			template<class __value_type, class __index_type>
 				static void
-				convert(        host_vector<__value_type,  __index_type>& dst,
-						const host_vector<__value_type,  __index_type>& src){
+				convert(        vector<__value_type, host_memory_space,  __index_type>& dst,
+						const vector<__value_type, host_memory_space,  __index_type>& src){
 					if( dst.size() != src.size()){
-						host_vector<__value_type,__index_type> h(src.size());
+						vector<__value_type, host_memory_space,__index_type> h(src.size());
 						dst = h;
 					}
 					memcpy(dst.ptr(),src.ptr(),dst.memsize());
@@ -214,7 +213,7 @@ namespace cuv{
 			template<class __value_type, class __mem_layout_type, class __index_type>
 				static void
 				convert(      dense_matrix<__value_type, __mem_layout_type, host_memory_space, __index_type>& dst, 
-						const host_dia_matrix<__value_type,  __index_type>& src){
+						const dia_matrix<__value_type, host_memory_space,  __index_type>& src){
 					if(        dst.h() != src.h()
 							|| dst.w() != src.w()
 							){
@@ -222,7 +221,7 @@ namespace cuv{
 						dst = d;
 					}
 					fill(dst.vec(),0);
-					const host_vector<int>& off = src.get_offsets();
+					const vector<int, host_memory_space>& off = src.get_offsets();
 					using namespace std;
 					const int rf = src.row_fact();
 					for(unsigned int oi=0; oi < off.size(); oi++){
@@ -241,15 +240,15 @@ namespace cuv{
 			 */
 			template<class __value_type, class __index_type>
 				static void
-				convert(      dev_dia_matrix <__value_type, __index_type>& dst, 
-						const host_dia_matrix<__value_type, __index_type>& src){
+				convert(      dia_matrix <__value_type, dev_memory_space, __index_type>& dst, 
+						const dia_matrix<__value_type, host_memory_space, __index_type>& src){
 					if(        dst.h() != src.h()
 							|| dst.w() != src.w()
 							|| dst.row_fact() != src.row_fact()
 							|| !dst.vec_ptr()
 							){
 						dst.dealloc();
-						dst = dev_dia_matrix<__value_type,__index_type>(src.h(),src.w(),src.num_dia(),src.stride(),src.row_fact());
+						dst = dia_matrix<__value_type,dev_memory_space,__index_type>(src.h(),src.w(),src.num_dia(),src.stride(),src.row_fact());
 					}
 					cuvAssert(dst.vec_ptr())
 					cuvAssert(src.vec_ptr())
@@ -265,15 +264,15 @@ namespace cuv{
 			 */
 			template<class __value_type, class __index_type>
 				static void
-				convert(      host_dia_matrix <__value_type, __index_type>& dst, 
-						const dev_dia_matrix<__value_type, __index_type>& src){
+				convert(      dia_matrix <__value_type,host_memory_space, __index_type>& dst, 
+						const dia_matrix<__value_type,dev_memory_space, __index_type>& src){
 					if(        dst.h() != src.h()
 							|| dst.w() != src.w()
 							|| dst.row_fact() != src.row_fact()
 							|| !dst.vec_ptr()
 							){
 						dst.dealloc();
-						dst = host_dia_matrix<__value_type,__index_type>(src.h(),src.w(),src.num_dia(),src.stride(),src.row_fact());
+						dst = dia_matrix<__value_type,host_memory_space, __index_type>(src.h(),src.w(),src.num_dia(),src.stride(),src.row_fact());
 					}
 					cuvAssert(dst.get_offsets().ptr());
 					cuvAssert(dst.vec().ptr());
@@ -291,12 +290,12 @@ namespace cuv{
 		};
 
 #define CONV_VEC(X) \
-	template void convert<host_vector<X>,         host_vector<X> > \
-		(                 host_vector<X>&,  const host_vector<X>&); \
-	template void convert<dev_vector<X>,          host_vector<X> > \
-		(                 dev_vector<X>&,   const host_vector<X>&); \
-	template void convert<host_vector<X>,          dev_vector<X> > \
-		(                 host_vector<X>&,   const dev_vector<X>&);
+	template void convert<vector<X, host_memory_space>,         vector<X, host_memory_space> > \
+		(                 vector<X, host_memory_space>&,  const vector<X, host_memory_space>&); \
+	template void convert<vector<X, dev_memory_space>,          vector<X, host_memory_space> > \
+		(                 vector<X, dev_memory_space>&,   const vector<X, host_memory_space>&); \
+	template void convert<vector<X, host_memory_space>,          vector<X, dev_memory_space> > \
+		(                 vector<X, host_memory_space>&,   const vector<X, dev_memory_space>&);
 
 #define CONV_INST(X,Y,Z) \
 	template void convert<dense_matrix<X,Y,dev_memory_space>,          dense_matrix<X,Z,host_memory_space> > \
@@ -342,22 +341,22 @@ CONV_VEC(signed char);
 
 #define DIA_DENSE_CONV(X,Y,Z) \
 	template <>                           \
-		void convert(dense_matrix<X,Y,host_memory_space,Z>& dst, const host_dia_matrix<X,Z>& src)     \
+		void convert(dense_matrix<X,Y,host_memory_space,Z>& dst, const dia_matrix<X,host_memory_space,Z>& src)     \
 		{                                                                                \
 			typedef dense_matrix<X,Y,host_memory_space,Z> Dst;                                        \
 			convert_impl::convert<typename Dst::value_type, typename Dst::memory_layout, typename Dst::index_type>(dst,src);  \
 		};   
 #define DIA_HOST_DEV_CONV(X,Z) \
 	template <>                           \
-		void convert(dev_dia_matrix<X,Z>& dst, const host_dia_matrix<X,Z>& src)     \
+		void convert(dia_matrix<X,dev_memory_space,Z>& dst, const dia_matrix<X,host_memory_space,Z>& src)     \
 		{                                                                                \
-			typedef dev_dia_matrix<X,Z> Dst;                                        \
+			typedef dia_matrix<X,dev_memory_space,Z> Dst;                                        \
 			convert_impl::convert<typename Dst::value_type, typename Dst::index_type>(dst,src);  \
 		};                                \
 	template <>                           \
-		void convert(host_dia_matrix<X,Z>& dst, const dev_dia_matrix<X,Z>& src)     \
+		void convert(dia_matrix<X,host_memory_space,Z>& dst, const dia_matrix<X,dev_memory_space,Z>& src)     \
 		{                                                                                \
-			typedef host_dia_matrix<X,Z> Dst;                                        \
+			typedef dia_matrix<X,host_memory_space,Z> Dst;                                        \
 			convert_impl::convert<typename Dst::value_type, typename Dst::index_type>(dst,src);  \
 		}; 
         

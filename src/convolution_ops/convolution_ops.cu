@@ -201,7 +201,7 @@ void sample_multinomial(dense_matrix<float,row_major,dev_memory_space>& grid){
 }
 
 template<>
-void prob_max_pooling(dev_vector<float>& sums,dense_matrix<float,row_major,dev_memory_space>& grid, int poolSize, bool sample){
+void prob_max_pooling(vector<float,dev_memory_space>& sums,dense_matrix<float,row_major,dev_memory_space>& grid, int poolSize, bool sample){
 	int numImages = grid.h();
 	int imgPixels = grid.w();
 	int regionsPerImage = imgPixels / (poolSize * poolSize);
@@ -231,7 +231,7 @@ void prob_max_pooling(dense_matrix<float,row_major,dev_memory_space>& grid, int 
 	int imgPixels = grid.w();
 	int regionsPerImage = imgPixels / (poolSize * poolSize);
 
-	dev_vector<float> sums(numImages*regionsPerImage);
+	vector<float,dev_memory_space> sums(numImages*regionsPerImage);
 	prob_max_pooling(sums, grid, poolSize,sample);
 }
 
@@ -874,7 +874,7 @@ __global__ void row_ncopy_kernel(float* targets, float* row, const int imgSize, 
 
 template<>
 	void row_ncopy(dense_matrix<float,row_major,dev_memory_space>& dst,
-				   dev_vector<float>& row,
+				   vector<float,dev_memory_space>& row,
 				   unsigned int n) {
 	int inputSize = row.size();
 	cuvAssert(n == dst.h());
@@ -892,7 +892,7 @@ template<>
 
 template<>
 	void row_ncopy(dense_matrix<float,row_major,host_memory_space>& erg_h,
-				   host_vector<float>& row,
+				   vector<float,host_memory_space>& row,
 				   unsigned int n) {
 
 	cuvAssert(n == erg_h.h());

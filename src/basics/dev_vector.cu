@@ -14,7 +14,7 @@
 
 #include <cuv_general.hpp>
 
-#include "dev_vector.hpp"
+#include "vector.hpp"
 
 namespace cuv{
 

@@ -13,8 +13,7 @@
 #include <cuv_general.hpp>
 #include <cutil_inline.h>
 
-#include <dev_vector.hpp>
-#include <host_vector.hpp>
+#include <vector.hpp>
 
 #include "vector_ops.hpp"
 
@@ -187,8 +186,8 @@ void setLinearGridAndThreads(dim3& blocks, dim3& threads, size_t len, int thread
 
 template<class unary_functor, class value_type, class index_type>
 void launch_unary_kernel(
-   cuv::dev_vector<value_type, index_type>& dst,
-   cuv::dev_vector<value_type, index_type>& src, 
+   cuv::vector<value_type,dev_memory_space,index_type>& dst,
+   cuv::vector<value_type,dev_memory_space,index_type>& src, 
 	 unary_functor uf){
 	 cuvAssert(dst.ptr());
 	 cuvAssert(src.ptr());
@@ -209,8 +208,8 @@ void launch_unary_kernel(
 
 template<class unary_functor, class value_type, class index_type>
 void launch_unary_kernel(
-   cuv::host_vector<value_type, index_type>& dst,
-   cuv::host_vector<value_type, index_type>& src, 
+   cuv::vector<value_type,host_memory_space,index_type>& dst,
+   cuv::vector<value_type,host_memory_space,index_type>& src, 
 	 unary_functor uf){
 	 cuvAssert(src.ptr());
 	 cuvAssert(dst.ptr());
@@ -223,8 +222,8 @@ void launch_unary_kernel(
 
 template<class binary_functor, class V1, class V2, class index_type>
 void launch_binary_kernel(
-   cuv::dev_vector<V1, index_type>& v,
-   cuv::dev_vector<V2, index_type>& w, 
+   cuv::vector<V1,dev_memory_space,index_type>& v,
+   cuv::vector<V2,dev_memory_space,index_type>& w, 
 	 binary_functor bf){
 	 cuvAssert(v.ptr());
 	 cuvAssert(w.ptr());
@@ -245,8 +244,8 @@ void launch_binary_kernel(
 
 template<class binary_functor, class V1, class V2, class index_type>
 void launch_binary_kernel(
-   cuv::host_vector<V1, index_type>& dst,
-   cuv::host_vector<V2, index_type>& src, 
+   cuv::vector<V1,host_memory_space,index_type>& dst,
+   cuv::vector<V2,host_memory_space,index_type>& src, 
 	 binary_functor uf){
 	 cuvAssert(src.ptr());
 	 cuvAssert(dst.ptr());
@@ -269,7 +268,7 @@ void
 apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf){
 	 cuvAssert(v.ptr());
 	 typedef typename __vector_type::value_type value_type;
-	 typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	 typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	 ptr_type dst_ptr(v.ptr());
 	 switch(nf){
 		 case NF_SEQ:
@@ -286,7 +285,7 @@ apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf, const __value_typ
 	 cuvAssert(v.ptr());
 
 	 typedef typename __vector_type::value_type value_type;
-	 typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	 typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	 ptr_type dst_ptr(v.ptr());
 	 switch(nf){
 		 case NF_FILL:
@@ -330,8 +329,8 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 	cuvAssert(v.size() == w.size());
 	typedef typename __vector_type1::value_type V1;
 	typedef typename __vector_type2::value_type V2;
-	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memspace_type>::ptr_type ptr_type1;
-	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memspace_type>::ptr_type ptr_type2;
+	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memory_space_type>::ptr_type ptr_type1;
+	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memory_space_type>::ptr_type ptr_type2;
 	ptr_type1 v_ptr(v.ptr());
 	ptr_type2 w_ptr(w.ptr());
 #if USE_THRUST_LAUNCHER 
@@ -368,8 +367,8 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 	cuvAssert(v.size() == w.size());
 	typedef typename __vector_type1::value_type V1;
 	typedef typename __vector_type2::value_type V2;
-	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memspace_type>::ptr_type ptr_type1;
-	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memspace_type>::ptr_type ptr_type2;
+	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memory_space_type>::ptr_type ptr_type1;
+	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memory_space_type>::ptr_type ptr_type2;
 	ptr_type1 v_ptr(v.ptr());
 	ptr_type2 w_ptr(w.ptr());
 #if USE_THRUST_LAUNCHER
@@ -397,8 +396,8 @@ apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& 
 	cuvAssert(v.size() == w.size());
 	typedef typename __vector_type1::value_type V1;
 	typedef typename __vector_type2::value_type V2;
-	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memspace_type>::ptr_type ptr_type1;
-	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memspace_type>::ptr_type ptr_type2;
+	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memory_space_type>::ptr_type ptr_type1;
+	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memory_space_type>::ptr_type ptr_type2;
 	ptr_type1 v_ptr(v.ptr());
 	ptr_type2 w_ptr(w.ptr());
 #if USE_THRUST_LAUNCHER
@@ -482,7 +481,7 @@ template<class __vector_type>
 bool
 has_inf(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
 	bool init=false;
 	return  thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_is_inf<value_type>(), init, bf_or<bool,bool>());
@@ -491,7 +490,7 @@ template<class __vector_type>
 bool
 has_nan(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
 	bool init=false;
 	return  thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_is_nan<value_type>(), init, bf_or<bool,bool>());
@@ -500,7 +499,7 @@ template<class __vector_type>
 float
 norm2(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
 	float init=0;
 	return  std::sqrt( thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_square<float>(), init, bf_plus<float,value_type>()) );
@@ -509,7 +508,7 @@ template<class __vector_type>
 float
 norm1(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
 	float init=0;
 	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_abs<float>(), init, bf_plus<float,value_type>());
@@ -518,7 +517,7 @@ template<class __vector_type>
 float
 maximum(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
 	float init=-INT_MAX;
 	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_max<float,value_type>());
@@ -527,7 +526,7 @@ template<class __vector_type>
 float
 minimum(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
 	float init=INT_MAX;
 	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_min<float,value_type>());
@@ -536,7 +535,7 @@ template<class __vector_type>
 float
 mean(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
 	float init=0;
 	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,value_type>()) / (float)v.size();
@@ -545,7 +544,7 @@ template<class __vector_type>
 float
 var(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memspace_type>::ptr_type ptr_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
 	float init=0;
 	float m = mean(v);
@@ -556,67 +555,62 @@ var(__vector_type& v){
  * Template instantiations
  */
 
-#define SIMPLE_0(X) \
-	template void apply_0ary_functor< X >(X&, const NullaryFunctor&);
+#define SIMPLE_0(X,Y) \
+	template void apply_0ary_functor< vector<X,Y> >( vector<X,Y>&, const NullaryFunctor&);
 
-#define SIMPLE_01(X,P) \
-	template void apply_0ary_functor< X, P>(X&, const NullaryFunctor&, const P& param);
+#define SIMPLE_01(X,P,Z) \
+	template void apply_0ary_functor< vector<X,Z>, P>(vector<X,Z>&, const NullaryFunctor&, const P& param);
 
-#define SIMPLE_1(X) \
-	template void apply_scalar_functor< X >(X&, const ScalarFunctor&);
-#define SIMPLE_11(X,P) \
-	template void apply_scalar_functor< X, P>(X&, const ScalarFunctor&,const P&); \
-	template void apply_scalar_functor< X, P>(X&, const ScalarFunctor&,const P&, const P&);
+#define SIMPLE_1(X,Y) \
+	template void apply_scalar_functor< vector<X,Y> >(vector<X,Y>&, const ScalarFunctor&);
+#define SIMPLE_11(X,P,Z) \
+	template void apply_scalar_functor< vector<X,Z>, P>(vector<X,Z>&, const ScalarFunctor&,const P&); \
+	template void apply_scalar_functor< vector<X,Z>, P>(vector<X,Z>&, const ScalarFunctor&,const P&, const P&);
 
-#define SIMPLE_2(X,Y) \
-	template void apply_binary_functor<X,Y  >(X&, Y&, const BinaryFunctor&);
-#define SIMPLE_21(X,Y,P) \
-	template void apply_binary_functor<X,Y,P>(X&, Y&, const BinaryFunctor&,  const P&); \
-	template void apply_binary_functor<X,Y,P>(X&, Y&, const BinaryFunctor&,  const P&, const P&);
+#define SIMPLE_2(X,Y,Z) \
+	template void apply_binary_functor< vector<X,Z> , vector<Y,Z>  >( vector<X,Z> &,  vector<Y,Z> &, const BinaryFunctor&);
+#define SIMPLE_21(X,Y,P,Z) \
+	template void apply_binary_functor<vector<X,Z>,vector<Y,Z>,P>(vector<X,Z>&, vector<Y,Z>&, const BinaryFunctor&,  const P&); \
+	template void apply_binary_functor<vector<X,Z>,vector<Y,Z>,P>(vector<X,Z>&, vector<Y,Z>&, const BinaryFunctor&,  const P&, const P&);
 
-#define SIMPLE_NORM(X) \
-	template bool has_inf<X>(X&); \
-	template bool has_nan<X>(X&); \
-	template float minimum<X>(X&); \
-	template float maximum<X>(X&); \
-	template float norm1<X>(X&); \
-	template float norm2<X>(X&); \
-	template float mean<X>(X&);  \
-	template float var<X>(X&); 
+#define SIMPLE_NORM(X, Y) \
+	template bool has_inf<vector<X,Y> >(vector<X,Y>&); \
+	template bool has_nan<vector<X,Y> >(vector<X,Y>&); \
+	template float minimum<vector<X,Y> >(vector<X,Y>&); \
+	template float maximum<vector<X,Y> >(vector<X,Y>&); \
+	template float norm1<vector<X,Y> >(vector<X,Y>&); \
+	template float norm2<vector<X,Y> >(vector<X,Y>&); \
+	template float mean<vector<X,Y> >(vector<X,Y>&);  \
+	template float var<vector<X,Y> >(vector<X,Y>&); 
 
 
 #define SIMPLE_INSTANTIATOR(X) \
-	SIMPLE_0( X );             \
-	SIMPLE_1( X );             \
-	SIMPLE_2( X, X );          \
-    SIMPLE_NORM( X );
+	SIMPLE_0( X , dev_memory_space);             \
+	SIMPLE_1( X , dev_memory_space);             \
+	SIMPLE_2( X, X , dev_memory_space);          \
+    SIMPLE_NORM( X , dev_memory_space);			\
+	SIMPLE_0( X , host_memory_space);             \
+	SIMPLE_1( X , host_memory_space);             \
+	SIMPLE_2( X, X , host_memory_space);          \
+    SIMPLE_NORM( X , host_memory_space);
 
 #define SIMPLE_INSTANTIATOR1(X, P) \
-	SIMPLE_01( X, P );             \
-	SIMPLE_11( X, P );             \
-	SIMPLE_21( X, X, P );          
+	SIMPLE_01( X, P , dev_memory_space);             \
+	SIMPLE_11( X, P , dev_memory_space);             \
+	SIMPLE_21( X, X, P , dev_memory_space);          \
+	SIMPLE_01( X, P , host_memory_space);             \
+	SIMPLE_11( X, P , host_memory_space);             \
+	SIMPLE_21( X, X, P , host_memory_space);          
 
-SIMPLE_INSTANTIATOR( dev_vector<float> );
-SIMPLE_INSTANTIATOR1( dev_vector<float>, float );
-SIMPLE_INSTANTIATOR1( dev_vector<float>, int );
-SIMPLE_INSTANTIATOR( dev_vector<unsigned char> );
-SIMPLE_INSTANTIATOR1( dev_vector<unsigned char>, unsigned char );
-SIMPLE_INSTANTIATOR( dev_vector<signed char> );
-SIMPLE_INSTANTIATOR1( dev_vector<signed char>, unsigned char );
-SIMPLE_2(dev_vector<float>,dev_vector<unsigned char>);
-
-SIMPLE_INSTANTIATOR( host_vector<float> );
-SIMPLE_INSTANTIATOR1( host_vector<float>, float );
-SIMPLE_INSTANTIATOR1( host_vector<float>, int );
-SIMPLE_INSTANTIATOR( host_vector<unsigned char> );
-SIMPLE_INSTANTIATOR1( host_vector<unsigned char>, unsigned char );
-SIMPLE_INSTANTIATOR( host_vector<signed char> );
-SIMPLE_INSTANTIATOR1( host_vector<signed char>, signed char );
-
-SIMPLE_INSTANTIATOR( host_vector<int> );
-SIMPLE_INSTANTIATOR1( host_vector<int>, int );
-SIMPLE_INSTANTIATOR( dev_vector<int> );
-SIMPLE_INSTANTIATOR1( dev_vector<int>, int );
-
-SIMPLE_2(host_vector<float>,host_vector<unsigned char>);
+SIMPLE_INSTANTIATOR( float );
+SIMPLE_INSTANTIATOR1( float, float );
+SIMPLE_INSTANTIATOR1( float, int );
+SIMPLE_INSTANTIATOR( unsigned char );
+SIMPLE_INSTANTIATOR1( unsigned char, unsigned char );
+SIMPLE_INSTANTIATOR( signed char );
+SIMPLE_INSTANTIATOR1( signed char, unsigned char );
+SIMPLE_2(float,unsigned char, dev_memory_space);
+SIMPLE_2(float,unsigned char, host_memory_space);
+SIMPLE_INSTANTIATOR(int );
+SIMPLE_INSTANTIATOR1(int, int );
 } // cuv

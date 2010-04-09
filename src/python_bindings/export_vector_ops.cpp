@@ -5,8 +5,7 @@
 #include <pyublas/numpy.hpp>
 #include  <boost/type_traits/is_base_of.hpp>
 
-#include <dev_vector.hpp>
-#include <host_vector.hpp>
+#include <vector.hpp>
 #include <vector_ops/vector_ops.hpp>
 #include <convert.hpp>
 

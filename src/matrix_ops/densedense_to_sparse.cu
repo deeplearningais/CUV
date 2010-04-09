@@ -173,7 +173,7 @@ namespace cuv{
 		}
 		template<class value_type, class index_type>
 			void densedense_to_dia(
-					host_dia_matrix<value_type,index_type>& dst,
+					dia_matrix<value_type,host_memory_space,index_type>& dst,
 					const host_block_descriptor<value_type,index_type>& bd,
 					const dense_matrix<value_type,cuv::column_major,host_memory_space,index_type>& A,
 					const dense_matrix<value_type,cuv::column_major,host_memory_space,index_type>& B,
@@ -220,7 +220,7 @@ namespace cuv{
 			}
 		template<class value_type, class index_type>
 			void densedense_to_dia(
-					dev_dia_matrix<value_type,index_type>& dst,
+					dia_matrix<value_type,dev_memory_space,index_type>& dst,
 					const dev_block_descriptor<value_type,index_type>& bd,
 					const dense_matrix<value_type,cuv::column_major,dev_memory_space,index_type>& A,
 					const dense_matrix<value_type,cuv::column_major,dev_memory_space,index_type>& B,
@@ -279,13 +279,13 @@ namespace cuv{
 	 */
 #define INST_DD2DIA(V) \
 	template void densedense_to_dia(                                \
-			dev_dia_matrix<V>& ,                                  \
+			dia_matrix<V,dev_memory_space>& ,                                  \
 			const dev_block_descriptor<V>& ,                      \
 			const dense_matrix<V,cuv::column_major,dev_memory_space>& ,        \
 			const dense_matrix<V,cuv::column_major,dev_memory_space>&,         \
 			const V&,const V&);       \
 	template void densedense_to_dia(                                \
-			host_dia_matrix<V>& ,                                  \
+			dia_matrix<V,host_memory_space>& ,                                  \
 			const host_block_descriptor<V>& ,                      \
 			const dense_matrix<V,cuv::column_major,host_memory_space>& ,        \
 			const dense_matrix<V,cuv::column_major,host_memory_space>&,         \

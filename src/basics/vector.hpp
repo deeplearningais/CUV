@@ -7,17 +7,38 @@
  */
 #ifndef __VECTOR_HPP__
 #define __VECTOR_HPP__
+#include <cuv_general.hpp>
+#include <iostream>
 
 namespace cuv{
 
+template <class value_type, class index_type>
+void alloc( value_type** ptr, index_type memsize, dev_memory_space);
+template <class value_type>
+void dealloc( value_type** ptr, dev_memory_space);
+template <class value_type, class index_type>
+void entry_set(value_type* ptr, index_type idx, value_type val, dev_memory_space);
+template <class value_type, class index_type>
+value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space);
+
+template <class value_type, class index_type>
+void alloc( value_type** ptr, index_type memsize, host_memory_space);
+template <class value_type>
+void dealloc( value_type** ptr, host_memory_space);
+template <class value_type, class index_type>
+void entry_set(value_type* ptr, index_type idx, value_type val, host_memory_space);
+template <class value_type, class index_type>
+value_type entry_get(const value_type* ptr, index_type idx, host_memory_space);
+
+
 /** Parent struct that host/device traits inherit from
  */
-	template<class T>
-	struct vector_traits{
-		//typedef memory_space memory_space_type;
-	};
-	template<class V, class I>
-	class host_vector;
+	//template<class T>
+	//struct vector_traits{
+		////typedef memory_space memory_space_type;
+	//};
+	//template<class V, class I>
+	//class host_vector;
 
 /**
  * @brief Basic vector class
@@ -25,22 +46,24 @@ namespace cuv{
  * This vector class is the parent of all other vector classes and has all the basic attributes that all matrices share.
  * This class is never actually instanciated.
  */
-template<class __value_type, class __index_type>
+template<class __value_type, class __memory_space_type, class __index_type=unsigned int>
 class vector{
 	public:
 	  typedef __value_type value_type;	 ///< Type of the entries of matrix
 	  typedef __index_type index_type;	 ///< Type of indices
-	  template <class Archive, class V, class I> friend void serialize(Archive&, host_vector<V,I>&, unsigned int) ;
-	  
+	  typedef __memory_space_type memory_space_type; ///< Indicates whether this is a host or device vector
+	  template <class Archive, class V, class I> friend void serialize(Archive&, vector<V,memory_space_type,I>&, unsigned int) ;
+	  typedef vector<value_type, memory_space_type, index_type> my_type;
 	protected:
 	  value_type* m_ptr;
 	  bool        m_is_view;
-	 index_type      m_size;
-	
+	  index_type  m_size;
+			
 	public:
 	  /*
 	   * Member Access
 	   */
+
 	  /** 
 	   * @brief Return pointer to matrix entries
 	   */
@@ -69,7 +92,9 @@ class vector{
 	   * 
 	   * @param s Length of vector
 	   */
-	  vector(index_type s):m_ptr(NULL),m_is_view(false),m_size(s) { alloc(); }
+	  vector(index_type s):m_ptr(NULL),m_is_view(false),m_size(s) {
+		  alloc();
+	  }
 	  /** 
 	   * @brief Creates vector from pointer to entries.
 	   * 
@@ -88,13 +113,23 @@ class vector{
 	   * Memory Management
 	   */
 	  /** 
-	   * @brief Does nothing
+	   * @brief Allocate memory
 	   */
-	  virtual void alloc(){}; 
+	  void alloc(){
+		  if (! m_is_view) {
+			  cuvAssert(m_ptr == NULL)
+			  cuv::alloc<value_type, index_type>( &m_ptr,m_size,memory_space_type());	
+		  }
+	  } 
 	  /** 
-	   * @brief Does nothing
+	   * @brief Deallocate memory if not a view
 	   */
-	  virtual void dealloc(){}; 
+	  void dealloc(){
+		  if (m_ptr && ! m_is_view)
+			cuv::dealloc<value_type>(&m_ptr,memory_space_type());	
+		  m_ptr=NULL;
+	  }
+
 
 		/** 
 		 * @brief Assignment operator. Assigns memory belonging to source to destination and sets source memory pointer to NULL (if source is not a view)
@@ -105,8 +140,8 @@ class vector{
 		 *
 		 * If source vector is a view, the returned vector is a view, too.
 		 */
-	  vector<value_type,index_type>& 
-		  operator=(const vector<value_type,index_type>& o){
+	  my_type& 
+		  operator=(const my_type& o){
 			  if(this==&o) return *this;
 			  this->dealloc();
 			  this->m_ptr = o.m_ptr;
@@ -114,12 +149,51 @@ class vector{
 			  this->m_size = o.m_size;
 			  if(!m_is_view){
 				  // transfer ownership of memory (!)
-				  (const_cast< vector<value_type,index_type> *>(&o))->m_ptr = NULL;
+				  (const_cast< my_type *>(&o))->m_ptr = NULL;
 			  }
 			  return *this;
 		  }
-};
 
-};
+		value_type operator[](const index_type& idx)const///< Return entry at position t
+			{
+				return entry_get<value_type,index_type>(m_ptr,idx,memory_space_type());
+			}
+
+		/** 
+		 * @brief Set entry idx to val
+		 * 
+		 * @param idx Index of which entry to change 
+		 * @param val New value of entry
+		 */
+		void set(const index_type& idx, const value_type& val){
+				entry_set<value_type,index_type>(m_ptr,idx,val,memory_space_type());
+		}
+
+}; // vector
+
+template<class value_type, class index_type>
+void alloc( value_type** ptr, index_type size, host_memory_space) {
+	*ptr = new value_type[size];
+	std::cout << "                    : "<< *ptr<<std::endl;
+}
+
+template<class value_type>
+void dealloc( value_type** ptr, host_memory_space) {
+	delete[] *ptr;
+	*ptr = NULL;
+}
+
+template <class value_type, class index_type>
+void entry_set(value_type* ptr, index_type idx, value_type val, host_memory_space) {
+	ptr[idx]=val;
+}
+
+
+template <class value_type, class index_type>
+value_type entry_get(const value_type* ptr, index_type idx, host_memory_space) {
+	return ptr[idx];
+}
+
+}; // cuv
 
 #endif

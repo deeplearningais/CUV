@@ -91,11 +91,11 @@ class host_vector
 /** 
  * @brief Trait that indicates whether device or host memory is used.
  */
-template<class V, class I>
-struct vector_traits<host_vector<V,I> >{
-	typedef dev_memory_space memory_space_type; ///< Trait for memory type (host/device)
+//template<class V, class I>
+//struct vector_traits<host_vector<V,I> >{
+	//typedef dev_memory_space memory_space_type; ///< Trait for memory type (host/device)
 
-};
+//};
 
 //template<class __value_type,class __index_type>
 //struct matrix_traits<__value_type, __index_type,host_memory_space> {

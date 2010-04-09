@@ -6,8 +6,7 @@
 
 #include <cuv_general.hpp>
 #include <dense_matrix.hpp>
-#include <dev_dia_matrix.hpp>
-#include <host_dia_matrix.hpp>
+#include <dia_matrix.hpp>
 #include <convert.hpp>
 #include <matrix_ops/matrix_ops.hpp>
 #include <matrix_ops/densedense_to_sparse.hpp>
@@ -36,7 +35,7 @@ static const int fs = 8;
 static const int nm = m/n;
 
 struct Fix{
-	dev_dia_matrix<float>   C;
+	dia_matrix<float,dev_memory_space>   C;
 	dense_matrix<float,column_major,dev_memory_space> A;
 	dense_matrix<float,column_major,dev_memory_space> B;
 	Fix()
@@ -69,7 +68,7 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_host_host )
 {
 	fill(C.vec(),0);
 
-	host_dia_matrix<float>   C2(C.h(),C.w(),C.num_dia(),C.stride());
+	dia_matrix<float,host_memory_space>   C2(C.h(),C.w(),C.num_dia(),C.stride());
 	dense_matrix<float,column_major,host_memory_space> C2dense(C.h(),C.w());
 	dense_matrix<float,column_major,host_memory_space> A2(A.h(),A.w());
 	dense_matrix<float,column_major,host_memory_space> B2(B.h(),B.w());
@@ -89,7 +88,7 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_dev_host )
 {
 	fill(C.vec(),0);
 
-	host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride());
+	dia_matrix<float,host_memory_space> C2(C.h(),C.w(),C.num_dia(),C.stride());
 	dense_matrix<float,column_major,host_memory_space> A2(A.h(),A.w());
 	dense_matrix<float,column_major,host_memory_space> B2(B.h(),B.w());
 	convert(C2,C);
@@ -111,7 +110,7 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_sparse_dense )
 
 	// make a dev_dense_matrix equivalent to the dia-matrix
 	dense_matrix<float,column_major,dev_memory_space> Cd(C.h(),C.w());
-	host_dia_matrix<float> C2(C.h(),C.w(),C.num_dia(),C.stride());
+	dia_matrix<float,host_memory_space> C2(C.h(),C.w(),C.num_dia(),C.stride());
 	dense_matrix<float,column_major,host_memory_space> C_2(C.h(),C.w());
 	convert(C2,C);  // dev->host
 	convert(C_2,C2); // dia->dense

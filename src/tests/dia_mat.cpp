@@ -5,8 +5,7 @@
 #include <cuv_test.hpp>
 #include <cuv_general.hpp>
 #include <vector_ops.hpp>
-#include <host_dia_matrix.hpp>
-#include <dev_dia_matrix.hpp>
+#include <dia_matrix.hpp>
 #include <convert.hpp>
 #include <sparse_matrix_io.hpp>
 
@@ -20,7 +19,7 @@ static const int rf=2;
 
 
 struct Fix{
-	host_dia_matrix<float> w;
+	dia_matrix<float,host_memory_space> w;
 	Fix()
 	:  w(n,m,d,n,rf) 
 	{
@@ -46,7 +45,7 @@ BOOST_AUTO_TEST_CASE( spmv_saveload )
 		boost::archive::binary_oarchive oa(ofs);
 		oa << w;
 	}
-	host_dia_matrix<float> w2;
+	dia_matrix<float,host_memory_space> w2;
 	if(1){
 		// load...
 		std::ifstream ifs("test_dia_mat.save");
@@ -59,7 +58,7 @@ BOOST_AUTO_TEST_CASE( spmv_saveload )
 
 BOOST_AUTO_TEST_CASE( spmv_uninit )
 {
-	dev_dia_matrix<float> wdev(32,16,3,16,1);
+	dia_matrix<float,dev_memory_space> wdev(32,16,3,16,1);
 	wdev.dealloc();
 	convert(wdev,w);
 }
@@ -78,7 +77,7 @@ BOOST_AUTO_TEST_CASE( spmv_dia2dense )
 BOOST_AUTO_TEST_CASE( spmv_host2dev )
 {
 	// host->dev
-	dev_dia_matrix<float> w2(n,m,w.num_dia(),w.stride(),rf);
+	dia_matrix<float,dev_memory_space> w2(n,m,w.num_dia(),w.stride(),rf);
 	convert(w2,w);
 	MAT_CMP(w,w2,0.1);
 	fill(w.vec(),0);

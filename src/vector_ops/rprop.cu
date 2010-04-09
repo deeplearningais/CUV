@@ -52,7 +52,7 @@ namespace cuv{
 
 	template<class V, class S, class I>
 	void
-	rprop_impl(dev_vector<V,I>& W, dev_vector<V,I>& dW, dev_vector<S,I>& dW_old, dev_vector<V,I>& rate, V decay){
+	rprop_impl(vector<V,dev_memory_space,I>& W, vector<V,dev_memory_space,I>& dW, vector<S,dev_memory_space,I>& dW_old, vector<V,dev_memory_space,I>& rate, V decay){
 		cuvAssert(decay < 1);
 		cuvAssert(decay >= 0);
 		int num_threads = 512;
@@ -63,7 +63,7 @@ namespace cuv{
 
 	template<class V, class S, class I>
 	void
-	rprop_impl(host_vector<V,I>& W, host_vector<V,I>& dW, host_vector<S,I>& dW_old, host_vector<V,I>& rate, V decay){
+	rprop_impl(vector<V,host_memory_space,I>& W, vector<V,host_memory_space,I>& dW, vector<S,host_memory_space,I>& dW_old, vector<V,host_memory_space,I>& rate, V decay){
 		cuvAssert(decay <1);
 		cuvAssert(decay >=0);
 		for (unsigned int i = 0; i < dW.size(); i++){
@@ -103,14 +103,14 @@ namespace cuv{
 
 
 	template<class V, class I>
-	void learn_step_weight_decay_impl(dev_vector<V,I>& W,dev_vector<V,I>& dW, const float& alpha, const float& beta){
+	void learn_step_weight_decay_impl(vector<V,dev_memory_space,I>& W,vector<V,dev_memory_space,I>& dW, const float& alpha, const float& beta){
 		int num_threads = 512;
 		int num_blocks  = min(512,(int)ceil((float)dW.size() / num_threads));
 		learn_step_weight_decay_kernel<<< num_threads, num_blocks>>>(W.ptr(), dW.ptr(), alpha, beta, W.size());
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class I>
-	void learn_step_weight_decay_impl(host_vector<V,I>& W,host_vector<V,I>& dW, const float& alpha, const float& beta){
+	void learn_step_weight_decay_impl(vector<V,host_memory_space,I>& W,vector<V,host_memory_space,I>& dW, const float& alpha, const float& beta){
 		for (unsigned int i = 0; i < W.size(); i++){
 			W.set(i,alpha*dW[i] + beta*W[i]);
 		}
@@ -124,11 +124,11 @@ namespace cuv{
 	}
 
 #define RPROP_INSTANTIATE(V,S) \
-	template void rprop( host_vector<V>&, host_vector<V>&, host_vector<S>&, host_vector<V>&m, const float&); \
-	template void rprop( dev_vector<V>&,  dev_vector<V>&, dev_vector<S>&, dev_vector<V>&, const float&);
+	template void rprop( vector<V,host_memory_space>&, vector<V,host_memory_space>&, vector<S,host_memory_space>&, vector<V,host_memory_space>&m, const float&); \
+	template void rprop( vector<V,dev_memory_space>&,  vector<V,dev_memory_space>&, vector<S,dev_memory_space>&, vector<V,dev_memory_space>&, const float&);
 #define LSWD_INSTANTIATE(V) \
-	template void learn_step_weight_decay( host_vector<V>&, host_vector<V>&, const float&,const float&); \
-	template void learn_step_weight_decay( dev_vector<V>&,  dev_vector<V>&, const float&,const float&);
+	template void learn_step_weight_decay( vector<V,host_memory_space>&, vector<V,host_memory_space>&, const float&,const float&); \
+	template void learn_step_weight_decay( vector<V,dev_memory_space>&,  vector<V,dev_memory_space>&, const float&,const float&);
 
 	RPROP_INSTANTIATE(float,float);
 	RPROP_INSTANTIATE(float,signed char);

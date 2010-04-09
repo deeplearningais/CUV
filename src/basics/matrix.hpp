@@ -7,10 +7,33 @@
  */
 #ifndef __MATRIX_HPP__
 #define __MATRIX_HPP__
+
+#include <cuv_general.hpp>
+
 namespace cuv{
 
-	template<class V, class I>
-	class host_dia_matrix;
+	template<class V, class T, class I>
+	class dia_matrix;
+		
+	//template<class __value_type, class __index_type>
+	//class dev_vector;
+
+	//template<class __value_type, class __index_type>
+	//class host_vector;
+
+	//struct memory_layout_tag{};
+	//struct column_major : public memory_layout_tag{}; ///< Trait for column major matrices
+	//struct row_major    : public memory_layout_tag{}; ///< Trait for row major matrices
+	
+	//template<class __value_type,class __index_type>
+	//struct matrix_traits<__value_type, __index_type,dev_memory_space> {
+		//typedef dev_vector<__value_type, __index_type>  vector_type;
+	//};
+
+	//template<class __value_type,class __index_type>
+	//struct matrix_traits<__value_type, __index_type,host_memory_space> {
+		//typedef host_vector<__value_type, __index_type>  vector_type;
+	//};
 
 /**
  * @brief Basic matrix class
@@ -24,7 +47,7 @@ class matrix
 	  public:
 		  typedef __value_type value_type;	///< Type of the entries of matrix
 		  typedef __index_type index_type;	///< Type of indices
-		  template <class Archive, class V, class I> friend void serialize(Archive&, host_dia_matrix<V,I>&, unsigned int) ; ///< serialization function to save matrix
+		  template <class Archive, class V, class I> friend void serialize(Archive&, dia_matrix<V,host_memory_space, I>&, unsigned int) ; ///< serialization function to save matrix
 	  protected:
 		  index_type m_width; ///< Width of matrix
 		  index_type m_height; ///< Heigth of matrix

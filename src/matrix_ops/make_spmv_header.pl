@@ -90,9 +90,9 @@ push @ifclauses, $ifc;
 
 $outstr .=<<"EOT";
 template<class value_type, class index_type>
-void spmm_device_dispatch(const dev_dia_matrix<value_type,index_type>& A, 
-					const dev_vector<value_type>& v, 
-					dev_vector<value_type>& dst, 
+void spmm_device_dispatch(const dia_matrix<value_type,dev_memory_space,index_type>& A, 
+					const vector<value_type,dev_memory_space>& v, 
+					vector<value_type,dev_memory_space>& dst, 
 					char transA,
 					const value_type& factAv,
 					const value_type& factC,

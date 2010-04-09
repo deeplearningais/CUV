@@ -5,8 +5,7 @@
 
 #include <cuv_general.hpp>
 #include <dense_matrix.hpp>
-#include <dev_dia_matrix.hpp>
-#include <host_dia_matrix.hpp>
+#include <dia_matrix.hpp>
 #include <convert.hpp>
 #include <matrix_ops/matrix_ops.hpp>
 #include <timing.hpp>
@@ -20,7 +19,7 @@ static const int k = 6;
 static const int rf = 2;
 
 struct Fix{
-	host_dia_matrix<float>   A;
+	dia_matrix<float,host_memory_space>   A;
 	dense_matrix<float,column_major,host_memory_space> A_;
 	dense_matrix<float,column_major,host_memory_space> B,B_;
 	dense_matrix<float,column_major,host_memory_space> C,C_;
@@ -60,7 +59,7 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 BOOST_AUTO_TEST_CASE( spmv_dev_correctness_trans )
 {
 	sequence(C.vec());
-	dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride(),rf);
+	dia_matrix<float,dev_memory_space> A2(n,m,A.num_dia(),A.stride(),rf);
 	convert(A2,A);
 	dense_matrix<float,column_major,dev_memory_space> C2(C.h(),C.w());
 	convert(C2,C);
@@ -73,7 +72,7 @@ BOOST_AUTO_TEST_CASE( spmv_dev_correctness_trans )
 }
 BOOST_AUTO_TEST_CASE( spmv_dev_correctness )
 {
- dev_dia_matrix<float> A2(n,m,A.num_dia(),A.stride(),rf);
+ dia_matrix<float,dev_memory_space> A2(n,m,A.num_dia(),A.stride(),rf);
  convert(A2,A);
  dense_matrix<float,column_major,dev_memory_space> C2(C.h(),C.w());
  convert(C2,C);

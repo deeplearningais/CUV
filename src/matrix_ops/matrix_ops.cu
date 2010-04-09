@@ -364,7 +364,7 @@ namespace cuv{
 
 	namespace matrix_plus_vector_impl{
 		template<class V, class I, class V2, class OP>
-			void matrix_plus_col(dense_matrix<V,row_major,dev_memory_space,I>& A, const dev_vector<V2,I>& v, const OP& op){
+			void matrix_plus_col(dense_matrix<V,row_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op){
 				cuvAssert(A.h() == v.size());
 				int num_threads = min(512,A.w());
 				int num_blocks  = min(1024,A.h());
@@ -372,7 +372,7 @@ namespace cuv{
 				cuvSafeCall(cudaThreadSynchronize());
 			}
 		template<class V, class I, class V2, class OP>
-			void matrix_plus_col(dense_matrix<V,column_major,dev_memory_space,I>& A, const dev_vector<V2,I>& v, const OP& op){
+			void matrix_plus_col(dense_matrix<V,column_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op){
 				cuvAssert(A.h() == v.size());
 				int num_threads = 512;
 				int num_blocks  = min(512,(int)ceil((float)A.n() / num_threads));
@@ -380,7 +380,7 @@ namespace cuv{
 				cuvSafeCall(cudaThreadSynchronize());
 			}
 		template<class V, class I, class V2, class OP>
-			void matrix_plus_col(dense_matrix<V,column_major,host_memory_space,I>& A, const host_vector<V2,I>& v, const OP& op){
+			void matrix_plus_col(dense_matrix<V,column_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op){
 				const V2* v_ptr = v.ptr();
 				V *       A_ptr = A.ptr();
 				for(int j=0;j<A.w();j++){
@@ -390,7 +390,7 @@ namespace cuv{
 				}
 			}
 		template<class V, class I, class V2, class OP>
-			void matrix_plus_col(dense_matrix<V,row_major,host_memory_space,I>& A, const host_vector<V2,I>& v, const OP& op){
+			void matrix_plus_col(dense_matrix<V,row_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op){
 				const V2* v_ptr = v.ptr();
 				V *       A_ptr = A.ptr();
 				for(int i=0;i<A.h();i++, v_ptr++){
@@ -415,7 +415,7 @@ namespace cuv{
 
   namespace reduce_to_col_impl{
 	  template<int rf,class V,class I, class V2>
-	  void reduce_to_col(host_vector<V2,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld){
+	  void reduce_to_col(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld){
 		  cuvAssert(m.ptr() != NULL);
 		  cuvAssert(m.h()   == v.size());
 		  const  V* A_ptr = m.ptr();
@@ -439,7 +439,7 @@ namespace cuv{
 		  }
 	  }
 	  template<int rf,class V,class I, class V2>
-	  void reduce_to_col(host_vector<V2,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld){
+	  void reduce_to_col(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld){
 		  cuvAssert(m.ptr() != NULL);
 		  cuvAssert(m.h()   == v.size());
 		  const  V* A_ptr = m.ptr();
@@ -464,7 +464,7 @@ namespace cuv{
 		  }
 	  }
 	  template<int rf,class V,class I, class V2>
-	  void reduce_to_col(dev_vector<V2,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
+	  void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
 		  cuvAssert(m.ptr() != NULL);
 		  cuvAssert(m.h()   == v.size());
 		  static const int BLOCK_SIZE = 16;
@@ -474,7 +474,7 @@ namespace cuv{
 		  cuvSafeCall(cudaThreadSynchronize());
 	  }
 	template<int rf,class V,class I, class V2>
-	void reduce_to_col(dev_vector<V2,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
+	void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
 		/*static const int BLOCK_SIZE = 16;*/
@@ -512,7 +512,7 @@ namespace cuv{
 
   namespace reduce_to_row_impl{
 	  template<int rf,class V,class I, class V2>
-	  void reduce_to_row(host_vector<V2,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld){
+	  void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld){
 		  cuvAssert(rf==RF_ADD);
 		  cuvAssert(m.ptr() != NULL);
 		  cuvAssert(m.w()   == v.size());
@@ -530,7 +530,7 @@ namespace cuv{
 		  }
 	  }
 	  template<int rf,class V,class I, class V2>
-	  void reduce_to_row(host_vector<V2,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld) {
+	  void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld) {
 		  cuvAssert(rf==RF_ADD);
 		  cuvAssert(m.ptr() != NULL);
 		  cuvAssert(m.w()   == v.size());
@@ -549,7 +549,7 @@ namespace cuv{
 	  }
 
 	template<int rf, class V,class I, class V2>
-	void reduce_to_row(dev_vector<V2,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
+	void reduce_to_row(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 		static const int BLOCK_SIZE = 16;
@@ -559,7 +559,7 @@ namespace cuv{
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<int rf,class V,class I, class V2>
-	void reduce_to_row(dev_vector<V2,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
+	void reduce_to_row(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w()   == v.size());
 		static const int BLOCK_SIZE = 16;
@@ -592,7 +592,7 @@ namespace cuv{
 	  }
 
 	template<>
-	void argmax_to_row(dev_vector<int>&v, const dense_matrix<float,column_major, dev_memory_space>& m){
+	void argmax_to_row(vector<int,dev_memory_space>&v, const dense_matrix<float,column_major, dev_memory_space>& m){
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 		static const int BLOCK_SIZE = 16;
@@ -613,7 +613,7 @@ namespace cuv{
 	}
 
 	template<>
-	void argmax_to_column(dev_vector<int>&v, const dense_matrix<float,row_major, dev_memory_space>& m){
+	void argmax_to_column(vector<int,dev_memory_space>&v, const dense_matrix<float,row_major, dev_memory_space>& m){
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
 		static const int BLOCK_SIZE = 16;
@@ -634,7 +634,7 @@ namespace cuv{
 	}
 
 	template<>
-	void argmax_to_row(host_vector<int>&v, const dense_matrix<float,column_major, host_memory_space>& m){
+	void argmax_to_row(vector<int,host_memory_space>&v, const dense_matrix<float,column_major, host_memory_space>& m){
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 		const float* ptr = m.ptr();
@@ -654,7 +654,7 @@ namespace cuv{
 	}
 
 	template<>
-	void argmax_to_column(host_vector<int>&v, const dense_matrix<float,row_major,host_memory_space>& m){
+	void argmax_to_column(vector<int,host_memory_space>&v, const dense_matrix<float,row_major,host_memory_space>& m){
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
 		const float* ptr = m.ptr();
@@ -737,24 +737,24 @@ namespace cuv{
 
 
 #define INSTANTIATE_MV(V,M) \
-  template void matrix_plus_col(dense_matrix<V,M,dev_memory_space>&, const dev_vector<V>&);   \
-  template void matrix_plus_col(dense_matrix<V,M,host_memory_space>&, const host_vector<V>&); \
-  template void matrix_times_col(dense_matrix<V,M,dev_memory_space>&, const dev_vector<V>&);  \
-  template void matrix_times_col(dense_matrix<V,M,host_memory_space>&, const host_vector<V>&); \
-  template void matrix_divide_col(dense_matrix<V,M,dev_memory_space>&, const dev_vector<V>&);  \
-  template void matrix_divide_col(dense_matrix<V,M,host_memory_space>&, const host_vector<V>&);
+  template void matrix_plus_col(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);   \
+  template void matrix_plus_col(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
+  template void matrix_times_col(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);  \
+  template void matrix_times_col(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
+  template void matrix_divide_col(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);  \
+  template void matrix_divide_col(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&);
 
 #define INSTANTIATE_REDCOL(V,M) \
-  template void reduce_to_row(dev_vector<V>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(dev_vector<V>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(host_vector<V>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(host_vector<V>&, const dense_matrix<V,M,host_memory_space>&,reduce_functor,  const V&,const V&);
+  template void reduce_to_row(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
+  template void reduce_to_col(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
+  template void reduce_to_row(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&); \
+  template void reduce_to_col(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&,reduce_functor,  const V&,const V&);
 
 #define INSTANTIATE_REDROW(V,M) \
-  template void reduce_to_col(dev_vector<V>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(dev_vector<V>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(host_vector<V>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(host_vector<V>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&);
+  template void reduce_to_col(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
+  template void reduce_to_row(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
+  template void reduce_to_col(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor, const V&,const V&); \
+  template void reduce_to_row(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&);
 
 #define INSTANTIATE_BLOCKVIEW(V,M,I) \
   template dense_matrix<V,M,host_memory_space,I>* blockview(dense_matrix<V,M,host_memory_space,I>&,I,I,I,I); \

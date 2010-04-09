@@ -3,7 +3,7 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 #include  <boost/type_traits/is_base_of.hpp>
-
+#include <vector.hpp>
 #include <dense_matrix.hpp>
 #include <matrix_ops/matrix_ops.hpp>
 #include <convert.hpp>
@@ -78,15 +78,15 @@ void export_cm_view(){
  * Create VIEWs at the same location in memory
  */
 template<class T,class S>
-host_vector<T, S> *
+cuv::vector<T,host_memory_space, S> *
 vec_view(pyublas::numpy_vector<T> v){
-	return new host_vector<T>(v.size(),v.as_ublas().data().data(),true);
+	return new cuv::vector<T,host_memory_space>(v.size(),v.as_ublas().data().data(),true);
 }
 template<class T, class Mto, class Mfrom>
 dense_matrix<T, Mto, host_memory_space>*
 mat_view(pyublas::numpy_matrix<T, Mfrom> m){
 	typedef typename dense_matrix<T,Mto,host_memory_space>::index_type index_type;
-	host_vector<T>* vec = new host_vector<T>((index_type)m.size1()*m.size2(),m.as_ublas().data().data(),true);
+	cuv::vector<T,host_memory_space>* vec = new cuv::vector<T,host_memory_space>((index_type)m.size1()*m.size2(),m.as_ublas().data().data(),true);
 	const bool same = boost::is_same<Mto, typename ublas2matrix_traits<Mfrom>::storage_type >::value;
 	if(same) return new dense_matrix<T,Mto,host_memory_space>((index_type)m.size1(), (index_type)m.size2(), vec);
 	else     return new dense_matrix<T,Mto,host_memory_space>((index_type)m.size2(), (index_type)m.size1(), vec);

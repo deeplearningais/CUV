@@ -39,8 +39,8 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	static const int n = 784*2048; 
-	dev_vector<float>  v,w;
-	host_vector<float> x,z;
+	vector<float,dev_memory_space>  v,w;
+	vector<float,host_memory_space> x,z;
 	Fix()
 	:   v(n),w(n)
 	,   x(n),z(n)
@@ -113,14 +113,14 @@ BOOST_AUTO_TEST_CASE( vec_add )
 
 BOOST_AUTO_TEST_CASE( vec_rprop )
 {
-	dev_vector<signed char> dW_old(n);
-	dev_vector<float>       dW(n);
-	dev_vector<float>       W(n);
-	dev_vector<float>       rate(n);
-	host_vector<signed char> h_dW_old(n);
-	host_vector<float>       h_W(n);
-	host_vector<float>       h_dW(n);
-	host_vector<float>       h_rate(n);
+	vector<signed char,dev_memory_space> dW_old(n);
+	vector<float,dev_memory_space>       dW(n);
+	vector<float,dev_memory_space>       W(n);
+	vector<float,dev_memory_space>       rate(n);
+	vector<signed char,host_memory_space> h_dW_old(n);
+	vector<float,host_memory_space>       h_W(n);
+	vector<float,host_memory_space>       h_dW(n);
+	vector<float,host_memory_space>       h_rate(n);
 	sequence(dW);           apply_scalar_functor(dW, SF_ADD, -10.f);
 	sequence(dW_old);
 	fill(rate, 1.f);
@@ -136,10 +136,10 @@ BOOST_AUTO_TEST_CASE( vec_rprop )
 
 BOOST_AUTO_TEST_CASE( vec_lswd )
 {
-	dev_vector<float>       dW(n);
-	dev_vector<float>       W(n);
-	host_vector<float>       h_W(n);
-	host_vector<float>       h_dW(n);
+	vector<float,dev_memory_space>       dW(n);
+	vector<float,dev_memory_space>       W(n);
+	vector<float,host_memory_space>       h_W(n);
+	vector<float,host_memory_space>       h_dW(n);
 
 	MEASURE_TIME(dev,  cuv::learn_step_weight_decay(W,dW,1.f,0.05f), 10);
 	MEASURE_TIME(host, cuv::learn_step_weight_decay(h_W,h_dW,1.f,0.05f), 10);

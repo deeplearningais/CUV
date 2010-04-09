@@ -5,7 +5,7 @@
 
 #include <cuv_general.hpp>
 #include <dense_matrix.hpp>
-#include <host_dia_matrix.hpp>
+#include <dia_matrix.hpp>
 #include <vector_ops.hpp>
 #include <convert.hpp>
 
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE( create_dev_plain3 )
 
 BOOST_AUTO_TEST_CASE( dia2host )
 {
-	host_dia_matrix<float>                 hdia(32,32,3,32);
+	dia_matrix<float,host_memory_space>                 hdia(32,32,3,32);
 	dense_matrix<float,column_major,host_memory_space>  hdns(32,32);
 	std::vector<int> off;
 	off.push_back(0);

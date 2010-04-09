@@ -4,8 +4,7 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 #include <boost/type_traits/is_base_of.hpp>
-#include <dev_vector.hpp>
-#include <host_vector.hpp>
+#include <vector.hpp>
 #include <vector_ops/vector_ops.hpp>
 #include <convert.hpp>
 #include <convolution_ops/convolution_ops.hpp>
@@ -112,7 +111,7 @@ void export_convolution_ops(){
 	export_padding_ops< dense_matrix<float,row_major, host_memory_space> >();
 	export_padding_ops< dense_matrix<float,row_major, host_memory_space>  >();
 	export_padding_ops< dense_matrix<float,row_major, dev_memory_space>  >();
-	export_row_ncopy< dense_matrix<float,row_major, dev_memory_space>, dev_vector<float>  >();
+	export_row_ncopy< dense_matrix<float,row_major, dev_memory_space>, vector<float,dev_memory_space>  >();
 }
 
 

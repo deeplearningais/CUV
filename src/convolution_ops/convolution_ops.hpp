@@ -116,7 +116,7 @@ void prob_max_pooling(dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
  * If sample is false the entry in sums is the sum of all entries in the corresponding window.
  */
 template<class V, class M, class T, class I>
-void prob_max_pooling(dev_vector<V,I>& sums, dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
+void prob_max_pooling(vector<V,T,I>& sums, dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
 
 /** 
  * @brief Reshape a matrix of images so that each column corresponds to a small window in the original image.
@@ -223,20 +223,9 @@ void strip_padding(dense_matrix<V,M,T,I>& dst,
  */
 template<class V, class M, class T,  class I>
 void row_ncopy(dense_matrix<V,M,T,I>& dst,
-			   dev_vector<V,I>& row,
+			   vector<V,T,I>& row,
 			   unsigned int n);
 
-/**
- * @brief Fills a matrix with n copies of a given image
- * @param dst holds the target matrix with the n rows each containing the same source row
- * @param row is a vector containing the one row to be copied
- * @param n how often the row should be copied
- *
- */
-template<class V, class M, class T, class I>
-void row_ncopy(dense_matrix<V,M,T,I>& dst,
-			   host_vector<V,I>& row,
-			   unsigned int n);
 
 /**
  * @brief Inverts the filters in a filter matrix consisting of m filters in a row with n rows.

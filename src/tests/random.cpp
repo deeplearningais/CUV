@@ -5,16 +5,15 @@
 
 
 #include <cuv_general.hpp>
-#include <dev_vector.hpp>
-#include <host_vector.hpp>
+#include <vector.hpp>
 #include <vector_ops.hpp>
 #include <../random/random.hpp>
 
 using namespace cuv;
 
 struct Fix{
-	dev_vector<float> v;
-	host_vector<float> x;
+	vector<float,dev_memory_space> v;
+	vector<float,host_memory_space> x;
 	static const int n = 8092;
 	Fix()
 		:v(n),x(n) // needs large sample number.
@@ -43,7 +42,7 @@ BOOST_AUTO_TEST_CASE( random_uniform )
 }
 BOOST_AUTO_TEST_CASE( random_normal_nan )
 {
-	dev_vector<float> large(105*150*96);
+	vector<float,dev_memory_space> large(105*150*96);
 	apply_0ary_functor(large,NF_FILL,0);
 	//apply_0ary_functor(x,NF_FILL,0);	
 	for(int iter=0;iter<10000;iter++){
