@@ -39,6 +39,10 @@ namespace cuv{
 		  std::map<int,index_type> m_dia2off;   ///< maps a diagonal to an offset
 		  int m_row_fact;                       ///< factor by which to multiply a row index (allows matrices with "steep" diagonals)
 		public:
+		  	~dia_matrix() {
+				dealloc();
+			}
+
 			dia_matrix() ///< Empty constructor. Returns empty diagonal matrix.
 				: base_type(0,0),
 				 m_vec(0),
