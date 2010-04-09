@@ -24,13 +24,13 @@ namespace cuv{
 	class dia_matrix 
 	:        public matrix<__value_type, __index_type>{
 	  public:
-		  typedef matrix<__value_type, __index_type> base_type; ///< Basic matrix type
-		  typedef __memory_space_type memory_space_type; ///< Whether this is a host or device matrix
-		  typedef typename base_type::value_type value_type;///< Type of matrix entries
-		  typedef typename base_type::index_type index_type;///< Type of indices
-		  typedef vector<value_type,memory_space_type,index_type>  					  vec_type; ///< Basic vector type used
-		  typedef vector<int,memory_space_type,index_type> intvec_type; ///< Type of offsets for diagonals
-		  typedef dia_matrix<value_type,index_type,memory_space_type>  		   my_type;					///< Type of this matix
+		  typedef matrix<__value_type, __index_type> 					   base_type; 			///< Basic matrix type
+		  typedef __memory_space_type 									   memory_space_type;	///< Whether this is a host or device matrix
+		  typedef typename base_type::value_type 						   value_type;			///< Type of matrix entries
+		  typedef typename base_type::index_type 						   index_type;			///< Type of indices
+		  typedef vector<value_type,memory_space_type,index_type>  		   vec_type; 			///< Basic vector type used
+		  typedef vector<int,memory_space_type,index_type> 				   intvec_type; 		///< Type of offsets for diagonals
+		  typedef dia_matrix<value_type,index_type,memory_space_type> 	   my_type;				///< Type of this matix
 		public:
 		  int m_num_dia;                        ///< number of diagonals stored
 		  int m_stride;                         ///< how long the stored diagonals are
@@ -39,7 +39,7 @@ namespace cuv{
 		  std::map<int,index_type> m_dia2off;   ///< maps a diagonal to an offset
 		  int m_row_fact;                       ///< factor by which to multiply a row index (allows matrices with "steep" diagonals)
 		public:
-		  	~dia_matrix() {
+		  	~dia_matrix() { ///< Destructor. Deallocates Matrix.
 				dealloc();
 			}
 

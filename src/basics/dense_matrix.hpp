@@ -17,18 +17,19 @@ namespace cuv{
 	struct row_major    : public memory_layout_tag{}; ///< Trait for row major matrices
 	
 	/** 
-	 * @brief Parent class for dense matrices
+	 * @brief Class for dense matrices
 	 */
 	template<class __value_type, class __mem_layout, class __memory_space_type, class __index_type = unsigned int >
 	class dense_matrix 
 	:        public matrix<__value_type, __index_type>{
 	  public:
-		  typedef __mem_layout                       					  memory_layout; ///< Memory layout type: column_major or row_major
-		  typedef __memory_space_type									  memory_space_type;
-		  typedef matrix<__value_type, __index_type>					  base_type; ///< Basic matrix type
-		  typedef typename base_type::value_type 						  value_type; ///< Type of matrix entries
-		  typedef typename base_type::index_type 						  index_type; ///< Type of indices
-		  typedef vector<value_type,memory_space_type,index_type>	  vec_type; ///< Basic vector type used
+		  typedef __mem_layout                       				  memory_layout; 	///< Memory layout type: column_major or row_major
+		  typedef __memory_space_type								  memory_space_type;///< Indicates whether matrix resides on host or device
+		  typedef matrix<__value_type, __index_type>				  base_type;		///< Basic matrix type
+		  typedef typename base_type::value_type 					  value_type; 		///< Type of matrix entries
+		  typedef typename base_type::index_type 					  index_type;		///< Type of indices
+		  typedef vector<value_type,memory_space_type,index_type>	  vec_type; 		///< Basic vector type used
+		  typedef dense_matrix<value_type,memory_layout,memory_space_type,index_type>  my_type;	///< Type of this object
 		  using base_type::m_width;
 		  using base_type::m_height;
 		  vec_type* m_vec;                      ///< stores the actual data 
@@ -56,6 +57,7 @@ namespace cuv{
 			virtual ~dense_matrix(){
 				dealloc();
 			} ///< Destructor
+
 			/** 
 			 * @brief Constructor for host matrices that creates a new vector and allocates memory
 			 * 
@@ -69,7 +71,7 @@ namespace cuv{
 					alloc();
 				}
 			/** 
-			 * @brief Constructor for dense matrices that creates a matrix from a given host pointer
+			 * @brief Constructor for dense matrices that creates a matrix from a given value_type pointer
 			 * 
 			 * @param h Height of matrix
 			 * @param w Weight of matrix 
@@ -82,16 +84,30 @@ namespace cuv{
 				m_vec = new vec_type(h*w,p,is_view);
 			}
 
+			/** 
+			 * @brief Constructor for dense matrices that creates a matrix from a given vector
+			 * 
+			 * @param h Height of matrix
+			 * @param w Weight of matrix 
+			 * @param p Pointer to a vector, storing matrix entries
+			 */
 			dense_matrix(const index_type& h, const index_type& w, vec_type* p)
 				:	base_type(h,w),m_vec(p)
 			{
 			}
 
+			/** 
+			 * @brief Constructor for dense matrices that creates a matrix of same size as given matrix
+			 * 
+			 * @param m Matrix whose width and height are used to create new matrix.
+			 */
 		    template<class V, class I>
 		  	dense_matrix(const matrix<V,I>* m)
-		  	:  base_type(m->h(),m->w())
-		  	{ 
+		  	: base_type(m->h(),m->w()),m_vec(NULL) 
+		  	{
+				alloc();
 		  	}
+
 			void dealloc() ///< Deallocate matrix entries. This calls deallocation of the vector storing entries.
 			{
 				if(m_vec)
