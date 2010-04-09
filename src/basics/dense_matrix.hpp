@@ -53,7 +53,7 @@ namespace cuv{
 		  inline       vec_type* vec_ptr()      { return m_vec; }								///< Return pointer to vector containing matrix entries
 		  inline 	   void set(const index_type& i, const index_type& j, const value_type& val);///< Set entry at position (i,j)
 
-			virtual ~dense_matrix(){} ///< Destructor
+			//virtual ~dense_matrix(){} ///< Destructor
 			/** 
 			 * @brief Constructor for host matrices that creates a new vector and allocates memory
 			 * 
