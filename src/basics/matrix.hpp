@@ -15,25 +15,6 @@ namespace cuv{
 	template<class V, class T, class I>
 	class dia_matrix;
 		
-	//template<class __value_type, class __index_type>
-	//class dev_vector;
-
-	//template<class __value_type, class __index_type>
-	//class host_vector;
-
-	//struct memory_layout_tag{};
-	//struct column_major : public memory_layout_tag{}; ///< Trait for column major matrices
-	//struct row_major    : public memory_layout_tag{}; ///< Trait for row major matrices
-	
-	//template<class __value_type,class __index_type>
-	//struct matrix_traits<__value_type, __index_type,dev_memory_space> {
-		//typedef dev_vector<__value_type, __index_type>  vector_type;
-	//};
-
-	//template<class __value_type,class __index_type>
-	//struct matrix_traits<__value_type, __index_type,host_memory_space> {
-		//typedef host_vector<__value_type, __index_type>  vector_type;
-	//};
 
 /**
  * @brief Basic matrix class

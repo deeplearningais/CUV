@@ -31,14 +31,6 @@ template <class value_type, class index_type>
 value_type entry_get(const value_type* ptr, index_type idx, host_memory_space);
 
 
-/** Parent struct that host/device traits inherit from
- */
-	//template<class T>
-	//struct vector_traits{
-		////typedef memory_space memory_space_type;
-	//};
-	//template<class V, class I>
-	//class host_vector;
 
 /**
  * @brief Basic vector class
