@@ -30,7 +30,7 @@ namespace cuv{
 		  typedef typename base_type::index_type 						   index_type;			///< Type of indices
 		  typedef vector<value_type,memory_space_type,index_type>  		   vec_type; 			///< Basic vector type used
 		  typedef vector<int,memory_space_type,index_type> 				   intvec_type; 		///< Type of offsets for diagonals
-		  typedef dia_matrix<value_type,index_type,memory_space_type> 	   my_type;				///< Type of this matix
+		  typedef dia_matrix<value_type,memory_space_type,index_type> 	   my_type;				///< Type of this matix
 		public:
 		  int m_num_dia;                        ///< number of diagonals stored
 		  int m_stride;                         ///< how long the stored diagonals are
@@ -67,11 +67,13 @@ namespace cuv{
 				m_row_fact = row_fact;
 				cuvAssert(m_row_fact>0);
 				alloc();
+
 			}
 			void dealloc() ///< Deallocate matrix entries. This calls deallocation of the vector storing entries.
 			{
-				if(m_vec)
+				if(m_vec){
 					delete m_vec;
+					}
 				m_vec = NULL;
 			}
 			void alloc() ///< Allocate matrix entries: Create vector to store entries.
@@ -139,11 +141,19 @@ namespace cuv{
 			 * 
 			 * @return Matrix of same size and type of o that now owns vector of entries of o.
 			 */
-		  dia_matrix<value_type,index_type, memory_space_type>& 
-			  operator=(const dia_matrix<value_type,index_type,memory_space_type>& o){
+		  my_type& 
+			  operator=(const my_type& o){
 				  if(this==&o) return *this;
 				  this->dealloc();
+
 				  (base_type&) (*this)  = (base_type&) o; 
+				  m_vec=o.m_vec;
+				  m_num_dia = o.m_num_dia;
+				  m_stride = o.m_stride;
+				  m_row_fact = o.m_row_fact;
+				  m_offsets = o.m_offsets;
+				  m_dia2off = o.m_dia2off;
+
 				   // transfer ownership of memory (!)
 				  (const_cast< my_type *>(&o))->m_vec = NULL;
 				  return *this;

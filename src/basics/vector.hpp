@@ -45,7 +45,7 @@ class vector{
 	  typedef __index_type index_type;	 ///< Type of indices
 	  typedef __memory_space_type memory_space_type; ///< Indicates whether this is a host or device vector
 	  template <class Archive, class V, class I> friend void serialize(Archive&, vector<V,memory_space_type,I>&, unsigned int) ;
-	  typedef vector<value_type, memory_space_type, index_type> my_type;
+	  typedef vector<value_type, memory_space_type, index_type> my_type; ///< Type of this vector
 	protected:
 	  value_type* m_ptr;
 	  bool        m_is_view;
@@ -100,7 +100,10 @@ class vector{
 	  /** 
 	   * @brief Deallocate memory if is_view is false.
 	   */
-	  virtual ~vector(){ dealloc(); } 
+	  virtual ~vector(){
+		  dealloc();
+	  } 
+
 	  /*
 	   * Memory Management
 	   */
@@ -166,7 +169,6 @@ class vector{
 template<class value_type, class index_type>
 void alloc( value_type** ptr, index_type size, host_memory_space) {
 	*ptr = new value_type[size];
-	std::cout << "                    : "<< *ptr<<std::endl;
 }
 
 template<class value_type>

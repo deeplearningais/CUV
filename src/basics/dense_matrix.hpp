@@ -128,8 +128,8 @@ namespace cuv{
 			 * 
 			 * @return Matrix of same size and type of o that now owns vector of entries of o.
 			 */
-			  dense_matrix<value_type,memory_layout, memory_space_type,index_type>& 
-			  operator=(dense_matrix<value_type,memory_layout, memory_space_type,index_type>& o){
+			  my_type& 
+			  operator=(my_type& o){
 				  if(this==&o) return *this;
 				  this->dealloc();
 					  (base_type&) (*this)  = (base_type&) o; // copy width, height

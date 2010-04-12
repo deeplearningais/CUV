@@ -65,7 +65,6 @@ BOOST_AUTO_TEST_CASE( spmv_dev_correctness_trans )
 	convert(C2,C);
 	dense_matrix<float,column_major,dev_memory_space> B2(B.h(),B.w());
 	convert(B2,B);
-
 	prod(B ,A, C, 't','n');
 	prod(B2,A2,C2,'t','n');
 	MAT_CMP(B,B2,0.1);

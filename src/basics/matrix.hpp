@@ -43,7 +43,7 @@ class matrix
 			: m_width(w), m_height(h)
 			{
 			}
-		  virtual ~matrix(){ ///< Destructor calls dealloc.
+		  virtual ~matrix(){ ///< Empty destructor
 		  }
 		  /** 
 		   * @brief Resizing matrix: changing width and height without changing memory layout

@@ -193,6 +193,8 @@ namespace cuv{
 			cuvAssert(transB == 'n');
 			cuvAssert(dst.w() == B.w());
 			cuvAssert(dst.vec_ptr());
+			cuvAssert(A.vec_ptr());
+			cuvAssert(B.vec_ptr());
 			if(transA=='t'){
 				cuvAssert(A.w() == dst.h());
 			}else{

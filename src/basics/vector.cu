@@ -10,13 +10,13 @@ namespace cuv{
 
 template <class value_type, class index_type>
 void alloc( value_type** ptr, index_type size, dev_memory_space) {
-		cuvSafeCall(cudaMalloc(ptr, sizeof(value_type)*size));
+	cuvSafeCall(cudaMalloc(ptr, sizeof(value_type)*size));
 }
 
 template <class value_type>
 void dealloc( value_type** ptr, dev_memory_space) {
-		cuvSafeCall(cudaFree(*ptr));
-		*ptr = NULL;
+	cuvSafeCall(cudaFree(*ptr));
+	*ptr = NULL;
 }
 
 template <class value_type, class index_type>
