@@ -153,10 +153,12 @@ namespace cuv{
    */
   template<class __vector_type>
   void sequence(__vector_type& v){ apply_0ary_functor(v,NF_SEQ); }
+
   /** 
    * @brief Fill a vector with a value
    * 
    * @param v	Destination vector
+   * @param p	Value to fill vector with
    * 
    * This is a convenience wrapper that applies the nullary functor NF_FILL to v.
    */

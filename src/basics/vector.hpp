@@ -47,9 +47,9 @@ class vector{
 	  template <class Archive, class V, class I> friend void serialize(Archive&, vector<V,memory_space_type,I>&, unsigned int) ;
 	  typedef vector<value_type, memory_space_type, index_type> my_type; ///< Type of this vector
 	protected:
-	  value_type* m_ptr;
-	  bool        m_is_view;
-	  index_type  m_size;
+	  value_type* m_ptr; ///< Pointer to actual entries in memory
+	  bool        m_is_view; ///< Indicates whether this vector owns the memory or is just a view
+	  index_type  m_size; ///< Length of vector
 			
 	public:
 	  /*
@@ -107,6 +107,7 @@ class vector{
 	  /*
 	   * Memory Management
 	   */
+
 	  /** 
 	   * @brief Allocate memory
 	   */
@@ -116,6 +117,7 @@ class vector{
 			  cuv::alloc<value_type, index_type>( &m_ptr,m_size,memory_space_type());	
 		  }
 	  } 
+
 	  /** 
 	   * @brief Deallocate memory if not a view
 	   */
@@ -166,23 +168,54 @@ class vector{
 
 }; // vector
 
+/** 
+ * @brief Allocate memory for host matrices 
+ * 
+ * @param ptr Address of pointer which will be set to allocated memory
+ * @param size Size of array which should be allocated
+ * 
+ * This is the instance of the alloc function that is called by host vectors.
+ */
 template<class value_type, class index_type>
 void alloc( value_type** ptr, index_type size, host_memory_space) {
 	*ptr = new value_type[size];
 }
 
+/** 
+ * @brief Deallocate memory for host matrices
+ * 
+ * @param ptr Address of pointer that will be freed
+ * 
+ * This is the instance of the dealloc function that is called by host vectors.
+ */
 template<class value_type>
 void dealloc( value_type** ptr, host_memory_space) {
 	delete[] *ptr;
 	*ptr = NULL;
 }
 
+/** 
+ * @brief Setting entry of host vector at ptr at index idx to value val
+ * 
+ * @param ptr Address of array in memory
+ * @param idx Index of value to set
+ * @param val Value to set vector entry to
+ * 
+ */
 template <class value_type, class index_type>
 void entry_set(value_type* ptr, index_type idx, value_type val, host_memory_space) {
 	ptr[idx]=val;
 }
 
 
+/** 
+ * @brief Getting entry of host vector at ptr at index idx
+ * 
+ * @param ptr Address of array in memory
+ * @param idx Index of value to get
+ * 
+ * @return 
+ */
 template <class value_type, class index_type>
 value_type entry_get(const value_type* ptr, index_type idx, host_memory_space) {
 	return ptr[idx];

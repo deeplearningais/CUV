@@ -16,6 +16,12 @@ namespace cuv
 	 *
 	 * @todo previously non-existent pixels at the border are filled... how?
 	 * 
+	 * @}
+	 */
+	 
+	 /** 
+	 * @brief Shift images by given amount
+	 * 
 	 * @param dst where the moved images are written
 	 * @param src unsigned char where original images are taken from
 	 * @param src_image_size  width and height of image in source
@@ -23,8 +29,6 @@ namespace cuv
 	 * @param num_maps  how many maps there are in src
 	 * @param xshift how much to shift right
 	 * @param yshift how much to shift down
-	 *
-	 * @}
 	 */
 	template<class __matrix_typeA, class __matrix_typeB>
 	void image_move(__matrix_typeA& dst, const __matrix_typeB& src, 

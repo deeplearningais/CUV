@@ -12,9 +12,12 @@
 #include <tools/cuv_general.hpp>
 
 namespace cuv{
+	 /// Parent struct for row and column major tags
 	struct memory_layout_tag{};
-	struct column_major : public memory_layout_tag{}; ///< Trait for column major matrices
-	struct row_major    : public memory_layout_tag{}; ///< Trait for row major matrices
+	 /// Tag for column major matrices
+	struct column_major : public memory_layout_tag{};
+    /// Tag for row major matrices
+	struct row_major    : public memory_layout_tag{};
 	
 	/** 
 	 * @brief Class for dense matrices
