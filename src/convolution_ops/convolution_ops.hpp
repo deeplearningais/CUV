@@ -19,11 +19,13 @@ namespace cuv{
 /**
  * Convolve N patterns (images) with F filters, resulting in N*F target images.
  *
- * @param img		contains one input pattern in each row
+ * @param dst		holds the target images of the convolution. one row for each
+ *			        input image, with one target image for each filter per row.
+ * @param img		contains one input image in each row
  * @param filter	contains one filter in each row, number of filters must
  * 			        be multiples of 16.
- * @param dst		holds the target images of the convolution. one row for each
- *			        input image. width = dstSize^2 * numFilters
+ *
+ *  The result is added to dst.
  */
 template<class V, class M, class T, class I>
 void convolve(dense_matrix<V,M,T,I>& dst,
@@ -32,18 +34,19 @@ void convolve(dense_matrix<V,M,T,I>& dst,
 
 
 /** 
- * @brief Convolve N patterns (images), each with a different set of numFilters filters,
- *        resulting in N*numFilter target images
+ * @brief Convolve N patterns (images), each with a unique set of F filters,
+ *        resulting in N*F target images
  * @param dst holds the target images of the convolution. one row for each
- *            input image. width = dstSize^2 * numFilters
- * @param img contains one input pattern in each row
- * @param filter contains numFilter filters in each row, number of filters must
+ *            input image, with one target images for each filter per row.
+ * @param img contains one input image in each row
+ * @param filter contains F filters in each row, number of filters per row must
  *               be multiples of 16.
- * @param numFilters number of Filters 
+ * @param numFilters number of filters (F)
  *
+ *  The result is added to dst.
  * 	This routine can be used to compute the weight gradients: img contains the
- *  activations from the lower layers filters are the error maps from the upper
- *  layer. dst will then contain weight gradients for each pattern per row (sum
+ *  activations from the lower layers, filters are the error maps from the upper
+ *  layer. dst will then contain weight gradients for each pattern per row. (sum
  *  each column up).
  *
  */
@@ -55,21 +58,28 @@ void convolve2(dense_matrix<V,M,T,I>& dst,
 
 
 /** 
- * @brief Convolve N patterns (images), each consisting of F images/maps with F filters
+ * @brief Convolve N patterns, each consisting of F images (maps) with F filters
  * and add them up. Resulting in N target images
  *
  * @param dst 	holds the target images of the convolution. one row for each
- *            	input image. width = dstSize^2 
- * @param img 	contains F input pattern in each row
- * @param filter contains numFilter filters in each row, number of filters must
+ *            	input image, with one target image per row.
+ * @param img 	contains F input images in each row
+ * @param filter contains one filter in each row, number of filters must
  *               be multiples of 16.
  *
+ *  The result is added to dst.
+ *  Filters are rotated by 180 degrees for the convolution. This routine is
+ *  therefore useful to propagate errors back through convolutional layers:
+ *  img contains the (padded) errors from the upper layers, filters are the
+ *  convolutional filters. dst will then contain the backpropagated errors of
+ *  the lower layer.
  */
-
 template<class V, class M, class T, class I>
 void convolve3(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& img,
 		   dense_matrix<V,M,T,I>& filter);
+
+
 /** 
  * @brief Sample from several multinomial distributions
  * 
@@ -82,9 +92,9 @@ void convolve3(dense_matrix<V,M,T,I>& dst,
  * of the corresponding entry in the input matrix.
  * 
  */
-
 template<class V, class M, class T, class I>
 void sample_multinomial(dense_matrix<V,M,T,I>& grid);
+
 
 /** 
  * @brief Multinomial max-pooling as done by Lee (2009)
@@ -97,7 +107,6 @@ void sample_multinomial(dense_matrix<V,M,T,I>& grid);
  * In each window the entries are normalized with a soft-max with an extra "hidden" pixel with value zero.
  * If sample is true, it is sampled from the resulting multinomial as described in sample_multinomial
  */
-
 template<class V, class M, class T, class I>
 void prob_max_pooling(dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
 
@@ -118,24 +127,31 @@ void prob_max_pooling(dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
 template<class V, class M, class T, class I>
 void prob_max_pooling(vector<V,T,I>& sums, dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
 
+
 /** 
  * @brief Reshape a matrix of images so that each column corresponds to a small window in the original image.
  * 
- * @param mat		Ouput matrix. Each column corresponds to a small window in grid. 
+ * @param mat		Ouput matrix. Each row corresponds to a small window in grid.
  * @param grid 		Input matrix. Each row corresponds to one image. 
  * @param poolSize	Size of window = mat.w()^2 
  *
- * Each image in grid is partitioned into grid.w() / poolSize^2 non-overlaping regions. These regions are saved in row major format into the columns of matrix.
+ * Each image in grid is partitioned into grid.w() / poolSize^2 non-overlaping regions.
+ * These regions are saved in row major format into the rows of a matrix.
+ * Can be used to compute the sum over all pixels of each region.
+ * Note: The entries in the output matrix are transposed, which shouldn't matter
+ * for most purposes, e.g. reduction operations.
  */
 template<class V, class M, class T, class I>
 void grid_to_matrix(dense_matrix<V,M,T,I>& mat,
 		   dense_matrix<V,M,T,I>& grid,       
 		   int poolSize);
+
+
 /** 
  * @brief Reshape a matrix of small windows in an image back to the original image.
  * 
- * @param grid		Output matrix, grid.w() = number of images 
- * @param mat		Input matrix 
+ * @param grid		Output matrix, grid.h() = number of images, grid.w() = image size
+ * @param mat		Input matrix, each row corresponds to one image region
  * @param poolSize	Size of window = mat.w()^2 
  * 
  * This is the inverse of grid_to_matrix. 
@@ -146,6 +162,22 @@ void matrix_to_grid(dense_matrix<V,M,T,I>& grid,
 		   int poolSize);
 
 
+/**
+ * @brief Resize N images of size (m x m) by a factor s into images of size (m*s x m*s)
+ *
+ * @param dst		holds the output images. One row for each image of size (m*s x m*s)
+ * @param img		contains the input images. One row for each image of size (m x m)
+ * @param factor	Scaling factor
+ * @param indices	matrix of indices. Each value corresponds to one block in the
+ * 					supersampled image. Only the indexed pixel is filled with the
+ * 					original value, any other pixel is set to zero.
+ *
+ * Supersampling takes a N x (m*m) matrix of N images of size (m x m) and enlarges
+ * the images by a factor s. If no indices matrix is given, the input is simply
+ * rescaled by the given factor.
+ * With the index matrix, each pixel of the original image is only assigned to
+ * one of the output pixel, depending on the index.
+ */
 template<class V, class M, class T, class I>
 void supersample(dense_matrix<V,M,T,I>& dst,
 		dense_matrix<V,M,T,I>& img,
@@ -153,7 +185,7 @@ void supersample(dense_matrix<V,M,T,I>& dst,
 		dense_matrix<int,row_major,T>* indices = NULL);
 
 /**
- * @brief Reorder blocks in a matrix
+ * @brief Reorder blocks of data in a matrix
  * 
  * @param A target matrix 
  * @param blockLength size of each block
@@ -168,14 +200,34 @@ void supersample(dense_matrix<V,M,T,I>& dst,
  *         A3
  *         B1
  *         B2
- *         ..
+ *         ...
  */
 template<class V, class M, class T, class I>
 void reorder(dense_matrix<V,M,T,I>& A,
 		   int blockLength);
 
 
-
+/**
+ * @brief Propagate data from N smaller images into bigger images.
+ *
+ * @param dst		holds the output images. One row for each image
+ * @param img		contains the input images. One row for each image of size (m x m)
+ * @param poolSize	width of the overlapping square patches
+ * @param overlap	amount of overlap
+ * @param indices	matrix of indices. Each entry corresponds to one patch in the
+ * 					supersampled image. Data from the input image is only propagated
+ * 					to the designated index.
+ * @param filter	Window function (matrix of poolSize x poolSize) to use. Data
+ * 					in the target image is multiplied with this function.
+ *
+ * Each pixel from an input image is mapped to one pixel in the output image.
+ * The exact position is determined by the index given in indices. If overlap > 0
+ * more than one data element from img can be mapped to a pixel in dst, in which
+ * case the values are added. Optionally, they are multiplied by a window fuction
+ * given in filter.
+ * This function can be used to perform the backpropagation step in a max pooling
+ * layer.
+  */
 template<class V, class M, class T, class I>
 void super_to_max(dense_matrix<V,M,T,I>& dst,
 		dense_matrix<V,M,T,I>& img,
@@ -184,12 +236,62 @@ void super_to_max(dense_matrix<V,M,T,I>& dst,
 		dense_matrix<int,row_major,T,I>* indices = NULL,
 		dense_matrix<V,M,T,I>* filter = NULL);
 
+
+
+/**
+ * @brief Copies images from img into dst and adds appropriate padding.
+ *
+ * @param dst		hold the output images, one in each row.
+ * @param img		contains the input images, one in each row.
+ * @param padding	Amount of pixels to be added on all sides
+ *
+ * Specifically, suppose "images" contains just one image and it looks like this:
+ * IIII
+ * IIII
+ * IIII
+ *
+ * And targets looks like this:
+ * XXXXXX
+ * XXXXXX
+ * XXXXXX
+ * XXXXXX
+ * XXXXXX
+ *
+ * After this function is called, targets will look like this:
+ * XXXXXX
+ * XIIIIX
+ * XIIIIX
+ * XIIIIX
+ * XXXXXX
+ *
+ * Where the Is and Xs are arbitrary values.
+ *
+ * You can use this function to pad a bunch of images with a border of zeros. To do this,
+ * the targets matrix should be all zeros.
+ */
 template<class V, class M, class T, class I>
 void copy_into(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& img,
 		   int padding);
 
 
+/**
+ * @brief Max pooling
+ *
+ * @param dst		holds the output images. One row for each image
+ * @param img		contains the input images. One row for each image
+ * @param poolSize	width of the overlapping square patches
+ * @param overlap	amount of overlap
+ * @param indices	matrix of indices. This matrix will store the index of it's
+ * 					patche's maximum.
+ * @param filter	Window function (matrix of poolSize x poolSize) to use.
+ *
+ * For each image in img, the maximum within each pooling window is calculated and
+ * stored in dst. Pooling windows may be overlapping. If an index matrix is given,
+ * the index of the maximum for each pool is stored in it and can later be used
+ * for backpropagation using super_to_max. Optionally, a window function (filter) can
+ * be applied prior to the maximum calculation.
+ */
 template<class V, class M, class T, class I>
 void max_pooling(dense_matrix<V,M,T,I>& dst,
 		dense_matrix<V,M,T,I>& img,
@@ -211,7 +313,6 @@ template<class V, class M, class T, class I>
 void strip_padding(dense_matrix<V,M,T,I>& dst,
 				   dense_matrix<V,M,T,I>& img,
 				   unsigned int padding);
-
 
 
 /**

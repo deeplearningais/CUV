@@ -341,11 +341,6 @@ void supersample_kernel(float*dst, float* src, int* indices, int len, int factor
 	dst[row*len + col] = *src;
 }
 
-/*
- * Supersampling takes a n x (m*m) matrix img with n images of size (m x m)
- * and a factor s. Output is a n x (m*s*m*s) matrix dst with n enlarged images
- * of size (m*s x m*s)
- */
 template<>
 void supersample(dense_matrix<float,row_major,dev_memory_space>& dst,
 		dense_matrix<float,row_major,dev_memory_space>& img,
