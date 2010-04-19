@@ -192,17 +192,6 @@ namespace cuv{
 			return new dense_matrix<__value_type,column_major,__memory_space_type,__index_type>(num_rows,num_cols, matrix.ptr()+matrix.h()*start_cols,true);
 		}
 
-	/*template<class value_type, class memory_space>*/
-		/*dense_matrix<value_type,column_major,memory_space>* blockview(*/
-				/*dense_matrix<value_type,column_major,memory_space>& matrix,*/
-				/*unsigned int start_rows,*/
-				/*unsigned int num_rows,*/
-				/*unsigned int start_cols,*/
-				/*unsigned int num_cols) {*/
-			/*cuvAssert(start_rows==0);*/
-			/*cuvAssert(num_rows==matrix.h())*/
-			/*return new dense_matrix<value_type,column_major,storage_type>(num_rows,num_cols, matrix.ptr()+matrix.h()*start_cols,true);*/
-		/*}*/
 	template<class __value_type, class __memory_space_type, class __index_type>
 		dense_matrix<__value_type,row_major,__memory_space_type,__index_type>* blockview(
 				dense_matrix<__value_type,row_major,__memory_space_type,__index_type>& matrix,
@@ -225,18 +214,8 @@ namespace cuv{
 			  __index_type num_cols){
 		  return blockview(matrix,start_rows,num_rows,start_cols,num_cols, __memory_layout());
 	  }
-	/*template<>*/
-		/*dev_dense_matrix<float,row_major>* blockview(*/
-				/*dev_dense_matrix<float,row_major>& matrix,*/
-				/*unsigned int start_rows,*/
-				/*unsigned int num_rows,*/
-				/*unsigned int start_cols,*/
-				/*unsigned int num_cols) {*/
-			/*cuvAssert(start_cols==0);*/
-			/*cuvAssert(num_cols==matrix.w())*/
-			/*return new dev_dense_matrix<float,row_major>(num_rows,num_cols, matrix.ptr()+matrix.w()*start_rows,true);*/
-		/*}*/
 
+  /// column major blas3
 	template<>
 		void prod(dense_matrix<float,column_major,dev_memory_space>& dst,
 				  dense_matrix<float,column_major,dev_memory_space>&   A,
@@ -298,6 +277,34 @@ namespace cuv{
 					dst.set(i,j,f);
 				}
 #endif
+		}
+/// row major blas3
+	template<>
+		void prod(dense_matrix<float,row_major,dev_memory_space>& dst,
+				  dense_matrix<float,row_major,dev_memory_space>&   A,
+				  dense_matrix<float,row_major,dev_memory_space>&   B,
+				  char transA,
+				  char transB,
+				  const float& factAB,
+				  const float& factC){
+			// we use column major prod and just exchange width and height
+			int m  = (transB=='t' ? B.w() : B.h());
+			int k1 = (transB=='t' ? B.h() : B.w());
+			int k2 = (transA=='t' ? A.w() : A.h());
+			int n  = (transA=='t' ? A.h() : A.w());
+
+			cuvAssert(dst.h() == n);
+			cuvAssert(dst.w() == m);
+			cuvAssert(k1 == k2);
+			cuvAssert(A.ptr());
+			cuvAssert(B.ptr());
+			cuvAssert(dst.ptr());
+			transA=(transA=='t'?'n' : 't');
+			transB=(transB=='t'?'n' : 't');
+			cublasSgemm(transB, transA, m, n, k1, factAB, B.ptr(), B.w(),A.ptr(), A.w(), factC, dst.ptr(), dst.w());
+			std::cout << cublasGetError();
+			cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
+			cuvSafeCall(cudaThreadSynchronize());
 		}
 
 	template<>
