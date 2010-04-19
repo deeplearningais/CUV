@@ -35,7 +35,9 @@ TARGET_LINK_LIBRARIES( cuv_python
 		cuv_matrix_ops
 		cuv_convolution_ops
 		cuv_image_ops
-        ${Boost_LIBRARIES}
+        #${Boost_LIBRARIES}
+		${Boost_DATE_TIME_LIBRARY_RELEASE}
+		${Boost_PYTHON_LIBRARY_RELEASE}
         ${PYTHON_LIBRARY}
         ${CUDA_CUBLAS_LIBRARIES}
 )
