@@ -93,32 +93,59 @@ namespace cuv{
 			// set/get offsets of diagonals
 			//*****************************
 		
+			/**
+			 * Set the offsets of the diagonals in the DIA matrix
+			 * This overload works with any iterator.
+			 * The main diagonal has offset zero, lower diagonals are negative, higher diagonals are positive.
+			 * 
+			 * @param begin start of sequence
+			 * @param end   one behind end of sequence
+			 */
 			template<class T>
-			void set_offsets(T a, const T& b){
+			void set_offsets(T begin, const T& end){ 
 				int i=0;
-				while(a!=b)
-					m_offsets.set(i++,*a++);
+				while(begin!=end)
+					m_offsets.set(i++,*begin++);
 				post_update_offsets();
 			}
+			/**
+			 * Set the offsets of the diagonals in the DIA matrix.
+			 * This overload works with a vector.
+			 * The main diagonal has offset zero, lower diagonals are negative, higher diagonals are positive.
+			 *
+			 * @param v a vector containing all offsets
+			 */
 			template<class T>
 			void set_offsets(const std::vector<T>& v){
 				for(unsigned int i=0;i<v.size();i++)
 					m_offsets.set(i,v[i]);
 				post_update_offsets();
 			}
+			/**
+			 * Update the internal reverse-mapping of diagonals to positions in the offset-array.
+			 * Normally, you do not need to call this function, except when
+			 * changing the diagonal offsets manually.
+			 */
 			void post_update_offsets(){
 				m_dia2off.clear();
 				for(unsigned int i = 0; i<m_offsets.size(); ++i)
 					m_dia2off[m_offsets[i]] = i;
 			}
+			/**
+			 * Set a single diagonal offset in the matrix.
+			 * The main diagonal has offset zero, lower diagonals are negative, higher diagonals are positive.
+			 *
+			 * @param idx the (internal) index of the offset
+			 * @param val the offset number
+			 */
 			inline void set_offset(const index_type& idx, const index_type& val){
 				m_offsets.set(idx,val);
 				m_dia2off[val] = idx;
 			}
 			inline vec_type* get_dia(const int& i){ return new vec_type(m_stride,  m_vec->ptr() + m_dia2off[i] * m_stride, true); } ///< Return vector containing specified diagonal.
-			inline const intvec_type& get_offsets()const{return m_offsets;}
-			inline       intvec_type& get_offsets()     {return m_offsets;}
-			inline int get_offset(const index_type& idx)const ///< Return offset of specified diagonal
+			inline const intvec_type& get_offsets()const{return m_offsets;} ///< Return the vector of offsets
+			inline       intvec_type& get_offsets()     {return m_offsets;} ///< return the vector of offsets
+			inline int get_offset(const index_type& idx)const               ///< Return offset of specified diagonal
 			{
 				return m_offsets[idx];
 			}
@@ -126,7 +153,7 @@ namespace cuv{
 			// ******************************
 			// read access
 			// ******************************
-			value_type operator()(const index_type& i, const index_type& j)const ///< Return entry (i,j)
+			value_type operator()(const index_type& i, const index_type& j)const ///< Return matrix entry (i,j)
 			{
 				int off = (int)j - (int)i/m_row_fact;
 				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);

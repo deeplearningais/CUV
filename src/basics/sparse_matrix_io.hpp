@@ -14,6 +14,13 @@
 
 namespace cuv{
 
+	/**
+	 * Serialize/deserialize a host-vector to/from an archive.
+	 *
+	 * @param ar the archive
+	 * @param v  the vector to serialize
+	 * @param version not used
+	 */
 	template<class Archive, class value_type, class index_type>
 		void serialize(Archive& ar, cuv::vector<value_type,host_memory_space,index_type>& v, const unsigned int version){
 			ar & v.m_size;
@@ -21,6 +28,14 @@ namespace cuv{
 				v.alloc();
 			ar & boost::serialization::make_array(v.ptr(),v.size());
 		}
+
+	/**
+	 * Serialize/deserialize a host-dia-matrix to/from an archive.
+	 *
+	 * @param ar the archive
+	 * @param m  the dia-matrix to serialize
+	 * @param version not used
+	 */
 	template<class Archive, class value_type, class index_type>
 		void serialize(Archive& ar, cuv::dia_matrix<value_type,host_memory_space,index_type>& m, const unsigned int version){
 			ar & m.m_width;
@@ -35,6 +50,9 @@ namespace cuv{
 			}
 			ar & m.vec();
 		}
+	/**
+	 * explicit instantiation of serialization for dia-matrices in binary oarchives
+	 */
 	template
 		void serialize(boost::archive::binary_oarchive&, dia_matrix<float, host_memory_space, unsigned int>&, unsigned int);
 }
