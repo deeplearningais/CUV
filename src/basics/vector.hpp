@@ -44,7 +44,7 @@ class vector{
 	  typedef __value_type value_type;	 ///< Type of the entries of matrix
 	  typedef __index_type index_type;	 ///< Type of indices
 	  typedef __memory_space_type memory_space_type; ///< Indicates whether this is a host or device vector
-	  template <class Archive, class V, class I> friend void serialize(Archive&, vector<V,memory_space_type,I>&, unsigned int) ;
+	  template <class Archive, class V, class I> friend void serialize(Archive&, vector<V,memory_space_type,I>&, unsigned int) ; ///< serialize/deserialize the vector to/from an archive
 	  typedef vector<value_type, memory_space_type, index_type> my_type; ///< Type of this vector
 	protected:
 	  value_type* m_ptr; ///< Pointer to actual entries in memory

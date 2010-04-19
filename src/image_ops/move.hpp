@@ -26,7 +26,7 @@ namespace cuv
 	 * @param src unsigned char where original images are taken from
 	 * @param src_image_size  width and height of image in source
 	 * @param dst_image_size  width and height of image in destination
-	 * @param num_maps  how many maps there are in src
+	 * @param src_num_maps  how many maps there are in src
 	 * @param xshift how much to shift right
 	 * @param yshift how much to shift down
 	 */
