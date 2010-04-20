@@ -1,0 +1,78 @@
+INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/basics )
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/convert )
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/vector_ops )
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/matrix_ops )
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/convolution_ops )
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/random )
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR} )
+
+ADD_EXECUTABLE( test_basic basic.cpp )
+TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools cuv_matrix_ops cuv_convert)
+
+ADD_EXECUTABLE( test_convert convert.cpp )
+TARGET_LINK_LIBRARIES( test_convert cuv_basics cuv_tools cuv_convert)
+
+ADD_EXECUTABLE( test_vec_op vec_op.cpp )
+TARGET_LINK_LIBRARIES( test_vec_op cuv_basics cuv_tools cuv_convert cuv_vector_ops)
+
+ADD_EXECUTABLE( test_vec_op_speed vec_op_speed.cpp )
+TARGET_LINK_LIBRARIES( test_vec_op_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_random )
+
+ADD_EXECUTABLE( test_mat_op matrix_op.cpp )
+TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_dia_mat dia_mat.cpp )
+TARGET_LINK_LIBRARIES( test_dia_mat cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_spmv spmv.cpp )
+TARGET_LINK_LIBRARIES( test_spmv         cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_spmv_speed spmv_speed.cpp )
+TARGET_LINK_LIBRARIES( test_spmv_speed   cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_densedense_to_dia densedense_to_dia.cpp )
+TARGET_LINK_LIBRARIES( test_densedense_to_dia     cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_densedense_to_dia_speed densedense_to_dia_speed.cpp )
+TARGET_LINK_LIBRARIES( test_densedense_to_dia_speed     cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_mat_op_speed matrix_op_speed.cpp )
+TARGET_LINK_LIBRARIES( test_mat_op_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_conv_op conv_op.cpp )
+TARGET_LINK_LIBRARIES( test_conv_op cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_convolution_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_conv_op_speed conv_op_speed.cpp )
+TARGET_LINK_LIBRARIES( test_conv_op_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_convolution_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_random random.cpp )
+TARGET_LINK_LIBRARIES( test_random cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_random)
+
+ADD_EXECUTABLE( test_random_speed random_speed.cpp )
+TARGET_LINK_LIBRARIES( test_random_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_random)
+
+ADD_EXECUTABLE( test_memory memory.cpp )
+TARGET_LINK_LIBRARIES( test_memory cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_TEST( basics  "${CMAKE_BINARY_DIR}/tests/test_basic" )
+ADD_TEST( convert "${CMAKE_BINARY_DIR}/tests/test_convert" )
+ADD_TEST( vec_op "${CMAKE_BINARY_DIR}/tests/test_vec_op" )
+ADD_TEST( random "${CMAKE_BINARY_DIR}/tests/test_random" )
+ADD_TEST( spmv "${CMAKE_BINARY_DIR}/tests/test_spmv" )
+ADD_TEST( densedense_to_dia "${CMAKE_BINARY_DIR}/tests/test_densedense_to_dia" )
+ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/tests/test_dia_mat" )
+ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/tests/test_conv_op" )
+ADD_TEST( memory  "${CMAKE_BINARY_DIR}/tests/test_memory" )
+
+# speed tests just take too long.
+#ADD_TEST( vec_op_speed "${CMAKE_BINARY_DIR}/tests/test_vec_op_speed" )
+#ADD_TEST( mat_op_speed "${CMAKE_BINARY_DIR}/tests/test_mat_op_speed" )
+#ADD_TEST( spmv_speed "${CMAKE_BINARY_DIR}/tests/test_spmv_speed" )
+#ADD_TEST( densedense_to_dia_speed "${CMAKE_BINARY_DIR}/tests/test_densedense_to_dia_speed" )
+#ADD_TEST( conv_ops_speed "${CMAKE_BINARY_DIR}/tests/test_conv_op_speed" )
+#ADD_TEST( random_speed "${CMAKE_BINARY_DIR}/tests/test_random_speed" )
+
+SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
+ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/python_bindings python -c 'import cuv_python as cp'" )
+

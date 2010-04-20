@@ -1,0 +1,157 @@
+2D CUDA Convolution Routines
+Alex Krizhevsky (akrizhevsky@gmail.com)
+Last updated Dec 29, 2009
+============================================
+
+Changelog:
+============================================
+Dec 29, 2009
+--------------------------------------------
+- Fixed bug that caused the multinomial sampling routine to output wrong answers when the multinomials were < 16.
+- Fixed local softmax example (test case) to divide by sum rather than max.
+- The copyInto function should work for really huge images now too.
+
+--------------------------------------------
+Dec 25, 2009
+--------------------------------------------
+- Fixed crashes when convolving with certain big filters.
+- Fixed crashes in new routines introduced in last update.
+- Slight speedups in most convolution routines.
+- No longer use 24-bit multiplication for certain quantities that may plausibly exceed 24 bits.
+- Reduced binary size by 50% by no longer unrolling certain huge loops.
+- If you set the input matrices right, the convolution output matrix will now spell out "MERRY CHRISTM" with ones and zeros (I ran out of shared memory).
+
+--------------------------------------------
+Dec 22, 2009
+--------------------------------------------
+- Significanly increased the speed of the conv2 routines when the output grid is small (<= 8x8). This speeds up the computation of weight derivatives when the original filters were small. For example, with 20x20 images and 5x5 filters, computing the derivatives is now 50% faster (because the derivatives computation involves a convolution of 20x20 images with 16x16 "filters", producing a 5x5 output grid -- the same size as the original filters).
+
+- Fixed two bugs in the conv and conv2 routines that beautifully cancelled each other out. If only one of the bugs had been present, the code would have produced an incorrect result in nearly all cases. But because both bugs were present, it merely produced the correct result slightly slower than it should have. Neat huh!
+
+- Fixed bug that caused conv2 to output the wrong answer when targets wasn't initialized with zeros. Note that color version of the regular convolution function (conv) still requires that targets be initialized with zeros.
+
+- Renamed the padZeros routine to copyInto, because that's really what it does. This highlights the fact that it has other uses besides padding images with zeros.
+
+- Added a check to make sure the kernel executed successfully after every CUDA call.
+
+--------------------------------------------
+Dec 7, 2009
+--------------------------------------------
+- Added functions for sampling from a bunch of multinomial distributions, where each distribution is in the row of a matrix (as would be the case if you used the gridToMatrix function).
+
+--------------------------------------------
+Dec 2, 2009
+--------------------------------------------
+Thanks to Ilya Sutskever for suggesting this:
+
+- Added a function gridToMatrix, which takes N m*m images and outputs N*(m/f)*(m/f) f*f images, where f must divide m. The purpose of this function is to make it easy to apply a unique function to every f*f square of an m*m image. This function outputs each f*f square as a row of a 2D matrix, so any operation that you can apply to the row of a matrix can now be applied to the f*f square. For example, this function makes it easy to divide each f*f square in an image by the maximum value within that square. 
+
+Note: gridToMatrix outputs the values within each f*f square in column-major order. 
+So, for example, if your image looks like this in memory:
+
+A B C D
+E F G H
+I J K L
+M N O P
+
+where each letter represents (say) a 4x4 square of values (so here N = 1 and m = 4*4=32), gridToMatrix will output
+
+A'
+B'
+C'
+...
+P'
+
+where prime denotes the transpose. For most purposes the orientation within each f*f square shouldn't actually matter.
+ 
+The function matrixToGrid is the inverse of gridToMatrix and it is also supplied.
+
+--------------------------------------------
+Nov 29, 2009
+--------------------------------------------
+- Supersampling function: removed restriction that factor*image size must be <= 512.
+
+--------------------------------------------
+Nov 28, 2009
+--------------------------------------------
+- Added subsampling and supersampling functions, which are useful for building multilayer convolutional nets.
+
+The supersampling function actually consists of two functions -- one is for row-major input and the other for column-major input. The reason for this is that the thing that you'll want to supersample is likely to be the result of a matrix multiplication, which means it will be in column-major order (I'm thinking of the top layer of a convnet, which might be fully-connected to the averaging layer below it). Both functions always output in row-major order, however.
+
+The subsampling and supersampling functions have a few restrictions:
+- The input images must be <= 512x512.
+- The subsampling/supersampling factor must be 16 or less (i.e. a 16x16 image can be subsampled to 1x1, and 1x1 can be supersampled to at most 16x16), but this is largely an artificial restriction (mostly just to avoid useless repetitive code), and I can remove if it matters. 
+- For the subsampling function only: the subsampling factor must divide the matrix dimensions. In other words, you can't subsample a 32x32 image by a factor of 5 because 5 doesn't divide 32. This restriction is pretty well built into the code and isn't easy to remove. 
+- For the supersampling function only: the product factor*image size must be <= 512. In practice I don't think this is a big deal, because it still lets you supersample 128x128 images by a factor of 16. I plan to remove this restriction later, but I figured there's no reason to delay release of this code just for some corner cases that no one is likely to hit.
+
+--------------------------------------------
+Nov 20, 2009
+--------------------------------------------
+- Below-mentioned routines work for all filter sizes now.
+
+--------------------------------------------
+Nov 16, 2009
+--------------------------------------------
+- Added routines for sampling visible units given hiddens in a convolutional RBM, as well as computing derivatives with respect to hidden activations in a convolutional net. For now, they only work with filter sizes no greater than 37x37. I will add total support soon. 
+
+--------------------------------------------
+Nov 10, 2009
+--------------------------------------------
+- Added routines for convolving multiple images with multiple filters, where each image is to be convolved with a _different_ set of filters. This is useful for computing derivatives with respect to weights in a convolutional net or RBM. 
+- Added a utility function "padZeros": adds a boundary of zeros around images. 
+
+============================================
+
+About this code:
+============================================
+
+What the routines do:
+- 2D convolution of multiple arbitrarily-sized filters with multiple arbitrarily-sized images.
+- Greyscale filters/images and color filters/images are both supported.
+
+About:
+This code consists of several routines, each of which is optimized for different filter/image sizes. In my testing against a naive CPU C++ implementation of convolution, for reasonable input sizes these routines are at worst 60 and at best 200 times faster (I have a 3.4GHz Core 2 and a GTX 280). In certain pathological cases that do not saturate the GPU's capacity, the speedup can be less than this.
+
+Assumptions:
+- The filters and images must be single-precision floats.
+- The filters and images must be in row-major order.
+- If your filters/images are color, they must be laid out in memory like this: 
+img1: RRR GGG BBB
+img2: RRR GGG BBB
+... etc
+In other words, all the red pixels (in row-major order) must come first, followed by all the green pixels, and so forth.
+
+Limitations:
+- The routines currently support only square filters and images.
+- The routines are only good for convolving many filters with many images. If you want to convolve one filter with one image, don't use them. It won't be fast. By "many", I mean "tens".
+- The number of filters must be a multiple of 16. This is an easy restriction to remove and I can do so in the future if it's a big deal to anyone.
+
+When are the routines fastest?
+- When the filter size is smaller than or equal to 14 and the number of outputs of the convolution is a multiple of 16 in each dimension. For example, convolving 40x40 images with 9x9 filters is very fast because it produces a (40 - 9 + 1)x(40 - 9 + 1) = 32x32 grid of outputs, and 32 is a multiple of 16.
+- When the filter size is greater than 20 and a multiple of 16, and additionally the number of outputs of the convolution is a multiple of 16 in each dimension. For example, convolving 47x47 images with 32x32 filters is very fast.
+
+When are the routines slowest?
+- When the number of outputs of the convolution is very small. For example, convolving 15x15 filters with 16x16 images produces a 2x2 output grid. This will be computed very inefficiently (except the conv2 routines, which have optimizations for these types of cases).
+- When the number of outputs of the convolution in each dimension is 1 more than a multiple of 16. For example, convolving 47x47 images with 15x15 filters produces a 33x33 grid of outputs.
+- When the number of filters * the number of images is very small. In this case the GPU's capacity will not be saturated.
+
+It is possible to optimize for other cases too, and I can do that if you let me know which cases you want to be faster. When I get more time I'm hoping to optimize for a lot more cases than these.
+
+This is C++ code. If you want to write a python wrapper, these are the two functions that you should wrap: convolve_bw and convolve_color; both are in conv.cu. They both currently take as input NVMatrix objects, and if you want to get rid of that dependency, you should just make them take float*s instead.
+
+=======================================
+Here are some instructions for compiling and running the example code on guppy:
+
+1. Have the following environment variables set:
+export CUDA_INSTALL_PATH=/pkgs/cuda/
+export CUDA_SDK_PATH=/pkgs/cuda-sdk-2.1/
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CUDA_INSTALL_PATH/lib
+
+2. Type make to compile it.
+
+3. Type ./bin/linux/release/conv to run it. The program will attempt to find and lock a free GPU board using Iain's new GPU locking script. The program's output is just the (partial) result of some convolution, as well as the running times for the CPU and GPU versions.
+=======================================
+
+Goals for future versions:
+- Write some routines that allow the user to specify the block size ("dynamic" routines). This will be useful if none of the default routines handles the problem very well. I have already written several such routines (see conv_extras.cuh), but the calling code does not use them yet.
+- Automate choosing parameters of dynamic routines based on parameters of CUDA device (shared memory, etc), rather than having user specify.
