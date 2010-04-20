@@ -1,36 +1,5 @@
 cmake_minimum_required( VERSION 2.6 FATAL_ERROR )
 
-PROJECT(CUV Fortran CXX C)
-SET(CMAKE_MODULE_PATH  ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules )
-
-INCLUDE(InstallRequiredSystemLibraries)
-
-SET(CPACK_SOURCE_GENERATOR "TGZ")
-SET(CPACK_PACKAGE_NAME "cuv")
-SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Matrix Algorithms on GPU")
-SET(CPACK_PACKAGE_CONTACT "Hannes Schulz <schulz at ais dot uni-bonn dot de>")
-SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../README")
-SET(CPACK_PACKAGE_VERSION_MAJOR "0")
-SET(CPACK_PACKAGE_VERSION_MINOR "4")
-SET(CPACK_PACKAGE_VERSION_PATCH "0")
-SET(CPACK_SOURCE_IGNORE_FILES "${CPACK_SOURCE_IGNORE_FILES};cfg/config.h")
-SET(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMake_VERSION_MAJOR}.${CMake_VERSION_MINOR}")
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libboost-dev (>= 1.34.1)" )
-SET(CMAKE_INSTALL_PREFIX ".")
-INCLUDE(CPack)
-
-FIND_PACKAGE(Doxygen)
-IF(DOXYGEN_FOUND)
-	CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/../doc/Doxyfile.in ${CMAKE_BINARY_DIR}/doc/Doxyfile)
-	ADD_CUSTOM_COMMAND(
-		DEPENDS ${CMAKE_BINARY_DIR}/doc/Doxyfile
-		OUTPUT  ${CMAKE_BINARY_DIR}/doc/html/index.html
-		COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_BINARY_DIR}/doc/Doxyfile
-		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-		)
-	ADD_CUSTOM_TARGET(doc DEPENDS ${CMAKE_BINARY_DIR}/doc/html/index.html)
-ENDIF(DOXYGEN_FOUND)
-
 OPTION(CUDA_SHARED "Wether shared version of CUDA is to be used, must be true for python bindings!" ON)
 IF(CUDA_SHARED)
 #	use this for python bindings. However, We need to recompile CUDA for this on every computer!
@@ -44,8 +13,6 @@ SET (CUDA_TEST_DEVICE "0" CACHE STRING "Which CUDA device should the tests be ru
 add_definitions(-DCUDA_TEST_DEVICE=${CUDA_TEST_DEVICE})
 
 FIND_PACKAGE(CUDA)
-#FIND_PACKAGE(CxxTest)
-
 
 # ---------- Find Boost Headers/Libraries -----------------------
 SET (Boost_FIND_REQUIRED TRUE)

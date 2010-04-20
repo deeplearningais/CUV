@@ -2,13 +2,13 @@ set(Boost_USE_STATIC_LIBS FALSE)
 FIND_PACKAGE( Boost 1.37 COMPONENTS date_time python REQUIRED )
 FIND_PACKAGE( PythonLibs )
 include_directories( 
-        ${CMAKE_SOURCE_DIR}
-        ${CMAKE_SOURCE_DIR}/basics
-        ${CMAKE_SOURCE_DIR}/convert
-        ${CMAKE_SOURCE_DIR}/vector_ops
-        ${CMAKE_SOURCE_DIR}/matrix_ops
-        ${CMAKE_SOURCE_DIR}/convolution_ops
-        ${CMAKE_SOURCE_DIR}/random
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/basics
+        ${CMAKE_SOURCE_DIR}/src/convert
+        ${CMAKE_SOURCE_DIR}/src/vector_ops
+        ${CMAKE_SOURCE_DIR}/src/matrix_ops
+        ${CMAKE_SOURCE_DIR}/src/convolution_ops
+        ${CMAKE_SOURCE_DIR}/src/random
         ${PYTHON_INCLUDE_PATH} 
         /usr/local/lib/python2.6/dist-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/include
         )
