@@ -27,6 +27,7 @@ sub addlic_file{
 	#print $lf;
 	#<STDIN>
 }
+
 sub addlic_dir{
 	my $dir = shift;
 	my $tp  = shift;
@@ -51,7 +52,7 @@ sub get_lic{
 
 sub run{
 	my @param = (
-		"Hannes Schulz, Andreas Mueller, Dominik Scherer",
+		"University of Bonn, Institute for Computer Science VI",
 		"University of Bonn",
 		"2010"
 	);

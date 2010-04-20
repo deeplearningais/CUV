@@ -1,5 +1,5 @@
 //*LB*
-// Copyright (c) 2010, Hannes Schulz, Andreas Mueller, Dominik Scherer
+// Copyright (c) 2010, University of Bonn, Institute for Computer Science VI
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
+
 
 
 
