@@ -110,7 +110,7 @@
  * $ make -j
  * $ ctest             # run tests to see if it went well
  * $ make install
- * $ export PYTHONPATH=`pwd`/lib
+ * $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
  * @endcode
  *
  * Building a release version:
@@ -124,7 +124,7 @@
  * $ ccmake .          # adjust paths to your system!
  * $ make -j
  * $ ctest             # run tests to see if it went well
- * $ export PYTHONPATH=`pwd`/lib
+ * $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
  * @endcode
  *
  * @subsection docinst  Building the documentation
