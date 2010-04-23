@@ -296,6 +296,8 @@ void export_matrix_ops(){
 	export_reductions<fdevr>();
 	export_learn_step<fhost>();
 	export_learn_step<fdev>();
+	export_learn_step<fhostr>();
+	export_learn_step<fdevr>();
 	export_blas2<fdev>();
 	export_blas2<fhost>();
 	export_blas2<fhostr>();
