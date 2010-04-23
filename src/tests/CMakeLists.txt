@@ -55,15 +55,15 @@ TARGET_LINK_LIBRARIES( test_random_speed cuv_basics cuv_tools cuv_convert cuv_ve
 ADD_EXECUTABLE( test_memory memory.cpp )
 TARGET_LINK_LIBRARIES( test_memory cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
 
-ADD_TEST( basics  "${CMAKE_BINARY_DIR}/tests/test_basic" )
-ADD_TEST( convert "${CMAKE_BINARY_DIR}/tests/test_convert" )
-ADD_TEST( vec_op "${CMAKE_BINARY_DIR}/tests/test_vec_op" )
-ADD_TEST( random "${CMAKE_BINARY_DIR}/tests/test_random" )
-ADD_TEST( spmv "${CMAKE_BINARY_DIR}/tests/test_spmv" )
-ADD_TEST( densedense_to_dia "${CMAKE_BINARY_DIR}/tests/test_densedense_to_dia" )
-ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/tests/test_dia_mat" )
-ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/tests/test_conv_op" )
-ADD_TEST( memory  "${CMAKE_BINARY_DIR}/tests/test_memory" )
+ADD_TEST( basics  "${CMAKE_BINARY_DIR}/src/tests/test_basic" )
+ADD_TEST( convert "${CMAKE_BINARY_DIR}/src/tests/test_convert" )
+ADD_TEST( vec_op "${CMAKE_BINARY_DIR}/src/tests/test_vec_op" )
+ADD_TEST( random "${CMAKE_BINARY_DIR}/src/tests/test_random" )
+ADD_TEST( spmv "${CMAKE_BINARY_DIR}/src/tests/test_spmv" )
+ADD_TEST( densedense_to_dia "${CMAKE_BINARY_DIR}/src/tests/test_densedense_to_dia" )
+ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/src/tests/test_dia_mat" )
+ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/src/tests/test_conv_op" )
+ADD_TEST( memory  "${CMAKE_BINARY_DIR}/src/tests/test_memory" )
 
 # speed tests just take too long.
 #ADD_TEST( vec_op_speed "${CMAKE_BINARY_DIR}/tests/test_vec_op_speed" )
@@ -74,5 +74,5 @@ ADD_TEST( memory  "${CMAKE_BINARY_DIR}/tests/test_memory" )
 #ADD_TEST( random_speed "${CMAKE_BINARY_DIR}/tests/test_random_speed" )
 
 SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
-ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/python_bindings python -c 'import cuv_python as cp'" )
+ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/src/python_bindings python -c 'import cuv_python as cp'" )
 
