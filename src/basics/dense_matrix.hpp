@@ -146,6 +146,7 @@ namespace cuv{
 
 			void dealloc() ///< Deallocate matrix entries. This calls deallocation of the vector storing entries.
 			{
+				//std::cout << "Deallocate dense matrix" << std::endl;
 				if(m_vec)
 					delete m_vec;
 				m_vec = NULL;
@@ -154,6 +155,7 @@ namespace cuv{
 			void alloc() ///< Allocate matrix entries: Create vector to store entries.
 			{
 				cuvAssert(!m_vec);
+				//std::cout << "Allocate dense matrix" << std::endl;
 				m_vec = new vec_type(m_width * m_height);
 			}
 

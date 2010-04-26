@@ -736,6 +736,50 @@ void max_pooling_kernel(float* dst, float* img, int* indices, int imgSize, int d
  * case.
  */
 
+__global__
+void first_pooling_kernel(float* dst, float* img, int imgSize, int dstSize, int poolSize, int stepSize) {
+	int tx = threadIdx.x; // ty = threadIdx.y;
+	int bx = blockIdx.x, by = blockIdx.y;
+
+	int p = tx + by * 256;
+	if(p >= dstSize * dstSize)
+		return;
+
+	img += bx * imgSize * imgSize;
+
+	int column = p % dstSize;
+	int row = p / dstSize;
+
+	// write result
+	dst += bx * dstSize * dstSize + p;
+	*dst = img[column*stepSize + (row*stepSize)*imgSize];
+}
+template<>
+	void first_pooling(dense_matrix<float,row_major,dev_memory_space>& dst,
+			dense_matrix<float,row_major,dev_memory_space>& img,
+			unsigned int poolSize
+			) {
+
+	int numImages = dst.h();
+	cuvAssert(numImages == img.h());
+	int imgSize = sqrt(img.w());
+	cuvAssert(imgSize * imgSize == img.w());
+	int stepSize = poolSize;
+	int dstSize = (imgSize - poolSize)/stepSize + 1;
+	cuvAssert(dstSize * dstSize == dst.w());
+	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
+
+	int numThreads = 256;
+	int numBlocksX = numImages;
+	int numBlocksY = ceil((float) (dstSize * dstSize)/numThreads);
+
+	dim3 grid(numBlocksX, numBlocksY);
+	dim3 threads(numThreads);
+	first_pooling_kernel<<<grid,threads>>>(dst.ptr(), img.ptr(), imgSize, dstSize, poolSize, stepSize);
+
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
 template<>
 	void max_pooling(dense_matrix<float,row_major,dev_memory_space>& dst,
 			dense_matrix<float,row_major,dev_memory_space>& img,

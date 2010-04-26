@@ -333,6 +333,11 @@ void max_pooling(dense_matrix<V,M,T,I>& dst,
 		dense_matrix<int,row_major,T,I>* indices = NULL,
 		dense_matrix<V,M,T,I>* filter = NULL);
 
+template<class V, class M, class T, class I>
+void first_pooling(dense_matrix<V,M,T,I>& dst,
+		dense_matrix<V,M,T,I>& img,
+		unsigned int poolSize
+		);
 
 /**
  * @brief Strips the padding inserted by copy_into
