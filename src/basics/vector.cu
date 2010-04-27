@@ -65,9 +65,17 @@ value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space) {
 }
 
 
-template class vector<int, dev_memory_space>;
-template class vector<float, dev_memory_space>;
-template class vector<unsigned char, dev_memory_space>;
-template class vector<signed char, dev_memory_space>;
+#define VECTOR_INST(T,I) \
+template class vector<T, dev_memory_space, I>; \
+template void alloc(T**, I, dev_memory_space); \
+template void dealloc(T**, dev_memory_space); \
+template void entry_set(T*, I, T, dev_memory_space); \
+template T entry_get(const T*, I, dev_memory_space); \
+
+VECTOR_INST(float, unsigned int);
+VECTOR_INST(unsigned char, unsigned int);
+VECTOR_INST(signed char, unsigned int);
+VECTOR_INST(int, unsigned int);
+
 
 }; // cuv
