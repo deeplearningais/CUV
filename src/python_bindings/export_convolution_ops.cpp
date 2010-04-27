@@ -139,8 +139,8 @@ void export_row_ncopy(){
 void export_convolution_ops(){
 	export_convolve< dense_matrix<float,row_major,host_memory_space> >();
 	export_convolve< dense_matrix<float,row_major,dev_memory_space> >();
-	//export_super_to_max< host_dense_matrix<float,row_major> >();
-	//export_super_to_max< dev_dense_matrix<float,row_major>  >();
+	export_super_to_max< dense_matrix<float,row_major, host_memory_space> >();
+	export_super_to_max< dense_matrix<float,row_major, dev_memory_space>  >();
 	export_padding_ops< dense_matrix<float,row_major, host_memory_space> >();
 	export_padding_ops< dense_matrix<float,row_major, host_memory_space>  >();
 	export_padding_ops< dense_matrix<float,row_major, dev_memory_space>  >();
