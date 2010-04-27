@@ -1,3 +1,11 @@
+  • Main Page
+  • Related Pages
+  • Modules
+  • Namespaces
+  • Classes
+  • Files
+  • [search] [Search              ] [close]
+
 CUV Documentation
 
 0.9.0
@@ -83,7 +91,9 @@ Building a debug version:
  $ cmake -DCMAKE_BUILD_TYPE=Debug ../../
  $ ccmake .          # adjust paths to your system!
  $ make -j
+ $ cd src
  $ ctest             # run tests to see if it went well
+ $ cd ..
  $ make install
  $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
 
@@ -96,7 +106,9 @@ Building a release version:
  $ cmake -DCMAKE_BUILD_TYPE=Release ../../
  $ ccmake .          # adjust paths to your system!
  $ make -j
+ $ cd src
  $ ctest             # run tests to see if it went well
+ $ cd ..
  $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
 
 Building the documentation
@@ -184,4 +196,4 @@ Python Code
  All Classes Namespaces Files Functions Variables Typedefs Enumerations Friends
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Generated on Tue Apr 20 15:01:59 2010 for CUV by  doxygen 1.6.1
+Generated on Tue Apr 27 12:39:49 2010 for CUV by  doxygen 1.6.1

@@ -108,7 +108,9 @@
  * $ cmake -DCMAKE_BUILD_TYPE=Debug ../../
  * $ ccmake .          # adjust paths to your system!
  * $ make -j
+ * $ cd src
  * $ ctest             # run tests to see if it went well
+ * $ cd ..
  * $ make install
  * $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
  * @endcode
@@ -123,7 +125,9 @@
  * $ cmake -DCMAKE_BUILD_TYPE=Release ../../
  * $ ccmake .          # adjust paths to your system!
  * $ make -j
+ * $ cd src
  * $ ctest             # run tests to see if it went well
+ * $ cd ..
  * $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
  * @endcode
  *
