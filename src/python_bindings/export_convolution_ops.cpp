@@ -133,7 +133,13 @@ void export_row_ncopy(){
 																arg("filter"),
 																arg("fs")));
 
-
+	def("reorder",(void (*)(M&, int))reorder<typename M::value_type, typename M::memory_layout, typename M::index_type>, (
+															arg("matrix"),
+															arg("block_length")));
+	def("add_maps_h",(void (*)(M&,M&, unsigned int))filter_inverse<typename M::value_type, typename M::memory_layout, typename M::index_type>, (
+															arg("dst"),
+															arg("map_matrix"),
+															arg("map_size")));
 }
 
 void export_convolution_ops(){
