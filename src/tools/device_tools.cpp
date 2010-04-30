@@ -48,7 +48,7 @@ namespace cuv{
 		cuerr = cudaGetLastError();
 		// free mem
 		the_iterator = container.begin();
-		printf("releasing memory....\n");
+		//printf("releasing memory....\n");
 		while( the_iterator != container.end() ) {
 			CUDA_SAFE_CALL(cudaFree(*the_iterator));
 			++the_iterator;
