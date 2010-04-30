@@ -36,7 +36,7 @@
 #include <vector_ops/vector_ops.hpp>
 #include <convert.hpp>
 #include <convolution_ops/convolution_ops.hpp>
-#include <tools/memory_tools.h>
+#include <tools/device_tools.h>
 
 
 //using namespace std;
