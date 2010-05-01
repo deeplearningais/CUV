@@ -77,4 +77,16 @@ namespace cuv{
 			return deviceProp.totalGlobalMem;
 		}
 	}
+
+	void useDevice(int dev_idx){
+		CUDA_SAFE_CALL(cudaSetDevice(dev_idx));
+	}
+
+	int countDevices(){
+		int nDevCount = 0;
+		CUDA_SAFE_CALL(cudaGetDeviceCount( &nDevCount ));
+		return nDevCount;
+	}
+
+
 }
