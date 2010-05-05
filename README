@@ -63,6 +63,7 @@ For C++ libs, you will need:
   • libboost-dev >= 1.37
   • libblas-dev
   • libtemplate-perl -- (we might get rid of this dependency soon)
+  • thrust library (from http://code.google.com/p/thrust/)
   • NVIDIA CUDA (tm), including SDK
   • doxygen (if you want to build the documentation yourself)
 
@@ -89,7 +90,7 @@ Building a debug version:
  $ mkdir -p build/debug
  $ cd build/debug
  $ cmake -DCMAKE_BUILD_TYPE=Debug ../../
- $ ccmake .          # adjust paths to your system!
+ $ ccmake .          # adjust CUDA SDK paths to your system!
  $ make -j
  $ cd src
  $ ctest             # run tests to see if it went well
@@ -104,7 +105,7 @@ Building a release version:
  $ mkdir -p build/release
  $ cd build/release
  $ cmake -DCMAKE_BUILD_TYPE=Release ../../
- $ ccmake .          # adjust paths to your system!
+ $ ccmake .          # adjust CUDA SDK paths to your system!
  $ make -j
  $ cd src
  $ ctest             # run tests to see if it went well
