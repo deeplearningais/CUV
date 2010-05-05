@@ -81,6 +81,7 @@
  * - libblas-dev
  * - libtemplate-perl -- (we might get rid of this dependency soon)
  * - NVIDIA CUDA (tm), including SDK
+ * - thrust library (from http://code.google.com/p/thrust/)
  * - doxygen (if you want to build the documentation yourself)
  *
  * For Python Integration, you additionally have to install
@@ -106,7 +107,7 @@
  * $ mkdir -p build/debug
  * $ cd build/debug
  * $ cmake -DCMAKE_BUILD_TYPE=Debug ../../
- * $ ccmake .          # adjust paths to your system!
+ * $ ccmake .          # adjust CUDA SDK paths to your system!
  * $ make -j
  * $ cd src
  * $ ctest             # run tests to see if it went well
@@ -123,7 +124,7 @@
  * $ mkdir -p build/release
  * $ cd build/release
  * $ cmake -DCMAKE_BUILD_TYPE=Release ../../
- * $ ccmake .          # adjust paths to your system!
+ * $ ccmake .          # adjust CUDA SDK paths to your system!
  * $ make -j
  * $ cd src
  * $ ctest             # run tests to see if it went well
