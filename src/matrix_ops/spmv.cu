@@ -33,7 +33,8 @@
 
 #include <iostream>
 #include <boost/any.hpp>
-#include <dia_matrix.hpp>
+#include <basics/dia_matrix.hpp>
+#include <basics/toeplitz_matrix.hpp>
 #include "matrix_ops.hpp"
 #include <texture.h>
 #include <boost/preprocessor/arithmetic/inc.hpp>
@@ -84,7 +85,8 @@ namespace cuv{
 		}
 
 // this file is generated using a perl-script from spmv_kernel.cuh
-#include "spmv_kernel_inst.cuh"
+#include "spmv_dia_kernel_inst.cuh"
+#include "spmv_toeplitz_kernel_inst.cuh"
 
 		template <typename value_type, typename index_type>
 			void spmv_dia_device(const dia_matrix<value_type,dev_memory_space,index_type>& A, 
@@ -95,7 +97,21 @@ namespace cuv{
 					const value_type& factC)
 			{
 				const unsigned int toff = bind_x(v.ptr(), v.size());
-				spmm_device_dispatch(A,v,dst,transA,factAv,factC,toff);
+				spmm_device_dia_dispatch(A,v,dst,transA,factAv,factC,toff);
+				cuvSafeCall(cudaThreadSynchronize());
+				unbind_x(v.ptr());
+			}
+
+		template <typename value_type, typename index_type>
+			void spmv_toeplitz_device(const toeplitz_matrix<value_type,dev_memory_space,index_type>& A, 
+					const vector<value_type,dev_memory_space>& v, 
+					vector<value_type,dev_memory_space>& dst, 
+					char transA,
+					const value_type& factAv,
+					const value_type& factC)
+			{
+				const unsigned int toff = bind_x(v.ptr(), v.size());
+				spmm_device_toeplitz_dispatch(A,v,dst,transA,factAv,factC,toff);
 				cuvSafeCall(cudaThreadSynchronize());
 				unbind_x(v.ptr());
 			}
@@ -126,6 +142,16 @@ namespace cuv{
 
 		/*        unbind_x(v.ptr());*/
 		/*    }*/
+		template<class value_type, class index_type>
+			void spmv(vector<value_type,dev_memory_space,index_type>& dst, toeplitz_matrix<value_type,dev_memory_space,index_type>& A, vector<value_type,dev_memory_space,index_type>& v, char transA, const float& factAv, const float& factC){
+				// TODO: find a good assert
+				/*if(transA=='t'){*/
+					/*cuvAssert(A.w() == dst.size());*/
+				/*}else{*/
+					/*cuvAssert(A.h() == dst.size());*/
+				/*}*/
+				spmv_toeplitz_device(A,v,dst,transA,factAv,factC);
+			}
 		template<class value_type, class index_type>
 			void spmv(vector<value_type,dev_memory_space,index_type>& dst, dia_matrix<value_type,dev_memory_space,index_type>& A, vector<value_type,dev_memory_space,index_type>& v, char transA, const float& factAv, const float& factC){
 				// TODO: find a good assert
@@ -197,11 +223,81 @@ namespace cuv{
 					}
 				}
 			}
+
+		template<class value_type, class index_type>
+			void spmv(vector<value_type,host_memory_space,index_type>& dst, toeplitz_matrix<value_type,host_memory_space,index_type>& A, vector<value_type,host_memory_space,index_type>& v, char transA, const float& factAv, const float& factC){
+				const vector<int,host_memory_space>& offsets = A.get_offsets();
+				const int num_diags             = A.num_dia();
+				const int A_h                   = A.h();
+				const int A_w                   = A.w();
+				index_type max_dst = ((transA=='t') ? A_w : A_h);
+				if(factC==0.f)
+					for(int i=0;i<max_dst;i++) dst.set(i, 0);
+				else
+					for(int i=0;i<max_dst;i++) dst.set(i, dst[i] * factC);
+				if(transA == 't'){
+					cuvAssert(A_h == v.size());
+					cuvAssert(A_w == dst.size());
+					for(index_type i = 0; i < num_diags; i++){
+						const int k = offsets[i];  //diagonal offset
+
+						const index_type i_start =  1 * std::max((int)0, k);
+						const index_type j_start =  1 * std::max((int)0,-k); // the matrix is now _wider_ than high --> stretch columns!
+
+						//number of elements to process
+						const index_type N = std::min((A_h - j_start), A_w - i_start);
+
+						const value_type * d_ = A.vec().ptr() + i;
+						const value_type * x_ = v.ptr() + j_start;
+						value_type * y_ = dst.ptr() + i_start;
+
+						for(index_type n = 0; n < N; n++,y_++,x_++){
+							*y_ += factAv * *d_ * *x_;
+						}
+					}
+				}else{
+					cuvAssert(A_w == v.size());
+					cuvAssert(A_h == dst.size());
+					for(index_type i = 0; i < num_diags; i++){
+						const int k = offsets[i];  //diagonal offset
+
+						const index_type i_start =  1*std::max((int)0,-k);
+						const index_type j_start =  1*std::max((int)0, k);
+
+						//number of elements to process
+						const index_type N = std::min(A_h - i_start, (A_w - j_start));
+
+						const value_type * d_ = A.vec().ptr() + i;
+						const value_type * x_ = v.ptr() + j_start;
+						value_type * y_ = dst.ptr() + i_start;
+
+						for(index_type n = 0; n < N; n++){
+							*y_++ += factAv * *d_ * x_[n];
+						}
+					}
+				}
+			}
 	}
 
 	template<>
 		void prod(dense_matrix<float,column_major,host_memory_space>& dst,
 				  dia_matrix<float,host_memory_space>&                  A,
+				  dense_matrix<float,column_major,host_memory_space>&   B,
+				  char transA,
+				  char transB,
+				  const float& factAB,
+				  const float& factC){
+			cuvAssert(transB == 'n');
+			cuvAssert(dst.w() == B.w());
+			for(int i=0;i<dst.w();i++){
+				vector<float,host_memory_space> dst_v(dst.h(), dst.vec().ptr()+i*dst.h(), true);
+				vector<float,host_memory_space> src_v(B.h(),   B.vec().ptr()+i*B.h(), true);
+				spmv(dst_v,A,src_v,transA,factAB,factC);
+			}
+		}
+	template<>
+		void prod(dense_matrix<float,column_major,host_memory_space>& dst,
+				  toeplitz_matrix<float,host_memory_space>&             A,
 				  dense_matrix<float,column_major,host_memory_space>&   B,
 				  char transA,
 				  char transB,
@@ -240,10 +336,37 @@ namespace cuv{
 				spmv(dst_v,A,src_v,transA,factAB,factC);
 			}
 		}
+	template<>
+		void prod(dense_matrix<float,column_major,dev_memory_space>& dst,
+				  toeplitz_matrix<float,dev_memory_space>&             A,
+				  dense_matrix<float,column_major,dev_memory_space>&   B,
+				  char transA,
+				  char transB,
+				  const float& factAB,
+				  const float& factC){
+			cuvAssert(transB == 'n');
+			cuvAssert(dst.w() == B.w());
+			cuvAssert(dst.vec_ptr());
+			cuvAssert(A.vec_ptr());
+			cuvAssert(B.vec_ptr());
+			if(transA=='t'){
+				cuvAssert(A.w() == dst.h());
+			}else{
+				cuvAssert(A.h() == dst.h());
+			}
+			const int num_at_same_time = min(MAX_NUM_IMGS_AT_ONCE, B.w());
+			for(int i=0; i<dst.w(); i += num_at_same_time){
+				vector<float,dev_memory_space> dst_v(dst.h() * min(dst.w()-i,num_at_same_time), dst.vec().ptr()+i*dst.h(), true);
+				vector<float,dev_memory_space> src_v(B.h()   * min(B.w()-i,  num_at_same_time), B.vec().ptr()+i*B.h(), true);
+				spmv(dst_v,A,src_v,transA,factAB,factC);
+			}
+		}
 	template<class __matrix_type, class __vector_type>
 		void spmv(__vector_type& dst, __matrix_type& A, __vector_type& v, char transA, const float& factAv, const float& factC){
 			spmv_impl::spmv(dst,A,v,transA,factAv,factC);
 		}
 	template void spmv<dia_matrix<float,host_memory_space>, vector<float,host_memory_space> >(vector<float,host_memory_space>&dst, dia_matrix<float,host_memory_space>& A, vector<float,host_memory_space>& v, char, const float&, const float&);
 	template void spmv<dia_matrix<float,dev_memory_space>, vector<float,dev_memory_space> >(vector<float,dev_memory_space>&dst, dia_matrix<float,dev_memory_space>& A, vector<float,dev_memory_space>& v, char, const float&, const float&);
+	template void spmv<toeplitz_matrix<float,host_memory_space>, vector<float,host_memory_space> >(vector<float,host_memory_space>&dst, toeplitz_matrix<float,host_memory_space>& A, vector<float,host_memory_space>& v, char, const float&, const float&);
+	template void spmv<toeplitz_matrix<float,dev_memory_space>, vector<float,dev_memory_space> >(vector<float,dev_memory_space>&dst, toeplitz_matrix<float,dev_memory_space>& A, vector<float,dev_memory_space>& v, char, const float&, const float&);
 }

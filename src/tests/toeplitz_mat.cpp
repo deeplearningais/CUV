@@ -35,13 +35,12 @@
 #include <iostream>
 #include <fstream>
 
-#include <cuv_test.hpp>
-#include <cuv_general.hpp>
-#include <vector_ops.hpp>
-#include <dia_matrix.hpp>
-#include <matrix_ops/diagonals.hpp>
-#include <convert.hpp>
-#include <sparse_matrix_io.hpp>
+#include <tools/cuv_test.hpp>
+#include <tools/cuv_general.hpp>
+#include <vector_ops/vector_ops.hpp>
+#include <basics/toeplitz_matrix.hpp>
+#include <convert/convert.hpp>
+#include <basics/sparse_matrix_io.hpp>
 
 using namespace std;
 using namespace cuv;
@@ -49,13 +48,13 @@ using namespace cuv;
 static const int n=32;
 static const int m=16;
 static const int d=3;
-static const int rf=1;
+static const int rf=2;
 
 
 struct Fix{
-	dia_matrix<float,host_memory_space> w;
+	toeplitz_matrix<float,host_memory_space> w;
 	Fix()
-	:  w(n,m,d,n,rf) 
+	:  w(n,m,d) 
 	{
 		std::vector<int> off;
 		off.push_back(0);
@@ -71,30 +70,12 @@ struct Fix{
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
-BOOST_AUTO_TEST_CASE( spmv_saveload )
-{
-	if(1){
-		// save...
-		std::ofstream ofs("test_dia_mat.save");
-		boost::archive::binary_oarchive oa(ofs);
-		oa << w;
-	}
-	dia_matrix<float,host_memory_space> w2;
-	if(1){
-		// load...
-		std::ifstream ifs("test_dia_mat.save");
-		boost::archive::binary_iarchive ia(ifs);
-		ia >> w2;
-	}
-	MAT_CMP(w,w2,0.01);
-	
-}
-
 BOOST_AUTO_TEST_CASE( spmv_uninit )
 {
-	dia_matrix<float,dev_memory_space> wdev(32,16,3,16,1);
+	toeplitz_matrix<float,dev_memory_space> wdev(32,16,3);
 	wdev.dealloc();
 	convert(wdev,w);
+	MAT_CMP( wdev, w , 0.01);
 }
 
 
@@ -105,13 +86,12 @@ BOOST_AUTO_TEST_CASE( spmv_dia2dense )
 	fill(w2.vec(),-1);
 	convert(w2,w);
 	MAT_CMP(w,w2,0.1);
-	//cout << w <<w2;
 }
 
 BOOST_AUTO_TEST_CASE( spmv_host2dev )
 {
 	// host->dev
-	dia_matrix<float,dev_memory_space> w2(n,m,w.num_dia(),w.stride(),rf);
+	toeplitz_matrix<float,dev_memory_space> w2(n,m,w.num_dia());
 	convert(w2,w);
 	MAT_CMP(w,w2,0.1);
 	fill(w.vec(),0);
@@ -119,15 +99,6 @@ BOOST_AUTO_TEST_CASE( spmv_host2dev )
 	// dev->host
 	convert(w,w2);
 	MAT_CMP(w,w2,0.1);
-}
-
-BOOST_AUTO_TEST_CASE( avg_dia )
-{
-	cuv::vector<float,host_memory_space> avg( w.num_dia() );
-	avg_diagonals( avg, w );
-	for( int i=0;i<avg.size(); i++ ){
-		BOOST_CHECK_EQUAL( avg[ i ], mean( *w.get_dia( w.get_offset( i ) ) ) );
-	}
 }
 
 

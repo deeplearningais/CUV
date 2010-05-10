@@ -6,6 +6,7 @@ use Template;
 my $sfile = shift @ARGV;
 my $ifile = shift @ARGV;
 my $ofile = shift @ARGV;
+my $kernel_name = shift @ARGV;
 
 print "Generating $ofile using $ifile\n";
 
@@ -74,10 +75,12 @@ $tmpl2
 EOT
 $outstr .= $o;
 
-my $kernel = (($ni < 2) ? "spmm_dia_kernel_trans_register" : "spmm_dia_kernel_trans_shared");
+my $kernel = (($ni < 0) ? "spmm_${kernel_name}_kernel_trans_register" : "spmm_${kernel_name}_kernel_trans_shared");
 $kernel .= "_" . join("_",($spmm_block_size, $ni, $rf));
-my $ifc = "\t\telse if(nimg == $ni && A.row_fact()==$rf){
-               $kernel<value_type, index_type, true,true,true> <<<grid, $spmm_block_size>>> (A.h(), A.w(),  A.num_dia(),  A.stride(), A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC,toff);
+my $has_stride = $kernel_name eq "dia";
+my $stride_param = ( $has_stride )?"A.stride(),":"0,";
+my $ifc = "\t\telse if(nimg == $ni){
+               $kernel<value_type, index_type, true,true,true> <<<grid, $spmm_block_size>>> (A.h(), A.w(),  A.num_dia(),  $stride_param A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC,toff);
 		   }";
 push @ifclausesTrans, $ifc;
 $ifc =~ s/_trans//g;
@@ -90,7 +93,7 @@ push @ifclauses, $ifc;
 
 $outstr .=<<"EOT";
 template<class value_type, class index_type>
-void spmm_device_dispatch(const dia_matrix<value_type,dev_memory_space,index_type>& A, 
+void spmm_device_${kernel_name}_dispatch(const ${kernel_name}_matrix<value_type,dev_memory_space,index_type>& A, 
 					const vector<value_type,dev_memory_space>& v, 
 					vector<value_type,dev_memory_space>& dst, 
 					char transA,

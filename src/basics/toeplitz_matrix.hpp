@@ -32,14 +32,14 @@
 
 
 /** 
- * @file dia_matrix.hpp
+ * @file toeplitz_matrix.hpp
  * @brief base class for sparse matrices in DIA format
  * @ingroup basics
  * @author Hannes Schulz
- * @date 2010-03-21
+ * @date 2010-05-10
  */
-#ifndef __SPARSE_MATRIX_HPP__
-#define __SPARSE_MATRIX_HPP__
+#ifndef __TOEPLITZ_MATRIX_HPP__
+#define __TOEPLITZ_MATRIX_HPP__
 #include <vector>
 #include <map>
 #include <memory>
@@ -51,10 +51,10 @@
 
 namespace cuv{
 	/** 
-	 * @brief Class for diagonal matrices
+	 * @brief Class for diagonal toeplitz-matrices
 	 */
 	template<class __value_type, class __memory_space_type, class __index_type=unsigned int> 
-	class dia_matrix 
+	class toeplitz_matrix 
 	:        public matrix<__value_type, __index_type>{
 	  public:
 		  typedef matrix<__value_type, __index_type> 					   base_type; 			///< Basic matrix type
@@ -63,42 +63,34 @@ namespace cuv{
 		  typedef typename base_type::index_type 						   index_type;			///< Type of indices
 		  typedef vector<value_type,memory_space_type,index_type>  		   vec_type; 			///< Basic vector type used
 		  typedef vector<int,memory_space_type,index_type> 				   intvec_type; 		///< Type of offsets for diagonals
-		  typedef dia_matrix<value_type,memory_space_type,index_type> 	   my_type;				///< Type of this matix
+		  typedef toeplitz_matrix<value_type,memory_space_type,index_type> 	   my_type;				///< Type of this matix
 		public:
 		  int m_num_dia;                        ///< number of diagonals stored
-		  int m_stride;                         ///< how long the stored diagonals are
 		  vec_type* m_vec;                      ///< stores the actual data 
 		  intvec_type m_offsets;                ///< stores the offsets of the diagonals
 		  std::map<int,index_type> m_dia2off;   ///< maps a diagonal to an offset
-		  int m_row_fact;                       ///< factor by which to multiply a row index (allows matrices with "steep" diagonals)
 		public:
-		  	~dia_matrix() { ///< Destructor. Deallocates Matrix.
+		  	~toeplitz_matrix() { ///< Destructor. Deallocates Matrix.
 				dealloc();
 			}
 
-			dia_matrix() ///< Empty constructor. Returns empty diagonal matrix.
+			toeplitz_matrix() ///< Empty constructor. Returns empty diagonal matrix.
 				: base_type(0,0),
 				 m_vec(0),
-				 m_num_dia(0),
-				 m_stride(0),
-				 m_row_fact(0){}
+				 m_num_dia(0)
+				 {}
 			/** 
-			 * @brief Creates diagonal matrix of given size, with given number of diagonals and stride.
+			 * @brief Creates diagonal matrix of given size, with given number of diagonals.
 			 * 
 			 * @param h Height of matrix 
 			 * @param w Width of matrix
 			 * @param num_dia Number of diagonals in matrix
-			 * @param stride Stride of matrix
-			 * @param row_fact Steepness of diagonals. Only 1 is supported at the moment.
 			 */
-			dia_matrix(const index_type& h, const index_type& w, const int& num_dia, const int& stride, int row_fact=1)
+			toeplitz_matrix(const index_type& h, const index_type& w, const int& num_dia)
 				: base_type(h,w)
 				, m_num_dia(num_dia)
-				, m_stride(stride)
 				, m_offsets(num_dia)
 			{
-				m_row_fact = row_fact;
-				cuvAssert(m_row_fact>0);
 				alloc();
 
 			}
@@ -111,16 +103,13 @@ namespace cuv{
 			}
 			void alloc() ///< Allocate matrix entries: Create vector to store entries.
 			{
-				cuvAssert(m_stride >= this->h() || m_stride >= this->w());
-				m_vec = new vec_type(m_stride * m_num_dia);
+				m_vec = new vec_type(m_num_dia);
 			}
 			inline const vec_type& vec()const{ return *m_vec; } ///< Return pointer to vector storing entries
 			inline       vec_type& vec()     { return *m_vec; } ///< Return pointer to vector storing entries
 			inline const vec_type* vec_ptr()const{ return m_vec; } ///< Return reference to vector storing entries
 			inline       vec_type* vec_ptr()     { return m_vec; } ///< Return reference to vector storing entries
 			inline int num_dia()const{ return m_num_dia; } ///< Return number of diagonals
-			inline int stride()const { return m_stride;  }///< Return stride of matrix
-			inline int row_fact()const{ return m_row_fact; } ///< Return steepness of diagonals
 
 			//*****************************
 			// set/get offsets of diagonals
@@ -175,23 +164,6 @@ namespace cuv{
 				m_offsets.set(idx,val);
 				m_dia2off[val] = idx;
 			}
-			/** Return vector containing specified diagonal.
-			 */
-			inline const vec_type* get_dia(const int& k)const{ 
-				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(k);
-				int off = it->second;
-				const index_type i_start = std::max((int)0,-k);
-				const index_type j_start = std::max((int)0, k);
-				const index_type N = std::min(base_type::m_height - i_start, (base_type::m_width - j_start));
-				return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
-			} 
-			inline vec_type* get_dia(const int& k){ 
-				int off   = m_dia2off[k];
-				const index_type i_start = std::max((int)0,-k);
-				const index_type j_start = std::max((int)0, k);
-				const index_type N = std::min(base_type::m_height - i_start, (base_type::m_width - j_start));
-				return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
-			} 
 			inline const intvec_type& get_offsets()const{return m_offsets;} ///< Return the vector of offsets
 			inline       intvec_type& get_offsets()     {return m_offsets;} ///< return the vector of offsets
 			inline int get_offset(const index_type& idx)const               ///< Return offset of specified diagonal
@@ -204,11 +176,11 @@ namespace cuv{
 			// ******************************
 			value_type operator()(const index_type& i, const index_type& j)const ///< Return matrix entry (i,j)
 			{
-				int off = (int)j - (int)i/m_row_fact;
+				int off = (int)j - (int)i;
 				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
 				if( it == m_dia2off.end() )
 					return (value_type) 0;
-				return (*m_vec)[ it->second * m_stride +i  ];
+				return (*m_vec)[ it->second];
 			}
 			/** 
 			 * @brief Assignment operator. Assigns vector belonging to source to destination and sets source vector to NULL
@@ -225,8 +197,6 @@ namespace cuv{
 				  (base_type&) (*this)  = (base_type&) o; 
 				  m_vec=o.m_vec;
 				  m_num_dia = o.m_num_dia;
-				  m_stride = o.m_stride;
-				  m_row_fact = o.m_row_fact;
 				  m_offsets = o.m_offsets;
 				  m_dia2off = o.m_dia2off;
 
@@ -246,7 +216,7 @@ namespace std{
 	 * @param w2 Matrix to output
 	 */
 	ostream& 
-	operator<<(ostream& o, const cuv::dia_matrix<V,T,I>& w2){
+	operator<<(ostream& o, const cuv::toeplitz_matrix<V,T,I>& w2){
 		cout << "Dia-Matrix: "<<endl;
 		for(I i=0;i<w2.h();i++){
 			for(I j=0;j<w2.w();j++){
@@ -259,5 +229,5 @@ namespace std{
 	}
 }
 
-#endif /* __SPARSE_MATRIX_HPP__ */
+#endif /* __TOEPLITZ_MATRIX_HPP__ */
 

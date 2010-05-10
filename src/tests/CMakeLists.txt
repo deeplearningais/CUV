@@ -25,11 +25,20 @@ TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_vector_o
 ADD_EXECUTABLE( test_dia_mat dia_mat.cpp )
 TARGET_LINK_LIBRARIES( test_dia_mat cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
 
+ADD_EXECUTABLE( test_toeplitz_mat toeplitz_mat.cpp )
+TARGET_LINK_LIBRARIES( test_toeplitz_mat cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
 ADD_EXECUTABLE( test_spmv spmv.cpp )
 TARGET_LINK_LIBRARIES( test_spmv         cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
 
+ADD_EXECUTABLE( test_spmv_toeplitz spmv_toeplitz.cpp )
+TARGET_LINK_LIBRARIES( test_spmv_toeplitz         cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
 ADD_EXECUTABLE( test_spmv_speed spmv_speed.cpp )
 TARGET_LINK_LIBRARIES( test_spmv_speed   cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+
+ADD_EXECUTABLE( test_spmv_toeplitz_speed spmv_toeplitz_speed.cpp )
+TARGET_LINK_LIBRARIES( test_spmv_toeplitz_speed   cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
 
 ADD_EXECUTABLE( test_densedense_to_dia densedense_to_dia.cpp )
 TARGET_LINK_LIBRARIES( test_densedense_to_dia     cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
@@ -60,8 +69,10 @@ ADD_TEST( convert "${CMAKE_BINARY_DIR}/src/tests/test_convert" )
 ADD_TEST( vec_op "${CMAKE_BINARY_DIR}/src/tests/test_vec_op" )
 ADD_TEST( random "${CMAKE_BINARY_DIR}/src/tests/test_random" )
 ADD_TEST( spmv "${CMAKE_BINARY_DIR}/src/tests/test_spmv" )
+ADD_TEST( spmv_toeplitz "${CMAKE_BINARY_DIR}/src/tests/test_spmv_toeplitz" )
 ADD_TEST( densedense_to_dia "${CMAKE_BINARY_DIR}/src/tests/test_densedense_to_dia" )
 ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/src/tests/test_dia_mat" )
+ADD_TEST( toeplitz_mat "${CMAKE_BINARY_DIR}/src/tests/test_toeplitz_mat" )
 ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/src/tests/test_conv_op" )
 ADD_TEST( memory  "${CMAKE_BINARY_DIR}/src/tests/test_memory" )
 
@@ -69,6 +80,7 @@ ADD_TEST( memory  "${CMAKE_BINARY_DIR}/src/tests/test_memory" )
 #ADD_TEST( vec_op_speed "${CMAKE_BINARY_DIR}/tests/test_vec_op_speed" )
 #ADD_TEST( mat_op_speed "${CMAKE_BINARY_DIR}/tests/test_mat_op_speed" )
 #ADD_TEST( spmv_speed "${CMAKE_BINARY_DIR}/tests/test_spmv_speed" )
+#ADD_TEST( spmv_toeplitz_speed "${CMAKE_BINARY_DIR}/tests/test_spmv_toeplitz_speed" )
 #ADD_TEST( densedense_to_dia_speed "${CMAKE_BINARY_DIR}/tests/test_densedense_to_dia_speed" )
 #ADD_TEST( conv_ops_speed "${CMAKE_BINARY_DIR}/tests/test_conv_op_speed" )
 #ADD_TEST( random_speed "${CMAKE_BINARY_DIR}/tests/test_random_speed" )

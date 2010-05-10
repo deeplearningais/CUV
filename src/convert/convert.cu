@@ -31,7 +31,8 @@
 
 
 
-#include <dia_matrix.hpp>
+#include <basics/dia_matrix.hpp>
+#include <basics/toeplitz_matrix.hpp>
 #include <vector_ops/vector_ops.hpp>
 #include <convert.hpp>
 
@@ -313,8 +314,76 @@ namespace cuv{
 					cuv::convert(dst.vec(), src.vec());
 					dst.post_update_offsets();
 				}
+			// Toeplitz matrices
+			/*
+			 * Host Toeplitz -> Host Dense
+			 */
+			template<class __value_type, class __mem_layout_type, class __index_type>
+				static void
+				convert(      dense_matrix<__value_type, __mem_layout_type, host_memory_space, __index_type>& dst, 
+						const toeplitz_matrix<__value_type, host_memory_space,  __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()
+							){
+						dense_matrix<__value_type, __mem_layout_type, host_memory_space, __index_type> d(src.h(),src.w());
+						dst = d;
+					}
+					fill(dst.vec(),0);
+					const vector<int, host_memory_space>& off = src.get_offsets();
+					using namespace std;
+					for(unsigned int oi=0; oi < off.size(); oi++){
+						int o = off[oi];
+						__index_type j = max((int)0, o);
+						__index_type i = max((int)0,-o);
+						for(;i<src.h() && j<src.w(); j++,i++){
+							dst.set(i,j, src(i,j));
+						}
+					}
+				}
 
+			/*
+			 * Host Toeplitz -> Dev Toeplitz
+			 */
+			template<class __value_type, class __index_type>
+				static void
+				convert(      toeplitz_matrix <__value_type, dev_memory_space, __index_type>& dst, 
+						const toeplitz_matrix<__value_type, host_memory_space, __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()
+							|| !dst.vec_ptr()
+							){
+						dst.dealloc();
+						dst = toeplitz_matrix<__value_type,dev_memory_space,__index_type>(src.h(),src.w(),src.num_dia());
+					}
+					cuvAssert(dst.vec_ptr())
+					cuvAssert(src.vec_ptr())
+					cuvAssert(dst.get_offsets().ptr());
+					cuvAssert(dst.vec().ptr());
+					cuv::convert(dst.get_offsets(), src.get_offsets());
+					cuv::convert(dst.vec(), src.vec());
+					dst.post_update_offsets();
+				}
 
+			/*
+			 * Dev Toeplitz -> Host Toeplitz
+			 */
+			template<class __value_type, class __index_type>
+				static void
+				convert(      toeplitz_matrix <__value_type,host_memory_space, __index_type>& dst, 
+						const toeplitz_matrix<__value_type,dev_memory_space, __index_type>& src){
+					if(        dst.h() != src.h()
+							|| dst.w() != src.w()
+							|| !dst.vec_ptr()
+							){
+						dst.dealloc();
+						dst = toeplitz_matrix<__value_type,host_memory_space, __index_type>(src.h(),src.w(),src.num_dia());
+					}
+					cuvAssert(dst.get_offsets().ptr());
+					cuvAssert(dst.vec().ptr());
+					cuv::convert(dst.get_offsets(), src.get_offsets());
+					cuv::convert(dst.vec(), src.vec());
+					dst.post_update_offsets();
+				}
 		};
 	template<class Dst, class Src>
 		void convert(Dst& dst, const Src& src)
@@ -374,6 +443,12 @@ CONV_VEC(signed char);
 
 #define DIA_DENSE_CONV(X,Y,Z) \
 	template <>                           \
+		void convert(dense_matrix<X,Y,host_memory_space,Z>& dst, const toeplitz_matrix<X,host_memory_space,Z>& src)     \
+		{                                                                                \
+			typedef dense_matrix<X,Y,host_memory_space,Z> Dst;                                        \
+			convert_impl::convert<typename Dst::value_type, typename Dst::memory_layout, typename Dst::index_type>(dst,src);  \
+		};                                \
+	template <>                           \
 		void convert(dense_matrix<X,Y,host_memory_space,Z>& dst, const dia_matrix<X,host_memory_space,Z>& src)     \
 		{                                                                                \
 			typedef dense_matrix<X,Y,host_memory_space,Z> Dst;                                        \
@@ -390,6 +465,18 @@ CONV_VEC(signed char);
 		void convert(dia_matrix<X,host_memory_space,Z>& dst, const dia_matrix<X,dev_memory_space,Z>& src)     \
 		{                                                                                \
 			typedef dia_matrix<X,host_memory_space,Z> Dst;                                        \
+			convert_impl::convert<typename Dst::value_type, typename Dst::index_type>(dst,src);  \
+		};                                \
+	template <>                           \
+		void convert(toeplitz_matrix<X,dev_memory_space,Z>& dst, const toeplitz_matrix<X,host_memory_space,Z>& src)     \
+		{                                                                                \
+			typedef toeplitz_matrix<X,dev_memory_space,Z> Dst;                                        \
+			convert_impl::convert<typename Dst::value_type, typename Dst::index_type>(dst,src);  \
+		};                                \
+	template <>                           \
+		void convert(toeplitz_matrix<X,host_memory_space,Z>& dst, const toeplitz_matrix<X,dev_memory_space,Z>& src)     \
+		{                                                                                \
+			typedef toeplitz_matrix<X,host_memory_space,Z> Dst;                                        \
 			convert_impl::convert<typename Dst::value_type, typename Dst::index_type>(dst,src);  \
 		}; 
         
