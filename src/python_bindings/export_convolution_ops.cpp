@@ -122,7 +122,7 @@ void export_padding_ops(){
 														);
 }
 
-template <class M, class V>
+template <class M, class N, class V>
 void export_row_ncopy(){
 	def("row_ncopy",(void (*)(M&,V&, unsigned int))row_ncopy<typename M::value_type, typename M::memory_layout,typename M::memory_space_type, typename M::index_type>, (
 															arg("dst"),
@@ -136,10 +136,17 @@ void export_row_ncopy(){
 	def("reorder",(void (*)(M&, int))reorder<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
 															arg("matrix"),
 															arg("block_length")));
-	def("add_maps_h",(void (*)(M&,M&, unsigned int))filter_inverse<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+	def("add_maps_h",(void (*)(M&,M&, unsigned int))add_maps_h<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
 															arg("dst"),
 															arg("map_matrix"),
 															arg("map_size")));
+	def("calc_error_to_blob",(void (*)(M&,M&, N&, unsigned int, unsigned int, unsigned int))calc_error_to_blob<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+																arg("dst"),
+																arg("img"),
+																arg("blob_mat"),
+																arg("image_w"),
+																arg("image_h"),
+																arg("blob_size")));
 }
 
 void export_convolution_ops(){
@@ -150,7 +157,7 @@ void export_convolution_ops(){
 	export_padding_ops< dense_matrix<float,row_major, host_memory_space> >();
 	export_padding_ops< dense_matrix<float,row_major, host_memory_space>  >();
 	export_padding_ops< dense_matrix<float,row_major, dev_memory_space>  >();
-	export_row_ncopy< dense_matrix<float,row_major, dev_memory_space>, vector<float,dev_memory_space>  >();
+	export_row_ncopy< dense_matrix<float,row_major, dev_memory_space>, dense_matrix<int,row_major, dev_memory_space>, vector<float,dev_memory_space>  >();
 }
 
 
