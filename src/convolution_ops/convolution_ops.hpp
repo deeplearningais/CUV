@@ -391,7 +391,22 @@ void add_maps_h(	dense_matrix<V,M,T,I>& dst,
 					dense_matrix<V,M,T,I>& mat,
 					unsigned int image_size);
 
-}
 
+
+/**
+ * @brief calculates error matrices
+ * @param dst holds the target error matrices each in a row
+ * @param img is a matrix with n maps to be compared with a blob
+ * @param blob_mat a matrix holding the blob center information for each row in a row
+ *
+ */
+template<class V, class M, class T, class I, class V2>
+void calc_error_to_blob(	dense_matrix<V,M,T,I>& dst,
+							dense_matrix<V,M,T,I>& img,
+							dense_matrix<V2,M,T,I>& blob_mat,
+							unsigned int image_w,
+							unsigned int image_h,
+							unsigned int blob_size);
+}
 /** @} */ //end group convolution_ops
 #endif /* __CONVOLUTION_OPS_HPP__ */

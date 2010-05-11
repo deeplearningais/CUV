@@ -1134,5 +1134,46 @@ void add_maps_h(	dense_matrix<float,row_major,host_memory_space>& dst,
 		}
 }
 
+__global__ void calc_error_to_blob_kernel(float* img,
+										  float* src,
+										  int* blob,
+										  const int img_w,
+										  const int img_h,
+										  const int blob_width) {
+
+	int idx = threadIdx.x +  blockDim.x * blockIdx.x;
+	int row = blockIdx.y;
+
+	int x = idx % img_w;
+	int y = idx / img_w;
+	int center_x = *(blob+row*2);
+	int center_y = *(blob+row*2+1);
+	float a = (center_x - x)/ blob_width;
+	float b = (center_y - y)/ blob_width;
+	// destination is calculated by the row the pixel is in (row*imagesize) and the index in the picture (idx)
+	*(img+idx+row*(img_w*img_h)) = expf(-(a*a+b*b)/2) - *(src+idx+row*(img_w*img_h));
+}
+
+
+
+template<>
+void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
+							dense_matrix<float,row_major,dev_memory_space>& img,
+							dense_matrix<int,row_major,dev_memory_space>& blob_mat,
+							unsigned int image_w,
+							unsigned int image_h,
+							unsigned int blob_size){
+	cuvAssert(dst.h() == img.h());
+	cuvAssert(dst.w() == img.w());
+
+	int numThreads = 512;
+	int numBlocksX = ceil((float)img.w()/numThreads);
+	int numBlocksY = dst.h();
+
+	dim3 grid(numBlocksX, numBlocksY);
+	dim3 dimBlock(numThreads,1);
+
+	calc_error_to_blob_kernel<<<grid,dimBlock>>>(dst.ptr(), img.ptr(), blob_mat.ptr(), image_w, image_h, blob_size);
+};
 
 }
