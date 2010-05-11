@@ -28,9 +28,6 @@
 //*LE*
 
 
-
-
-
 #include <stdexcept>
 #include <cublas.h>
 #include <cblas.h>
@@ -41,6 +38,11 @@
 #include <float.h>
 #include "matrix_ops.hpp"
 
+#ifdef __CDT_PARSER__
+#define __global__
+#define __shared__
+#endif
+
 #define CVT_TRANSPOSE(c) \
 	(CBLAS_TRANSPOSE)(((c) == 'N' || (c) == 'n') ? CblasNoTrans : \
 	 ((c) == 'T' || (c) == 't') ? CblasTrans : \
@@ -48,122 +50,181 @@
 	 -1)
 
 template<int BLOCK_SIZE, class T, int OP>
-__global__ 
-void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows, T param, T factNew, T factOld) {
-	__shared__ T shared[BLOCK_SIZE*2][BLOCK_SIZE/2];
-	int tx = threadIdx.x, bx=blockIdx.x;
-	int ty = threadIdx.y;//, by=blockIdx.y;
-	if(bx*blockDim.x+tx>nRows) return;
-	int off = blockDim.y;
-	
-	if     (OP==cuv::RF_MIN) 
-		shared[ty][tx] =  INT_MAX;
-	else if(OP==cuv::RF_MAX) 
-		shared[ty][tx] = -INT_MAX;
-	else 
-		shared[ty][tx] = 0.f;
-	for(int my=ty; my<nCols; my += off){
-		T f = matrix[my*nRows + bx*blockDim.x + tx];
+__global__
+void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
+		T param, T factNew, T factOld) {
 
-		if(OP==cuv::RF_ADD)          shared[ty][tx] += f;
-		if(OP==cuv::RF_ADD_SQUARED)  shared[ty][tx] += f*f;
-		if(OP==cuv::RF_MIN)          shared[ty][tx]  = min(shared[ty][tx],f);
-		if(OP==cuv::RF_MAX)          shared[ty][tx]  = max(shared[ty][tx],f);
+	__shared__ T shared[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
+	T sum;
+	// tx indicates the y-dimension in the matrix; ty indicates the x-dimension in the matrix
+
+	/* (mg)the idea is to place the blocks under each other starting at the upper left in the matrix. their threads
+	 * add up multiples of their x position (indicated by ty - see above) in shared memory. then we have a 2-dim
+	 * array in shared memory that corresponds in size to the block.
+	 *
+	 * in each block we now have to add up the elements of each row in the shared memory to get the final value. this is done
+	 * by logarithmically adding up the elements:
+	 * in the first step the second half (in x direction) of the blocks add their values to the first halfs memory locations in
+	 * shared memory - then this is repeated for the first half of the threads. a short example for blockDim.y=8 and blockDim.x=1:
+	 *
+	 * 1st iter(offset=4): a1 a2 a3 a4 | b1 b2 b3 b4
+	 *
+	 * 2nd iter(offset=2): (a1+b1) (a2+b2) | (a3+b3) (a4+b4)
+	 *
+	 * 3rd iter(offset=1): ( (a1+b1) + (a3+b3)  ) | ( (a2+b2) +  (a4+b4) )
+	 *
+	 * 4th iter(offset=0): ( (a1+b1) + (a3+b3)  ) + ( (a2+b2) +  (a4+b4) )
+	 *
+	 * done: what if m.h()/ (BLOCK_SIZE/2) > 65535 -> constraint on grid dimension is violated...
+	 * todo: add in registers
+	 */
+	int tx = threadIdx.x;
+	int bx = blockIdx.x;
+	int ty = threadIdx.y;
+	int by = blockIdx.y;
+	if (bx * blockDim.x + tx > nRows)
+		return;
+	int off = blockDim.y;
+
+	if (OP==cuv::RF_MIN)
+		sum = INT_MAX;
+	else if(OP==cuv::RF_MAX)
+		sum = -INT_MAX;
+	else
+		sum = 0.f;
+//	printf("\n\nBlockDim.x: %d, BlockDim.y: %d\n", blockDim.x, blockDim.y);
+//	printf("Thread: bx: %d, tx: %d, ty: %d\n", bx, tx, ty);
+//	printf("nCols: %d, nRows: %d\n", nCols, nRows);
+	for (int my = ty; my < nCols; my += off) {
+//		if (my <100)
+//			printf("my: %d\t", my);
+		T f = matrix[my * nRows + bx * blockDim.x + by * gridDim.x * blockDim.x + tx];
+
+		if (OP == cuv::RF_ADD)
+			sum += f;
+		if (OP == cuv::RF_ADD_SQUARED)
+			sum += f * f;
+		if (OP == cuv::RF_MIN)
+			sum = min(sum, f);
+		if (OP == cuv::RF_MAX)
+			sum = max(sum, f);
 	}
+
+	shared[ty][tx] = sum;
+
 	__syncthreads();
 
 	int offset = blockDim.y / 2;
-	while(offset > 0) {
-		if( ty < offset){
-			if(OP==cuv::RF_ADD)          shared[ty][tx] += shared[ty+offset][tx];
-			if(OP==cuv::RF_ADD_SQUARED)  shared[ty][tx] += shared[ty+offset][tx];
-			if(OP==cuv::RF_MIN)          shared[ty][tx]  = min(shared[ty][tx],shared[ty+offset][tx]);
-			if(OP==cuv::RF_MAX)          shared[ty][tx]  = max(shared[ty][tx],shared[ty+offset][tx]);
+	while (offset > 0) {
+		if (ty < offset) {
+			if (OP == cuv::RF_ADD)
+				shared[ty][tx] += shared[ty + offset][tx];
+			if (OP == cuv::RF_ADD_SQUARED)
+				shared[ty][tx] += shared[ty + offset][tx];
+			if (OP == cuv::RF_MIN)
+				shared[ty][tx] = min(shared[ty][tx], shared[ty + offset][tx]);
+			if (OP == cuv::RF_MAX)
+				shared[ty][tx] = max(shared[ty][tx], shared[ty + offset][tx]);
 		}
 		offset >>= 1;
 		__syncthreads();
 	}
 
-	if (ty == 0){
-		if(OP==cuv::RF_MIN || OP==cuv::RF_MAX)
-			vector[bx * blockDim.x + tx] = shared[0][tx];
+	if (ty == 0) {
+		const int dst_idx = bx * blockDim.x + by * gridDim.y * blockDim.x + tx;
+		if (OP == cuv::RF_MIN || OP == cuv::RF_MAX)
+			vector[dst_idx] = shared[0][tx];
 		else
-			vector[bx * blockDim.x + tx] = vector[bx*blockDim.x+tx]*factOld + shared[0][tx] * factNew; 
+			vector[dst_idx] = vector[dst_idx] * factOld + shared[0][tx] * factNew;
 	}
 	__syncthreads();
 }
 
 template<int BLOCK_SIZE, class T, int OP>
 __global__
-void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows, T param, T factNew, T factOld) {
-    __shared__ T shared[BLOCK_SIZE*BLOCK_SIZE];
-	const int tx = threadIdx.x, bx=blockIdx.x;
-	const int ty = threadIdx.y, by=blockIdx.y;
+void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows,
+		T param, T factNew, T factOld) {
+	__shared__ T shared[BLOCK_SIZE * BLOCK_SIZE];
+	const int tx = threadIdx.x, bx = blockIdx.x;
+	const int ty = threadIdx.y, by = blockIdx.y;
 	unsigned int idx = blockIdx.y * blockDim.y + threadIdx.y;
-	for(; idx<nCols;idx+=blockDim.y*gridDim.y){
+	for (; idx < nCols; idx += blockDim.y * gridDim.y) {
 		int off = blockDim.x;
 
-		if     (OP==cuv::RF_MIN) shared[tx] =  INT_MAX;
-		else if(OP==cuv::RF_MAX) shared[tx] = -INT_MAX;
-		else                     shared[tx] =  0;
-		for(int my=tx; my<nRows; my += off){
-			T f = matrix[by * nRows + bx*blockDim.x + my];
+		if (OP == cuv::RF_MIN)
+			shared[tx] = INT_MAX;
+		else if (OP == cuv::RF_MAX)
+			shared[tx] = -INT_MAX;
+		else
+			shared[tx] = 0;
+		for (int my = tx; my < nRows; my += off) {
+			T f = matrix[by * nRows + bx * blockDim.x + my];
 
-			if(OP==cuv::RF_ADD)          shared[tx] += f;
-			if(OP==cuv::RF_ADD_SQUARED)  shared[tx] += f*f;
-			if(OP==cuv::RF_MAX)          shared[tx] = max(shared[tx],f);
-			if(OP==cuv::RF_MIN)          shared[tx] = min(shared[tx],f);
+			if (OP == cuv::RF_ADD)
+				shared[tx] += f;
+			if (OP == cuv::RF_ADD_SQUARED)
+				shared[tx] += f * f;
+			if (OP == cuv::RF_MAX)
+				shared[tx] = max(shared[tx], f);
+			if (OP == cuv::RF_MIN)
+				shared[tx] = min(shared[tx], f);
 		}
 		__syncthreads();
 
 		int offset = blockDim.x / 2;
-		while(offset > 0) {
-			if( tx < offset){
-				if(OP==cuv::RF_ADD)          shared[tx] += shared[tx+offset];
-				if(OP==cuv::RF_ADD_SQUARED)  shared[tx] += shared[tx+offset];
-				if(OP==cuv::RF_MAX)          shared[tx]  = max(shared[tx],shared[tx+offset]);
-				if(OP==cuv::RF_MIN)          shared[tx]  = min(shared[tx],shared[tx+offset]);
+		while (offset > 0) {
+			if (tx < offset) {
+				if (OP == cuv::RF_ADD)
+					shared[tx] += shared[tx + offset];
+				if (OP == cuv::RF_ADD_SQUARED)
+					shared[tx] += shared[tx + offset];
+				if (OP == cuv::RF_MAX)
+					shared[tx] = max(shared[tx], shared[tx + offset]);
+				if (OP == cuv::RF_MIN)
+					shared[tx] = min(shared[tx], shared[tx + offset]);
 			}
 			offset >>= 1;
 			__syncthreads();
 		}
 
-		if (tx == 0){
-			if(OP==cuv::RF_MIN || OP==cuv::RF_MAX)
-				vector[by * blockDim.y + ty] = shared[0] ;
+		if (tx == 0) {
+			if (OP == cuv::RF_MIN || OP == cuv::RF_MAX)
+				vector[by * blockDim.y + ty] = shared[0];
 			else
-				vector[by * blockDim.y + ty] = vector[by * blockDim.y + ty] * factOld + shared[0] * factNew;
+				vector[by * blockDim.y + ty] = vector[by * blockDim.y + ty]
+						* factOld + shared[0] * factNew;
 		}
 		__syncthreads();
 	}
 }
 
-
 template<int BLOCK_SIZE, class T, class I>
 __global__
 void argmax_row_kernel(const T* matrix, I* vector, int nCols, int nRows) {
-	__shared__ I shIdx[BLOCK_SIZE*BLOCK_SIZE]; // index of the maximum
-	__shared__ T shVal[BLOCK_SIZE*BLOCK_SIZE]; // value
+	__shared__ I shIdx[BLOCK_SIZE * BLOCK_SIZE]; // index of the maximum
+	__shared__
+	T shVal[BLOCK_SIZE * BLOCK_SIZE]; // value
 
-	int tx = threadIdx.x, bx=blockIdx.x;
-	int ty = threadIdx.y, by=blockIdx.y;
-	if(by*blockDim.y + ty>nCols) return;
+	int tx = threadIdx.x, bx = blockIdx.x;
+	int ty = threadIdx.y, by = blockIdx.y;
+	if (by * blockDim.y + ty > nCols)
+		return;
 	int off = blockDim.x;
 
 	shVal[tx] = (T) -FLT_MAX; // dangerous for some data types
 	shIdx[tx] = 0;
 
-	int idx = by * nRows + bx*blockDim.x + tx;
-	if(tx < nRows) {
+	int idx = by * nRows + bx * blockDim.x + tx;
+	if (tx < nRows) {
 		shVal[tx] = matrix[idx];
 		shIdx[tx] = tx;
 	}
 
-	for(int my=tx+off; my<nRows; my += off){
+	for (int my = tx + off; my < nRows; my += off) {
 		idx += off;
 		T f = matrix[idx];
 
-		if(f > shVal[tx]) {
+		if (f > shVal[tx]) {
 			shVal[tx] = f;
 			shIdx[tx] = my;
 		}
@@ -171,11 +232,11 @@ void argmax_row_kernel(const T* matrix, I* vector, int nCols, int nRows) {
 	__syncthreads();
 
 	int offset = blockDim.x / 2;
-	while(offset > 0) {
-		if( tx < offset) {
-			if(shVal[tx] < shVal[tx+offset]) {
-				shVal[tx] = shVal[tx+offset];
-				shIdx[tx] = shIdx[tx+offset];
+	while (offset > 0) {
+		if (tx < offset) {
+			if (shVal[tx] < shVal[tx + offset]) {
+				shVal[tx] = shVal[tx + offset];
+				shIdx[tx] = shIdx[tx + offset];
 			}
 		}
 		offset >>= 1;
@@ -192,27 +253,28 @@ void argmax_row_kernel(const T* matrix, I* vector, int nCols, int nRows) {
 template<int BLOCK_SIZE, class T>
 __global__
 void transpose_kernel(T* dst, T* src, int width, int height) {
-    const int bx = blockIdx.x * blockDim.x;
-    const int by = blockIdx.y * blockDim.y;
-    const int tx = bx + threadIdx.x;
-    const int ty = by + threadIdx.y;
+	const int bx = blockIdx.x * blockDim.x;
+	const int by = blockIdx.y * blockDim.y;
+	const int tx = bx + threadIdx.x;
+	const int ty = by + threadIdx.y;
 
-    __shared__ T shared[BLOCK_SIZE][BLOCK_SIZE + 1];
+	__shared__
+	T shared[BLOCK_SIZE][BLOCK_SIZE + 1];
 
-    if (tx < width && ty < height) {
-        shared[threadIdx.y][threadIdx.x] = src[ty * width + tx];
-    }
-    __syncthreads();
+	if (tx < width && ty < height) {
+		shared[threadIdx.y][threadIdx.x] = src[ty * width + tx];
+	}
+	__syncthreads();
 
-    if (by + threadIdx.x < height && threadIdx.y + bx < width) {
-        dst[(bx + threadIdx.y) * height + by + threadIdx.x] = shared[threadIdx.x][threadIdx.y];
-    }
+	if (by + threadIdx.x < height && threadIdx.y + bx < width) {
+		dst[(bx + threadIdx.y) * height + by + threadIdx.x]
+				= shared[threadIdx.x][threadIdx.y];
+	}
 }
 
-
-namespace cuv{
-	template<class __value_type, class __memory_space_type, class __index_type>
-		dense_matrix<__value_type,column_major,__memory_space_type,__index_type>* blockview(
+namespace cuv {
+template<class __value_type, class __memory_space_type, class __index_type>
+dense_matrix<__value_type , column_major, __memory_space_type, __index_type >*blockview(
 		dense_matrix<__value_type,column_major,__memory_space_type,__index_type>& matrix,
 				__index_type start_rows,
 				__index_type num_rows,
@@ -225,296 +287,308 @@ namespace cuv{
 			return new dense_matrix<__value_type,column_major,__memory_space_type,__index_type>(num_rows,num_cols, matrix.ptr()+matrix.h()*start_cols,true);
 		}
 
-	template<class __value_type, class __memory_space_type, class __index_type>
-		dense_matrix<__value_type,row_major,__memory_space_type,__index_type>* blockview(
-				dense_matrix<__value_type,row_major,__memory_space_type,__index_type>& matrix,
-				__index_type start_rows,
-				__index_type num_rows,
-				__index_type start_cols,
-				__index_type num_cols,
-				row_major
-				) {
-			cuvAssert(start_cols==0);
-			cuvAssert(num_cols==matrix.w())
-			return new dense_matrix<__value_type,row_major,__memory_space_type,__index_type>(num_rows,num_cols, matrix.ptr()+matrix.w()*start_rows,true);
-		}
-  template<class __value_type, class __memory_layout, class __memory_space_type, class __index_type>
-	  dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type>* blockview(
-	  dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type> & matrix,
-			  __index_type start_rows,
-			  __index_type num_rows ,
-			  __index_type start_cols,
-			  __index_type num_cols){
-		  return blockview(matrix,start_rows,num_rows,start_cols,num_cols, __memory_layout());
-	  }
+template<class __value_type, class __memory_space_type, class __index_type>
+dense_matrix<__value_type,row_major,__memory_space_type,__index_type>* blockview(
+		dense_matrix<__value_type,row_major,__memory_space_type,__index_type>& matrix,
+		__index_type start_rows,
+		__index_type num_rows,
+		__index_type start_cols,
+		__index_type num_cols,
+		row_major
+) {
+	cuvAssert(start_cols==0);
+	cuvAssert(num_cols==matrix.w())
+	return new dense_matrix<__value_type,row_major,__memory_space_type,__index_type>(num_rows,num_cols, matrix.ptr()+matrix.w()*start_rows,true);
+}
+template<class __value_type, class __memory_layout, class __memory_space_type, class __index_type>
+dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type>* blockview(
+		dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type> & matrix,
+		__index_type start_rows,
+		__index_type num_rows ,
+		__index_type start_cols,
+		__index_type num_cols) {
+	return blockview(matrix,start_rows,num_rows,start_cols,num_cols, __memory_layout());
+}
 
-  /// column major blas3
-	template<>
-		void prod(dense_matrix<float,column_major,dev_memory_space>& dst,
-				  dense_matrix<float,column_major,dev_memory_space>&   A,
-				  dense_matrix<float,column_major,dev_memory_space>&   B,
-				  char transA,
-				  char transB,
-				  const float& factAB,
-				  const float& factC){
-			int m  = (transA=='t' ? A.w() : A.h());
-			int k1 = (transA=='t' ? A.h() : A.w());
-			int k2 = (transB=='t' ? B.w() : B.h());
-			int n  = (transB=='t' ? B.h() : B.w());
+/// column major blas3
+template<>
+void prod(dense_matrix<float,column_major,dev_memory_space>& dst,
+		dense_matrix<float,column_major,dev_memory_space>& A,
+		dense_matrix<float,column_major,dev_memory_space>& B,
+		char transA,
+		char transB,
+		const float& factAB,
+		const float& factC) {
+	int m = (transA=='t' ? A.w() : A.h());
+	int k1 = (transA=='t' ? A.h() : A.w());
+	int k2 = (transB=='t' ? B.w() : B.h());
+	int n = (transB=='t' ? B.h() : B.w());
 
-			cuvAssert(dst.h() == m);
-			cuvAssert(dst.w() == n);
-			cuvAssert(k1 == k2);
-			cuvAssert(A.ptr());
-			cuvAssert(B.ptr());
-			cuvAssert(dst.ptr());
+	cuvAssert(dst.h() == m);
+	cuvAssert(dst.w() == n);
+	cuvAssert(k1 == k2);
+	cuvAssert(A.ptr());
+	cuvAssert(B.ptr());
+	cuvAssert(dst.ptr());
 
-			cublasSgemm(transA, transB, m, n, k1, factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
-			cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
-			cuvSafeCall(cudaThreadSynchronize());
-		}
+	cublasSgemm(transA, transB, m, n, k1, factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
+	cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
+	cuvSafeCall(cudaThreadSynchronize());
+}
 
-	template<>
-		void prod(dense_matrix<float,column_major,host_memory_space>& dst,
-				  dense_matrix<float,column_major,host_memory_space>&   A,
-				  dense_matrix<float,column_major,host_memory_space>&   B,
-				  char transA,
-				  char transB,
-				  const float& factAB,
-				  const float& factC){
-			int m  = (transA=='t' ? A.w() : A.h());
-			int k1 = (transA=='t' ? A.h() : A.w());
-			int k2 = (transB=='t' ? B.w() : B.h());
-			int n  = (transB=='t' ? B.h() : B.w());
+template<>
+void prod(dense_matrix<float,column_major,host_memory_space>& dst,
+		dense_matrix<float,column_major,host_memory_space>& A,
+		dense_matrix<float,column_major,host_memory_space>& B,
+		char transA,
+		char transB,
+		const float& factAB,
+		const float& factC) {
+	int m = (transA=='t' ? A.w() : A.h());
+	int k1 = (transA=='t' ? A.h() : A.w());
+	int k2 = (transB=='t' ? B.w() : B.h());
+	int n = (transB=='t' ? B.h() : B.w());
 
-			cuvAssert(dst.h() == m);
-			cuvAssert(dst.w() == n);
-			cuvAssert(k1 == k2);
-			cuvAssert(A.ptr() != NULL);
-			cuvAssert(B.ptr() != NULL);
-			cuvAssert(dst.ptr());
+	cuvAssert(dst.h() == m);
+	cuvAssert(dst.w() == n);
+	cuvAssert(k1 == k2);
+	cuvAssert(A.ptr() != NULL);
+	cuvAssert(B.ptr() != NULL);
+	cuvAssert(dst.ptr());
 
 #if 1 /* CBLAS */
-			cblas_sgemm(
-				   CblasColMajor,
-				   CVT_TRANSPOSE(transA),
-				   CVT_TRANSPOSE(transB), m, n, k1,
-				   factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
+	cblas_sgemm(
+			CblasColMajor,
+			CVT_TRANSPOSE(transA),
+			CVT_TRANSPOSE(transB), m, n, k1,
+			factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
 #else /* naive */
-			for(int i=0; i<A.h();i++)
-				for(int j=0; j<B.w(); j++){
-					float f=0;
-					for(int k=0;k<A.w();k++){
-						f += A(i,k)*B(k,j);
-					}
-					dst.set(i,j,f);
-				}
+	for(int i=0; i<A.h();i++)
+	for(int j=0; j<B.w(); j++) {
+		float f=0;
+		for(int k=0;k<A.w();k++) {
+			f += A(i,k)*B(k,j);
+		}
+		dst.set(i,j,f);
+	}
 #endif
-		}
+}
 /// row major blas3
-	template<>
-		void prod(dense_matrix<float,row_major,dev_memory_space>& dst,
-				  dense_matrix<float,row_major,dev_memory_space>&   A,
-				  dense_matrix<float,row_major,dev_memory_space>&   B,
-				  char transA,
-				  char transB,
-				  const float& factAB,
-				  const float& factC){
-			// we use column major prod and just exchange width and height
-			int m  = (transB=='t' ? B.w() : B.h());
-			int k1 = (transB=='t' ? B.h() : B.w());
-			int k2 = (transA=='t' ? A.w() : A.h());
-			int n  = (transA=='t' ? A.h() : A.w());
+template<>
+void prod(dense_matrix<float,row_major,dev_memory_space>& dst,
+		dense_matrix<float,row_major,dev_memory_space>& A,
+		dense_matrix<float,row_major,dev_memory_space>& B,
+		char transA,
+		char transB,
+		const float& factAB,
+		const float& factC) {
+	// we use column major prod and just exchange width and height
+	int m = (transB=='t' ? B.w() : B.h());
+	int k1 = (transB=='t' ? B.h() : B.w());
+	int k2 = (transA=='t' ? A.w() : A.h());
+	int n = (transA=='t' ? A.h() : A.w());
 
-			cuvAssert(dst.h() == n);
-			cuvAssert(dst.w() == m);
-			cuvAssert(k1 == k2);
-			cuvAssert(A.ptr());
-			cuvAssert(B.ptr());
-			cuvAssert(dst.ptr());
-			transA=(transA=='t'?'n' : 't');
-			transB=(transB=='t'?'n' : 't');
-			cublasSgemm(transB, transA, m, n, k1, factAB, B.ptr(), B.w(),A.ptr(), A.w(), factC, dst.ptr(), dst.w());
-			std::cout << cublasGetError();
-			cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
-			cuvSafeCall(cudaThreadSynchronize());
+	cuvAssert(dst.h() == n);
+	cuvAssert(dst.w() == m);
+	cuvAssert(k1 == k2);
+	cuvAssert(A.ptr());
+	cuvAssert(B.ptr());
+	cuvAssert(dst.ptr());
+	transA=(transA=='t'?'n' : 't');
+	transB=(transB=='t'?'n' : 't');
+	cublasSgemm(transB, transA, m, n, k1, factAB, B.ptr(), B.w(),A.ptr(), A.w(), factC, dst.ptr(), dst.w());
+	std::cout << cublasGetError();
+	cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
+template<>
+void prod(dense_matrix<float,row_major,host_memory_space>& dst,
+		dense_matrix<float,row_major,host_memory_space>& A,
+		dense_matrix<float,row_major,host_memory_space>& B,
+		char transA,
+		char transB,
+		const float& factAB,
+		const float& factC) {
+	int m = (transA=='t' ? A.w() : A.h());
+	int k1 = (transA=='t' ? A.h() : A.w());
+	int k2 = (transB=='t' ? B.w() : B.h());
+	int n = (transB=='t' ? B.h() : B.w());
+
+	cuvAssert(dst.h() == m);
+	cuvAssert(dst.w() == n);
+	cuvAssert(k1 == k2);
+	cuvAssert(A.ptr() != NULL);
+	cuvAssert(B.ptr() != NULL);
+	cuvAssert(dst.ptr());
+
+	cblas_sgemm(
+			CblasRowMajor,
+			CVT_TRANSPOSE(transA),
+			CVT_TRANSPOSE(transB), m, n, k1,
+			factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
+}
+
+template<class V, class I, class V2, class OP>
+__global__
+void matrix_plus_vector_kernel_column_major(V*A,V2* v,I w,I h, OP op) {
+	int tid = blockDim.x*blockIdx.x + threadIdx.x;
+	if(tid>h) return;
+	V2 tid_v = v[tid];
+	for(int i=tid;i<w;i++)
+	A[i] = op(A[i],tid_v);
+}
+template<class V, class I, class V2, class OP>
+__global__
+void matrix_plus_vector_kernel_column_major2 (V *A, const V2* v, I h, I w, OP op) {
+	const unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
+	const unsigned int numThreads = __mul24(blockDim.x , gridDim.x);
+
+	int stop = w*h;
+	for (unsigned int i = idx; i < stop; i += numThreads)
+	A[i] = op(A[i] , v[i % h]);
+}
+template<class V, class I, class V2, class OP>
+__global__
+void matrix_plus_vector_kernel_row_major (V *A, V2* v, I h, I w, OP op) {
+	__shared__ float scalar;
+	for(int baseidx = blockIdx.x; baseidx < h; baseidx += gridDim.x) {
+		if (threadIdx.x == 0) {
+			scalar = v[baseidx];
 		}
-
-	template<>
-		void prod(dense_matrix<float,row_major,host_memory_space>& dst,
-				  dense_matrix<float,row_major,host_memory_space>&   A,
-				  dense_matrix<float,row_major,host_memory_space>&   B,
-				  char transA,
-				  char transB,
-				  const float& factAB,
-				  const float& factC){
-			int m  = (transA=='t' ? A.w() : A.h());
-			int k1 = (transA=='t' ? A.h() : A.w());
-			int k2 = (transB=='t' ? B.w() : B.h());
-			int n  = (transB=='t' ? B.h() : B.w());
-
-			cuvAssert(dst.h() == m);
-			cuvAssert(dst.w() == n);
-			cuvAssert(k1 == k2);
-			cuvAssert(A.ptr() != NULL);
-			cuvAssert(B.ptr() != NULL);
-			cuvAssert(dst.ptr());
-
-			cblas_sgemm(
-					CblasRowMajor,
-					CVT_TRANSPOSE(transA),
-					CVT_TRANSPOSE(transB), m, n, k1, 
-					factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
+		__syncthreads();
+		for (unsigned int i = threadIdx.x; i < w; i += blockDim.x) {
+			const int k = baseidx * w + i;
+			A[k] = op(A[k] , scalar);
 		}
+	}
+}
 
+namespace matrix_plus_vector_impl {
 	template<class V, class I, class V2, class OP>
-	__global__
-	void matrix_plus_vector_kernel_column_major(V*A,V2* v,I w,I h, OP op){
-		int tid = blockDim.x*blockIdx.x + threadIdx.x;
-		if(tid>h) return;
-		V2 tid_v = v[tid];
-		for(int i=tid;i<w;i++)
-			A[i] = op(A[i],tid_v);
+	void matrix_plus_col(dense_matrix<V,row_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op) {
+		cuvAssert(A.h() == v.size());
+		int num_threads = min(512,A.w());
+		int num_blocks = min(1024,A.h());
+		matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
+		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class I, class V2, class OP>
-	__global__ 
-	void matrix_plus_vector_kernel_column_major2 (V *A, const V2* v,  I h, I w, OP op) {
-			const unsigned int idx        = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
-			const unsigned int numThreads = __mul24(blockDim.x , gridDim.x);
-
-			int stop = w*h;
-			for (unsigned int i = idx; i < stop; i += numThreads)
-				A[i] = op(A[i] , v[i % h]);
-		}
-	template<class V, class I, class V2, class OP>
-	__global__ 
-	void matrix_plus_vector_kernel_row_major (V *A, V2* v,  I h, I w, OP op) {
-			__shared__ float scalar;
-			for(int baseidx = blockIdx.x; baseidx < h; baseidx += gridDim.x){
-				if (threadIdx.x == 0) {
-					scalar = v[baseidx];
-				}
-				__syncthreads();
-				for (unsigned int i = threadIdx.x; i < w; i += blockDim.x) {
-					const int k = baseidx * w + i;
-					A[k] = op(A[k] , scalar);
-				}
-			}
-		}
-
-	namespace matrix_plus_vector_impl{
-		template<class V, class I, class V2, class OP>
-			void matrix_plus_col(dense_matrix<V,row_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op){
-				cuvAssert(A.h() == v.size());
-				int num_threads = min(512,A.w());
-				int num_blocks  = min(1024,A.h());
-				matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
-				cuvSafeCall(cudaThreadSynchronize());
-			}
-		template<class V, class I, class V2, class OP>
-			void matrix_plus_col(dense_matrix<V,column_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op){
-				cuvAssert(A.h() == v.size());
-				int num_threads = 512;
-				int num_blocks  = min(512,(int)ceil((float)A.n() / num_threads));
-				matrix_plus_vector_kernel_column_major2<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
-				cuvSafeCall(cudaThreadSynchronize());
-			}
-		template<class V, class I, class V2, class OP>
-			void matrix_plus_col(dense_matrix<V,column_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op){
-				const V2* v_ptr = v.ptr();
-				V *       A_ptr = A.ptr();
-				for(int j=0;j<A.w();j++){
-					v_ptr = v.ptr();
-					for(int i=0;i<A.h();i++,A_ptr++,v_ptr++)
-						*A_ptr = op(*A_ptr,*v_ptr);
-				}
-			}
-		template<class V, class I, class V2, class OP>
-			void matrix_plus_col(dense_matrix<V,row_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op){
-				const V2* v_ptr = v.ptr();
-				V *       A_ptr = A.ptr();
-				for(int i=0;i<A.h();i++, v_ptr++){
-					for(int j=0;j<A.w();j++)
-						*A_ptr++ = op(*A_ptr,*v_ptr);
-				}
-			}
+	void matrix_plus_col(dense_matrix<V,column_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op) {
+		cuvAssert(A.h() == v.size());
+		int num_threads = 512;
+		int num_blocks = min(512,(int)ceil((float)A.n() / num_threads));
+		matrix_plus_vector_kernel_column_major2<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
+		cuvSafeCall(cudaThreadSynchronize());
 	}
-  template<class __matrix_type, class __vector_type>
-	  void matrix_plus_col(__matrix_type& A, const __vector_type& v){
-		  matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::plus<typename __matrix_type::value_type>());
-	  }
+	template<class V, class I, class V2, class OP>
+	void matrix_plus_col(dense_matrix<V,column_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op) {
+		const V2* v_ptr = v.ptr();
+		V * A_ptr = A.ptr();
+		for(int j=0;j<A.w();j++) {
+			v_ptr = v.ptr();
+			for(int i=0;i<A.h();i++,A_ptr++,v_ptr++)
+			*A_ptr = op(*A_ptr,*v_ptr);
+		}
+	}
+	template<class V, class I, class V2, class OP>
+	void matrix_plus_col(dense_matrix<V,row_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op) {
+		const V2* v_ptr = v.ptr();
+		V * A_ptr = A.ptr();
+		for(int i=0;i<A.h();i++, v_ptr++) {
+			for(int j=0;j<A.w();j++)
+			*A_ptr++ = op(*A_ptr,*v_ptr);
+		}
+	}
+}
+template<class __matrix_type, class __vector_type>
+void matrix_plus_col(__matrix_type& A, const __vector_type& v) {
+	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::plus<typename __matrix_type::value_type>());
+}
 
-  template<class __matrix_type, class __vector_type>
-	  void matrix_times_col(__matrix_type& A, const __vector_type& v){
-		  matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<typename __matrix_type::value_type>());
-	  }
-  template<class __matrix_type, class __vector_type>
-	  void matrix_divide_col(__matrix_type& A, const __vector_type& v){
-		  matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::divides<typename __matrix_type::value_type>());
-	  }
+template<class __matrix_type, class __vector_type>
+void matrix_times_col(__matrix_type& A, const __vector_type& v) {
+	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<typename __matrix_type::value_type>());
+}
+template<class __matrix_type, class __vector_type>
+void matrix_divide_col(__matrix_type& A, const __vector_type& v) {
+	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::divides<typename __matrix_type::value_type>());
+}
 
-  namespace reduce_to_col_impl{
-	  template<int rf,class V,class I, class V2>
-	  void reduce_to_col(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld){
-		  cuvAssert(m.ptr() != NULL);
-		  cuvAssert(m.h()   == v.size());
-		  const  V* A_ptr = m.ptr();
-		  
-		  V2* v_ptr = v.ptr();
-		  for(int j=0; j<m.h(); j++){
-			  if(0);
-			  else if(rf == RF_MIN) *v_ptr++  =  INT_MAX;
-			  else if(rf == RF_MAX) *v_ptr++  = -INT_MAX;
-			  else                  *v_ptr++ *= factOld;
-		  }
-		  for(int i=0;i<m.w();i++){
-			  v_ptr = v.ptr();
-			  for(int j=0; j<m.h(); j++,v_ptr++,A_ptr++){
-				  if(0);
-				  else if(rf==RF_ADD)           *v_ptr += factNew * *A_ptr;
-				  else if(rf==RF_ADD_SQUARED)   *v_ptr += factNew * (*A_ptr * *A_ptr);
-				  else if(rf==RF_MIN)           *v_ptr  = min(*A_ptr, *v_ptr);
-				  else if(rf==RF_MAX)           *v_ptr  = max(*A_ptr, *v_ptr);
-			  }
-		  }
-	  }
-	  template<int rf,class V,class I, class V2>
-	  void reduce_to_col(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld){
-		  cuvAssert(m.ptr() != NULL);
-		  cuvAssert(m.h()   == v.size());
-		  const  V* A_ptr = m.ptr();
-
-		  V2* v_ptr = v.ptr();
-		  for(int j=0; j<m.h(); j++){
-				  if(0);
-				  else if(rf == RF_MIN) *v_ptr++  =  INT_MAX;
-				  else if(rf == RF_MAX) *v_ptr++  = -INT_MAX;
-				  else *v_ptr++  *= factOld;
-		  }
-		  v_ptr = v.ptr();
-		  for(int i=0;i<m.h(); i++) {
-			 for(int j=0; j<m.w(); j++,A_ptr++){
-				 if(0);
-				 else if(rf==RF_ADD)           *v_ptr += factNew * *A_ptr;
-				 else if(rf==RF_ADD_SQUARED)   *v_ptr += factNew * (*A_ptr * *A_ptr);
-				 else if(rf==RF_MIN)           *v_ptr = min(*A_ptr, *v_ptr);
-				 else if(rf==RF_MAX)           *v_ptr = max(*A_ptr, *v_ptr);
-			 }
-			 v_ptr++;
-		  }
-	  }
-	  template<int rf,class V,class I, class V2>
-	  void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
-		  cuvAssert(m.ptr() != NULL);
-		  cuvAssert(m.h()   == v.size());
-		  static const int BLOCK_SIZE = 16;
-		  dim3 grid(ceil((float)m.h()/(BLOCK_SIZE/2)), 1);
-		  dim3 threads(BLOCK_SIZE/2,BLOCK_SIZE*2);
-		  reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
-		  cuvSafeCall(cudaThreadSynchronize());
-	  }
+namespace reduce_to_col_impl {
 	template<int rf,class V,class I, class V2>
-	void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
+	void reduce_to_col(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld) {
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.h() == v.size());
+		const V* A_ptr = m.ptr();
+
+		V2* v_ptr = v.ptr();
+		for(int j=0; j<m.h(); j++) {
+			if(0);
+			else if(rf == RF_MIN) *v_ptr++ = INT_MAX;
+			else if(rf == RF_MAX) *v_ptr++ = -INT_MAX;
+			else *v_ptr++ *= factOld;
+		}
+		for(int i=0;i<m.w();i++) {
+			v_ptr = v.ptr();
+			for(int j=0; j<m.h(); j++,v_ptr++,A_ptr++) {
+				if(0);
+				else if(rf==RF_ADD) *v_ptr += factNew * *A_ptr;
+				else if(rf==RF_ADD_SQUARED) *v_ptr += factNew * (*A_ptr * *A_ptr);
+				else if(rf==RF_MIN) *v_ptr = min(*A_ptr, *v_ptr);
+				else if(rf==RF_MAX) *v_ptr = max(*A_ptr, *v_ptr);
+			}
+		}
+	}
+	template<int rf,class V,class I, class V2>
+	void reduce_to_col(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld) {
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.h() == v.size());
+		const V* A_ptr = m.ptr();
+
+		V2* v_ptr = v.ptr();
+		for(int j=0; j<m.h(); j++) {
+			if(0);
+			else if(rf == RF_MIN) *v_ptr++ = INT_MAX;
+			else if(rf == RF_MAX) *v_ptr++ = -INT_MAX;
+			else *v_ptr++ *= factOld;
+		}
+		v_ptr = v.ptr();
+		for(int i=0;i<m.h(); i++) {
+			for(int j=0; j<m.w(); j++,A_ptr++) {
+				if(0);
+				else if(rf==RF_ADD) *v_ptr += factNew * *A_ptr;
+				else if(rf==RF_ADD_SQUARED) *v_ptr += factNew * (*A_ptr * *A_ptr);
+				else if(rf==RF_MIN) *v_ptr = min(*A_ptr, *v_ptr);
+				else if(rf==RF_MAX) *v_ptr = max(*A_ptr, *v_ptr);
+			}
+			v_ptr++;
+		}
+	}
+	template<int rf,class V,class I, class V2>
+	void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld) {
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.h() == v.size());
+		static const int BLOCK_SIZE = 16;
+		static const int blocks_needed = ceil((float)m.h()/(BLOCK_SIZE/2));
+		int grid_x =0, grid_y=0;
+
+		// how to handle grid dimension constraint
+		if (blocks_needed <= 65535){
+			grid_x = blocks_needed;
+			grid_y = 1;
+		}else{
+			// try to avoid large noop blocks by adjusting x and y dimension to nearly equal size
+			grid_x = ceil(sqrt(blocks_needed));
+			grid_y = ceil(blocks_needed/grid_x);
+		}
+		dim3 grid(grid_x, grid_y);
+		dim3 threads(BLOCK_SIZE/2,BLOCK_SIZE*2);
+		reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+	template<int rf,class V,class I, class V2>
+	void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld) {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
 		/*static const int BLOCK_SIZE = 16;*/
@@ -529,67 +603,67 @@ namespace cuv{
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
-  }
-  template<class __matrix_type, class __vector_type>
-	  void reduce_to_col(__vector_type&v, const __matrix_type& m, reduce_functor rf, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld){
-		  switch(rf){
-			  case RF_ADD: 
-				  reduce_to_col_impl::reduce_to_col<RF_ADD>(v,m,factNew,factOld);
-				  break;
-			  case RF_ADD_SQUARED: 
-				  reduce_to_col_impl::reduce_to_col<RF_ADD_SQUARED>(v,m,factNew,factOld);
-				  break;
-			  case RF_MIN: 
-				  reduce_to_col_impl::reduce_to_col<RF_MIN>(v,m,factNew,factOld);
-				  break;
-			  case RF_MAX: 
-				  reduce_to_col_impl::reduce_to_col<RF_MAX>(v,m,factNew,factOld);
-				  break;
-			  default:
-				  throw std::runtime_error("supplied reduce_functor does not exist");
-		  }
-	  }
+}
+template<class __matrix_type, class __vector_type>
+void reduce_to_col(__vector_type&v, const __matrix_type& m, reduce_functor rf, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld) {
+	switch(rf) {
+		case RF_ADD:
+		reduce_to_col_impl::reduce_to_col<RF_ADD>(v,m,factNew,factOld);
+		break;
+		case RF_ADD_SQUARED:
+		reduce_to_col_impl::reduce_to_col<RF_ADD_SQUARED>(v,m,factNew,factOld);
+		break;
+		case RF_MIN:
+		reduce_to_col_impl::reduce_to_col<RF_MIN>(v,m,factNew,factOld);
+		break;
+		case RF_MAX:
+		reduce_to_col_impl::reduce_to_col<RF_MAX>(v,m,factNew,factOld);
+		break;
+		default:
+		throw std::runtime_error("supplied reduce_functor does not exist");
+	}
+}
 
-  namespace reduce_to_row_impl{
-	  template<int rf,class V,class I, class V2>
-	  void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld){
-		  cuvAssert(rf==RF_ADD);
-		  cuvAssert(m.ptr() != NULL);
-		  cuvAssert(m.w()   == v.size());
-		  const  V* A_ptr = m.ptr();
+namespace reduce_to_row_impl {
+	template<int rf,class V,class I, class V2>
+	void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld) {
+		cuvAssert(rf==RF_ADD);
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.w() == v.size());
+		const V* A_ptr = m.ptr();
 
-		  V2* v_ptr = v.ptr();
-		  for(int j=0; j<v.size(); j++){
-				  *v_ptr++  *= factOld;
-		  }
-		  for(int i=0;i<m.h();i++){
-			  v_ptr = v.ptr();
-			  for(int j=0; j<m.w(); j++){
-				  *v_ptr++ += factNew * *A_ptr++;
-			  }
-		  }
-	  }
-	  template<int rf,class V,class I, class V2>
-	  void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld) {
-		  cuvAssert(rf==RF_ADD);
-		  cuvAssert(m.ptr() != NULL);
-		  cuvAssert(m.w()   == v.size());
-		  const  V* A_ptr = m.ptr();
+		V2* v_ptr = v.ptr();
+		for(int j=0; j<v.size(); j++) {
+			*v_ptr++ *= factOld;
+		}
+		for(int i=0;i<m.h();i++) {
+			v_ptr = v.ptr();
+			for(int j=0; j<m.w(); j++) {
+				*v_ptr++ += factNew * *A_ptr++;
+			}
+		}
+	}
+	template<int rf,class V,class I, class V2>
+	void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld) {
+		cuvAssert(rf==RF_ADD);
+		cuvAssert(m.ptr() != NULL);
+		cuvAssert(m.w() == v.size());
+		const V* A_ptr = m.ptr();
 
-		  V2* v_ptr = v.ptr();
-		  for(int j=0; j<v.size(); j++){
-				  *v_ptr++  *= factOld;
-		  }
-		  v_ptr = v.ptr();
-		  for(int i=0;i<m.w();i++){
-			  for(int j=0; j<m.h(); j++)
-				  *v_ptr += factNew * *A_ptr++;
-			  v_ptr++;
-		  }
-	  }
+		V2* v_ptr = v.ptr();
+		for(int j=0; j<v.size(); j++) {
+			*v_ptr++ *= factOld;
+		}
+		v_ptr = v.ptr();
+		for(int i=0;i<m.w();i++) {
+			for(int j=0; j<m.h(); j++)
+			*v_ptr += factNew * *A_ptr++;
+			v_ptr++;
+		}
+	}
 
 	template<int rf, class V,class I, class V2>
-	void reduce_to_row(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
+	void reduce_to_row(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld) {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 		static const int BLOCK_SIZE = 16;
@@ -598,183 +672,195 @@ namespace cuv{
 		reduce_to_row_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
+
 	template<int rf,class V,class I, class V2>
-	void reduce_to_row(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld){
+	void reduce_to_row(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld) {
 		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.w()   == v.size());
+		cuvAssert(m.w() == v.size());
 		static const int BLOCK_SIZE = 16;
-		dim3 grid(ceil((float)m.w()/(BLOCK_SIZE/2)), 1);
-		dim3 threads(BLOCK_SIZE/2,BLOCK_SIZE*2);
+		static const int blocks_needed = ceil((float)m.w()/(BLOCK_SIZE*2));
+			int grid_x =0, grid_y=0;
+
+			// how to handle grid dimension constraint
+			if (blocks_needed <= 65535){
+				grid_x = blocks_needed;
+				grid_y = 1;
+			}else{
+				// try to avoid large noop blocks by adjusting x and y dimension to nearly equal size
+				grid_x = ceil(sqrt(blocks_needed));
+				grid_y = ceil(blocks_needed/grid_x);
+			}
+		dim3 grid(grid_x, grid_y);
+		dim3 threads(BLOCK_SIZE*2, BLOCK_SIZE/2);
 		// yes, we abuse the reduce_to_col kernel here :)
 		reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
-  }
-  template<class __matrix_type, class __vector_type>
-	  void reduce_to_row(__vector_type&v, const __matrix_type& m,reduce_functor rf, const typename __matrix_type::value_type& factNew,   const typename __matrix_type::value_type& factOld){
-		  switch(rf){
-			  case RF_ADD: 
-				  reduce_to_row_impl::reduce_to_row<RF_ADD>(v,m,factNew,factOld);
-				  break;
-			  case RF_ADD_SQUARED: 
-				  reduce_to_row_impl::reduce_to_row<RF_ADD_SQUARED>(v,m,factNew,factOld);
-				  break;
-			  case RF_MIN: 
-				  reduce_to_row_impl::reduce_to_row<RF_MIN>(v,m,factNew,factOld);
-				  break;
-			  case RF_MAX: 
-				  reduce_to_row_impl::reduce_to_row<RF_MAX>(v,m,factNew,factOld);
-				  break;
-			  default:
-				  throw std::runtime_error("supplied reduce_functor does not exist");
-		  }
-	  }
-
-	template<>
-	void argmax_to_row(vector<int,dev_memory_space>&v, const dense_matrix<float,column_major, dev_memory_space>& m){
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.w() == v.size());
-		static const int BLOCK_SIZE = 16;
-		unsigned int w = m.w();
-		unsigned int u;
-		float* m_ptr = (float*) m.ptr();
-		int* v_ptr = v.ptr();
-		do {
-			u = min(w, MAX_GRID_SIZE);
-			dim3 grid(1, u);
-			dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-			argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m_ptr,v_ptr,u,m.h());
-			m_ptr += m.h() * MAX_GRID_SIZE;
-			v_ptr += MAX_GRID_SIZE;
-			w -= MAX_GRID_SIZE;
-		} while(u == MAX_GRID_SIZE);
-		cuvSafeCall(cudaThreadSynchronize());
+}
+template<class __matrix_type, class __vector_type>
+void reduce_to_row(__vector_type&v, const __matrix_type& m,reduce_functor rf, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld) {
+	switch(rf) {
+		case RF_ADD:
+		reduce_to_row_impl::reduce_to_row<RF_ADD>(v,m,factNew,factOld);
+		break;
+		case RF_ADD_SQUARED:
+		reduce_to_row_impl::reduce_to_row<RF_ADD_SQUARED>(v,m,factNew,factOld);
+		break;
+		case RF_MIN:
+		reduce_to_row_impl::reduce_to_row<RF_MIN>(v,m,factNew,factOld);
+		break;
+		case RF_MAX:
+		reduce_to_row_impl::reduce_to_row<RF_MAX>(v,m,factNew,factOld);
+		break;
+		default:
+		throw std::runtime_error("supplied reduce_functor does not exist");
 	}
+}
 
-	template<>
-	void argmax_to_column(vector<int,dev_memory_space>&v, const dense_matrix<float,row_major, dev_memory_space>& m){
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.h() == v.size());
-		static const int BLOCK_SIZE = 16;
-		unsigned int h = m.h();
-		unsigned int u;
-		float* m_ptr = (float*) m.ptr();
-		int* v_ptr = v.ptr();
-		do {
-			u = min(h, MAX_GRID_SIZE);
-			dim3 grid(1, u);
-			dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-			argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m_ptr,v_ptr,u,m.w());
-			m_ptr += m.w() * MAX_GRID_SIZE;
-			v_ptr += MAX_GRID_SIZE;
-			h -= MAX_GRID_SIZE;
-		} while(u == MAX_GRID_SIZE);
-		cuvSafeCall(cudaThreadSynchronize());
-	}
+template<>
+void argmax_to_row(vector<int,dev_memory_space>&v, const dense_matrix<float,column_major, dev_memory_space>& m) {
+	cuvAssert(m.ptr() != NULL);
+	cuvAssert(m.w() == v.size());
+	static const int BLOCK_SIZE = 16;
+	unsigned int w = m.w();
+	unsigned int u;
+	float* m_ptr = (float*) m.ptr();
+	int* v_ptr = v.ptr();
+	do {
+		u = min(w, MAX_GRID_SIZE);
+		dim3 grid(1, u);
+		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
+		argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m_ptr,v_ptr,u,m.h());
+		m_ptr += m.h() * MAX_GRID_SIZE;
+		v_ptr += MAX_GRID_SIZE;
+		w -= MAX_GRID_SIZE;
+	}while(u == MAX_GRID_SIZE);
+	cuvSafeCall(cudaThreadSynchronize());
+}
 
-	template<>
-	void argmax_to_row(vector<int,host_memory_space>&v, const dense_matrix<float,column_major, host_memory_space>& m){
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.w() == v.size());
-		const float* ptr = m.ptr();
-		int* res = v.ptr();
-		for(int i=0; i<m.w();i++) {
-			int idx = 0;
-			float val = *ptr;
-			for(int j=0; j<m.h();j++) {
-				if(*ptr > val) {
-					val = *ptr;
-					idx = j;
-				}
-				ptr++;
+template<>
+void argmax_to_column(vector<int,dev_memory_space>&v, const dense_matrix<float,row_major, dev_memory_space>& m) {
+	cuvAssert(m.ptr() != NULL);
+	cuvAssert(m.h() == v.size());
+	static const int BLOCK_SIZE = 16;
+	unsigned int h = m.h();
+	unsigned int u;
+	float* m_ptr = (float*) m.ptr();
+	int* v_ptr = v.ptr();
+	do {
+		u = min(h, MAX_GRID_SIZE);
+		dim3 grid(1, u);
+		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
+		argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m_ptr,v_ptr,u,m.w());
+		m_ptr += m.w() * MAX_GRID_SIZE;
+		v_ptr += MAX_GRID_SIZE;
+		h -= MAX_GRID_SIZE;
+	}while(u == MAX_GRID_SIZE);
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
+template<>
+void argmax_to_row(vector<int,host_memory_space>&v, const dense_matrix<float,column_major, host_memory_space>& m) {
+	cuvAssert(m.ptr() != NULL);
+	cuvAssert(m.w() == v.size());
+	const float* ptr = m.ptr();
+	int* res = v.ptr();
+	for(int i=0; i<m.w();i++) {
+		int idx = 0;
+		float val = *ptr;
+		for(int j=0; j<m.h();j++) {
+			if(*ptr > val) {
+				val = *ptr;
+				idx = j;
 			}
-			*res++ = idx;
+			ptr++;
 		}
+		*res++ = idx;
 	}
+}
 
-	template<>
-	void argmax_to_column(vector<int,host_memory_space>&v, const dense_matrix<float,row_major,host_memory_space>& m){
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.h() == v.size());
-		const float* ptr = m.ptr();
-		int* res = v.ptr();
-		for(int i=0; i<m.h();i++) {
-			int idx = 0;
-			float val = *ptr;
-			for(int j=0; j<m.w();j++) {
-				if(*ptr > val) {
-					val = *ptr;
-					idx = j;
-				}
-				ptr++;
+template<>
+void argmax_to_column(vector<int,host_memory_space>&v, const dense_matrix<float,row_major,host_memory_space>& m) {
+	cuvAssert(m.ptr() != NULL);
+	cuvAssert(m.h() == v.size());
+	const float* ptr = m.ptr();
+	int* res = v.ptr();
+	for(int i=0; i<m.h();i++) {
+		int idx = 0;
+		float val = *ptr;
+		for(int j=0; j<m.w();j++) {
+			if(*ptr > val) {
+				val = *ptr;
+				idx = j;
 			}
-			*res++ = idx;
+			ptr++;
 		}
+		*res++ = idx;
 	}
+}
 
-	template<>
-	void transpose(dense_matrix<float,column_major, dev_memory_space>& dst,
+template<>
+void transpose(dense_matrix<float,column_major, dev_memory_space>& dst,
 		dense_matrix<float,column_major, dev_memory_space>& src) {
-		cuvAssert(dst.w() == src.h());
-		cuvAssert(dst.h() == src.w());
-	    const int width = dst.w();
-	    const int height = dst.h();
-		static const int BLOCK_SIZE = 16;
-	    const int numBlocksX = ceil((float)width / BLOCK_SIZE);
-	    const int numBlocksY = ceil((float)height / BLOCK_SIZE);
-	    dim3 gridSize(numBlocksX, numBlocksY, 1);
-	    dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
-	    transpose_kernel<BLOCK_SIZE,float><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
-		cuvSafeCall(cudaThreadSynchronize());
-	}
+	cuvAssert(dst.w() == src.h());
+	cuvAssert(dst.h() == src.w());
+	const int width = dst.w();
+	const int height = dst.h();
+	static const int BLOCK_SIZE = 16;
+	const int numBlocksX = ceil((float)width / BLOCK_SIZE);
+	const int numBlocksY = ceil((float)height / BLOCK_SIZE);
+	dim3 gridSize(numBlocksX, numBlocksY, 1);
+	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
+	transpose_kernel<BLOCK_SIZE,float><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
+	cuvSafeCall(cudaThreadSynchronize());
+}
 
-	template<>
-	void transpose(dense_matrix<float,row_major,dev_memory_space>& dst,
+template<>
+void transpose(dense_matrix<float,row_major,dev_memory_space>& dst,
 		dense_matrix<float,row_major, dev_memory_space>& src) {
-		cuvAssert(dst.w() == src.h());
-		cuvAssert(dst.h() == src.w());
-	    const int width = dst.h();
-	    const int height = dst.w();
-		static const int BLOCK_SIZE = 16;
-	    const int numBlocksX = ceil((float)width / BLOCK_SIZE);
-	    const int numBlocksY = ceil((float)height / BLOCK_SIZE);
-	    dim3 gridSize(numBlocksX, numBlocksY, 1);
-	    dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
-	    transpose_kernel<BLOCK_SIZE,float><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
-		cuvSafeCall(cudaThreadSynchronize());
-	}
+	cuvAssert(dst.w() == src.h());
+	cuvAssert(dst.h() == src.w());
+	const int width = dst.h();
+	const int height = dst.w();
+	static const int BLOCK_SIZE = 16;
+	const int numBlocksX = ceil((float)width / BLOCK_SIZE);
+	const int numBlocksY = ceil((float)height / BLOCK_SIZE);
+	dim3 gridSize(numBlocksX, numBlocksY, 1);
+	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
+	transpose_kernel<BLOCK_SIZE,float><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
+	cuvSafeCall(cudaThreadSynchronize());
+}
 
-	template<>
-	void transpose(dense_matrix<float,column_major,host_memory_space>& dst,
+template<>
+void transpose(dense_matrix<float,column_major,host_memory_space>& dst,
 		dense_matrix<float,column_major,host_memory_space>& src) {
-		cuvAssert(dst.w() == src.h());
-		cuvAssert(dst.h() == src.w());
-		float* dst_ptr = dst.ptr();
-		float* src_ptr = src.ptr();
-		for(int i=0; i<dst.w(); i++) {
-			for(int j=0; j<dst.h(); j++) {
-				*dst_ptr++ = src_ptr[j*src.h()];
-			}
-			src_ptr++;
+	cuvAssert(dst.w() == src.h());
+	cuvAssert(dst.h() == src.w());
+	float* dst_ptr = dst.ptr();
+	float* src_ptr = src.ptr();
+	for(int i=0; i<dst.w(); i++) {
+		for(int j=0; j<dst.h(); j++) {
+			*dst_ptr++ = src_ptr[j*src.h()];
 		}
+		src_ptr++;
 	}
+}
 
-	template<>
-	void transpose(dense_matrix<float,row_major,host_memory_space>& dst,
+template<>
+void transpose(dense_matrix<float,row_major,host_memory_space>& dst,
 		dense_matrix<float,row_major,host_memory_space>& src) {
-		cuvAssert(dst.w() == src.h());
-		cuvAssert(dst.h() == src.w());
-		float* dst_ptr = dst.ptr();
-		float* src_ptr = src.ptr();
-		for(int i=0; i<dst.h(); i++) {
-			for(int j=0; j<dst.w(); j++) {
-				*dst_ptr++ = src_ptr[j*src.w()];
-			}
-			src_ptr++;
+	cuvAssert(dst.w() == src.h());
+	cuvAssert(dst.h() == src.w());
+	float* dst_ptr = dst.ptr();
+	float* src_ptr = src.ptr();
+	for(int i=0; i<dst.h(); i++) {
+		for(int j=0; j<dst.w(); j++) {
+			*dst_ptr++ = src_ptr[j*src.w()];
 		}
+		src_ptr++;
 	}
-
+}
 
 #define INSTANTIATE_MV(V,M) \
   template void matrix_plus_col(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);   \
@@ -799,15 +885,14 @@ namespace cuv{
 #define INSTANTIATE_BLOCKVIEW(V,M,I) \
   template dense_matrix<V,M,host_memory_space,I>* blockview(dense_matrix<V,M,host_memory_space,I>&,I,I,I,I); \
   template dense_matrix<V,M, dev_memory_space,I>* blockview(dense_matrix<V,M, dev_memory_space,I>&,I,I,I,I);
-  
-  INSTANTIATE_MV(float, column_major);
-  INSTANTIATE_MV(float, row_major);
 
-  INSTANTIATE_REDCOL(float,column_major);
-  INSTANTIATE_REDROW(float,row_major);
+INSTANTIATE_MV(float, column_major);
+INSTANTIATE_MV(float, row_major);
 
-  INSTANTIATE_BLOCKVIEW(float,column_major,unsigned int);
-  INSTANTIATE_BLOCKVIEW(float,row_major,unsigned int);
+INSTANTIATE_REDCOL(float,column_major);
+INSTANTIATE_REDROW(float,row_major);
 
-  
+INSTANTIATE_BLOCKVIEW(float,column_major,unsigned int);
+INSTANTIATE_BLOCKVIEW(float,row_major,unsigned int);
+
 }; // cuv
