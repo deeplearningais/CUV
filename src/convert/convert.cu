@@ -350,10 +350,12 @@ namespace cuv{
 						const toeplitz_matrix<__value_type, host_memory_space, __index_type>& src){
 					if(        dst.h() != src.h()
 							|| dst.w() != src.w()
+							|| dst.input_maps() != src.input_maps()
+							|| dst.output_maps() != src.output_maps()
 							|| !dst.vec_ptr()
 							){
 						dst.dealloc();
-						dst = toeplitz_matrix<__value_type,dev_memory_space,__index_type>(src.h(),src.w(),src.num_dia());
+						dst = toeplitz_matrix<__value_type,dev_memory_space,__index_type>(src.h(),src.w(),src.num_dia(), src.input_maps(), src.output_maps());
 					}
 					cuvAssert(dst.vec_ptr())
 					cuvAssert(src.vec_ptr())
@@ -373,10 +375,12 @@ namespace cuv{
 						const toeplitz_matrix<__value_type,dev_memory_space, __index_type>& src){
 					if(        dst.h() != src.h()
 							|| dst.w() != src.w()
+							|| dst.input_maps() != src.input_maps()
+							|| dst.output_maps() != src.output_maps()
 							|| !dst.vec_ptr()
 							){
 						dst.dealloc();
-						dst = toeplitz_matrix<__value_type,host_memory_space, __index_type>(src.h(),src.w(),src.num_dia());
+						dst = toeplitz_matrix<__value_type,host_memory_space, __index_type>(src.h(),src.w(),src.num_dia(),src.input_maps(),src.output_maps());
 					}
 					cuvAssert(dst.get_offsets().ptr());
 					cuvAssert(dst.vec().ptr());

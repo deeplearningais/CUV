@@ -214,6 +214,8 @@ namespace cuv{
 				  m_num_dia = o.m_num_dia;
 				  m_offsets = o.m_offsets;
 				  m_dia2off = o.m_dia2off;
+				  m_input_maps = o.m_input_maps;
+				  m_output_maps = o.m_output_maps;
 
 				   // transfer ownership of memory (!)
 				  (const_cast< my_type *>(&o))->m_vec = NULL;

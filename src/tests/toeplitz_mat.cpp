@@ -93,38 +93,36 @@ BOOST_AUTO_TEST_CASE( output )
 	}
 }
 
-/*
- *BOOST_AUTO_TEST_CASE( spmv_uninit )
- *{
- *    toeplitz_matrix<float,dev_memory_space> wdev(32,16,3);
- *    wdev.dealloc();
- *    convert(wdev,w);
- *    MAT_CMP( wdev, w , 0.01);
- *}
- *
- *
- *BOOST_AUTO_TEST_CASE( spmv_dia2dense )
- *{
- *    // hostdia->hostdense
- *    dense_matrix<float,column_major,host_memory_space> w2(n,m);
- *    fill(w2.vec(),-1);
- *    convert(w2,w);
- *    MAT_CMP(w,w2,0.1);
- *}
- *
- *BOOST_AUTO_TEST_CASE( spmv_host2dev )
- *{
- *    // host->dev
- *    toeplitz_matrix<float,dev_memory_space> w2(n,m,w.num_dia());
- *    convert(w2,w);
- *    MAT_CMP(w,w2,0.1);
- *    fill(w.vec(),0);
- *
- *    // dev->host
- *    convert(w,w2);
- *    MAT_CMP(w,w2,0.1);
- *}
- */
+BOOST_AUTO_TEST_CASE( spmv_uninit )
+{
+	toeplitz_matrix<float,dev_memory_space> wdev(32,16,3);
+	wdev.dealloc();
+	convert(wdev,w);
+	MAT_CMP( wdev, w , 0.01);
+}
+
+
+BOOST_AUTO_TEST_CASE( spmv_dia2dense )
+{
+	// hostdia->hostdense
+	dense_matrix<float,column_major,host_memory_space> w2(n,m);
+	fill(w2.vec(),-1);
+	convert(w2,w);
+	MAT_CMP(w,w2,0.1);
+}
+
+BOOST_AUTO_TEST_CASE( spmv_host2dev )
+{
+	// host->dev
+	toeplitz_matrix<float,dev_memory_space> w2(n,m,w.num_dia());
+	convert(w2,w);
+	MAT_CMP(w,w2,0.1);
+	fill(w.vec(),0);
+
+	// dev->host
+	convert(w,w2);
+	MAT_CMP(w,w2,0.1);
+}
 
 
 
