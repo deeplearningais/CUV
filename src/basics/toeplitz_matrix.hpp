@@ -112,6 +112,8 @@ namespace cuv{
 			{
 				m_vec = new vec_type(m_num_dia*m_input_maps);
 			}
+			inline int input_maps()const{ return m_input_maps; } ///< Return number of input_maps
+			inline int output_maps()const{ return m_output_maps; } ///< Return number of output
 			inline const vec_type& vec()const{ return *m_vec; } ///< Return pointer to vector storing entries
 			inline       vec_type& vec()     { return *m_vec; } ///< Return pointer to vector storing entries
 			inline const vec_type* vec_ptr()const{ return m_vec; } ///< Return reference to vector storing entries

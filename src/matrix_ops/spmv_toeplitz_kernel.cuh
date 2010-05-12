@@ -53,7 +53,8 @@ spmm_toeplitz_kernel_trans_shared_[%bs%]_[%ni%]_[%rf%]
  const index_type A_h, 
  const index_type A_w, 
  const index_type A_nd,
- const index_type A_stride,
+ const index_type input_maps,
+ const index_type output_maps,
  const int        * A_diaoff,
  const value_type * A_data,
  const value_type * v, 
@@ -81,16 +82,24 @@ spmm_toeplitz_kernel_trans_shared_[%bs%]_[%ni%]_[%rf%]
 		for(unsigned int i=threadIdx.x;i<[%bs%]*[%ni%];  i += [%bs%])
 			sums[i] = 0;
 
-		for(index_type n = 0, offset=0; n < A_nd; n++, offset+=A_stride)
+		for(index_type n = 0; n < A_nd; n++)
 		{
 #if BLOCK_SIZE_LIMITS_NUM_DIAG
-			int row = (col - offsets[n]);
+			const int off = offsets[n];
+			const int row = (col - off);
 #else
-			int row = (col - A_diaoff[n]);
+			const int off = A_diaoff[n];
+			const int row = (col - off);
 #endif
-			value_type A_ij    = A_data[n];
 			if(row >= 0 && row < A_h)
 			{
+				const int w = A_w / output_maps;
+				const int p = 2*( off<=0 )-1;
+				const int z = off + p*( int( -p* off/float(w) + 0.5f)*w );
+				const float elim = !( 
+						   (z> 0 && (col%w)<z  ) 
+						|| (z<=0 && (col%w)>=w+z) );
+				const value_type A_ij    = elim * A_data[ n*input_maps + col/w ];
 				[% FOREACH img IN nimgs  %]
 					sums[[%bs%] * [% img %] + threadIdx.x] += A_ij * fetch_x<UseCache>(v,toff+row+A_h*[%img%]);
 				[% END %]
@@ -109,7 +118,8 @@ spmm_toeplitz_kernel_shared_[%bs%]_[%ni%]_[%rf%]
 	 const index_type A_h, 
 	 const index_type A_w, 
 	 const index_type A_nd,
-	 const index_type A_stride,
+	 const index_type input_maps,
+	 const index_type output_maps,
 	 const int        * A_diaoff,
 	 const value_type * A_data,
 	 const value_type * v, 
@@ -142,13 +152,21 @@ spmm_toeplitz_kernel_shared_[%bs%]_[%ni%]_[%rf%]
 		for(index_type n = 0; n < A_nd; n++)
 		{
 #if BLOCK_SIZE_LIMITS_NUM_DIAG
-			const int col = row + offsets[n];
+			const int off = offsets[n];
+			const int col = (row + off);
 #else
-			const int col = row + A_diaoff[n];
+			const int off = A_diaoff[n];
+			const int col = (row + off);
 #endif
 			if(col >= 0 && col < A_w)
 			{
-				const value_type   A_ij = A_data[       n];
+				const int w = A_w / output_maps;
+				const int p = 2*( off<=0 )-1;
+				const int z = off + p*( int( -p* off/float(w) + 0.5f)*w );
+				const float elim = !( 
+						   (z> 0 && (col%w)<z  ) 
+						|| (z<=0 && (col%w)>=w+z) );
+				const value_type A_ij    = elim * A_data[ n*input_maps + col/w ];
 				[% FOREACH img IN nimgs %]
 					sums[[%bs%]* [%img%] + threadIdx.x] += A_ij * fetch_x<UseCache>(v, toff + col+[%img%]*A_w);
 				[% END %]

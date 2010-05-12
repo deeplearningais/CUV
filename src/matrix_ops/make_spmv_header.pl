@@ -78,7 +78,7 @@ $outstr .= $o;
 my $kernel = (($ni < 0) ? "spmm_${kernel_name}_kernel_trans_register" : "spmm_${kernel_name}_kernel_trans_shared");
 $kernel .= "_" . join("_",($spmm_block_size, $ni, $rf));
 my $has_stride = $kernel_name eq "dia";
-my $stride_param = ( $has_stride )?"A.stride(),":"0,";
+my $stride_param = ( $has_stride )?"A.stride(),":"A.input_maps(),A.output_maps(),";
 my $ifc = "\t\telse if(nimg == $ni){
                $kernel<value_type, index_type, true,true,true> <<<grid, $spmm_block_size>>> (A.h(), A.w(),  A.num_dia(),  $stride_param A.get_offsets().ptr(), A.vec().ptr(), v.ptr(), dst.ptr(), factAv,factC,toff);
 		   }";
