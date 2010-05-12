@@ -69,6 +69,8 @@ namespace cuv{
 		  vec_type* m_vec;                      ///< stores the actual data 
 		  intvec_type m_offsets;                ///< stores the offsets of the diagonals
 		  std::map<int,index_type> m_dia2off;   ///< maps a diagonal to an offset
+		  int m_input_maps;                     ///< number of input maps  (along 1st dimension)
+		  int m_output_maps;                    ///< number of output maps (along 2nd dimension)
 		public:
 		  	~toeplitz_matrix() { ///< Destructor. Deallocates Matrix.
 				dealloc();
@@ -77,7 +79,9 @@ namespace cuv{
 			toeplitz_matrix() ///< Empty constructor. Returns empty diagonal matrix.
 				: base_type(0,0),
 				 m_vec(0),
-				 m_num_dia(0)
+				 m_num_dia(0),
+				 m_input_maps(1),
+				 m_output_maps(1)
 				 {}
 			/** 
 			 * @brief Creates diagonal matrix of given size, with given number of diagonals.
@@ -85,14 +89,17 @@ namespace cuv{
 			 * @param h Height of matrix 
 			 * @param w Width of matrix
 			 * @param num_dia Number of diagonals in matrix
+			 * @param input_maps number of input maps (along 1st dim of matrix)
+			 * @param output_maps number of output maps (along 2nd dim of matrix)
 			 */
-			toeplitz_matrix(const index_type& h, const index_type& w, const int& num_dia)
+			toeplitz_matrix(const index_type& h, const index_type& w, const int& num_dia, const int& input_maps=1, const int& output_maps=1)
 				: base_type(h,w)
 				, m_num_dia(num_dia)
 				, m_offsets(num_dia)
+				, m_input_maps(input_maps)
+				, m_output_maps(output_maps)
 			{
 				alloc();
-
 			}
 			void dealloc() ///< Deallocate matrix entries. This calls deallocation of the vector storing entries.
 			{
@@ -103,7 +110,7 @@ namespace cuv{
 			}
 			void alloc() ///< Allocate matrix entries: Create vector to store entries.
 			{
-				m_vec = new vec_type(m_num_dia);
+				m_vec = new vec_type(m_num_dia*m_input_maps);
 			}
 			inline const vec_type& vec()const{ return *m_vec; } ///< Return pointer to vector storing entries
 			inline       vec_type& vec()     { return *m_vec; } ///< Return pointer to vector storing entries
@@ -180,7 +187,13 @@ namespace cuv{
 				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
 				if( it == m_dia2off.end() )
 					return (value_type) 0;
-				return (*m_vec)[ it->second];
+				int w = base_type::m_width / m_output_maps;
+				int p = 2*( off<=0 )-1;
+				int z = off + p*( int( -p* off/float(w) + 0.5f)*w );
+				float elim = !( 
+						   (z> 0 && (j%w)<z  ) 
+						|| (z<=0 && (j%w)>=w+z) );
+				return elim * (*m_vec)[ it->second*m_input_maps + j/w];
 			}
 			/** 
 			 * @brief Assignment operator. Assigns vector belonging to source to destination and sets source vector to NULL
