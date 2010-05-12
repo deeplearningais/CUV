@@ -47,13 +47,12 @@
 using namespace std;
 using namespace cuv;
 
-static const int  n = 150*150;
-static const int  m = 150*150;
-static const int  k = 96;
-static const int rf = 2;
-static const int fs = 8;
-static const int px = 150;
-static const int nm = m/n;
+static const unsigned int px = 256;  // image width and height
+static const unsigned int  n = px*px;// size of input layer
+static const unsigned int  m = 16*n;  // size output layer (same as input times number of output maps)
+static const unsigned int  k = 14;    // number images
+static const unsigned int fs = 8;    // filter size
+static const unsigned int nm = m/n;  // number of maps in output layer
 
 #define MEASURE_TIME(MSG, OPERATION, ITERS)     \
 	float MSG;                                  \
@@ -73,7 +72,7 @@ struct Fix{
 	dense_matrix<float,column_major,host_memory_space> B,B_,BLarge;
 	dense_matrix<float,column_major,host_memory_space> C,C_,CLarge;
 	Fix()
-	:   A(n,m,fs*fs*nm)
+	:   A(n,m,fs*fs*nm,1,nm)
 	,   A_(n,m)
 	,   B(m,1)
 	,   B_(m,1)
@@ -93,9 +92,11 @@ struct Fix{
 		A.set_offsets(off);
 		sequence(A.vec());
 		sequence(C);
-		sequence(C_);
 		sequence(B);
+		if(px > 64)
+			return;
 		sequence(B_);
+		sequence(C_);
 		convert(A_,A);
 	}
 	~Fix(){
@@ -108,7 +109,7 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 {
-	if(n*m > 1000*1000)
+	if(px>64)
 		return;
 	dense_matrix<float,column_major,host_memory_space> Ahostdense(n,m);
 	convert(Ahostdense,A);
@@ -139,7 +140,7 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 }
 BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_toeplitz )
 {
-	toeplitz_matrix<float,dev_memory_space> A2(n,m,A.num_dia());
+	toeplitz_matrix<float,dev_memory_space> A2(n,m,A.num_dia(),1,nm);
 	convert(A2,A);
 	dense_matrix<float,column_major,dev_memory_space> CLarge2(CLarge.h(), CLarge.w());
 	convert(CLarge2,CLarge);
@@ -148,12 +149,12 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_toeplitz )
 
 	float factAv = 2.f, factC = 1.3f;
 	//float factAv = 1.f, factC = 0.f;
-	MEASURE_TIME(host_dia, prod(CLarge, A, BLarge,'n','n',factAv,factC),  10);
-	MEASURE_TIME(dev_dia , prod(CLarge2,A2,BLarge2,'n','n',factAv,factC), 10);
+	MEASURE_TIME(host_dia, prod(CLarge, A, BLarge,'n','n',factAv,factC),  2);
+	MEASURE_TIME(dev_dia , prod(CLarge2,A2,BLarge2,'n','n',factAv,factC), 2);
 	printf("Speedup: %3.4f\n", host_dia/dev_dia);
 
-	MEASURE_TIME(host_dia_t, prod(BLarge,A,CLarge,'t','n',factAv,factC), 10);
-	MEASURE_TIME(dev_dia_t , prod(BLarge2,A2,CLarge2,'t','n',factAv,factC), 10);
+	MEASURE_TIME(host_dia_t, prod(BLarge,A,CLarge,'t','n',factAv,factC), 2);
+	MEASURE_TIME(dev_dia_t , prod(BLarge2,A2,CLarge2,'t','n',factAv,factC), 2);
 	printf("Speedup: %3.4f\n", host_dia_t/dev_dia_t);
 
 	BOOST_CHECK_LT(dev_dia,  host_dia);
@@ -161,7 +162,7 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_toeplitz )
 }
 BOOST_AUTO_TEST_CASE( spmv_host_speed )
 {
-	if(n*m > 1000*1000)
+	if(px>64)
 		return;
    float factAv = 2.f, factC = 1.3f;
    MEASURE_TIME(sparse_host, prod(CLarge,A,BLarge,'n','n',factAv,factC), 10);

@@ -76,6 +76,7 @@ spmm_toeplitz_kernel_trans_shared_[%bs%]_[%ni%]_[%rf%]
 	   offsets[threadIdx.x] = A_diaoff[threadIdx.x];
 	__syncthreads();
 #endif
+	const int w = A_w / output_maps;
 
 	for(index_type col = thread_id; col < A_w; col += grid_size)
 	{
@@ -93,13 +94,11 @@ spmm_toeplitz_kernel_trans_shared_[%bs%]_[%ni%]_[%rf%]
 #endif
 			if(row >= 0 && row < A_h)
 			{
-				const int w = A_w / output_maps;
-				const int p = 2*( off<=0 )-1;
-				const int z = off + p*( int( -p* off/float(w) + 0.5f)*w );
+				const int z = off + rintf( - off/float(w))*w;
 				const float elim = !( 
 						   (z> 0 && (col%w)<z  ) 
 						|| (z<=0 && (col%w)>=w+z) );
-				const value_type A_ij    = elim * A_data[ n*input_maps + col/w ];
+				const value_type A_ij    = elim * A_data[ n*input_maps + row/w ];
 				[% FOREACH img IN nimgs  %]
 					sums[[%bs%] * [% img %] + threadIdx.x] += A_ij * fetch_x<UseCache>(v,toff+row+A_h*[%img%]);
 				[% END %]
@@ -142,6 +141,7 @@ spmm_toeplitz_kernel_shared_[%bs%]_[%ni%]_[%rf%]
 		offsets[threadIdx.x] = A_diaoff[threadIdx.x];
 	__syncthreads();
 #endif
+	const int w = A_w / output_maps;
 
 	for(index_type row = thread_id; row < A_h; row += grid_size)
 	{
@@ -160,13 +160,11 @@ spmm_toeplitz_kernel_shared_[%bs%]_[%ni%]_[%rf%]
 #endif
 			if(col >= 0 && col < A_w)
 			{
-				const int w = A_w / output_maps;
-				const int p = 2*( off<=0 )-1;
-				const int z = off + p*( int( -p* off/float(w) + 0.5f)*w );
-				const float elim = !( 
-						   (z> 0 && (col%w)<z  ) 
-						|| (z<=0 && (col%w)>=w+z) );
-				const value_type A_ij    = elim * A_data[ n*input_maps + col/w ];
+				const int z = off + int(rintf( - off/float(w)))*w;
+				const float elim = !(
+						  (z> 0 && (col%w)<z  )
+					   || (z<=0 && (col%w)>=w+z) );
+				const value_type A_ij    = elim * A_data[ n*input_maps + row/w ];
 				[% FOREACH img IN nimgs %]
 					sums[[%bs%]* [%img%] + threadIdx.x] += A_ij * fetch_x<UseCache>(v, toff + col+[%img%]*A_w);
 				[% END %]

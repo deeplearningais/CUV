@@ -44,7 +44,7 @@
 #include <map>
 #include <memory>
 #include <iostream>
-#include <vector.hpp>
+#include <basics/vector.hpp>
 #include <vector_ops/vector_ops.hpp>
 #include <matrix.hpp>
 #include <cuv_general.hpp>
@@ -136,7 +136,11 @@ namespace cuv{
 			void set_offsets(T begin, const T& end){ 
 				int i=0;
 				while(begin!=end)
+				{
+					cuvAssert( i<m_offsets.size() );
 					m_offsets.set(i++,*begin++);
+				}
+				cuvAssert( i==m_offsets.size() );
 				post_update_offsets();
 			}
 			/**
@@ -179,6 +183,13 @@ namespace cuv{
 			{
 				return m_offsets[idx];
 			}
+			inline int get_dia(const int& dia)const               ///< Return diagonal of specified offset
+			{
+				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(dia);
+				if( it == m_dia2off.end() )
+					return (value_type) 0;
+				return it->second;
+			}
 
 			// ******************************
 			// read access
@@ -190,12 +201,13 @@ namespace cuv{
 				if( it == m_dia2off.end() )
 					return (value_type) 0;
 				int w = base_type::m_width / m_output_maps;
-				int p = 2*( off<=0 )-1;
-				int z = off + p*( int( -p* off/float(w) + 0.5f)*w );
+				//int z = off + w*rintf( - off/float(w));
+				float p = off<=0 ? 0.5f : -0.5f;
+				int z = off + w*int( - off/float(w) + p);
 				float elim = !( 
 						   (z> 0 && (j%w)<z  ) 
 						|| (z<=0 && (j%w)>=w+z) );
-				return elim * (*m_vec)[ it->second*m_input_maps + j/w];
+				return elim * (*m_vec)[ it->second*m_input_maps + i/w];
 			}
 			/** 
 			 * @brief Assignment operator. Assigns vector belonging to source to destination and sets source vector to NULL

@@ -42,6 +42,7 @@
 #include <basics/toeplitz_matrix.hpp>
 #include <convert/convert.hpp>
 #include <basics/sparse_matrix_io.hpp>
+#include <basics/filter_factory.hpp>
 
 using namespace std;
 using namespace cuv;
@@ -76,21 +77,44 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( output )
 {
+	typedef toeplitz_matrix<float, host_memory_space> sparse_type;
+	//typedef dia_matrix<float, host_memory_space> sparse_type;
+
+	filter_factory<float, host_memory_space>   ff(8,8,3,4,4);
+	dense_matrix<float,column_major,host_memory_space> filters(3*3, 4*4);
+	fill( filters.vec(), 0.f );
+	for( int i=0; i<4*4;i++ ){
+		for (int j = 0; j < 3*3; ++j) 
+		{
+			filters.set( j,i , ( float )i+1);
+		}
+	}
+	cout << "filters: "<< filters << endl;
+	sparse_type* mat_p = ff.create_toeplitz_from_filters(filters);
+	//sparse_type* mat_p = ff.get_dia();
+	sparse_type& mat = *mat_p;
+	BOOST_CHECK_EQUAL( 8*8*4, mat.w() )	;
+	BOOST_CHECK_EQUAL( 8*8*4, mat.h() )	;
+	//sequence( mat.vec() );
+	//apply_scalar_functor( mat.vec(), SF_ADD, 1.f );
+
 	using boost::format;
 	cout <<"   | ";
-	for( int j=0; j< w.w(); j++ )
-		cout << ( format( "%02d " )%j ).str();
+	for( int j=0; j< mat.w(); j++ )
+		cout << ( format( "%03d " )%j ).str();
 	cout <<endl;
-	for( int i=0; i< w.w(); i++ ){
-		cout << ( format( "%02d | " )%i ).str();
-		for( int j=0; j< w.h(); j++ ){
-			if( w( i,j ) == 0 )
-				cout << "   ";
+	for( int i=0; i< mat.w(); i++ ){
+		cout << ( format( "%03d | " )%i ).str();
+		for( int j=0; j< mat.h(); j++ ){
+			if( mat( i,j ) == 0 )
+				cout << "    ";
 			else
-				cout << ( format( "%02d " ) % ( w( i,j ) ) ).str();
+				cout << ( format( "%03d " ) % ( mat( i,j ) ) ).str();
 		}
 		cout <<endl;
 	}
+	cout << *ff.extract_filters( mat )<<endl;
+	delete mat_p;
 }
 
 BOOST_AUTO_TEST_CASE( spmv_uninit )
