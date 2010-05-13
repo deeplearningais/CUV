@@ -175,7 +175,7 @@ namespace cuv{
 				m_offsets.set(idx,val);
 				m_dia2off[val] = idx;
 			}
-			/** Return vector containing specified diagonal.
+			/** Return vector (view) containing specified diagonal.
 			 */
 			inline const vec_type* get_dia(const int& k)const{ 
 				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(k);
@@ -185,6 +185,8 @@ namespace cuv{
 				const index_type N = std::min(base_type::m_height - i_start, (base_type::m_width - j_start));
 				return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
 			} 
+			/** Return a vector (view) on the specified diagonal
+			 */
 			inline vec_type* get_dia(const int& k){ 
 				int off   = m_dia2off[k];
 				const index_type i_start = std::max((int)0,-k);
