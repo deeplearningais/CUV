@@ -39,7 +39,8 @@
 
 #include <cuv_general.hpp>
 #include <dense_matrix.hpp>
-#include <toeplitz_matrix.hpp>
+#include <basics/toeplitz_matrix.hpp>
+#include <basics/filter_factory.hpp>
 #include <convert.hpp>
 #include <matrix_ops/matrix_ops.hpp>
 #include <timing.hpp>
@@ -47,12 +48,13 @@
 using namespace std;
 using namespace cuv;
 
-static const unsigned int px = 256;  // image width and height
-static const unsigned int  n = px*px;// size of input layer
-static const unsigned int  m = 16*n;  // size output layer (same as input times number of output maps)
+static const unsigned int px = 128;  // image width and height
+static const unsigned int im = 1;
+static const unsigned int om = 4;
+static const unsigned int  n = im*px*px;// size of input layer
+static const unsigned int  m = om*px*px;  // size output layer (same as input times number of output maps)
 static const unsigned int  k = 14;    // number images
-static const unsigned int fs = 8;    // filter size
-static const unsigned int nm = m/n;  // number of maps in output layer
+static const unsigned int fs = 11;    // filter size
 
 #define MEASURE_TIME(MSG, OPERATION, ITERS)     \
 	float MSG;                                  \
@@ -66,13 +68,15 @@ static const unsigned int nm = m/n;  // number of maps in output layer
 		MSG = 1000000.0f*tim.perf();            \
 	}
 
+#define NO_DENSE_TESTS 1
+
 struct Fix{
 	toeplitz_matrix<float,host_memory_space>   A;
 	dense_matrix<float,column_major,host_memory_space> A_;
 	dense_matrix<float,column_major,host_memory_space> B,B_,BLarge;
 	dense_matrix<float,column_major,host_memory_space> C,C_,CLarge;
 	Fix()
-	:   A(n,m,fs*fs*nm,1,nm)
+	:   A()
 	,   A_(n,m)
 	,   B(m,1)
 	,   B_(m,1)
@@ -82,18 +86,11 @@ struct Fix{
 	,   CLarge(n,k)
 	{
 		std::vector<int> off;
-		off.resize(fs*fs*nm);
-		for(int i=0;i<fs;i++)
-			for(int j=0;j<fs;j++)
-				for(int m=0;m<nm;m++)
-				{
-					off[i*fs+j + m*fs*fs] = i*px+j;
-				}
-		A.set_offsets(off);
+		A = *filter_factory<float,host_memory_space>(px,px,fs,im,om).get_toeplitz();
 		sequence(A.vec());
 		sequence(C);
 		sequence(B);
-		if(px > 64)
+		if(NO_DENSE_TESTS)
 			return;
 		sequence(B_);
 		sequence(C_);
@@ -109,7 +106,7 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 {
-	if(px>64)
+	if(NO_DENSE_TESTS)
 		return;
 	dense_matrix<float,column_major,host_memory_space> Ahostdense(n,m);
 	convert(Ahostdense,A);
@@ -140,7 +137,7 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 }
 BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_toeplitz )
 {
-	toeplitz_matrix<float,dev_memory_space> A2(n,m,A.num_dia(),1,nm);
+	toeplitz_matrix<float,dev_memory_space> A2;
 	convert(A2,A);
 	dense_matrix<float,column_major,dev_memory_space> CLarge2(CLarge.h(), CLarge.w());
 	convert(CLarge2,CLarge);
@@ -162,7 +159,7 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_toeplitz )
 }
 BOOST_AUTO_TEST_CASE( spmv_host_speed )
 {
-	if(px>64)
+	if(NO_DENSE_TESTS)
 		return;
    float factAv = 2.f, factC = 1.3f;
    MEASURE_TIME(sparse_host, prod(CLarge,A,BLarge,'n','n',factAv,factC), 10);

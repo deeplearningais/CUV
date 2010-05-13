@@ -39,6 +39,7 @@
 #include <cuv_general.hpp>
 #include <dense_matrix.hpp>
 #include <basics/toeplitz_matrix.hpp>
+#include <basics/filter_factory.hpp>
 #include <convert.hpp>
 #include <matrix_ops/matrix_ops.hpp>
 #include <timing.hpp>
@@ -46,10 +47,14 @@
 using namespace std;
 using namespace cuv;
 
-static const int n = 32;
-static const int m = 16;
+static const int px = 64;
+static const int py = 54;
+static const int im = 4;
+static const int om = 6;
+static const int fs = 3;
+static const int n = im*px*py;
+static const int m = om*px*py;
 static const int k = 6;
-static const int rf = 2;
 
 struct Fix{
 	toeplitz_matrix<float,host_memory_space>   A;
@@ -74,6 +79,7 @@ struct Fix{
 #endif
 			off.push_back(i);
 		A.set_offsets(off);
+		A = *filter_factory<float,host_memory_space>(px,py,fs,im,om).get_toeplitz();
 		sequence(A.vec());
 		sequence(C);
 		sequence(C_);
