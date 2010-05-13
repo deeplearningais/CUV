@@ -238,43 +238,60 @@ namespace cuv{
 				if(transA == 't'){
 					cuvAssert(A_h == v.size());
 					cuvAssert(A_w == dst.size());
-					for(index_type i = 0; i < num_diags; i++){
-						const int k = offsets[i];  //diagonal offset
-
-						const index_type i_start =  1 * std::max((int)0, k);
-						const index_type j_start =  1 * std::max((int)0,-k); // the matrix is now _wider_ than high --> stretch columns!
-
-						//number of elements to process
-						const index_type N = std::min((A_h - j_start), A_w - i_start);
-
-						const value_type * d_ = A.vec().ptr() + i;
-						const value_type * x_ = v.ptr() + j_start;
-						value_type * y_ = dst.ptr() + i_start;
-
-						for(index_type n = 0; n < N; n++,y_++,x_++){
-							*y_ += factAv * *d_ * *x_;
-						}
+					for( unsigned int j=0; j<A.w(); j++ ){
+						value_type sum = (value_type) 0;
+						for( unsigned int i=0; i<A.h();i++ )
+							sum += A( i,j ) * v[i];
+						dst.set( j, dst[ j ] + factAv*sum );
 					}
+
+/*
+ *                    for(index_type i = 0; i < num_diags; i++){
+ *                        const int k = offsets[i];  //diagonal offset
+ *
+ *                        const index_type i_start =  1 * std::max((int)0, k);
+ *                        const index_type j_start =  1 * std::max((int)0,-k); // the matrix is now _wider_ than high --> stretch columns!
+ *
+ *                        //number of elements to process
+ *                        const index_type N = std::min((A_h - j_start), A_w - i_start);
+ *
+ *                        const value_type * d_ = A.vec().ptr() + i;
+ *                        const value_type * x_ = v.ptr() + j_start;
+ *                        value_type * y_ = dst.ptr() + i_start;
+ *
+ *                        for(index_type n = 0; n < N; n++,y_++,x_++){
+ *                            *y_ += factAv * *d_ * *x_;
+ *                        }
+ *                    }
+ */
 				}else{
 					cuvAssert(A_w == v.size());
 					cuvAssert(A_h == dst.size());
-					for(index_type i = 0; i < num_diags; i++){
-						const int k = offsets[i];  //diagonal offset
-
-						const index_type i_start =  1*std::max((int)0,-k);
-						const index_type j_start =  1*std::max((int)0, k);
-
-						//number of elements to process
-						const index_type N = std::min(A_h - i_start, (A_w - j_start));
-
-						const value_type * d_ = A.vec().ptr() + i;
-						const value_type * x_ = v.ptr() + j_start;
-						value_type * y_ = dst.ptr() + i_start;
-
-						for(index_type n = 0; n < N; n++){
-							*y_++ += factAv * *d_ * x_[n];
-						}
+					for( int i=0; i<A.h();i++ ){ 
+						value_type sum = ( value_type ) 0;
+						for( int j=0; j<A.w();j++ )
+							sum += A( i,j ) * v[j];
+						dst.set( i, dst[ i ] + factAv*sum );
 					}
+/*
+ *                    for(index_type i = 0; i < num_diags; i++){
+ *                        const int k = offsets[i];  //diagonal offset
+ *
+ *                        const index_type i_start =  1*std::max((int)0,-k);
+ *                        const index_type j_start =  1*std::max((int)0, k);
+ *
+ *                        //number of elements to process
+ *                        const index_type N = std::min(A_h - i_start, (A_w - j_start));
+ *
+ *                        const value_type * d_ = A.vec().ptr() + i;
+ *                        const value_type * x_ = v.ptr() + j_start;
+ *                        value_type * y_ = dst.ptr() + i_start;
+ *
+ *                        for(index_type n = 0; n < N; n++){
+ *                            *y_++ += factAv * *d_ * x_[n];
+ *                        }
+ *                    }
+ */
 				}
 			}
 	}
