@@ -32,7 +32,6 @@ INCLUDE_DIRECTORIES(      ${CUDA_CUT_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS}         t
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}                                )
 INCLUDE_DIRECTORIES(      ${CMAKE_CURRENT_SOURCE_DIR}                                )
 
-ENABLE_TESTING()
 add_subdirectory(3rd_party)
 
 add_subdirectory(tools)

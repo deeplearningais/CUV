@@ -31,6 +31,7 @@ IF(DOXYGEN_FOUND)
 	ADD_CUSTOM_TARGET(doc DEPENDS ${CMAKE_BINARY_DIR}/doc/html/index.html)
 ENDIF(DOXYGEN_FOUND)
 
+ENABLE_TESTING()
 add_subdirectory(src)
 
 
