@@ -49,7 +49,7 @@ using namespace cuv;
 static const int n = 32;
 static const int m = 16;
 static const int k = 6;
-static const int rf = 2;
+static const int rf = 1;
 
 struct Fix{
 	dia_matrix<float,host_memory_space>   A;
