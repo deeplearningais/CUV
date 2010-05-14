@@ -75,7 +75,7 @@ $tmpl2
 EOT
 $outstr .= $o;
 
-my $kernel = (($ni < 0) ? "spmm_${kernel_name}_kernel_trans_register" : "spmm_${kernel_name}_kernel_trans_shared");
+my $kernel = (($ni < 2) ? "spmm_${kernel_name}_kernel_trans_register" : "spmm_${kernel_name}_kernel_trans_shared");
 $kernel .= "_" . join("_",($spmm_block_size, $ni, $rf));
 my $has_stride = $kernel_name eq "dia";
 my $stride_param = ( $has_stride )?"A.stride(),":"A.input_maps(),A.output_maps(),";

@@ -176,3 +176,146 @@ spmm_toeplitz_kernel_shared_[%bs%]_[%ni%]_[%rf%]
 		[% END %]
 	}
 }
+
+/*
+ * Registers are a bit special, they (empirically) make only sense for NUM_IMG = 1
+ */
+[% IF ni < 2 %]
+template <typename value_type, typename index_type, bool UseCache, bool wantFactAv, bool wantFactC>
+	__global__ void
+spmm_toeplitz_kernel_trans_register_[%bs%]_[%ni%]_[%rf%]
+(
+ const index_type A_h, 
+ const index_type A_w, 
+ const index_type A_nd,
+ const index_type input_maps,
+ const index_type output_maps,
+ const int        * A_diaoff,
+ const value_type * A_data,
+ const value_type * v, 
+ value_type       * dst,
+ const value_type factAv,
+ const value_type factC,
+ const unsigned int  toff)
+{
+#if BLOCK_SIZE_LIMITS_NUM_DIAG
+	__shared__ int        offsets[[%bs%]];
+#endif
+	const index_type thread_id = large_grid_thread_id();
+	const index_type grid_size = large_grid_thread_num();
+
+	// load diagonal offsets into shared memory
+#if BLOCK_SIZE_LIMITS_NUM_DIAG
+	if(threadIdx.x < A_nd)
+	   offsets[threadIdx.x] = A_diaoff[threadIdx.x];
+	__syncthreads();
+#endif
+	const int w = A_w / output_maps;
+
+	for(index_type col = thread_id; col < A_w; col += grid_size)
+	{
+		[% FOREACH img IN nimgs %] 
+			value_type            sums[%img%] = 0;
+		[% END %]
+
+		for(index_type n = 0; n < A_nd; n++)
+		{
+#if BLOCK_SIZE_LIMITS_NUM_DIAG
+			const int off = offsets[n];
+			const int row = (col - off);
+#else
+			const int off = A_diaoff[n];
+			const int row = (col - off);
+#endif
+			if(row >= 0 && row < A_h)
+			{
+				const int z = off + rintf( - off/float(w))*w;
+				const float elim = !( 
+						   (z> 0 && (col%w)<z  ) 
+						|| (z<=0 && (col%w)>=w+z) );
+				const value_type A_ij    = elim * A_data[ n*input_maps + row/w ];
+				[% FOREACH img IN nimgs  %]
+					sums[% img %] += A_ij * fetch_x<UseCache>(v,toff+row+A_h*[%img%]);
+				[% END %]
+			}
+		}
+		[% FOREACH img IN nimgs %]
+			dst[col + [%img%]*A_w] = (wantFactC  ? factC * dst[col + [%img%] * A_w] : 0.f) 
+				+                    (wantFactAv ? factAv                           : 1.f) * sums[%img%];
+		[% END %]
+	}
+}
+template <typename value_type, typename index_type, bool UseCache, bool wantFactAv, bool wantFactC>
+__global__ void
+spmm_toeplitz_kernel_register_[%bs%]_[%ni%]_[%rf%]
+	(
+	 const index_type A_h, 
+	 const index_type A_w, 
+	 const index_type A_nd,
+	 const index_type input_maps,
+	 const index_type output_maps,
+	 const int        * A_diaoff,
+	 const value_type * A_data,
+	 const value_type * v, 
+	 value_type       * dst,
+	 const value_type factAv,
+	 const value_type factC,
+	 const unsigned int  toff)
+{
+#if BLOCK_SIZE_LIMITS_NUM_DIAG
+	__shared__ int        offsets[[%bs%]];
+#endif
+
+	[% FOREACH img IN nimgs %] 
+		value_type            sums[%img%] = 0; 
+	[% END %]
+
+	const index_type thread_id = large_grid_thread_id();
+	const index_type grid_size = large_grid_thread_num();
+
+#if BLOCK_SIZE_LIMITS_NUM_DIAG
+	// load diagonal offsets into shared memory
+	if(threadIdx.x < A_nd)
+		offsets[threadIdx.x] = A_diaoff[threadIdx.x];
+#endif
+	const int w = A_w / output_maps;
+
+	for(index_type row = thread_id; row < A_h; row += grid_size)
+	{
+		// initialize shared memory
+		[% FOREACH img IN nimgs %]
+		    sums[%img%] = (value_type) 0 ;
+		[% END %]
+		__syncthreads();
+		for(index_type n = 0; n < A_nd; n++)
+		{
+#if BLOCK_SIZE_LIMITS_NUM_DIAG
+			const int off = offsets[n];
+			const int col = (row + off);
+#else
+			const int off = A_diaoff[n];
+			const int col = (row + off);
+#endif
+			if(col >= 0 && col < A_w)
+			{
+				const int z = off + int(rintf( - off/float(w)))*w;
+				const float elim = !(
+						  (z> 0 && (col%w)<z  )
+					   || (z<=0 && (col%w)>=w+z) );
+				const value_type A_ij    = elim * A_data[ n*input_maps + row/w ];
+				const value_type* v_ptr = v+col;
+				[% FOREACH img IN nimgs %]
+					sums[% img %] += A_ij * *v_ptr; v_ptr += A_h;
+				[% END %]
+				/*[% FOREACH img IN nimgs %]*/
+					/*sums[%img%] += A_ij * fetch_x<UseCache>(v, toff + col+[%img%]*A_w);*/
+				/*[% END %]*/
+			}
+		}
+		[% FOREACH img IN nimgs %]
+			dst[row + [%img%]*A_h] = (wantFactC  ? factC * dst[row + [%img%] * A_h] : 0.f)
+				+                    (wantFactAv ? factAv                           : 1.f) * sums[%img%];
+		[% END %]
+	}
+}
+[% END %]
