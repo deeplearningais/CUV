@@ -33,6 +33,7 @@
 
 #define BOOST_TEST_MODULE example
 #include <cstdio>
+#include <memory>
 #include <boost/test/included/unit_test.hpp>
 
 #include <cuv_general.hpp>
@@ -43,6 +44,8 @@
 #include <timing.hpp>
 #include <random.hpp>
 #include <matrix_ops/rprop.hpp>
+#include <basics/filter_factory.hpp>
+#include <basics/toeplitz_matrix.hpp>
 #include <convert.hpp>
 
 using namespace cuv;
@@ -135,9 +138,9 @@ void conv_speed_test(int inputSize, int filterSize, int numFilters, int numImage
 
 
 template<class ms_type>
-void conv_rlcnp(dense_matrix<float, row_major, ms_type> dst,
-				dense_matrix<float, row_major, ms_type> img,
-				dense_matrix<float, row_major, ms_type> filter,
+void conv_rlcnp(dense_matrix<float, row_major, ms_type>& dst,
+				dense_matrix<float, row_major, ms_type>& img,
+				dense_matrix<float, row_major, ms_type>& filter,
 				int numImages,
 				int inputSize,
 				int numFilter,
@@ -180,10 +183,21 @@ void conv_rlcnp_test(int inputSize, int filterSize, int numFilters, int numImage
 	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
 	sequence(h_filter); apply_scalar_functor(h_filter,SF_MULT,0.001f);
 
+
+
 	MEASURE_TIME(dev,  conv_rlcnp<dev_memory_space>(d_dst,d_img,d_filter,c,n,f,g), 10);
 	MEASURE_TIME(host, conv_rlcnp<host_memory_space>(h_dst,h_img,h_filter,c,n,f,g), 10);
-
 	printf("Speedup: %3.4f\n", host/dev);
+
+	std::auto_ptr<toeplitz_matrix<float,dev_memory_space> > tp ( filter_factory<float,dev_memory_space>( n,n,g,c,f ).get_toeplitz() );
+	dense_matrix<float, column_major, dev_memory_space>  im_in(c*n*n,1);
+	dense_matrix<float, column_major, dev_memory_space>  im_out(f*n*n,1);
+	sequence( tp->vec() );
+	//MEASURE_TIME(dev_tp,  prod( im_out,*tp,im_in,'t','n' ), 10);
+	MEASURE_TIME(dev_tp,  prod( im_in,*tp,im_out,'n','n' ), 10);
+
+	printf("Speedup dev/dev_tp : %3.4f\n", dev/dev_tp);
+	printf("Speedup host/dev_tp: %3.4f\n", host/dev_tp);
 
 }
 
@@ -227,7 +241,8 @@ BOOST_AUTO_TEST_CASE( convolution_speed )
 	//conv_speed_test(40, 9, 16, 128);
 	//conv_speed_test(47, 15, 16, 1);
 	//conv2_speed_test(384,9,32,16);
-	conv_rlcnp_test(384,9,32,16);
+	//conv_rlcnp_test(384,9,16,16);
+	conv_rlcnp_test(180+4*2,9,16,16);
 }
 
 BOOST_AUTO_TEST_CASE( supersampling_speed )
