@@ -69,8 +69,8 @@ namespace cuv{
 		  vec_type* m_vec;                      ///< stores the actual data 
 		  intvec_type m_offsets;                ///< stores the offsets of the diagonals
 		  std::map<int,index_type> m_dia2off;   ///< maps a diagonal to an offset
-		  int m_input_maps;                     ///< number of input maps  (along 1st dimension)
-		  int m_output_maps;                    ///< number of output maps (along 2nd dimension)
+		  unsigned int m_input_maps;            ///< number of input maps  (along 1st dimension)
+		  unsigned int m_output_maps;           ///< number of output maps (along 2nd dimension)
 		public:
 		  	~toeplitz_matrix() { ///< Destructor. Deallocates Matrix.
 				dealloc();
@@ -112,8 +112,8 @@ namespace cuv{
 			{
 				m_vec = new vec_type(m_num_dia*m_input_maps);
 			}
-			inline int input_maps()const{ return m_input_maps; } ///< Return number of input_maps
-			inline int output_maps()const{ return m_output_maps; } ///< Return number of output
+			inline unsigned int input_maps()const{ return m_input_maps; } ///< Return number of input_maps
+			inline unsigned int output_maps()const{ return m_output_maps; } ///< Return number of output
 			inline const vec_type& vec()const{ return *m_vec; } ///< Return pointer to vector storing entries
 			inline       vec_type& vec()     { return *m_vec; } ///< Return pointer to vector storing entries
 			inline const vec_type* vec_ptr()const{ return m_vec; } ///< Return reference to vector storing entries

@@ -95,45 +95,74 @@ void show( T&mat ){
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
-BOOST_AUTO_TEST_CASE( output )
+/*
+ *BOOST_AUTO_TEST_CASE( output )
+ *{
+ *    typedef toeplitz_matrix<float, host_memory_space> toeplitz_type;
+ *    //typedef toeplitz_matrix<float, host_memory_space> sparse_type;
+ *    typedef dia_matrix<float, host_memory_space> sparse_type;
+ *
+ *    filter_factory<float, host_memory_space>   ff(8,8,3,4,4);
+ *    dense_matrix<float,column_major,host_memory_space> filters(3*3, 4*4);
+ *    fill( filters.vec(), 0.f );
+ *    for( int i=0; i<4*4;i++ ){
+ *        for (int j = 0; j < 3*3; ++j) 
+ *        {
+ *            filters.set( j,i , ( float )i+1);
+ *        }
+ *    }
+ *    cout << "filters: "<< filters << endl;
+ *
+ *    //sparse_type* mat_p = ff.create_toeplitz_from_filters(filters);
+ *    sparse_type* mat_p = ff.get_dia();
+ *    sparse_type& mat = *mat_p;
+ *
+ *    //sequence( mat.vec() );
+ *    fill( mat.vec(), 0.f );
+ *    //apply_scalar_functor( mat.vec(), SF_ADD, 1.f );
+ *
+ *    BOOST_CHECK_EQUAL( 8*8*4, mat.w() )	;
+ *    BOOST_CHECK_EQUAL( 8*8*4, mat.h() )	;
+ *
+ *    // test averaging of diagonals
+ *    toeplitz_type* sums  = ff.get_toeplitz();
+ *    fill( sums->vec(), 0 );
+ *    avg_diagonals(*sums, mat);
+ *
+ *    show( *sums );
+ *    show( mat );
+ *    //cout << *ff.extract_filters( mat )<<endl;
+ *
+ *    delete mat_p;
+ *    delete sums;
+ *}
+ */
+
+BOOST_AUTO_TEST_CASE( avg_diagonals_device )
 {
-	typedef toeplitz_matrix<float, host_memory_space> toeplitz_type;
-	//typedef toeplitz_matrix<float, host_memory_space> sparse_type;
-	typedef dia_matrix<float, host_memory_space> sparse_type;
+	typedef toeplitz_matrix<float, dev_memory_space> toeplitz_t;
+	typedef dia_matrix<float, dev_memory_space> dia_t;
 
-	filter_factory<float, host_memory_space>   ff(8,8,3,4,4);
-	dense_matrix<float,column_major,host_memory_space> filters(3*3, 4*4);
-	fill( filters.vec(), 0.f );
-	for( int i=0; i<4*4;i++ ){
-		for (int j = 0; j < 3*3; ++j) 
-		{
-			filters.set( j,i , ( float )i+1);
-		}
-	}
-	cout << "filters: "<< filters << endl;
+	typedef toeplitz_matrix<float, host_memory_space> toeplitz_ht;
+	typedef dia_matrix<float, host_memory_space> dia_ht;
 
-	//sparse_type* mat_p = ff.create_toeplitz_from_filters(filters);
-	sparse_type* mat_p = ff.get_dia();
-	sparse_type& mat = *mat_p;
+	filter_factory<float, dev_memory_space>   ff(8,8,3,4,4);
 
-	//sequence( mat.vec() );
-	fill( mat.vec(), 0.f );
-	//apply_scalar_functor( mat.vec(), SF_ADD, 1.f );
+	auto_ptr<dia_t>     mat_p(ff.get_dia());
+	auto_ptr<toeplitz_t> tp_p(ff.get_toeplitz());
+	dia_t&      mat   = *mat_p;
+	toeplitz_t& tp    = *tp_p;
+	sequence( mat.vec());
+	fill( tp.vec(), -1 );
 
-	BOOST_CHECK_EQUAL( 8*8*4, mat.w() )	;
-	BOOST_CHECK_EQUAL( 8*8*4, mat.h() )	;
+	toeplitz_ht tph;
+	dia_ht      math;
+	convert( tph,  tp );
+	convert( math, mat );
 
-	// test averaging of diagonals
-	toeplitz_type* sums  = ff.get_toeplitz();
-	fill( sums->vec(), 0 );
-	avg_diagonals(*sums, mat);
-
-	show( *sums );
-	show( mat );
-	//cout << *ff.extract_filters( mat )<<endl;
-
-	delete mat_p;
-	delete sums;
+	avg_diagonals( tp,mat );
+	avg_diagonals( tph,math );
+	MAT_CMP( tp, tph, 0.1 );
 }
 
 BOOST_AUTO_TEST_CASE( spmv_uninit )

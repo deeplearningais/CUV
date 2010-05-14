@@ -48,6 +48,63 @@ namespace cuv{
 				}
 			}
 
+		template<int BLOCK_DIM, class value_type, class index_type>
+		__global__ void dia2toeplitz_kernel(
+				value_type* tp_data,
+				const value_type* dia_data,
+				const int* dia_offsets,
+				index_type dia_w,
+				index_type dia_stride,
+				index_type w,
+				index_type im,
+				index_type om
+				){
+			index_type dia = blockIdx.x; // the (running) number of the diagonal
+			index_type bi  = blockIdx.y; // the block offset (an index along the diagonal to determine in which input/output map we are)
+			/*index_type nd  = gridDim.x;  // the total number of diagonals*/
+
+			__shared__ int off;          // the offset of the diagonal (0 for main diagonal, negative to the left, positive to the right)
+			__shared__ index_type i_start;          
+			__shared__ index_type N;          
+			__shared__ index_type startx;          
+			if( threadIdx.x == 0 ){
+				off = dia_offsets[ dia ];
+				int virtual_om  = rintf( off/float( w ));
+				int virtual_off = off - virtual_om*w;
+				index_type j_start;          
+				i_start = max( (int)0, -virtual_off );
+				j_start = max( (int)0,  virtual_off );
+				N       = min( w-i_start, w-j_start );
+				startx  = i_start + bi*w;
+			}
+			__syncthreads();
+			if( startx+N > dia_w )
+			  return;
+
+
+			__shared__ value_type sSums[ BLOCK_DIM ];
+			value_type sum = ( value_type ) 0;
+			for (int idx = dia*dia_stride + startx + threadIdx.x;
+					 idx < dia*dia_stride + startx + N;
+					 idx += blockDim.x) {
+				value_type f = dia_data[ idx ];
+				sum += f;
+			}
+			sSums[ threadIdx.x ] = sum;
+			__syncthreads();
+
+			int offset = blockDim.x / 2;
+			while (offset > 0) {
+				if (threadIdx.x < offset) 
+					sSums[threadIdx.x] += sSums[threadIdx.x + offset];
+				offset >>= 1;
+			}
+			__syncthreads();
+
+			if( threadIdx.x == 0 )
+				tp_data[ dia * im + bi ] = sSums[ 0 ]/N;
+		}
+
 		/***********************************************************
 		 * With toeplitz_matrix result
 		 ***********************************************************/
@@ -56,8 +113,25 @@ namespace cuv{
 					cuv::toeplitz_matrix<T,dev_memory_space,I>& dst,
 					const cuv::dia_matrix<T,dev_memory_space,I>& dia
 					){
-				cuvAssert( false );
+				cuvAssert( dst.w()==dia.w() );
+				cuvAssert( dst.h()==dia.h() );
+				I w = dst.w()/dst.output_maps();
+
+				static const int BLOCK_DIM = 256;
+				dim3 threads( BLOCK_DIM );
+				dim3 grid ( dst.num_dia(), dst.input_maps() );
+				dia2toeplitz_kernel<BLOCK_DIM><<<grid,threads>>>(
+						dst.vec().ptr(),
+						dia.vec().ptr(),
+						dia.get_offsets().ptr(),
+						dia.w(),
+						dia.stride(),
+						w,
+						dst.input_maps(),
+						dst.output_maps() );
+				cuvSafeCall( cudaThreadSynchronize() );
 			}
+
 		template<class T,class I>
 			void avg_diagonals(
 					cuv::toeplitz_matrix<T,host_memory_space,I>& dst,

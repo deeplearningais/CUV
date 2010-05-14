@@ -66,7 +66,7 @@ namespace cuv{
 		  typedef dia_matrix<value_type,memory_space_type,index_type> 	   my_type;				///< Type of this matix
 		public:
 		  int m_num_dia;                        ///< number of diagonals stored
-		  int m_stride;                         ///< how long the stored diagonals are
+		  unsigned int m_stride;                ///< how long the stored diagonals are
 		  vec_type* m_vec;                      ///< stores the actual data 
 		  intvec_type m_offsets;                ///< stores the offsets of the diagonals
 		  std::map<int,index_type> m_dia2off;   ///< maps a diagonal to an offset
@@ -119,7 +119,7 @@ namespace cuv{
 			inline const vec_type* vec_ptr()const{ return m_vec; } ///< Return reference to vector storing entries
 			inline       vec_type* vec_ptr()     { return m_vec; } ///< Return reference to vector storing entries
 			inline int num_dia()const{ return m_num_dia; } ///< Return number of diagonals
-			inline int stride()const { return m_stride;  }///< Return stride of matrix
+			inline unsigned int stride()const { return m_stride;  }///< Return stride of matrix
 			inline int row_fact()const{ return m_row_fact; } ///< Return steepness of diagonals
 
 			//*****************************

@@ -43,6 +43,7 @@
 #include <basics/filter_factory.hpp>
 #include <convert.hpp>
 #include <matrix_ops/matrix_ops.hpp>
+#include <matrix_ops/diagonals.hpp>
 #include <timing.hpp>
 
 using namespace std;
@@ -134,6 +135,33 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 
 	BOOST_CHECK_LT(dev_dia,  dev_dense);
 	BOOST_CHECK_LT(dev_dia_t,dev_dense_t);
+}
+
+BOOST_AUTO_TEST_CASE( avg_diagonals_speed )
+{
+	typedef toeplitz_matrix<float, dev_memory_space> toeplitz_t;
+	typedef dia_matrix<float, dev_memory_space> dia_t;
+
+	typedef toeplitz_matrix<float, host_memory_space> toeplitz_ht;
+	typedef dia_matrix<float, host_memory_space> dia_ht;
+
+	filter_factory<float, dev_memory_space>   ff(px,px,fs,im,om);
+
+	auto_ptr<dia_t>     mat_p(ff.get_dia());
+	auto_ptr<toeplitz_t> tp_p(ff.get_toeplitz());
+	dia_t&      mat   = *mat_p;
+	toeplitz_t& tp    = *tp_p;
+	sequence( mat.vec());
+	fill( tp.vec(), -1 );
+
+	toeplitz_ht tph;
+	dia_ht      math;
+	convert( tph,  tp );
+	convert( math, mat );
+
+   MEASURE_TIME(avg_dia_host, avg_diagonals( tph,math ), 10);
+   MEASURE_TIME(avg_dia_dev , avg_diagonals( tp,mat ), 10);
+   printf("Speedup: %3.4f\n", avg_dia_host/avg_dia_dev);
 }
 BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_toeplitz )
 {
