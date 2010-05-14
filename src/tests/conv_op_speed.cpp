@@ -133,11 +133,101 @@ void conv_speed_test(int inputSize, int filterSize, int numFilters, int numImage
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
+
+template<class ms_type>
+void conv_rlcnp(dense_matrix<float, row_major, ms_type> dst,
+				dense_matrix<float, row_major, ms_type> img,
+				dense_matrix<float, row_major, ms_type> filter,
+				int numImages,
+				int inputSize,
+				int numFilter,
+				int filterSize
+				){
+	int c = inputSize;
+	int k = inputSize - filterSize + 1;
+	int f = numFilter;
+	dense_matrix<float, row_major, ms_type>  helper(c, f*k*k);
+
+	convolve2(helper, img, filter, numFilter);
+	reduce_to_row(dst.vec(), helper, RF_ADD);
+
+}
+
+void conv_rlcnp_test(int inputSize, int filterSize, int numFilters, int numImages){
+
+	int c = numImages;
+	int n = inputSize;
+	int f = numFilters;
+	int g = filterSize;
+	int k = inputSize-filterSize+1;
+
+	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i using convolve2().\n", c, n,n, f, g,g);
+	printf("Result are %i*%i images of size %ix%i\n", c,f, k,k);
+
+	dense_matrix<float, row_major, dev_memory_space>  d_img(c, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  d_filter(c, f*g*g);
+	dense_matrix<float, row_major, dev_memory_space>  d_dst(c, k*k);
+
+	dense_matrix<float, row_major, host_memory_space>  h_img(c, n*n);
+	dense_matrix<float, row_major, host_memory_space>  h_filter(c, f*g*g);
+	dense_matrix<float, row_major, host_memory_space>  h_dst(c, k*k);
+
+	fill(d_dst, 0.0f);
+	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
+	sequence(d_filter); apply_scalar_functor(d_filter,SF_MULT,0.001f);
+
+	fill(h_dst, 1.0f);
+	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
+	sequence(h_filter); apply_scalar_functor(h_filter,SF_MULT,0.001f);
+
+	MEASURE_TIME(dev,  conv_rlcnp<dev_memory_space>(d_dst,d_img,d_filter,c,n,f,g), 10);
+	MEASURE_TIME(host, conv_rlcnp<host_memory_space>(h_dst,h_img,h_filter,c,n,f,g), 10);
+
+	printf("Speedup: %3.4f\n", host/dev);
+
+}
+
+
+void conv2_speed_test(int inputSize, int filterSize, int numFilters, int numImages)
+{
+	int c = numImages;
+	int n = inputSize;
+	int f = numFilters;
+	int g = filterSize;
+	int k = inputSize-filterSize+1;
+
+	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i using convolve2().\n", c, n,n, f, g,g);
+	printf("Result are %i*%i images of size %ix%i\n", c,f, k,k);
+
+	dense_matrix<float, row_major, dev_memory_space>  d_img(c, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  d_filter(c, f*g*g);
+	dense_matrix<float, row_major, dev_memory_space>  d_dst(c, f*k*k);
+
+	dense_matrix<float, row_major, host_memory_space>  h_img(c, n*n);
+	dense_matrix<float, row_major, host_memory_space>  h_filter(c, f*g*g);
+	dense_matrix<float, row_major, host_memory_space>  h_dst(c, f*k*k);
+
+	fill(d_dst, 0.0f);
+	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
+	sequence(d_filter); apply_scalar_functor(d_filter,SF_MULT,0.001f);
+
+	fill(h_dst, 1.0f);
+	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
+	sequence(h_filter); apply_scalar_functor(h_filter,SF_MULT,0.001f);
+
+	MEASURE_TIME(dev,  convolve2(d_dst,d_img,d_filter, f), 10);
+	MEASURE_TIME(host, convolve2(h_dst,h_img,h_filter, f), 10);
+
+	printf("Speedup: %3.4f\n", host/dev);
+}
+
 BOOST_AUTO_TEST_CASE( convolution_speed )
 {
-	conv_speed_test(140, 16, 16, 30);
-	conv_speed_test(40, 9, 16, 128);
-	conv_speed_test(47, 15, 16, 1);
+	//conv_speed_test(140, 16, 16, 30);
+	//conv_speed_test(40, 9, 16, 128);
+	//conv_speed_test(47, 15, 16, 1);
+	//conv2_speed_test(384,9,32,16);
+	conv_rlcnp_test(384,9,32,16);
 }
 
 BOOST_AUTO_TEST_CASE( supersampling_speed )
