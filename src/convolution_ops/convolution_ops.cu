@@ -448,7 +448,8 @@ void supersample(dense_matrix<float,row_major,host_memory_space>& dst,
 
 }
 
-#define CONST_SIZE 512
+// arbitrary value can be anything <= 64 KB
+#define CONST_SIZE 8192
 __device__ __constant__ float c_filter[CONST_SIZE];
 
 template<bool FILTER>
