@@ -37,6 +37,7 @@
 #include <thrust/functional.h>
 #include <float.h>
 #include "matrix_ops.hpp"
+#include <limits>
 
 #ifdef __CDT_PARSER__
 #define __global__
@@ -48,16 +49,6 @@
 	 ((c) == 'T' || (c) == 't') ? CblasTrans : \
 	 ((c) == 'C' || (c) == 'c') ? CblasConjTrans : \
 	 -1)
-
-template<int BLOCK_SIZE, class T, int OP>
-__global__
-void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
-		T param, T factNew, T factOld) {
-
-	__shared__ T shared[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
-	T sum;
-	// tx indicates the y-dimension in the matrix; ty indicates the x-dimension in the matrix
-
 	/* (mg)the idea is to place the blocks under each other starting at the upper left in the matrix. their threads
 	 * add up multiples of their x position (indicated by ty - see above) in shared memory. then we have a 2-dim
 	 * array in shared memory that corresponds in size to the block.
@@ -75,14 +66,26 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 	 *
 	 * 4th iter(offset=0): ( (a1+b1) + (a3+b3)  ) + ( (a2+b2) +  (a4+b4) )
 	 *
-	 * done: what if m.h()/ (BLOCK_SIZE/2) > 65535 -> constraint on grid dimension is violated...
-	 * todo: add in registers
+	 * tx indicates the y-dimension in the matrix; ty indicates the x-dimension in the matrix
 	 */
+template<int BLOCK_SIZE, class T, int OP>
+__global__
+void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
+		T param, T factNew, T factOld) {
+
+	__shared__ T shared[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
+	T sum;
+
 	int tx = threadIdx.x;
 	int bx = blockIdx.x;
 	int ty = threadIdx.y;
 	int by = blockIdx.y;
-	if (bx * blockDim.x + tx > nRows)
+
+	const int row_idx = by * gridDim.x * blockDim.x +   	// offset according to y index in grid
+						bx * blockDim.x +  					// offset according to block index
+						tx;									// offset in block
+
+	if (row_idx >= nRows)
 		return;
 	int off = blockDim.y;
 
@@ -93,12 +96,16 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 	else
 		sum = 0.f;
 //	printf("\n\nBlockDim.x: %d, BlockDim.y: %d\n", blockDim.x, blockDim.y);
-//	printf("Thread: bx: %d, tx: %d, ty: %d\n", bx, tx, ty);
+//	printf("\n\ngridDim.x: %d, gridDim.y: %d\n", gridDim.x, gridDim.y);
+//
+//	printf("Thread.x: tx: %d, Thread.y: %d, Thread.z: %d\n", bx, tx, ty, threadIdx.z);
+//	printf("Block.x: bx: %d, Block.y: %d\n", bx, by);
 //	printf("nCols: %d, nRows: %d\n", nCols, nRows);
 	for (int my = ty; my < nCols; my += off) {
 //		if (my <100)
 //			printf("my: %d\t", my);
-		T f = matrix[my * nRows + bx * blockDim.x + by * gridDim.x * blockDim.x + tx];
+		// to jump one col we proceed nRow elements in the matrix vector
+		T f = matrix[my * nRows + row_idx ];
 
 		if (OP == cuv::RF_ADD)
 			sum += f;
@@ -131,11 +138,12 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 	}
 
 	if (ty == 0) {
-		const int dst_idx = bx * blockDim.x + by * gridDim.y * blockDim.x + tx;
+
 		if (OP == cuv::RF_MIN || OP == cuv::RF_MAX)
-			vector[dst_idx] = shared[0][tx];
+			vector[row_idx] = shared[0][tx];
 		else
-			vector[dst_idx] = vector[dst_idx] * factOld + shared[0][tx] * factNew;
+			vector[row_idx] = vector[row_idx] * factOld + shared[0][tx] * factNew;
+			//vector[row_idx] = blockDim.x;
 	}
 	__syncthreads();
 }
@@ -570,7 +578,7 @@ namespace reduce_to_col_impl {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
 		static const int BLOCK_SIZE = 16;
-		static const int blocks_needed = ceil((float)m.h()/(BLOCK_SIZE/2));
+		const int blocks_needed = ceil((float)m.h()/(BLOCK_SIZE*2));
 		int grid_x =0, grid_y=0;
 
 		// how to handle grid dimension constraint
@@ -583,7 +591,7 @@ namespace reduce_to_col_impl {
 			grid_y = ceil(blocks_needed/grid_x);
 		}
 		dim3 grid(grid_x, grid_y);
-		dim3 threads(BLOCK_SIZE/2,BLOCK_SIZE*2);
+		dim3 threads(BLOCK_SIZE*2,BLOCK_SIZE/2);
 		reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
@@ -677,19 +685,21 @@ namespace reduce_to_row_impl {
 	void reduce_to_row(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld) {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
-		static const int BLOCK_SIZE = 16;
-		static const int blocks_needed = ceil((float)m.w()/(BLOCK_SIZE*2));
-			int grid_x =0, grid_y=0;
+		static const long int BLOCK_SIZE = 16;
+		const int blocks_needed = ceil((float)m.w()/(BLOCK_SIZE*2));
 
-			// how to handle grid dimension constraint
-			if (blocks_needed <= 65535){
-				grid_x = blocks_needed;
-				grid_y = 1;
-			}else{
-				// try to avoid large noop blocks by adjusting x and y dimension to nearly equal size
-				grid_x = ceil(sqrt(blocks_needed));
-				grid_y = ceil(blocks_needed/grid_x);
-			}
+		int grid_x =0, grid_y=0;
+
+		// how to handle grid dimension constraint
+		if (blocks_needed <= 65535){
+			grid_x = blocks_needed;
+			grid_y = 1;
+		}else{
+			// try to avoid large noop blocks by adjusting x and y dimension to nearly equal size
+			grid_x = ceil(sqrt(blocks_needed));
+			grid_y = ceil(blocks_needed/grid_x);
+		}
+
 		dim3 grid(grid_x, grid_y);
 		dim3 threads(BLOCK_SIZE*2, BLOCK_SIZE/2);
 		// yes, we abuse the reduce_to_col kernel here :)
