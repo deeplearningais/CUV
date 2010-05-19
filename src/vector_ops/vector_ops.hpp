@@ -107,20 +107,20 @@ namespace cuv{
 	 *
 	 *  Without scalar parameters:
 	 *
-	 * 	@li BF_ADD computes  x + y
-	 * 	@li BF_SUBTRACT computes x - y
-	 * 	@li BF_MULT computes x * y
-	 * 	@li BF_DIV computes x / y
-	 * 	@li BF_COPY computes y
-	 * 	@li BF_MIN computes min(x,y)
-	 * 	@li BF_MAX computes max(x,y)
+	 * 	@li BF_ADD computes  x += y
+	 * 	@li BF_SUBTRACT computes x -= y
+	 * 	@li BF_MULT computes x *= y
+	 * 	@li BF_DIV computes x /= y
+	 * 	@li BF_COPY computes x = y
+	 * 	@li BF_MIN computes x = min(x,y)
+	 * 	@li BF_MAX computes x = max(x,y)
 	 *
 	 *  With one scalar parameter a:
-	 *  @li BF_AXPY computes a * x + y
-	 *  @li BF_XPBY computes x + a * y
+	 *  @li BF_AXPY computes x = a * x + y
+	 *  @li BF_XPBY computes x += a * y
 	 *
 	 *  With two scalar parameters a and b:
-	 *  @li BF_AXPBY computes a * x + b * y
+	 *  @li BF_AXPBY computes x = a * x + b * y
 	 *
 	 */
   enum BinaryFunctor{
