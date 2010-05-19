@@ -90,6 +90,7 @@ namespace cuv{
 		SF_NEGATE,
 		SF_ABS,
 		SF_SMAX,
+		SF_POSLIN,
 
 		// with param
 		SF_ADD,
