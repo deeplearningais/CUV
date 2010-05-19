@@ -358,6 +358,39 @@ void reorder(dense_matrix<float,row_major,host_memory_space>& M,
 	free(temp);
 }
 
+template<>
+	void subsample(dense_matrix<float,row_major,dev_memory_space>& dst,
+			  dense_matrix<float,row_major,dev_memory_space>&   img,
+			  int factor,
+			  bool avoidBankConflicts) {
+	// make NVMatrices with this data
+	NVMatrix nv_dst(dst.ptr(), dst.h(), dst.w(), false);
+	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
+
+	if (dst.w()*dst.h() != img.w()* img.h() / (factor*factor)){
+		std::cout << dst.w() << "*" << dst.h() << "==" << img.w() << "*" << img.h() << "/" << factor << "*" << factor << "==" << dst.w()*dst.h() << "!=" << img.w()* img.h() / (factor*factor);
+	}
+
+	cuvAssert(dst.w()*dst.h() == img.w()* img.h() / (factor*factor));
+	// execute convolution
+    subsample(&nv_img, &nv_dst, factor, avoidBankConflicts);
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
+template<>
+	void subsample(dense_matrix<float,row_major,host_memory_space>& dst,
+			  dense_matrix<float,row_major,host_memory_space>&   img,
+			  int factor,
+			  bool avoidBankConflicts) {
+	int imgSize = sqrt(img.w());
+	int numImg = img.h();
+
+	// execute convolution
+    subsampleCPU(img.vec().ptr(), dst.vec().ptr(), imgSize, factor, numImg);
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
+
 __global__
 void supersample_kernel(float*dst, float* src, int* indices, int len, int factor, int smallLen) {
 	int tx = threadIdx.x; // ty = threadIdx.y;
@@ -886,6 +919,7 @@ template<>
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 dimBlock(numThreads,1);
 	strip_padding_kernel<<<grid,dimBlock>>>(dst.ptr(), img.ptr(), imgWidth, numImages, padding);
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
@@ -960,6 +994,7 @@ template<>
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 dimBlock(numThreads,1);
 	row_ncopy_kernel<<<grid,dimBlock>>>(dst.ptr(), row.ptr(), inputSize, n);
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 
@@ -981,7 +1016,7 @@ template<>
 }
 
 template<>
-	void filter_inverse(dense_matrix<float,row_major,host_memory_space>& dst,
+	void filter_rotate(dense_matrix<float,row_major,host_memory_space>& dst,
 					    dense_matrix<float,row_major,host_memory_space>& filter,
 					    unsigned int fs){
 		int f = filter.w() / fs;
@@ -1007,7 +1042,7 @@ template<>
 /*
  * this is limited to 22 x 22 filter kernels yet
  */
-__global__ void filter_inverse_kernel(float* dst, float* src, const int w, const int h, const int fs) {
+__global__ void filter_rotate_kernel(float* dst, float* src, const int w, const int h, const int fs) {
 
 	const int col_idx = threadIdx.x;
 	const int row_idx = blockIdx.y;
@@ -1040,7 +1075,7 @@ __global__ void filter_inverse_kernel(float* dst, float* src, const int w, const
 }
 
 template<>
-void filter_inverse(   dense_matrix<float,row_major,dev_memory_space>& dst,
+void filter_rotate(   dense_matrix<float,row_major,dev_memory_space>& dst,
 					   dense_matrix<float,row_major,dev_memory_space>& filter,
 					   unsigned int fs){
 		cuvAssert(dst.h() == filter.h())
@@ -1057,7 +1092,7 @@ void filter_inverse(   dense_matrix<float,row_major,dev_memory_space>& dst,
 		int numFiltersPerRow = 512 / fs;
 		int numRows = ceil((float)(num_filter*filter.h()) / numFiltersPerRow);
 
-			std::cout << "resizing from " << num_filter << "x" << filter.h() << " to " << numFiltersPerRow << " x " << numRows << std::endl;
+		//std::cout << "resizing from " << num_filter << "x" << filter.h() << " to " << numFiltersPerRow << " x " << numRows << std::endl;
 		filter.resize(numRows, numFiltersPerRow*fs);
 
 		int numThreads = 512;
@@ -1067,7 +1102,8 @@ void filter_inverse(   dense_matrix<float,row_major,dev_memory_space>& dst,
 		dim3 dimBlock(numThreads,1);
 
 //		std::cout << "filter.h =  " << filter.h() << std::endl;
-		filter_inverse_kernel<<<grid,dimBlock>>>(dst.ptr(), filter.ptr(), filter.w(), filter.h(), fs);
+		filter_rotate_kernel<<<grid,dimBlock>>>(dst.ptr(), filter.ptr(), filter.w(), filter.h(), fs);
+		cuvSafeCall(cudaThreadSynchronize());
 		filter.resize(numCases, f_h_w);
 }
 
@@ -1108,6 +1144,7 @@ void add_maps_h(	dense_matrix<float,row_major,dev_memory_space>& dst,
 		dim3 dimBlock(numThreads,1);
 
 		add_maps_h_kernel<<<grid,dimBlock>>>(dst.ptr(), mat.ptr(), mat.w(), image_size);
+		cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
@@ -1137,7 +1174,7 @@ void add_maps_h(	dense_matrix<float,row_major,host_memory_space>& dst,
 
 __global__ void calc_error_to_blob_kernel(float* img,
 										  float* src,
-										  int* blob,
+										  float* blob,
 										  const int img_w,
 										  const int img_h,
 										  const int blob_width) {
@@ -1147,8 +1184,8 @@ __global__ void calc_error_to_blob_kernel(float* img,
 
 	int x = idx % img_w;
 	int y = idx / img_w;
-	int center_x = *(blob+row*2);
-	int center_y = *(blob+row*2+1);
+	int center_x = round(*(blob+row*2));
+	int center_y = round(*(blob+row*2+1));
 	float a = (center_x - x)/ blob_width;
 	float b = (center_y - y)/ blob_width;
 	// destination is calculated by the row the pixel is in (row*imagesize) and the index in the picture (idx)
@@ -1160,7 +1197,7 @@ __global__ void calc_error_to_blob_kernel(float* img,
 template<>
 void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 							dense_matrix<float,row_major,dev_memory_space>& img,
-							dense_matrix<int,row_major,dev_memory_space>& blob_mat,
+							dense_matrix<float,row_major,dev_memory_space>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
 							unsigned int blob_size){
@@ -1175,6 +1212,7 @@ void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 	dim3 dimBlock(numThreads,1);
 
 	calc_error_to_blob_kernel<<<grid,dimBlock>>>(dst.ptr(), img.ptr(), blob_mat.ptr(), image_w, image_h, blob_size);
+	cuvSafeCall(cudaThreadSynchronize());
 };
 
 }

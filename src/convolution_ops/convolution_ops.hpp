@@ -217,6 +217,33 @@ void supersample(dense_matrix<V,M,T,I>& dst,
 		int factor,
 		dense_matrix<int,row_major,T>* indices = NULL);
 
+
+/**
+ * @brief Resize N images of size (m x m) by a factor s into images of size (m/s x m/s)
+ *
+ * @param dst					holds the output images. One row for each image of size (m/s x m/s)
+ * @param img					contains the input images. One row for each image of size (m x m)
+ * @param factor				Scaling factor
+ * @param avoidBankConflicts	The avoidBankConflicts option causes this function to use extra
+ * 								shared memory to avoid all bank conflicts.
+ *
+ * Subsampling takes a N x (m*m) matrix of N images of size (m x m) and shrinks
+ * the images by a factor s.
+ * With the index matrix, each pixel of the original image is only assigned to
+ * one of the output pixel, depending on the index.
+ *
+ * The avoidBankConflicts option causes this function to use extra shared memory to avoid all
+ * bank conflicts. Most bank conflicts are avoided regardless of the setting of this parameter,
+ * and so setting this parameter to true will have minimal impact on performance (Alex reported
+ * a 5% improvement). (still can get 2-way conflicts if factor doesn't divide 16)
+ *
+ */
+template<class V, class M, class T>
+void subsample(dense_matrix<V,M,T>& dst,
+		dense_matrix<V,M,T>& img,
+		int factor,
+		bool avoidBankConflicts);
+
 /**
  * @brief Reorder blocks of data in a matrix
  * 
@@ -367,14 +394,14 @@ void row_ncopy(dense_matrix<V,M,T,I>& dst,
 
 
 /**
- * @brief Inverts the filters in a filter matrix consisting of m filters in a row with n rows.
+ * @brief Rotates the filters in a filter matrix consisting of m filters in a row with n rows by 180 deg.
  * @param dst holds the target matrix with the inverted filters
  * @param filter is a matrix with m filters in a row and n rows
  * @param fs the filter size
  *
  */
 template<class V, class M, class T, class I>
-void filter_inverse(   dense_matrix<V,M,T,I>& dst,
+void filter_rotate(   dense_matrix<V,M,T,I>& dst,
 					   dense_matrix<V,M,T,I>& filter,
 					   unsigned int fs);
 
@@ -400,10 +427,10 @@ void add_maps_h(	dense_matrix<V,M,T,I>& dst,
  * @param blob_mat a matrix holding the blob center information for each row in a row
  *
  */
-template<class V, class M, class T, class I, class V2>
+template<class V, class M, class T, class I>
 void calc_error_to_blob(	dense_matrix<V,M,T,I>& dst,
 							dense_matrix<V,M,T,I>& img,
-							dense_matrix<V2,M,T,I>& blob_mat,
+							dense_matrix<V,M,T,I>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
 							unsigned int blob_size);
