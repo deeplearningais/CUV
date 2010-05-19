@@ -40,7 +40,7 @@
  */
 #ifndef __VECTOR_HPP__
 #define __VECTOR_HPP__
-#include <cuv_general.hpp>
+#include <tools/cuv_general.hpp>
 #include <iostream>
 
 namespace cuv{
