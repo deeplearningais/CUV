@@ -103,6 +103,13 @@ void export_super_to_max(){
 															arg("indices")=object(),
 															arg("filter")=object())
 														);
+	def("subsample",(void (*)(M&,M&, int, bool))subsample<typename M::value_type, typename M::memory_layout,typename M::memory_space_type>, (
+															arg("dst"),
+															arg("img"),
+															arg("factor"),
+															arg("avoidBankConflicts"))
+															);
+
 
 
 }
@@ -128,7 +135,7 @@ void export_row_ncopy(){
 															arg("dst"),
 															arg("img"),
 															arg("rows")));
-	def("filter_inverse",(void (*)(M&,M&, unsigned int))filter_inverse<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+	def("filter_rotate",(void (*)(M&,M&, unsigned int))filter_rotate<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
 																arg("dst"),
 																arg("filter"),
 																arg("fs")));
@@ -140,7 +147,7 @@ void export_row_ncopy(){
 															arg("dst"),
 															arg("map_matrix"),
 															arg("map_size")));
-	def("calc_error_to_blob",(void (*)(M&,M&, N&, unsigned int, unsigned int, unsigned int))calc_error_to_blob<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+	def("calc_error_to_blob",(void (*)(M&,M&, M&, unsigned int, unsigned int, unsigned int))calc_error_to_blob<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
 																arg("dst"),
 																arg("img"),
 																arg("blob_mat"),
