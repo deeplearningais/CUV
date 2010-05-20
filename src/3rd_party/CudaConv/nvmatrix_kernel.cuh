@@ -101,17 +101,23 @@ __global__ void kLog(float* gData, float* target, unsigned int numElements);
 __global__ void kSquare(float* gData, float* target, unsigned int numElements);
 __global__ void kSqrt(float* gData, float* target, unsigned int numElements);
 __global__ void kZero(float* gData, float* target, unsigned int numElements);
+__global__ void kSign(float* gData, float* target, unsigned int numElements);
 __global__ void kReciprocal(float* gData, float* target, unsigned int numElements);
 __global__ void kSubtractFromScalar(float* gData, float scalar, float* target, unsigned int numElements);
 __global__ void kAddScalar(float* gData, float scalar, float* target, unsigned int numElements);
 __global__ void kBiggerThanScalar(float* gData, float scalar, float* target, unsigned int numElements);
-__global__ void kAddGaussianNoise(unsigned int* rndMults, unsigned long long* rndWords, float* gData, float stdev, unsigned int numElements);
+__global__ void kSmallerThanScalar(float* gData, float scalar, float* target, unsigned int numElements);
+__global__ void kInRangeInc(float* gData, float lower, float upper, float* target, unsigned int numElements);
+__global__ void kInRangeExc(float* gData, float lower, float upper, float* target, unsigned int numElements);
+__global__ void kAddGaussianNoise(unsigned int* rndMults, unsigned long long* rndWords, float* gData, const float stdev, unsigned int numElements);
+__global__ void kAddGaussianNoise(unsigned int* rndMults, unsigned long long* rndWords, float* gData, const float* stdevs, unsigned int numElements);
 __global__ void kRandomGaussian(unsigned int* rndMults, unsigned long long* rndWords, float* gData, float stdev, unsigned int numElements);
+__global__ void kRandomGaussian(unsigned int* rndMults, unsigned long long* rndWords, float* gData, const float* stdevs, unsigned int numElements);
 __global__ void kRandomUniform(unsigned int* randMults, unsigned long long* randWords, float* gData, unsigned int numElements);
 __global__ void kBinarizeProbs(unsigned int* randMults, unsigned long long* randWords, float *gData, unsigned int numElements);
 __global__ void kSeedRandom(unsigned int* randMults, unsigned long long* randWords, unsigned int seed);
 __global__ void kBiggerThan(float* gMat1, float* gMat2, float* gMatTarget, unsigned int numElements);
-__global__ void kCopy(float* srcStart, float* destStart, unsigned int copyWidth, unsigned int jumpWidth, unsigned int numElements);
+__global__ void kCopy(float* srcStart, float* destStart, const int copyWidth, const int srcJumpWidth, const int destJumpWidth, const int numElements);
 __device__ inline int getTransArrayIndex(unsigned int width, unsigned int height, unsigned  int i);
 __global__ void kCopyToTransDestSlow(float* srcStart, float* destStart, unsigned int srcCopyWidth,
                                     unsigned int srcJumpWidth, unsigned int destJumpHeight, unsigned int numElements);
@@ -119,22 +125,18 @@ __global__ void kCopyToTransDestFast(float* srcStart, float* destStart, unsigned
                                     unsigned int srcJumpSize, unsigned int destJumpSize);
 __global__ void kAdd(float* a, float* b, float* dest,
                      unsigned int numEls, float scaleA, float scaleB);
-__global__ void kAddTransSlow(float* a, float* b, float* dest, unsigned int width, unsigned int height,
-                          unsigned int numEls, float scaleA, float scaleB);
-__global__ void kAddTransFast(float* a, float* b, float* dest, unsigned int width, unsigned int height,
-                           unsigned int bJumpWidth, float scaleA, float scaleB);
-__global__ void kMultTransFast(float* a, float* b, float* dest, unsigned int width, unsigned int height, unsigned int bJumpWidth);
 __global__ void kMult(float* a, float* b, float* dest, unsigned int numEls);
-__global__ void kDivideTransFast(float* a, float* b, float* dest, unsigned int width, unsigned int height, unsigned int bJumpWidth);
 __global__ void kDivide(float* a, float* b, float* dest, unsigned int numEls);
 __global__ void kAdd3(float* a, const float* b, const float* c, const unsigned int numEls,
         const float scaleA, const float scaleB, const float scaleC);
-__global__ void kSquaredDiffTransFast(float* a, float* b, float* dest, unsigned int width, unsigned int bJumpWidth);
 __global__ void kSquaredDiff(float* a, float* b, float* dest, unsigned int numEls);
-__global__ void kTile(float* src, float* tgt, unsigned int srcWidth, unsigned int srcHeight, unsigned int tgtWidth,
-                      unsigned int tgtHeight);
+__global__ void kTile(const float* src, float* tgt, const int srcWidth, const int srcHeight, const int tgtWidth, const int tgtHeight);
 __global__ void kAddRowVector(float* mat, float* vec, float* tgtMat, unsigned int width, unsigned int height, float scaleVec);
 __global__ void kAddColVector(float* mat, float* vec, float* tgtMat, const unsigned int width, const unsigned int height, const float scaleVec);
+__global__ void kEqualsRowVector(float* mat, float* vec, float* tgtMat, const int width, const int height);
+__global__ void kEqualsColVector(float* mat, float* vec, float* tgtMat, const int width, const int height);
+__global__ void kBiggerThanRowVector(float* mat, float* vec, float* tgtMat, const int width, const int height);
+__global__ void kBiggerThanColVector(float* mat, float* vec, float* tgtMat, const int width, const int height);
 __global__ void kMultByRowVector(float* mat, float* vec, float* tgtMat, unsigned int width,unsigned int height);
 __global__ void kMultByColVector(float* mat, float* vec, float* tgtMat, unsigned int width, unsigned int height);
 __global__ void kDivideByRowVector(float* mat, float* vec, float* tgtMat, unsigned int width,unsigned int height);
@@ -147,21 +149,21 @@ __global__ void kTranspose(float* a, float* dest, int width, int height);
 /*
  * a := a + b + c where b, c might have different transposedness from a.
  */
-template<bool checkBounds>
-__global__ void kAddTrans3Fast(float* a, const float* b, const float* c, const unsigned int width, const unsigned int height,
-                               const unsigned int transJumpWidth, const float scaleA, const float scaleB, const float scaleC,
-                               const bool transB, const bool transC) {
-    unsigned int idxYA = blockIdx.y * blockDim.y + threadIdx.y;
-    unsigned int idxXA = blockIdx.x * blockDim.x + threadIdx.x;
+template<bool checkBounds, bool transB, bool transC>
+__global__ void kAddTrans3Fast(float* a, const float* b, const float* c, const int width,
+                                const int height, const int initialHeight,
+                               const float scaleA, const float scaleB, const float scaleC) {
+    unsigned int idxYA = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.y;
+    unsigned int idxXA = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.x;
 
-    unsigned int idxXB = blockIdx.x * blockDim.x + threadIdx.y;
-    unsigned int idxYB = blockIdx.y * blockDim.y + threadIdx.x;
+    unsigned int idxXB = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.y;
+    unsigned int idxYB = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.x;
 
     __shared__ float smemB[ADD_BLOCK_SIZE][ADD_BLOCK_SIZE + 1];
     __shared__ float smemC[ADD_BLOCK_SIZE][ADD_BLOCK_SIZE + 1];
 
-    if (!checkBounds || (idxYB < height && idxXB < width)) {
-        const unsigned int bIdx = idxXB * height + idxYB;
+    if ((!checkBounds || (idxYB < height && idxXB < width)) && (transB || transC)) {
+        const unsigned int bIdx = idxXB * initialHeight + idxYB;
         if (transB)
             smemB[threadIdx.x][threadIdx.y] = b[bIdx];
 
@@ -176,6 +178,139 @@ __global__ void kAddTrans3Fast(float* a, const float* b, const float* c, const u
         a[idx] =    scaleA * a[idx] +
                     scaleB * (transB ? smemB[threadIdx.y][threadIdx.x] : b[idx]) +
                     scaleC * (transC ? smemC[threadIdx.y][threadIdx.x] : c[idx]);
+    }
+}
+
+
+/*
+ * a not transposed, b transposed.
+ * coalesced reads and writes, no bank conflicts cause of the +1.
+ */
+template<bool checkBounds>
+__global__ void kAddTransFast(float* a, float* b, float* dest, int width, int height,
+                               int initialHeight, float scaleA, float scaleB) {
+    const int idxYA = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.y;
+    const int idxXA = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.x;
+
+    const int idxXB = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.y;
+    const int idxYB = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.x;
+
+    __shared__ float smem[ADD_BLOCK_SIZE][ADD_BLOCK_SIZE + 1];
+
+    if (!checkBounds || (idxYB < height && idxXB < width)) {
+        const unsigned int bIdx = idxXB * initialHeight + idxYB;
+        smem[threadIdx.x][threadIdx.y] = b[bIdx];
+    }
+    __syncthreads();
+
+    if(!checkBounds || (idxXA < width && idxYA < height)) {
+        const int idx = idxYA * width + idxXA;
+        dest[idx] = scaleA * a[idx] + scaleB * smem[threadIdx.y][threadIdx.x];
+    }
+}
+
+template<bool checkBounds>
+__global__ void kSquaredDiffTransFast(float* a, float* b, float* dest, int width, int height, int initialHeight) {
+    const int idxYA = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.y;
+    const int idxXA = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.x;
+
+    const int idxXB = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.y;
+    const int idxYB = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.x;
+
+    __shared__ float smem[ADD_BLOCK_SIZE][ADD_BLOCK_SIZE + 1];
+
+    if (!checkBounds || (idxYB < height && idxXB < width)) {
+        const unsigned int bIdx = idxXB * initialHeight + idxYB;
+        smem[threadIdx.x][threadIdx.y] = b[bIdx];
+    }
+    __syncthreads();
+
+    if(!checkBounds || (idxXA < width && idxYA < height)) {
+        const int idx = idxYA * width + idxXA;
+        dest[idx] =  (a[idx] - smem[threadIdx.y][threadIdx.x]) * (a[idx] - smem[threadIdx.y][threadIdx.x]);
+    }
+}
+
+
+/*
+ * a not transposed, b transposed.
+ * coalesced reads and writes, no bank conflicts cause of the +1.
+ */
+template<bool checkBounds>
+__global__ void kMultTransFast(float* a, float* b, float* dest, const int width, const int height, const int initialHeight) {
+    const int idxYA = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.y;
+    const int idxXA = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.x;
+
+    const int idxXB = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.y;
+    const int idxYB = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.x;
+
+    __shared__ float smem[ADD_BLOCK_SIZE][ADD_BLOCK_SIZE + 1];
+
+    if (!checkBounds || (idxYB < height && idxXB < width)) {
+        const unsigned int bIdx = idxXB * initialHeight + idxYB;
+        smem[threadIdx.x][threadIdx.y] = b[bIdx];
+    }
+    __syncthreads();
+
+    if(!checkBounds || (idxXA < width && idxYA < height)) {
+        const int idx = idxYA * width + idxXA;
+        dest[idx] =  a[idx] * smem[threadIdx.y][threadIdx.x];
+    }
+}
+
+/*
+ * a not transposed, b transposed.
+ * coalesced reads and writes, no bank conflicts cause of the +1.
+ */
+ template<bool checkBounds>
+__global__ void kDivideTransFast(float* a, float* b, float* dest, const int width, const int height, const int initialHeight) {
+    const int idxYA = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.y;
+    const int idxXA = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.x;
+
+    const int idxXB = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.y;
+    const int idxYB = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.x;
+
+    __shared__ float smem[ADD_BLOCK_SIZE][ADD_BLOCK_SIZE + 1];
+
+    if (!checkBounds || (idxYB < height && idxXB < width)) {
+        const unsigned int bIdx = idxXB * initialHeight + idxYB;
+        smem[threadIdx.x][threadIdx.y] = b[bIdx];
+    }
+    __syncthreads();
+
+    if(!checkBounds || (idxXA < width && idxYA < height)) {
+        const int idx = idxYA * width + idxXA;
+        dest[idx] =  a[idx] / smem[threadIdx.y][threadIdx.x];
+    }
+}
+
+/*
+ * dest not transposed, src transposed.
+ * coalesced reads and writes, no bank conflicts cause of the +1.
+ * height, width: dimensions of non-transposed dest matrix.
+ * initialHeight: number of rows in matrix dest before slicing (this kernel is called in a loop)
+ */
+template<bool checkBounds>
+__global__ void kCopyTransFast(float* dest, float* src,
+                               const int destCopyWidth, const int destCopyHeight,
+                               const int destJumpWidth, const int srcJumpWidth) {
+    // A = dest, B = src
+    const int idxYA = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.y;
+    const int idxXA = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.x;
+    const int idxXB = blockIdx.x * ADD_BLOCK_SIZE + threadIdx.y;
+    const int idxYB = blockIdx.y * ADD_BLOCK_SIZE + threadIdx.x;
+
+    __shared__ float smem[ADD_BLOCK_SIZE][ADD_BLOCK_SIZE + 1];
+
+    if (!checkBounds || (idxYB < destCopyHeight && idxXB < destCopyWidth)) {
+        const unsigned int bIdx = idxXB * srcJumpWidth + idxYB;
+        smem[threadIdx.x][threadIdx.y] = src[bIdx];
+    }
+
+    __syncthreads();
+     if(!checkBounds || (idxXA < destCopyWidth && idxYA < destCopyHeight)) {
+        const int idx = idxYA * destJumpWidth + idxXA;
+        dest[idx] = smem[threadIdx.y][threadIdx.x];
     }
 }
 

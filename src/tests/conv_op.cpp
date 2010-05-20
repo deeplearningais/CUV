@@ -61,8 +61,8 @@ struct Fix{
 	dense_matrix<float, row_major, dev_memory_space>  d_img,d_filter,d_dst,d_pooled;
 	dense_matrix<float, row_major, host_memory_space> h_img,h_filter,h_dst,h_pooled;
 	Fix()
-	:   d_img(c,n*n), d_filter(f,g*g), d_dst(c,f*k*k), d_pooled(c,o*o)
-	,   h_img(c,n*n), h_filter(f,g*g), h_dst(c,f*k*k), h_pooled(c,o*o)
+	:   d_img(c,n*n), d_filter(f,g*g), d_dst(f,c*k*k), d_pooled(c,o*o)
+	,   h_img(c,n*n), h_filter(f,g*g), h_dst(f,c*k*k), h_pooled(c,o*o)
 	{
 		//MEASURE_TIME("warmup", apply_scalar_functor(v, SF_EXP), 100);
 	}

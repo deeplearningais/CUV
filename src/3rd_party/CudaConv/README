@@ -1,10 +1,18 @@
 2D CUDA Convolution Routines
 Alex Krizhevsky (akrizhevsky@gmail.com)
-Last updated Dec 29, 2009
+Last updated May 15, 2010
 ============================================
 
 Changelog:
 ============================================
+May 15, 2010
+--------------------------------------------
+- Fixed color version of conv2 producing wrong output.
+- The forward-convolution routines now output in filter-major order. The conv2 and conv3 routines have been updated to deal with the change.
+- Convolutions can now be done in groups. So instead of convolving N images with M filters, you can convolve K sets of N images with M filters with one function call. The conv2 and conv3 routines have been updated accordingly.
+- Relaxed restriction that number of filters must be divisible by 16. Now there must only be an even number of filters. But note that the computation may not be particularly efficient if there are too few filters per group (especially so if there are few groups).
+
+--------------------------------------------
 Dec 29, 2009
 --------------------------------------------
 - Fixed bug that caused the multinomial sampling routine to output wrong answers when the multinomials were < 16.

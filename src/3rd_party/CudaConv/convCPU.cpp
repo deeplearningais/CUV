@@ -50,77 +50,101 @@ inline float dotCPU(float* img, float* filter, int imgSize, int filterSize, int 
     return result;
 }
 
-void convCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters) {
+void convCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups) {
     int numOutputsX = imgSize - filterSize + 1;
     int numOutputs = numOutputsX * numOutputsX;
     int imgPixels = imgSize * imgSize;
     int filterPixels = filterSize * filterSize;
-    for(int i = 0; i < numImgs; i++) {
-        for(int f = 0; f < numFilters; f++) {
-            for(int y = 0; y < numOutputsX; y++) {
-                for(int x = 0; x < numOutputsX; x++) {
-                    targets[f * numOutputs + y * numOutputsX + x] = dotCPU(imgs, &filters[f*filterPixels], imgSize, filterSize, y, x);
+    for(int g = 0; g <  numGroups; g++) {
+        for(int f = 0; f < numFiltersPerGroup; f++) {
+            for(int i = 0; i < numImgsPerGroup; i++) {
+                for(int y = 0; y < numOutputsX; y++) {
+                    for(int x = 0; x < numOutputsX; x++) {
+                        targets[y * numOutputsX + x] = dotCPU(&imgs[i*imgPixels], &filters[f*filterPixels], imgSize, filterSize, y, x);
+                    }
                 }
+                targets += numOutputs;
             }
         }
-        imgs += imgPixels;
-        targets += numOutputs * numFilters;
+        filters += numFiltersPerGroup * filterPixels;
+        imgs += imgPixels * numImgsPerGroup;
     }
 }
 
-void convColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters) {
+void convColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups) {
     int numOutputsX = imgSize - filterSize + 1;
     int numOutputs = numOutputsX * numOutputsX;
     int imgPixels = imgSize * imgSize;
     int filterPixels = filterSize * filterSize;
-    for(int i = 0; i < numImgs; i++) {
-        for(int f = 0; f < numFilters; f++) {
-            for(int y = 0; y < numOutputsX; y++) {
-                for(int x = 0; x < numOutputsX; x++) {
-                    targets[f * numOutputs + y * numOutputsX + x] = dotCPU(imgs, &filters[f*filterPixels*3], imgSize, filterSize, y, x)
-                                                                    + dotCPU(imgs + imgPixels, &filters[f*filterPixels*3 + filterPixels], imgSize, filterSize, y, x)
-                                                                    + dotCPU(imgs + 2*imgPixels, &filters[f*filterPixels*3 + 2*filterPixels], imgSize, filterSize, y, x);
+    for(int g = 0; g <  numGroups; g++) {
+        for(int f = 0; f < numFiltersPerGroup; f++) {
+            for(int i = 0; i < numImgsPerGroup; i++) {
+                for(int y = 0; y < numOutputsX; y++) {
+                    for(int x = 0; x < numOutputsX; x++) {
+                        targets[y * numOutputsX + x] = dotCPU(&imgs[i*3*imgPixels], &filters[f*3*filterPixels], imgSize, filterSize, y, x)
+                                                     + dotCPU(&imgs[(i*3+1)*imgPixels], &filters[(f*3+1)*filterPixels], imgSize, filterSize, y, x)
+                                                     + dotCPU(&imgs[(i*3+2)*imgPixels], &filters[(f*3+2)*filterPixels], imgSize, filterSize, y, x);
+                    }
                 }
+                targets += numOutputs;
             }
         }
-        imgs += imgPixels*3;
-        targets += numOutputs * numFilters;
+        filters += 3*filterPixels*numFiltersPerGroup;
+        imgs += 3*imgPixels * numImgsPerGroup;
     }
 }
 
-void conv2CPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters) {
+void conv2CPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups) {
     int numOutputsX = imgSize - filterSize + 1;
     int numOutputs = numOutputsX * numOutputsX;
     int imgPixels = imgSize * imgSize;
     int filterPixels = filterSize * filterSize;
-    for(int i = 0; i < numImgs; i++) {
-        for(int f = 0; f < numFilters; f++) {
-            for(int y = 0; y < numOutputsX; y++) {
-                for(int x = 0; x < numOutputsX; x++) {
-                    targets[f * numOutputs + y * numOutputsX + x] = dotCPU(imgs, &filters[i * numFilters * filterPixels + f*filterPixels], imgSize, filterSize, y, x);
+    for(int g = 0; g <  numGroups; g++) {
+        for(int i = 0; i < numImgsPerGroup; i++) {
+            for(int f = 0; f < numFiltersPerGroup; f++) {
+                for(int y = 0; y < numOutputsX; y++) {
+                    for(int x = 0; x < numOutputsX; x++) {
+                        targets[g * numFiltersPerGroup * numOutputs
+                                + i * numGroups * numFiltersPerGroup * numOutputs
+                                + f * numOutputs + y * numOutputsX + x] = dotCPU(&imgs[i*imgPixels],
+                                                                                 &filters[f * numImgsPerGroup * filterPixels
+                                                                                          + i * filterPixels], imgSize, filterSize, y, x);
+                    }
                 }
             }
+//            imgs += imgPixels;
+//            targets += numOutputs * numFiltersPerGroup;
         }
-        imgs += imgPixels;
-        targets += numOutputs * numFilters;
+        filters += filterPixels * numFiltersPerGroup * numImgsPerGroup;
+        imgs += imgPixels * numImgsPerGroup;
     }
 }
 
-void conv2ColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters) {
+void conv2ColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups) {
     int numOutputsX = imgSize - filterSize + 1;
     int numOutputs = numOutputsX * numOutputsX;
     int imgPixels = imgSize * imgSize;
     int filterPixels = filterSize * filterSize;
-    for(int i = 0; i < numImgs; i++) {
-        for(int f = 0; f < numFilters; f++) {
-            for(int y = 0; y < numOutputsX; y++) {
-                for(int x = 0; x < numOutputsX; x++) {
-                    targets[f * numOutputs + y * numOutputsX + x] = dotCPU(imgs, &filters[(i/3) * numFilters * filterPixels + f*filterPixels], imgSize, filterSize, y, x);
+    for(int g = 0; g <  numGroups; g++) {
+        for(int i = 0; i < numImgsPerGroup; i++) {
+            for(int f = 0; f < numFiltersPerGroup; f++) {
+                for(int y = 0; y < numOutputsX; y++) {
+                    for(int x = 0; x < numOutputsX; x++) {
+                        targets[g * numFiltersPerGroup * numOutputs * 3
+                                + (i/3) * numGroups * numFiltersPerGroup * numOutputs * 3
+                                + f * numOutputs * 3
+                                + (i%3) * numOutputs
+                                + y * numOutputsX + x] = dotCPU(&imgs[i*imgPixels],
+                                                                &filters[f * (numImgsPerGroup/3) * filterPixels + (i/3)*filterPixels],
+                                                                imgSize, filterSize, y, x);
+                    }
                 }
             }
+//            imgs += imgPixels;
+//            targets += numOutputs * numFiltersPerGroup;
         }
-        imgs += imgPixels;
-        targets += numOutputs * numFilters;
+        filters += filterPixels * numFiltersPerGroup * (numImgsPerGroup/3);
+        imgs += imgPixels * numImgsPerGroup;
     }
 }
 
@@ -165,40 +189,49 @@ inline float dotRotateCPU(float* img, float* filter, int imgSize, int filterSize
     return result;
 }
 
-void conv3CPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters) {
+void conv3CPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups) {
     int numOutputsX = imgSize - filterSize + 1;
     int numOutputs = numOutputsX * numOutputsX;
     int imgPixels = imgSize * imgSize;
     int filterPixels = filterSize * filterSize;
-    for (int i = 0; i < numImgs; i++) {
-        for (int f = 0; f < numFilters; f++) {
-            for (int y = 0; y < numOutputsX; y++) {
-                for (int x = 0; x < numOutputsX; x++) {
-                    targets[y * numOutputsX + x] += dotRotateCPU(&imgs[imgPixels * f], &filters[f * filterPixels], imgSize, filterSize, y, x);
+    for(int g = 0; g < numGroups; g++) {
+        for (int i = 0; i < numImgsPerGroup; i++) {
+            for (int f = 0; f < numFiltersPerGroup; f++) {
+                for (int y = 0; y < numOutputsX; y++) {
+                    for (int x = 0; x < numOutputsX; x++) {
+                        targets[y * numOutputsX + x] += dotRotateCPU(&imgs[f * imgPixels * numImgsPerGroup + imgPixels * i],
+                                                                     &filters[f * filterPixels], imgSize, filterSize, y, x);
+                    }
                 }
             }
-//            return;
+            targets += numOutputs;
         }
-        imgs += imgPixels * numFilters;
-        targets += numOutputs;
+        imgs += imgPixels * numImgsPerGroup * numFiltersPerGroup;
+        filters += filterPixels * numFiltersPerGroup;
     }
 }
 
-void conv3ColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters) {
+void conv3ColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups) {
     int numOutputsX = imgSize - filterSize + 1;
     int numOutputs = numOutputsX * numOutputsX;
     int imgPixels = imgSize * imgSize;
     int filterPixels = filterSize * filterSize;
-    for (int i = 0; i < numImgs; i++) {
-        for (int f = 0; f < numFilters; f++) {
-            for (int y = 0; y < numOutputsX; y++) {
-                for (int x = 0; x < numOutputsX; x++) {
-                    targets[y * numOutputsX + x + (f % 3) * numOutputs] += dotRotateCPU(&imgs[imgPixels * (f / 3)], &filters[f * filterPixels], imgSize, filterSize, y, x);
+    for(int g = 0; g < numGroups; g++) {
+        for (int i = 0; i < numImgsPerGroup; i++) {
+            for (int f = 0; f < numFiltersPerGroup; f++) {
+                for (int y = 0; y < numOutputsX; y++) {
+                    for (int x = 0; x < numOutputsX; x++) {
+                        targets[y * numOutputsX + x
+                                + (f % 3) * numOutputs] += dotRotateCPU(&imgs[(f / 3) * imgPixels * numImgsPerGroup + imgPixels * i],
+                                                                        &filters[f * filterPixels], imgSize, filterSize, y, x);
+                    }
                 }
             }
+
+            targets += 3 * numOutputs;
         }
-        imgs += imgPixels * (numFilters / 3);
-        targets += 3 * numOutputs;
+        imgs += imgPixels * numImgsPerGroup * (numFiltersPerGroup / 3);
+        filters += filterPixels * numFiltersPerGroup;
     }
 }
 

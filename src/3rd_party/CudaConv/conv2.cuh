@@ -51,13 +51,11 @@
 #include <nvmatrix.cuh>
 #include "conv_common.cuh"
 
-void convolve2_bw(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int filterSize);
+void convolve2(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int filterSize, int numGroups, bool colorImages);
 /*
  * Here the "filters" might represent the activities of the hidden layer of a convolutional net
  * (the output of a convolution), so the color attribute does not apply to them.
  */
-void convolve2_color(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int filterSize);
-
 /*
  * This version uses block size (z, y, x) = 8x4x16.
  *
@@ -138,21 +136,16 @@ __global__ void conv2_bw_fit_4x16_2per(float* imgs, float* filters, float* targe
                     }
                     myShImg += 15;
                 }
-//                targets[0] = prod[0];
-//                targets[numOutputs] = prod[1];
+
                 targets[MUL24(y, numOutputsX) + x] += prod[0];
                 targets[MUL24(y, numOutputsX) + x + numOutputs] += prod[1];
             }
-//            targets += !checkBounds || x < numOutputsX - 16 ? 16 : numOutputsX - x;
         }
-//        targets += MUL24(3, numOutputsX);
-//        imgs += imgSize * 4;
     }
 }
 
-
 /*
- * This version uses block size (z, y, x).
+ * This version uses block size (z, y, x)= 8x4x16
  *
  * Each block convolves 1 image with 8 filters.
  * Works for filters 20x20 or smaller; image size only influences checkBounds.
@@ -216,11 +209,8 @@ __global__ void conv2_bw_fit_4x16_1per(float* imgs, float* filters, float* targe
                 }
 
                 targets[MUL24(y, numOutputsX) + x] += prod;
-//                targets[0] = prod;
             }
-//            targets += !checkBounds || x < numOutputsX - 16 ? 16 : numOutputsX - x;
         }
-//        targets += MUL24(3, numOutputsX);
     }
 }
 

@@ -63,14 +63,20 @@ namespace cuv{
 template<>
 	void convolve(dense_matrix<float,row_major,dev_memory_space>& dst,
 			  dense_matrix<float,row_major,dev_memory_space>&   img,
-			  dense_matrix<float,row_major,dev_memory_space>&   filter){
+			  dense_matrix<float,row_major,dev_memory_space>&   filter,
+			  int numGroups){
 
 	// some preliminary checks to ensure compatibility
-	int numFilters = filter.h();
+	int numFilters = filter.h() / numGroups;
+	cuvAssert(filter.h() == numFilters*numGroups);
+	int numImages = img.h() / numGroups;
+	cuvAssert(img.h() == numImages*numGroups);
 	int filterSize = sqrt(filter.w());
 	int imgSize = sqrt(img.w());
-	int dstSize = sqrt(dst.w()/numFilters);
-	cuvAssert(numFilters%16 == 0);
+	int dstSize = sqrt(dst.w()/numImages);
+//	printf("imgSize = %i, dstSize = %i, filterSize = %i\n", imgSize, dstSize, filterSize);
+//	printf("(%ix%i) x (%ix%i) = (%ix%i)\n", img.h(), img.w(), filter.h(), filter.w(), dst.h(), dst.w());
+	cuvAssert(numFilters%2 == 0);
 	cuvAssert(filterSize*filterSize == filter.w());
 	cuvAssert(imgSize*imgSize == img.w());
 	cuvAssert(dstSize == imgSize - filterSize + 1);
@@ -81,45 +87,48 @@ template<>
 	NVMatrix nv_filter(filter.ptr(), filter.h(), filter.w(), false);
 
 	// execute convolution
-	convolve_bw(&nv_img, &nv_filter, &nv_dst);
+	convolve(&nv_img, &nv_filter, &nv_dst, numGroups, false);
 	cuvSafeCall(cudaThreadSynchronize());
 	}
 
 template<>
 void convolve(dense_matrix<float,row_major,host_memory_space>& dst,
 		  dense_matrix<float,row_major,host_memory_space>&   img,
-		  dense_matrix<float,row_major,host_memory_space>&   filter) {
+		  dense_matrix<float,row_major,host_memory_space>&   filter,
+		  int numGroups) {
 
-	int numImages = img.h();
-	int numFilters = filter.h();
+	int numImages = img.h() / numGroups;
+	int numFilters = filter.h() / numGroups;
 
 	int filterSize = sqrt(filter.w());
 	int imgSize = sqrt(img.w());
-	int dstSize = sqrt(dst.w()/numFilters);
+	int dstSize = sqrt(dst.w()/numImages);
 
 	int dstPixels = dstSize * dstSize;
 
-	float* images = img.ptr();
 	float* targets = dst.ptr();
 
-	for(int i=0; i<numImages; i++) {
-		float* filters = filter.ptr();
+	for(int g=0; g<numGroups; g++) {
+		float* filters = filter.ptr() + g*numGroups*filterSize;
 		for(int f=0; f<numFilters; f++) {
-			for(int r=0; r<dstSize; r++)
-				for(int c=0; c<dstSize; c++) {
-					float sum = 0.0f;
-					for(int y=0; y<filterSize; y++) {
-						float subsum = 0.0f;
-						for(int x=0; x<filterSize; x++)
-							subsum += images[(r+y)*imgSize + (c+x)] * filters[y * filterSize + x];
-						sum += subsum;
+			float* images = img.ptr();
+			for(int i=0; i<numImages; i++) {
+				for(int r=0; r<dstSize; r++)
+					for(int c=0; c<dstSize; c++) {
+						float sum = 0.0f;
+						for(int y=0; y<filterSize; y++) {
+							float subsum = 0.0f;
+							for(int x=0; x<filterSize; x++)
+								subsum += images[(r+y)*imgSize + (c+x)] * filters[y * filterSize + x];
+							sum += subsum;
+						}
+						targets[i*dstPixels + r*dstSize + c] += sum;
 					}
-					targets[f*dstPixels + r*dstSize + c] += sum;
-				}
+				images += img.w();
+			}
+			targets += dst.w();
 			filters += filter.w();
 		}
-		targets += dst.w();
-		images += img.w();
 	}
 }
 
@@ -128,15 +137,17 @@ template<>
 	void convolve2(dense_matrix<float,row_major,dev_memory_space>& dst,
 			  dense_matrix<float,row_major,dev_memory_space>&   img,
 			  dense_matrix<float,row_major,dev_memory_space>&   filter,
-			  int numFilters) {
+			  int numFilters,
+			  int numGroups) {
 	int imgSize = sqrt(img.w());
-	int numImages = img.h();
-	int filterSize = sqrt(filter.w()/numFilters);
+	int numImages = img.h() / numGroups;
+	int filterSize = sqrt(filter.w()/numImages);
 	int dstSize = sqrt(dst.w()/numFilters);
 
 	// some preliminary checks to ensure compatibility
-	cuvAssert(numFilters%16 == 0);
-	cuvAssert(filterSize*filterSize*numFilters == filter.w());
+	cuvAssert(filter.h() == numFilters*numGroups);
+	cuvAssert(numFilters%2 == 0);
+	cuvAssert(numImages*filterSize*filterSize == filter.w());
 	cuvAssert(imgSize*imgSize == img.w());
 
 	if (!(dstSize == (imgSize - filterSize + 1)))
@@ -149,7 +160,7 @@ template<>
 	NVMatrix nv_filter(filter.ptr(), filter.h(), filter.w(), false);
 
 	// execute convolution
-    convolve2_bw(&nv_img, &nv_filter, &nv_dst, filterSize);
+    convolve2(&nv_img, &nv_filter, &nv_dst, filterSize, numGroups, false);
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
@@ -157,13 +168,14 @@ template<>
 void convolve2(dense_matrix<float,row_major,host_memory_space>& dst,
 		  dense_matrix<float,row_major,host_memory_space>&   img,
 		  dense_matrix<float,row_major,host_memory_space>&   filter,
-		  int numFilters) {
+		  int numFilters,
+		  int numGroups) {
 	int imgSize = sqrt(img.w());
 	int numImages = img.h();
 	int filterSize = sqrt(filter.w()/numFilters);
 	int dstSize = sqrt(dst.w()/numFilters);
 
-	conv2CPU(img.ptr(), filter.ptr(), dst.ptr(), imgSize, filterSize, numImages, numFilters);
+	conv2CPU(img.ptr(), filter.ptr(), dst.ptr(), imgSize, filterSize, numImages, numFilters, numGroups);
 }
 
 // images --> blocks
@@ -272,7 +284,8 @@ void prob_max_pooling(dense_matrix<float,row_major,dev_memory_space>& grid, int 
 template<>
 	void convolve3(dense_matrix<float,row_major,dev_memory_space>& dst,
 			  dense_matrix<float,row_major,dev_memory_space>&   img,
-			  dense_matrix<float,row_major,dev_memory_space>&   filter) {
+			  dense_matrix<float,row_major,dev_memory_space>&   filter,
+			  int numGroups) {
 
 	int numFilters = filter.h();
 	int smallSize = sqrt(img.w()/numFilters);
@@ -286,14 +299,15 @@ template<>
 	NVMatrix nv_filter(filter.ptr(), filter.h(), filter.w(), false);
 
 	// execute convolution
-	convolve3_bw(&nv_img, &nv_filter, &nv_dst);
+	convolve3(&nv_img, &nv_filter, &nv_dst, numGroups, false);
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
 void convolve3(dense_matrix<float,row_major,host_memory_space>& dst,
 		  dense_matrix<float,row_major,host_memory_space>&   img,
-		  dense_matrix<float,row_major,host_memory_space>&   filter) {
+		  dense_matrix<float,row_major,host_memory_space>&   filter,
+		  int numGroups) {
 	// TODO
 	printf("convolve3 NYI on host!\n");
 }

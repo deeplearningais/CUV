@@ -42,14 +42,14 @@
 #define CONVCPU_H_
 
 inline float dotCPU(float* img, float* filter, int imgSize, int filterSize, int y, int x);
-void convCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters);
-void convColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters);
-void conv2CPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters);
-void conv2ColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters);
+void convCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups);
+void convColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups);
+void conv2CPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups);
+void conv2ColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups);
 void rotate180CPU(float* filters, float* targets, int filterSize, int numFilters);
 void padZerosCPU(float* images, float* targets, int imgSize, int numImages, int paddingSize);
-void conv3CPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters);
-void conv3ColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgs, int numFilters);
+void conv3CPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups);
+void conv3ColorCPU(float* imgs, float* filters, float* targets, int imgSize, int filterSize, int numImgsPerGroup, int numFiltersPerGroup, int numGroups);
 void subsampleCPU(float* images, float* targets, int imgSize, int factor, int numImgs);
 void supersampleCPU(float* images, float* targets, int imgSize, int factor, int numImgs, bool trans);
 void gridToMatrixCPU(float* images, float* targets, int imgSize, int factor, int numImgs);

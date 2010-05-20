@@ -53,17 +53,20 @@ namespace cuv{
  * Convolve N patterns (images) with F filters, resulting in N*F target images.
  *
  * @param dst		holds the target images of the convolution. one row for each
- *			        input image, with one target image for each filter per row.
+ *			        filter, with one target image for each input image per row.
  * @param img		contains one input image in each row
  * @param filter	contains one filter in each row, number of filters must
- * 			        be multiples of 16.
+ * 			        be multiples of 2. Routines is fastest for multiples of 16.
+ * @param numGroups	amount of image groups. each group is convolved with it's own
+ * 					set of filters.
  *
  *  The result is added to dst.
  */
 template<class V, class M, class T, class I>
 void convolve(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& img,
-		   dense_matrix<V,M,T,I>& filter);
+		   dense_matrix<V,M,T,I>& filter,
+		   int numGroups = 1);
 
 
 /** 
@@ -72,9 +75,11 @@ void convolve(dense_matrix<V,M,T,I>& dst,
  * @param dst holds the target images of the convolution. one row for each
  *            input image, with one target images for each filter per row.
  * @param img contains one input image in each row
- * @param filter contains F filters in each row, number of filters per row must
- *               be multiples of 16.
+ * @param filter contains N filters in each row, number of rows (filters) must
+ *               be multiples of 2. Routines is fastest for multiples of 16.
  * @param numFilters number of filters (F)
+ * @param numGroups	amount of image groups. each group is convolved with it's own
+ * 					set of filters.
  *
  *  The result is added to dst.
  * 	This routine can be used to compute the weight gradients: img contains the
@@ -87,7 +92,8 @@ template<class V, class M, class T, class I>
 void convolve2(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& img,
 		   dense_matrix<V,M,T,I>& filter,
-		   int numFilters);
+		   int numFilters,
+		   int numGroups = 1);
 
 
 /** 
@@ -96,9 +102,11 @@ void convolve2(dense_matrix<V,M,T,I>& dst,
  *
  * @param dst 	holds the target images of the convolution. one row for each
  *            	input image, with one target image per row.
- * @param img 	contains F input images in each row
+ * @param img 	contains N input images in each row
  * @param filter contains one filter in each row, number of filters must
- *               be multiples of 16.
+ *               be multiples of 2. Routines is fastest for multiples of 16.
+ * @param		numGroups	amount of image groups. each group is convolved with it's own
+ * 				set of filters.
  *
  *  The result is added to dst.
  *  Filters are rotated by 180 degrees for the convolution. This routine is
@@ -110,7 +118,8 @@ void convolve2(dense_matrix<V,M,T,I>& dst,
 template<class V, class M, class T, class I>
 void convolve3(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& img,
-		   dense_matrix<V,M,T,I>& filter);
+		   dense_matrix<V,M,T,I>& filter,
+		   int numGroups = 1);
 
 
 /** 

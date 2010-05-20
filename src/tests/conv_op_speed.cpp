@@ -235,6 +235,123 @@ void conv2_speed_test(int inputSize, int filterSize, int numFilters, int numImag
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
+
+void conv1_iter(dense_matrix<float, row_major, dev_memory_space>& d_img,
+		dense_matrix<float, row_major, dev_memory_space>& d_filter,
+		dense_matrix<float, row_major, dev_memory_space>& d_dst,
+		int numInputMaps) {
+	fill(d_dst, 0.0f);
+	for(int i = 0; i < numInputMaps; i++)
+		convolve(d_dst, d_img, d_filter);
+}
+
+void conv1_pass(dense_matrix<float, row_major, dev_memory_space>& d_img,
+		dense_matrix<float, row_major, dev_memory_space>& d_filter,
+		dense_matrix<float, row_major, dev_memory_space>& d_dst,
+		dense_matrix<float, row_major, dev_memory_space>& d_temp,
+		int numInputMaps) {
+	fill(d_dst, 0.0f);
+	int numFilters = d_dst.h();
+	convolve(d_temp, d_img, d_filter, numInputMaps);
+	d_temp.resize(d_temp.h()/numFilters, d_temp.w()*numFilters);
+	reduce_to_row(d_dst.vec(), d_temp);
+	d_temp.resize(d_temp.h()*numFilters, d_temp.w()/numFilters);
+}
+
+void conv2_pass(dense_matrix<float, row_major, dev_memory_space>& d_img,
+		dense_matrix<float, row_major, dev_memory_space>& d_filter,
+		dense_matrix<float, row_major, dev_memory_space>& d_dst,
+		dense_matrix<float, row_major, dev_memory_space>& d_temp,
+		int numPatterns) {
+	fill(d_temp, 0.0f);
+	convolve2(d_temp, d_img, d_filter, d_filter.h());
+	// note: this is not the correct summation! but it's at least as computationally intense
+	d_temp.resize(d_temp.h()/numPatterns, d_temp.w()*numPatterns);
+	reduce_to_row(d_dst.vec(), d_temp);
+	d_temp.resize(d_temp.h()*numPatterns, d_temp.w()/numPatterns);
+}
+
+// compare whether iterating over conv() or calling conv2() and accumulating is faster
+void conv_vs_conv2_speed(int inputSize, int numInputMaps, int filterSize, int numFilters, int numPatterns)
+{
+	int p = numPatterns;
+	int k = numInputMaps;
+	int f = numFilters; // per input map
+
+	int n = inputSize;
+	int g = filterSize;
+	int m = inputSize-filterSize+1;
+
+	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i (for %i patterns)\n", k, n,n, f, g,g, p);
+	printf("Result are %i*%i images of size %ix%i.\n", f, k,k);
+
+	dense_matrix<float, row_major, dev_memory_space>  d_img1(p, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  d_filter1(f, g*g);
+	dense_matrix<float, row_major, dev_memory_space>  d_dst1(f, p*m*m);
+
+	sequence(d_img1);    apply_scalar_functor(d_img1,   SF_MULT,0.001f);
+	sequence(d_filter1); apply_scalar_functor(d_filter1,SF_MULT,0.001f);
+
+	dense_matrix<float, row_major, dev_memory_space>  d_img2(k*p, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  d_filter2(f, k*p*g*g);
+	dense_matrix<float, row_major, dev_memory_space>  d_temp(k*p, f*m*m);
+	dense_matrix<float, row_major, dev_memory_space>  d_dst2(f, p*m*m);
+
+	sequence(d_img2);    apply_scalar_functor(d_img2,   SF_MULT,0.001f);
+	sequence(d_filter2); apply_scalar_functor(d_filter2,SF_MULT,0.001f);
+
+	MEASURE_TIME(conv1, conv1_iter(d_img1, d_filter1, d_dst1, k), 10);
+	MEASURE_TIME(conv2, conv2_pass(d_img2, d_filter2, d_dst2, d_temp, p), 10);
+
+	printf("Convolve1: %3.4f\n", conv1);
+	printf("Convolve2: %3.4f\n", conv2);
+	if(conv2<conv1)
+		printf("conv2 is %3.4f times faster than conv1\n", conv1/conv2);
+	else
+		printf("conv1 is %3.4f times faster than conv2\n", conv2/conv1);
+}
+
+// compare whether iterating over conv() or calling conv1() and accumulating is faster
+void conv_vs_conv_speed(int inputSize, int numInputMaps, int filterSize, int numFilters, int numPatterns)
+{
+	int p = numPatterns;
+	int k = numInputMaps;
+	int f = numFilters; // per input map
+
+	int n = inputSize;
+	int g = filterSize;
+	int m = inputSize-filterSize+1;
+
+	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i (for %i patterns)\n", k, n,n, f, g,g, p);
+	printf("Result are %i*%i images of size %ix%i.\n", f, k,k);
+
+	dense_matrix<float, row_major, dev_memory_space>  d_img1(p, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  d_filter1(f, g*g);
+	dense_matrix<float, row_major, dev_memory_space>  d_dst1(f, p*m*m);
+
+	sequence(d_img1);    apply_scalar_functor(d_img1,   SF_MULT,0.001f);
+	sequence(d_filter1); apply_scalar_functor(d_filter1,SF_MULT,0.001f);
+
+	dense_matrix<float, row_major, dev_memory_space>  d_img2(k*p, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  d_filter2(k*f, g*g);
+	dense_matrix<float, row_major, dev_memory_space>  d_temp(k*f, p*m*m);
+	dense_matrix<float, row_major, dev_memory_space>  d_dst2(f, p*m*m);
+
+	sequence(d_img2);    apply_scalar_functor(d_img2,   SF_MULT,0.001f);
+	sequence(d_filter2); apply_scalar_functor(d_filter2,SF_MULT,0.001f);
+
+	MEASURE_TIME(conv_iter, conv1_iter(d_img1, d_filter1, d_dst1, k), 10);
+	MEASURE_TIME(conv_pass, conv1_pass(d_img2, d_filter2, d_dst2, d_temp, k), 10);
+
+	printf("conv_iter: %3.4f\n", conv_iter);
+	printf("conv_pass: %3.4f\n", conv_pass);
+	if(conv_pass<conv_iter)
+		printf("conv_pass is %3.4f times faster than conv_iter\n", conv_iter/conv_pass);
+	else
+		printf("conv_iter is %3.4f times faster than conv_pass\n", conv_pass/conv_iter);
+}
+
+
 BOOST_AUTO_TEST_CASE( convolution_speed )
 {
 	//conv_speed_test(140, 16, 16, 30);
@@ -242,7 +359,12 @@ BOOST_AUTO_TEST_CASE( convolution_speed )
 	//conv_speed_test(47, 15, 16, 1);
 	//conv2_speed_test(384,9,32,16);
 	//conv_rlcnp_test(384,9,16,16);
-	conv_rlcnp_test(180+4*2,9,16,16);
+	//conv_rlcnp_test(180+4*2,9,16,16);
+
+//	conv_vs_conv2_speed(382, 16, 9, 32, 1);
+//	conv_vs_conv2_speed(96, 2, 5, 16, 60);
+
+	conv_vs_conv_speed(96, 2, 5, 16, 60);
 }
 
 BOOST_AUTO_TEST_CASE( supersampling_speed )

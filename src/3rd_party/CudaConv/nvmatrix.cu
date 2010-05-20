@@ -263,9 +263,11 @@ void NVMatrix::apply(NVMatrix::FUNCTIONS f, NVMatrix& target, int numBlocks, int
         kReciprocal<<<grid, threads>>>(_devData, target._devData, _numElements);
     } else if(f == NVMatrix::LOG) {
         kLog<<<grid, threads>>>(_devData, target._devData, _numElements);
+    } else if(f == NVMatrix::SIGN) {
+        kSign<<<grid, threads>>>(_devData, target._devData, _numElements);
     }
 
-    cutilCheckMsg("Kernel execution failed");
+    cutilCheckMsg("apply Kernel execution failed");
 }
 
 void NVMatrix::apply(NVMatrix::FUNCTIONS f, int numBlocks, int numThreadsPerBlock) {
@@ -333,14 +335,31 @@ void NVMatrix::randomizeGaussian(float stdev) {
     cutilCheckMsg("Kernel execution failed");
 }
 
+void NVMatrix::randomizeGaussian(NVMatrix& stdevs) {
+    assert(rndInitialized);
+    assert(stdevs.getNumElements() == _numElements);
+    assert(stdevs.isTrans() == isTrans());
+    kRandomGaussian<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(devRndMults, devRndWords, _devData, stdevs.getDevData(), _numElements);
+    cutilCheckMsg("Kernel execution failed");
+}
+
 void NVMatrix::addGaussianNoise() {
     addGaussianNoise(1);
 }
 
 void NVMatrix::addGaussianNoise(float stdev) {
     assert(rndInitialized);
-    assert(_numElements % 2 == 0);
+//    assert(_numElements % 2 == 0);
     kAddGaussianNoise<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(devRndMults, devRndWords, _devData,stdev,_numElements);
+    cutilCheckMsg("Kernel execution failed");
+}
+
+void NVMatrix::addGaussianNoise(NVMatrix& stdevs) {
+    assert(rndInitialized);
+//    assert(_numElements % 2 == 0);
+    assert(stdevs.getNumElements() == _numElements);
+    assert(stdevs.isTrans() == isTrans());
+    kAddGaussianNoise<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(devRndMults, devRndWords, _devData,stdevs.getDevData(),_numElements);
     cutilCheckMsg("Kernel execution failed");
 }
 
@@ -348,7 +367,33 @@ void NVMatrix::biggerThanScalar(float scalar) {
     biggerThanScalar(scalar, *this);
 }
 void NVMatrix::biggerThanScalar(float scalar, NVMatrix& target) {
+    target.resize(*this);
     kBiggerThanScalar<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(_devData,scalar,target._devData,_numElements);
+    cutilCheckMsg("Kernel execution failed");
+}
+
+void NVMatrix::inRangeInc(float lower, float upper) {
+    inRangeInc(lower, upper, *this);
+}
+void NVMatrix::inRangeInc(float lower, float upper, NVMatrix& target) {
+    target.resize(*this);
+    kInRangeInc<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(_devData,lower, upper,target._devData,_numElements);
+    cutilCheckMsg("Kernel execution failed");
+}
+
+void NVMatrix::inRangeExc(float lower, float upper) {
+    inRangeExc(lower, upper, *this);
+}
+void NVMatrix::inRangeExc(float lower, float upper, NVMatrix& target) {
+    target.resize(*this);
+    kInRangeExc<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(_devData,lower, upper,target._devData,_numElements);
+    cutilCheckMsg("Kernel execution failed");
+}
+
+
+void NVMatrix::smallerThanScalar(float scalar, NVMatrix& target) {
+    target.resize(*this);
+    kSmallerThanScalar<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(_devData,scalar,target._devData,_numElements);
     cutilCheckMsg("Kernel execution failed");
 }
 
@@ -365,6 +410,29 @@ void NVMatrix::biggerThan(NVMatrix& m, NVMatrix& target, int numBlocks, int numT
 
 void NVMatrix::biggerThan(NVMatrix& m, int numBlocks, int numThreadsPerBlock) {
     biggerThan(m, *this, numBlocks, numThreadsPerBlock);
+}
+
+void NVMatrix::biggerThanVector(NVMatrix& vec, NVMatrix& target) {
+    if(&target == &vec && &target != this) { // because we manipulate target to be like this
+        vec.biggerThanVector(*this);
+        return;
+    }
+    assert(vec.getNumRows() == 1 || vec.getNumCols() == 1);
+    assert(vec.getNumRows() == _numRows || vec.getNumCols() == _numCols);
+    target.resize(*this);
+
+    const unsigned int width = _isTrans ? _numRows : _numCols;
+    const unsigned int height = _isTrans ? _numCols : _numRows;
+    if(vec.getNumRows() == _numRows && !isTrans() || vec.getNumCols() == _numCols && isTrans()) {
+        kBiggerThanColVector<<<NUM_ADD_VECTOR_BLOCKS,NUM_ADD_VECTOR_THREADS_PER_BLOCK>>>(_devData, vec._devData, target._devData, width, height);
+    } else {
+        kBiggerThanRowVector<<<NUM_ADD_VECTOR_BLOCKS,NUM_ADD_VECTOR_THREADS_PER_BLOCK>>>(_devData, vec._devData, target._devData, width, height);
+    }
+    cutilCheckMsg("Kernel execution failed");
+}
+
+void NVMatrix::biggerThanVector(NVMatrix& vec) {
+    biggerThanVector(vec, *this);
 }
 
 void NVMatrix::_checkBounds(int startRow, int endRow, int startCol, int endCol) const {
@@ -467,8 +535,9 @@ NVMatrix& NVMatrix::reshaped(int numRows, int numCols) {
     return *new NVMatrix(_devData, numRows, numCols, _isTrans);
 }
 
-void NVMatrix::copy(NVMatrix &dest, int srcStartRow, int srcEndRow, int srcStartCol, int srcEndCol,
-                    int destStartRow, int destStartCol, int numBlocks, int numThreadsPerBlock) const {
+void NVMatrix::copy(NVMatrix &dest, int srcStartRow, int srcEndRow,
+                    int srcStartCol, int srcEndCol,
+                    int destStartRow, int destStartCol) const {
     srcEndRow = srcEndRow < 0 ? this->_numRows : srcEndRow;
     srcEndCol = srcEndCol < 0 ? this->_numCols : srcEndCol;
     assert(destStartRow >= 0 && destStartCol >= 0); //some range-checking
@@ -476,55 +545,46 @@ void NVMatrix::copy(NVMatrix &dest, int srcStartRow, int srcEndRow, int srcStart
     assert(destStartRow + srcEndRow - srcStartRow <= dest.getNumRows());
     assert(destStartCol + srcEndCol - srcStartCol <= dest.getNumCols());
 
+    const int srcJumpWidth = !_isTrans ? getNumCols() : getNumRows();
+    const int destJumpWidth = !dest._isTrans ? dest.getNumCols() : dest.getNumRows();
     float* srcStartPtr = getCellPtr(srcStartRow, srcStartCol);
     float* destStartPtr = dest.getCellPtr(destStartRow, destStartCol);
-    const int copyWidth = !_isTrans ? srcEndCol - srcStartCol : srcEndRow - srcStartRow;
-    const int copyHeight = !_isTrans ? srcEndRow - srcStartRow : srcEndCol - srcStartCol;
-    const int srcJumpSize = !_isTrans ? getNumCols() : getNumRows();
-    const int destJumpSize = !dest._isTrans ? dest.getNumCols() : dest.getNumRows();
+    if (isTrans() != dest.isTrans()) {
+        // copyWidth here refers to dest
+        const int copyWidth = !dest._isTrans ? srcEndCol - srcStartCol : srcEndRow - srcStartRow;
+        const int copyHeight = !dest._isTrans ? srcEndRow - srcStartRow : srcEndCol - srcStartCol;
+        //call copy kernel for transposed matrices
+//        const int width = dest.isTrans() ? _numRows : _numCols;
+//        const int height = dest.isTrans() ? _numCols : _numRows;
+        const bool checkBounds = !(copyWidth % ADD_BLOCK_SIZE == 0 && copyHeight % ADD_BLOCK_SIZE == 0);
 
-    int numElements = (srcEndRow - srcStartRow) * (srcEndCol - srcStartCol);
-    const int numThreads = numBlocks * numThreadsPerBlock;
-
-    const int numCopyRows = numThreads / copyWidth;
-    if(isTrans() != dest.isTrans() && !(copyWidth % COPY_BLOCK_SIZE == 0 && copyHeight % COPY_BLOCK_SIZE == 0)) {
-        WARN("Matrix copy: matrices have different transposedness and copy region dimensions not divisible by 16 -- calling inefficient copy kernel.");
-    }
-    if(isTrans() == dest.isTrans() || !(copyWidth % COPY_BLOCK_SIZE == 0 && copyHeight % COPY_BLOCK_SIZE == 0)) {
-        while (numElements > 0) {
-            int numToCopy = min(numElements, numCopyRows * copyWidth);
-            if(isTrans() == dest.isTrans()) {
-                kCopy<<<numBlocks,numThreadsPerBlock>>>(srcStartPtr, destStartPtr, copyWidth, srcJumpSize, numToCopy);
+        const int numBlocksX = DIVUP(copyWidth, ADD_BLOCK_SIZE);
+        assert(numBlocksX < NUM_BLOCKS_MAX);
+        const int numBlocksY = std::max(1, std::min(DIVUP(copyHeight, ADD_BLOCK_SIZE), NUM_BLOCKS_MAX));
+        dim3 gridSize(numBlocksX, numBlocksY, 1);
+        dim3 blockSize(ADD_BLOCK_SIZE, ADD_BLOCK_SIZE, 1);
+        int numRowsCopied = 0;
+//        printf("calling kCopyTransFast\n");
+        while (numRowsCopied < copyHeight) {
+            if (checkBounds) {
+                kCopyTransFast<true><<<gridSize, blockSize>>>(&destStartPtr[numRowsCopied * destJumpWidth],
+                        &srcStartPtr[numRowsCopied], copyWidth, copyHeight - numRowsCopied, destJumpWidth, srcJumpWidth);
             } else {
-                kCopyToTransDestSlow<<<numBlocks,numThreadsPerBlock>>>(srcStartPtr, destStartPtr, copyWidth, srcJumpSize, destJumpSize, numToCopy);
+                kCopyTransFast<false><<<gridSize, blockSize>>>(&destStartPtr[numRowsCopied * destJumpWidth],
+                        &srcStartPtr[numRowsCopied], copyWidth, copyHeight - numRowsCopied, destJumpWidth, srcJumpWidth);
             }
-            cutilCheckMsg("Kernel execution failed");
-            numElements -= numToCopy;
-            srcStartPtr += isTrans() ? numCopyRows : numToCopy;
-            destStartPtr += dest.isTrans() ? numCopyRows : numToCopy;
+            cutilCheckMsg("copy: Kernel execution failed");
+            numRowsCopied += gridSize.y * ADD_BLOCK_SIZE;
+            gridSize.y = std::max(1, min(DIVUP(copyHeight-numRowsCopied, ADD_BLOCK_SIZE), NUM_BLOCKS_MAX));
         }
     } else {
-//        printf("neato copy kernel\n");
-        const int numBlocksX = copyWidth / COPY_BLOCK_SIZE;
-        assert(numBlocksX < NUM_BLOCKS_MAX);
-        const int numBlocksY = min(copyHeight / COPY_BLOCK_SIZE, NUM_BLOCKS_MAX);
-        dim3 gridSize(numBlocksX, numBlocksY, 1);
-        dim3 blockSize(COPY_BLOCK_SIZE, COPY_BLOCK_SIZE, 1);
-        int numRowsCopied = 0;
-        while(numRowsCopied < copyHeight) {
-            kCopyToTransDestFast<<<gridSize, blockSize>>>(srcStartPtr + srcJumpSize * numRowsCopied, destStartPtr + numRowsCopied, copyWidth, copyHeight, srcJumpSize, destJumpSize);
-            cutilCheckMsg("Kernel execution failed");
-            numRowsCopied += gridSize.y * COPY_BLOCK_SIZE;
-            gridSize.y = min((copyHeight - numRowsCopied) / COPY_BLOCK_SIZE, NUM_BLOCKS_MAX);
-        }
-    }
-}
+        // copyWidth here refers to src
+        const int copyWidth = !_isTrans ? srcEndCol - srcStartCol : srcEndRow - srcStartRow;
+        const int copyHeight = !_isTrans ? srcEndRow - srcStartRow : srcEndCol - srcStartCol;
+        const int numToCopy = copyWidth * copyHeight;
 
-void NVMatrix::copy(NVMatrix &dest, int srcStartRow, int srcEndRow, int srcStartCol, int srcEndCol,
-                    int destStartRow, int destStartCol) const {
-    //TODO: these grid/block sizes may not be good
-    copy(dest, srcStartRow, srcEndRow, srcStartCol, srcEndCol, destStartRow, destStartCol,
-            NUM_BLOCKS_MAX, deviceProps.maxThreadsPerBlock);
+        kCopy<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(srcStartPtr, destStartPtr, copyWidth, srcJumpWidth, destJumpWidth, numToCopy);
+    }
 }
 
 NVMatrix& NVMatrix::getTranspose() {
@@ -568,20 +628,24 @@ void NVMatrix::squaredDiff(NVMatrix& b, NVMatrix& target) {
     const int width = isTrans() ? _numRows : _numCols;
     const int height = isTrans() ? _numCols : _numRows;
     if (_isTrans != b._isTrans) {
-        assert(width % ADD_BLOCK_SIZE == 0 && height % ADD_BLOCK_SIZE == 0);
-        const int numBlocksX = width / ADD_BLOCK_SIZE;
+        const bool checkBounds = !(width % ADD_BLOCK_SIZE == 0 && height % ADD_BLOCK_SIZE == 0);
+        const int numBlocksX = DIVUP(width, ADD_BLOCK_SIZE);
         assert(numBlocksX < NUM_BLOCKS_MAX);
-        const int numBlocksY = std::max(1, std::min(height / ADD_BLOCK_SIZE, NUM_BLOCKS_MAX));
+        const int numBlocksY = std::max(1, std::min(DIVUP(height, ADD_BLOCK_SIZE), NUM_BLOCKS_MAX));
         dim3 gridSize(numBlocksX, numBlocksY, 1);
         dim3 blockSize(ADD_BLOCK_SIZE, ADD_BLOCK_SIZE, 1);
         int numRowsAdded = 0;
         float* aData = _devData, *bData = b._devData, *destData = target._devData;
 //        printf("calling trans sq diff\n");
         while (numRowsAdded < height) {
-            kSquaredDiffTransFast<<<gridSize, blockSize>>>(aData, bData, destData, width, height);
+            if(checkBounds) {
+                kSquaredDiffTransFast<true><<<gridSize, blockSize>>>(aData, bData, destData, width, height - numRowsAdded, height);
+            } else {
+                kSquaredDiffTransFast<false><<<gridSize, blockSize>>>(aData, bData, destData, width, height - numRowsAdded, height);
+            }
             cutilCheckMsg("Kernel execution failed");
             numRowsAdded += gridSize.y * ADD_BLOCK_SIZE;
-            gridSize.y = std::max(1, std::min((height-numRowsAdded) / ADD_BLOCK_SIZE, NUM_BLOCKS_MAX));
+            gridSize.y = std::max(1, std::min(DIVUP(height-numRowsAdded, ADD_BLOCK_SIZE), NUM_BLOCKS_MAX));
             aData += numRowsAdded * width;
             bData += b._isTrans != _isTrans ? numRowsAdded : numRowsAdded * width;
             destData += numRowsAdded * width;
@@ -608,13 +672,44 @@ void NVMatrix::addSum(NVMatrix& b, NVMatrix& c, float scaleThis, float scaleB, f
         dim3 blockSize(ADD_BLOCK_SIZE, ADD_BLOCK_SIZE, 1);
         int numRowsAdded = 0;
         float* aData = _devData, *bData = b._devData, *cData = c._devData;
+        const bool transB = b._isTrans != _isTrans, transC = c._isTrans != _isTrans;
         while (numRowsAdded < height) {
-            if(checkBounds) {
-                kAddTrans3Fast<true><<<gridSize, blockSize>>>(aData, bData, cData,width, height - numRowsAdded, height,
-                                                    scaleThis, scaleB, scaleC, b._isTrans != _isTrans, c._isTrans != _isTrans);
+            if(transB) {
+                if(transC) {
+                    if(checkBounds) {
+                        kAddTrans3Fast<true, true, true><<<gridSize, blockSize>>>(aData, bData, cData,width, height - numRowsAdded, height,
+                                                            scaleThis, scaleB, scaleC);
+                    } else {
+                        kAddTrans3Fast<false, true, true><<<gridSize, blockSize>>>(aData, bData, cData,width, height - numRowsAdded, height,
+                                                                scaleThis, scaleB, scaleC);
+                    }
+                } else {
+                    if(checkBounds) {
+                        kAddTrans3Fast<true, true, false><<<gridSize, blockSize>>>(aData, bData, cData,width, height - numRowsAdded, height,
+                                                            scaleThis, scaleB, scaleC);
+                    } else {
+                        kAddTrans3Fast<false, true, false><<<gridSize, blockSize>>>(aData, bData, cData,width, height - numRowsAdded, height,
+                                                                scaleThis, scaleB, scaleC);
+                    }
+                }
             } else {
-                kAddTrans3Fast<false><<<gridSize, blockSize>>>(aData, bData, cData,width, height - numRowsAdded, height,
-                                                        scaleThis, scaleB, scaleC, b._isTrans != _isTrans, c._isTrans != _isTrans);
+                if(transC) {
+                    if(checkBounds) {
+                        kAddTrans3Fast<true, false, true><<<gridSize, blockSize>>>(aData, bData, cData,width, height - numRowsAdded, height,
+                                                            scaleThis, scaleB, scaleC);
+                    } else {
+                        kAddTrans3Fast<false, false, true><<<gridSize, blockSize>>>(aData, bData, cData,width, height - numRowsAdded, height,
+                                                                scaleThis, scaleB, scaleC);
+                    }
+                } else {
+                    if(checkBounds) {
+                        kAddTrans3Fast<true, false, false><<<gridSize, blockSize>>>(aData, bData, cData,width, height - numRowsAdded, height,
+                                                            scaleThis, scaleB, scaleC);
+                    } else {
+                        kAddTrans3Fast<false, false, false><<<gridSize, blockSize>>>(aData, bData, cData,width, height - numRowsAdded, height,
+                                                                scaleThis, scaleB, scaleC);
+                    }
+                }
             }
             cutilCheckMsg("Kernel execution failed");
             numRowsAdded += gridSize.y * ADD_BLOCK_SIZE;
@@ -641,26 +736,27 @@ void NVMatrix::add(NVMatrix& b, float scaleA, float scaleB, NVMatrix& target) {
         //call addition kernel for transposed matrices
         const int width = isTrans() ? _numRows : _numCols;
         const int height = isTrans() ? _numCols : _numRows;
-        if (width % ADD_BLOCK_SIZE == 0 && height % ADD_BLOCK_SIZE == 0) {
-            const int numBlocksX = width / ADD_BLOCK_SIZE;
-            assert(numBlocksX < NUM_BLOCKS_MAX);
-            const int numBlocksY = std::max(1, std::min(height / ADD_BLOCK_SIZE, NUM_BLOCKS_MAX));
-            dim3 gridSize(numBlocksX, numBlocksY, 1);
-            dim3 blockSize(ADD_BLOCK_SIZE, ADD_BLOCK_SIZE, 1);
-            int numRowsAdded = 0;
-            while (numRowsAdded < height) {
-                kAddTransFast<<<gridSize, blockSize>>>(&_devData[numRowsAdded * width],
+        const bool checkBounds = !(width % ADD_BLOCK_SIZE == 0 && height % ADD_BLOCK_SIZE == 0);
+
+        const int numBlocksX = DIVUP(width, ADD_BLOCK_SIZE);
+        assert(numBlocksX < NUM_BLOCKS_MAX);
+        const int numBlocksY = std::max(1, std::min(DIVUP(height, ADD_BLOCK_SIZE), NUM_BLOCKS_MAX));
+        dim3 gridSize(numBlocksX, numBlocksY, 1);
+        dim3 blockSize(ADD_BLOCK_SIZE, ADD_BLOCK_SIZE, 1);
+        int numRowsAdded = 0;
+        while (numRowsAdded < height) {
+            if (checkBounds) {
+                kAddTransFast<true><<<gridSize, blockSize>>>(&_devData[numRowsAdded * width],
                         &b._devData[numRowsAdded], &target._devData[numRowsAdded * width],
                         width, height - numRowsAdded, height, scaleA, scaleB);
-                cutilCheckMsg("Kernel execution failed");
-                numRowsAdded += gridSize.y * ADD_BLOCK_SIZE;
-                gridSize.y = std::max(1, std::min((height-numRowsAdded) / ADD_BLOCK_SIZE, NUM_BLOCKS_MAX));
+            } else {
+                kAddTransFast<false><<<gridSize, blockSize>>>(&_devData[numRowsAdded * width],
+                        &b._devData[numRowsAdded], &target._devData[numRowsAdded * width],
+                        width, height - numRowsAdded, height, scaleA, scaleB);
             }
-        } else {
-            WARN("Add: Matrices have different transposedness and matrix dimensions not divisible by 16 -- calling inefficient matrix addition kernel.");
-            kAddTransSlow<<<getDefaultNumBlocks(), getDefaultNumThreadsPerBlock()>>>(_devData, b._devData, target._devData,
-                    width, height, _numElements, scaleA, scaleB);
             cutilCheckMsg("Kernel execution failed");
+            numRowsAdded += gridSize.y * ADD_BLOCK_SIZE;
+            gridSize.y = std::max(1, min(DIVUP(height-numRowsAdded, ADD_BLOCK_SIZE), NUM_BLOCKS_MAX));
         }
     } else {
         if(scaleA == 1.0f) {
@@ -670,7 +766,6 @@ void NVMatrix::add(NVMatrix& b, float scaleA, float scaleB, NVMatrix& target) {
             kAdd<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(_devData, b._devData, target._devData,
                                                                             _numElements, scaleA, scaleB);
         }
-
     }
 }
 
@@ -713,21 +808,27 @@ void NVMatrix::eltWiseMult(NVMatrix& b, NVMatrix& target) {
         //call mult kernel for transposed matrices
         const int width = isTrans() ? _numRows : _numCols;
         const int height = isTrans() ? _numCols : _numRows;
-        assert(width % ADD_BLOCK_SIZE == 0 && height % ADD_BLOCK_SIZE == 0);
+        const bool checkBounds = !(width % ADD_BLOCK_SIZE == 0 && height % ADD_BLOCK_SIZE == 0);
 //        if (width % ADD_BLOCK_SIZE == 0 && height % ADD_BLOCK_SIZE == 0) {
-        const int numBlocksX = width / ADD_BLOCK_SIZE;
+        const int numBlocksX = DIVUP(width, ADD_BLOCK_SIZE);
         assert(numBlocksX < NUM_BLOCKS_MAX);
-        const int numBlocksY = min(height / ADD_BLOCK_SIZE, NUM_BLOCKS_MAX);
+        const int numBlocksY = min(DIVUP(height, ADD_BLOCK_SIZE), NUM_BLOCKS_MAX);
         dim3 gridSize(numBlocksX, numBlocksY, 1);
         dim3 blockSize(ADD_BLOCK_SIZE, ADD_BLOCK_SIZE, 1);
         int numRowsProcessed = 0;
         while (numRowsProcessed < height) {
-            kMultTransFast<<<gridSize, blockSize>>>(&_devData[numRowsProcessed * width],
-                                                    &b._devData[numRowsProcessed], &target._devData[numRowsProcessed * width],
-                                                    width, height - numRowsProcessed, height);
+            if (checkBounds) {
+                kMultTransFast<true><<<gridSize, blockSize>>>(&_devData[numRowsProcessed * width],
+                                                        &b._devData[numRowsProcessed], &target._devData[numRowsProcessed * width],
+                                                        width, height - numRowsProcessed, height);
+            } else {
+                kMultTransFast<false><<<gridSize, blockSize>>>(&_devData[numRowsProcessed * width],
+                                                            &b._devData[numRowsProcessed], &target._devData[numRowsProcessed * width],
+                                                            width, height - numRowsProcessed, height);
+            }
             cutilCheckMsg("Kernel execution failed");
             numRowsProcessed += gridSize.y * ADD_BLOCK_SIZE;
-            gridSize.y = min((height-numRowsProcessed) / ADD_BLOCK_SIZE, NUM_BLOCKS_MAX);
+            gridSize.y = min(DIVUP(height-numRowsProcessed, ADD_BLOCK_SIZE), NUM_BLOCKS_MAX);
         }
 //        }
     } else {
@@ -748,21 +849,27 @@ void NVMatrix::eltWiseDivide(NVMatrix& b, NVMatrix& target) {
         //call mult kernel for transposed matrices
         const int width = isTrans() ? _numRows : _numCols;
         const int height = isTrans() ? _numCols : _numRows;
-        assert(width % ADD_BLOCK_SIZE == 0 && height % ADD_BLOCK_SIZE == 0);
+        const bool checkBounds = !(width % ADD_BLOCK_SIZE == 0 && height % ADD_BLOCK_SIZE == 0);
 //        if (width % ADD_BLOCK_SIZE == 0 && height % ADD_BLOCK_SIZE == 0) {
-        const int numBlocksX = width / ADD_BLOCK_SIZE;
+        const int numBlocksX = DIVUP(width, ADD_BLOCK_SIZE);
         assert(numBlocksX < NUM_BLOCKS_MAX);
         const int numBlocksY = min(height / ADD_BLOCK_SIZE, NUM_BLOCKS_MAX);
         dim3 gridSize(numBlocksX, numBlocksY, 1);
         dim3 blockSize(ADD_BLOCK_SIZE, ADD_BLOCK_SIZE, 1);
         int numRowsProcessed = 0;
         while (numRowsProcessed < height) {
-            kDivideTransFast<<<gridSize, blockSize>>>(&_devData[numRowsProcessed * width],
-                                                        &b._devData[numRowsProcessed], &target._devData[numRowsProcessed * width],
-                                                        width, height - numRowsProcessed, height);
+            if (checkBounds) {
+                kDivideTransFast<true><<<gridSize, blockSize>>>(&_devData[numRowsProcessed * width],
+                                                            &b._devData[numRowsProcessed], &target._devData[numRowsProcessed * width],
+                                                            width, height - numRowsProcessed, height);
+            } else {
+                kDivideTransFast<false><<<gridSize, blockSize>>>(&_devData[numRowsProcessed * width],
+                                                            &b._devData[numRowsProcessed], &target._devData[numRowsProcessed * width],
+                                                            width, height - numRowsProcessed, height);
+            }
             cutilCheckMsg("Kernel execution failed");
             numRowsProcessed += gridSize.y * ADD_BLOCK_SIZE;
-            gridSize.y = min((height-numRowsProcessed) / ADD_BLOCK_SIZE, NUM_BLOCKS_MAX);
+            gridSize.y = min(DIVUP(height-numRowsProcessed, ADD_BLOCK_SIZE), NUM_BLOCKS_MAX);
         }
 //        }
     } else {
@@ -775,20 +882,20 @@ void NVMatrix::eltWiseDivide(NVMatrix& b) {
     eltWiseDivide(b, *this);
 }
 
-void NVMatrix::tile(int timesY, int timesX, NVMatrix& target, int numBlocks, int numThreadsPerBlock) {
+void NVMatrix::tile(int timesY, int timesX, NVMatrix& target) {
     assert(timesX > 0 && timesY > 0);
     target.resize(_numRows*timesY, _numCols*timesX);
     target._isTrans = _isTrans;
     if(!isTrans()) {
-        kTile<<<numBlocks,numThreadsPerBlock>>>(_devData, target._devData, _numCols, _numRows, target._numCols, target._numRows);
+        kTile<<<NUM_APPLY_BLOCKS,NUM_APPLY_THREADS_PER_BLOCK>>>(_devData, target._devData, _numCols, _numRows, target._numCols, target._numRows);
     } else {
-        kTile<<<numBlocks,numThreadsPerBlock>>>(_devData, target._devData, _numRows, _numCols, target._numRows, target._numCols);
+        kTile<<<NUM_APPLY_BLOCKS,NUM_APPLY_THREADS_PER_BLOCK>>>(_devData, target._devData, _numRows, _numCols, target._numRows, target._numCols);
     }
     cutilCheckMsg("Kernel execution failed");
 }
 
-void NVMatrix::addVector(NVMatrix& vec, float scaleVec, NVMatrix& target, int numBlocks, int numThreadsPerBlock) {
-    if(&target == &vec && &target != this) { // because we manipulate target to be like a
+void NVMatrix::addVector(NVMatrix& vec, float scaleVec, NVMatrix& target) {
+    if(&target == &vec && &target != this) { // because we manipulate target to be like this
         vec.add(*this, scaleVec, 1);
         return;
     }
@@ -818,6 +925,29 @@ void NVMatrix::addVector(NVMatrix& vec, float scaleVec) {
 
 void NVMatrix::addVector(NVMatrix& vec, NVMatrix& target) {
     addVector(vec, 1, target);
+}
+
+void NVMatrix::equalsVector(NVMatrix& vec, NVMatrix& target) {
+    if(&target == &vec && &target != this) { // because we manipulate target to be like this
+        vec.equalsVector(*this);
+        return;
+    }
+    assert(vec.getNumRows() == 1 || vec.getNumCols() == 1);
+    assert(vec.getNumRows() == _numRows || vec.getNumCols() == _numCols);
+    target.resize(*this);
+
+    const unsigned int width = _isTrans ? _numRows : _numCols;
+    const unsigned int height = _isTrans ? _numCols : _numRows;
+    if(vec.getNumRows() == _numRows && !isTrans() || vec.getNumCols() == _numCols && isTrans()) {
+        kEqualsColVector<<<NUM_ADD_VECTOR_BLOCKS,NUM_ADD_VECTOR_THREADS_PER_BLOCK>>>(_devData, vec._devData, target._devData, width, height);
+    } else {
+        kEqualsRowVector<<<NUM_ADD_VECTOR_BLOCKS,NUM_ADD_VECTOR_THREADS_PER_BLOCK>>>(_devData, vec._devData, target._devData, width, height);
+    }
+    cutilCheckMsg("Kernel execution failed");
+}
+
+void NVMatrix::equalsVector(NVMatrix& vec) {
+    equalsVector(vec, *this);
 }
 
 void NVMatrix::subtractFromScalar(float scalar, NVMatrix& target) {
@@ -1115,6 +1245,10 @@ void NVMatrix::print(int startRow, int rows, int startCol, int cols) const {
 
 void NVMatrix::print(int rows, int cols) const {
     print(0, rows, 0, cols);
+}
+
+void NVMatrix::printShape(const char* name) const {
+    printf("%s: %dx%d\n", name, _numRows, _numCols);
 }
 
 //========================================================
