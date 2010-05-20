@@ -41,7 +41,7 @@
 #ifndef __MATRIX_HPP__
 #define __MATRIX_HPP__
 
-#include <cuv_general.hpp>
+#include <tools/cuv_general.hpp>
 
 namespace cuv{
 
