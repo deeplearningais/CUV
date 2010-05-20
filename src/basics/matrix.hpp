@@ -41,7 +41,7 @@
 #ifndef __MATRIX_HPP__
 #define __MATRIX_HPP__
 
-#include <tools/cuv_general.hpp>
+#include <cuv_general.hpp>
 
 namespace cuv{
 
@@ -86,6 +86,7 @@ class matrix
 		   */
 		  inline void resize(const index_type& h, const index_type& w) 
 		  {
+			  cuvAssert(w*h == m_width*m_height);
 			  m_width=w;
 			  m_height=h;
 		  }
