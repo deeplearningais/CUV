@@ -372,7 +372,7 @@ BOOST_AUTO_TEST_CASE( reverse_filters )
 	filter_d.resize(c, f*g*g);
 	filter_h.resize(c, f*g*g);
 
-	filter_inverse(erg_d,filter_d, g*g);
+	filter_rotate(erg_d,filter_d, g*g);
 
 	float* f_h_ptr;
 	int fs = g*g;
