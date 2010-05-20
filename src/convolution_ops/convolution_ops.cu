@@ -1091,9 +1091,9 @@ void filter_rotate(   dense_matrix<float,row_major,dev_memory_space>& dst,
 		// we put as many filter in a row of width 512 as possible
 		int numFiltersPerRow = 512 / fs;
 		int numRows = ceil((float)(num_filter*filter.h()) / numFiltersPerRow);
-
 		//std::cout << "resizing from " << num_filter << "x" << filter.h() << " to " << numFiltersPerRow << " x " << numRows << std::endl;
-		filter.resize(numRows, numFiltersPerRow*fs);
+		int _h = numRows;
+		int _w = numFiltersPerRow*fs;
 
 		int numThreads = 512;
 		int numBlocksX = ceil((float)filter.w()/numThreads);
@@ -1102,9 +1102,9 @@ void filter_rotate(   dense_matrix<float,row_major,dev_memory_space>& dst,
 		dim3 dimBlock(numThreads,1);
 
 //		std::cout << "filter.h =  " << filter.h() << std::endl;
-		filter_rotate_kernel<<<grid,dimBlock>>>(dst.ptr(), filter.ptr(), filter.w(), filter.h(), fs);
+		filter_rotate_kernel<<<grid,dimBlock>>>(dst.ptr(), filter.ptr(), _w, _h, fs);
 		cuvSafeCall(cudaThreadSynchronize());
-		filter.resize(numCases, f_h_w);
+
 }
 
 __global__ void add_maps_h_kernel(float* dst, float* img, const int img_w, const int imagesize) {
