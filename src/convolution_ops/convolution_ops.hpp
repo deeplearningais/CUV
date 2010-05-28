@@ -405,7 +405,7 @@ void row_ncopy(dense_matrix<V,M,T,I>& dst,
 /**
  * @brief Rotates the filters in a filter matrix consisting of m filters in a row with n rows by 180 deg.
  * @param dst holds the target matrix with the inverted filters
- * @param filter is a matrix with m filters in a row and n rows
+ * @param filter is a matrix with n filters in a column and n columns
  * @param fs the filter size
  *
  */
@@ -422,10 +422,10 @@ void filter_rotate(   dense_matrix<V,M,T,I>& dst,
  * @param image_size the size of one map in that rows
  *
  */
-template<class V, class M, class T, class I>
-void add_maps_h(	dense_matrix<V,M,T,I>& dst,
-					dense_matrix<V,M,T,I>& mat,
-					unsigned int image_size);
+//template<class V, class M, class T, class I>
+//void add_maps_h(	dense_matrix<V,M,T,I>& dst,
+//					dense_matrix<V,M,T,I>& mat,
+//					unsigned int image_size);
 
 
 
@@ -443,6 +443,25 @@ void calc_error_to_blob(	dense_matrix<V,M,T,I>& dst,
 							unsigned int image_w,
 							unsigned int image_h,
 							unsigned int blob_size);
+
+/**
+ * @brief makes sure that the weights in the first numInhibitory filters are non-positive, the next numExitatory are non-negative
+ * @param dst holds the target matrix for the corrected filters
+ * @param filter is a matrix with n filters in a column and n columns
+ * @param start_filter the filter col where to start checking (i.e. skipping input/output maps filters...)
+ * @param num_inhibitory number of inhibitory filters
+ * @param num_exitatory number of exitatory filters
+ */
+
+template<class V, class M, class T, class I>
+void check_exitatory_inhibitory(
+							dense_matrix<V,M,T,I>& filter,
+							unsigned int start_filter,
+							unsigned int filter_pixels,
+							unsigned int num_inhibitory,
+							unsigned int num_exitatory);
+
+
 }
 /** @} */ //end group convolution_ops
 #endif /* __CONVOLUTION_OPS_HPP__ */

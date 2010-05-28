@@ -149,7 +149,6 @@ template<>
 	cuvAssert(numFilters%2 == 0);
 	cuvAssert(numImages*filterSize*filterSize == filter.w());
 	cuvAssert(imgSize*imgSize == img.w());
-
 	if (!(dstSize == (imgSize - filterSize + 1)))
 		std::cout << "destSize should be " << imgSize - filterSize + 1 << " but is " << dstSize;
 	cuvAssert(dstSize == imgSize - filterSize + 1);
@@ -1089,9 +1088,11 @@ __global__ void filter_rotate_kernel(float* dst, float* src, const int w, const 
 }
 
 template<>
-void filter_rotate(   dense_matrix<float,row_major,dev_memory_space>& dst,
-					   dense_matrix<float,row_major,dev_memory_space>& filter,
-					   unsigned int fs){
+void filter_rotate(	dense_matrix<float,row_major,dev_memory_space>& dst,
+					dense_matrix<float,row_major,dev_memory_space>& filter,
+					unsigned int fs){
+
+
 		cuvAssert(dst.h() == filter.h())
 		cuvAssert(dst.w() == filter.w())
 
@@ -1121,70 +1122,70 @@ void filter_rotate(   dense_matrix<float,row_major,dev_memory_space>& dst,
 
 }
 
-__global__ void add_maps_h_kernel(float* dst, float* img, const int img_w, const int imagesize) {
-
-	int px = threadIdx.x +  blockDim.x * blockIdx.x;
-	int row = blockIdx.y;
-
-	int num_maps = img_w / imagesize;
-
-	__shared__ float summedMaps[512];
-
-	// sum up in fast shared mem
-	for(int i = 0; i < num_maps; i++){
-		summedMaps[px] += *(img + row * img_w		// goto row in matrix
-								+ px				// pixel
-								+ i * imagesize);   // iterate on images
-	}
-
-	// move result to global mem
-	*(dst + row * img_w + px) = *(summedMaps + row * img_w + px);
-}
-
-template<>
-void add_maps_h(	dense_matrix<float,row_major,dev_memory_space>& dst,
-					dense_matrix<float,row_major,dev_memory_space>& mat,
-					unsigned int image_size){
-
-		int num_images = mat.w() / image_size;
-		cuvAssert(dst.w() == image_size);
-		cuvAssert(dst.h() == mat.h());
-		cuvAssert(num_images * image_size == mat.w());
-
-		int numThreads = 512;
-		int numBlocksX = ceil((float)mat.w()/numThreads);
-		int numBlocksY = mat.h();
-		dim3 grid(numBlocksX, numBlocksY);
-		dim3 dimBlock(numThreads,1);
-
-		add_maps_h_kernel<<<grid,dimBlock>>>(dst.ptr(), mat.ptr(), mat.w(), image_size);
-		cuvSafeCall(cudaThreadSynchronize());
-}
-
-template<>
-void add_maps_h(	dense_matrix<float,row_major,host_memory_space>& dst,
-					dense_matrix<float,row_major,host_memory_space>& mat,
-					unsigned int image_size){
-
-		int num_images = mat.w() / image_size;
-		cuvAssert(dst.w() == image_size);
-		cuvAssert(dst.h() == mat.h());
-		cuvAssert(num_images * image_size == mat.w());
-
-		float* e_ptr = dst.ptr();
-		float* i_ptr = mat.ptr();
-
-		// host solution
-		for (int row = 0; row<mat.h(); row++){
-			for(int px = 0; px < image_size; px++){
-				for(int img = 0; img < num_images; img++){
-					*(e_ptr + row*dst.w() + px) += *(i_ptr + row * dst.w()  // move to right row
-															 + img * image_size // move to img
-															 + px);				// move to pixel in img
-				}
-			}
-		}
-}
+//__global__ void add_maps_h_kernel(float* dst, float* img, const int img_w, const int imagesize) {
+//
+//	int px = threadIdx.x +  blockDim.x * blockIdx.x;
+//	int row = blockIdx.y;
+//
+//	int num_maps = img_w / imagesize;
+//
+//	__shared__ float summedMaps[512];
+//
+//	// sum up in fast shared mem
+//	for(int i = 0; i < num_maps; i++){
+//		summedMaps[px] += *(img + row * img_w		// goto row in matrix
+//								+ px				// pixel
+//								+ i * imagesize);   // iterate on images
+//	}
+//
+//	// move result to global mem
+//	*(dst + row * img_w + px) = *(summedMaps + row * img_w + px);
+//}
+//
+//template<>
+//void add_maps_h(	dense_matrix<float,row_major,dev_memory_space>& dst,
+//					dense_matrix<float,row_major,dev_memory_space>& mat,
+//					unsigned int image_size){
+//
+//		int num_images = mat.w() / image_size;
+//		cuvAssert(dst.w() == image_size);
+//		cuvAssert(dst.h() == mat.h());
+//		cuvAssert(num_images * image_size == mat.w());
+//
+//		int numThreads = 512;
+//		int numBlocksX = ceil((float)mat.w()/numThreads);
+//		int numBlocksY = mat.h();
+//		dim3 grid(numBlocksX, numBlocksY);
+//		dim3 dimBlock(numThreads,1);
+//
+//		add_maps_h_kernel<<<grid,dimBlock>>>(dst.ptr(), mat.ptr(), mat.w(), image_size);
+//		cuvSafeCall(cudaThreadSynchronize());
+//}
+//
+//template<>
+//void add_maps_h(	dense_matrix<float,row_major,host_memory_space>& dst,
+//					dense_matrix<float,row_major,host_memory_space>& mat,
+//					unsigned int image_size){
+//
+//		int num_images = mat.w() / image_size;
+//		cuvAssert(dst.w() == image_size);
+//		cuvAssert(dst.h() == mat.h());
+//		cuvAssert(num_images * image_size == mat.w());
+//
+//		float* e_ptr = dst.ptr();
+//		float* i_ptr = mat.ptr();
+//
+//		// host solution
+//		for (int row = 0; row<mat.h(); row++){
+//			for(int px = 0; px < image_size; px++){
+//				for(int img = 0; img < num_images; img++){
+//					*(e_ptr + row*dst.w() + px) += *(i_ptr + row * dst.w()  // move to right row
+//															 + img * image_size // move to img
+//															 + px);				// move to pixel in img
+//				}
+//			}
+//		}
+//}
 
 __global__ void calc_error_to_blob_kernel(float* img,
 										  float* src,
@@ -1203,7 +1204,10 @@ __global__ void calc_error_to_blob_kernel(float* img,
 	float a = (center_x - x)/ blob_width;
 	float b = (center_y - y)/ blob_width;
 	// destination is calculated by the row the pixel is in (row*imagesize) and the index in the picture (idx)
-	*(img+idx+row*(img_w*img_h)) = expf(-(a*a+b*b)/2) - *(src+idx+row*(img_w*img_h));
+	// img_w and img_h refers to the dimensions of an image (one row) in the img matrix
+	if(img_w*img_h < idx){
+		*(img+idx+row*(img_w*img_h)) = expf(-(a*a+b*b)/2) - *(src+idx+row*(img_w*img_h));
+	}
 }
 
 
@@ -1227,6 +1231,99 @@ void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 
 	calc_error_to_blob_kernel<<<grid,dimBlock>>>(dst.ptr(), img.ptr(), blob_mat.ptr(), image_w, image_h, blob_size);
 	cuvSafeCall(cudaThreadSynchronize());
+};
+
+__global__ void check_exitatory_inhibitory_kernel(float* filter,
+												  const int filter_w,
+												  const int filter_h,
+												  const int start_filter,
+												  const int filter_pixels,
+												  const int num_inhibitory,
+												  const int num_exitatory) {
+
+	int idx = threadIdx.x +  blockDim.x * blockIdx.x;
+	int row = blockIdx.y;
+
+	int inhib_start_col 	= start_filter * filter_pixels;
+	int exit_start_col		= inhib_start_col + num_inhibitory*filter_pixels;
+
+	int ptr_adr =  	inhib_start_col		//move to the beginning of the block
+						+ idx				//move to column in block
+						+ (row*filter_w);	// move pointer by row many rows down
+
+	if(idx < filter_w and row<filter_h)
+		if(idx >= exit_start_col - inhib_start_col){ // if idx is in exitatory block
+			if(*(filter+ptr_adr) < 0)
+				*(filter + ptr_adr) = 0;
+		}else{										 // if idx is in inhibitory
+			if(*(filter + ptr_adr) > 0)
+				*(filter + ptr_adr) = 0;
+		}
+
+}
+
+template<>
+void check_exitatory_inhibitory(dense_matrix<float,row_major,dev_memory_space>& filter,
+								unsigned int start_filter,
+								unsigned int filter_pixels,
+								unsigned int num_inhibitory,
+								unsigned int num_exitatory){
+
+	int row_size = filter.w();
+	int inhib_start_col 	= start_filter * filter_pixels;
+	int inhib_end_col 		= inhib_start_col + num_inhibitory * filter_pixels - 1;
+	int exit_start_col		= inhib_end_col + 1;
+	int exit_end_col		= exit_start_col + num_exitatory * filter_pixels - 1;
+//	std::cout << "filter.h: " << filter.h() << " cols ges: "<< filter.w() <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
+	int numThreads = 512;
+	int numBlocksX = ceil((float)(exit_end_col-inhib_start_col)/numThreads);
+ 	int numBlocksY = filter.h();
+// 	std::cout << "launching " << numBlocksX << "x" << numBlocksY << "x512 Threads for " << (exit_end_col-inhib_start_col)*filter.h() <<" elements"<<std::endl;
+	dim3 grid(numBlocksX, numBlocksY);
+	dim3 dimBlock(numThreads,1);
+
+	check_exitatory_inhibitory_kernel<<<grid,dimBlock>>>( filter.ptr(),
+														  filter.w(),
+														  filter.h(),
+														  start_filter,
+														  filter_pixels,
+														  num_inhibitory,
+														  num_exitatory);
+	cuvSafeCall(cudaThreadSynchronize());
+
+};
+
+template<>
+void check_exitatory_inhibitory(dense_matrix<float,row_major,host_memory_space>& filter,
+								unsigned int start_filter,
+								unsigned int filter_pixels,
+								unsigned int num_inhibitory,
+								unsigned int num_exitatory){
+
+	int row_size = filter.w();
+	int inhib_start_col 	= start_filter * filter_pixels;
+	int inhib_end_col 		= inhib_start_col + num_inhibitory * filter_pixels-1;
+	int exit_start_col		= inhib_end_col+1;
+	int exit_end_col		= exit_start_col + num_exitatory * filter_pixels-1;
+	std::cout << "filter.h: " << filter.h() << " cols ges: "<< filter.w() <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
+
+	// horizontal direction
+	for(int c = inhib_start_col; c < inhib_end_col; c = c + 1 ){
+		// vertical direction
+		for(int r = 0; r < filter.h(); r++){
+			if(*(filter.ptr()+c+(r*row_size)) > 0)
+				*(filter.ptr()+c+(r*row_size)) = 0;
+		}
+	}
+
+	for(int c = exit_start_col; c <= exit_end_col; c = c + 1 ){
+		// vertical direction
+		for(int r = 0; r < filter.h(); r++){
+			if(*(filter.ptr()+c+(r*row_size)) < 0)
+				*(filter.ptr()+c+(r*row_size)) = 0;
+		}
+	}
+
 };
 
 }

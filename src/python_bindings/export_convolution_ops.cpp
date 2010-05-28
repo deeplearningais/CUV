@@ -74,21 +74,24 @@ struct switch_value_type{
 
 template <class M>
 void export_convolve(){
-	def("convolve",(void (*)(M&,M&, M&))convolve<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
-																							arg("dst"),
-																							arg("img"),
-																							arg("filter"))
-																						);
-	def("convolve2",(void (*)(M&,M&, M&, int))convolve2<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
+	def("convolve",(void (*)(M&,M&, M&, int))convolve<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
 																							arg("dst"),
 																							arg("img"),
 																							arg("filter"),
-																							arg("numFilters"))
+																							arg("nGroups"))
 																						);
-	def("convolve3",(void (*)(M&,M&, M&))convolve3<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
+	def("convolve2",(void (*)(M&,M&, M&, int, int))convolve2<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
 																							arg("dst"),
 																							arg("img"),
-																							arg("filter"))
+																							arg("filter"),
+																							arg("numFilters"),
+																							arg("nGroups"))
+																						);
+	def("convolve3",(void (*)(M&,M&, M&, int))convolve3<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
+																							arg("dst"),
+																							arg("img"),
+																							arg("filter"),
+																							arg("nGroups"))
 																						);
 }
 
@@ -143,10 +146,10 @@ void export_row_ncopy(){
 	def("reorder",(void (*)(M&, int))reorder<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
 															arg("matrix"),
 															arg("block_length")));
-	def("add_maps_h",(void (*)(M&,M&, unsigned int))add_maps_h<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
-															arg("dst"),
-															arg("map_matrix"),
-															arg("map_size")));
+//	def("add_maps_h",(void (*)(M&,M&, unsigned int))add_maps_h<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+//															arg("dst"),
+//															arg("map_matrix"),
+//															arg("map_size")));
 	def("calc_error_to_blob",(void (*)(M&,M&, M&, unsigned int, unsigned int, unsigned int))calc_error_to_blob<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
 																arg("dst"),
 																arg("img"),
@@ -154,6 +157,13 @@ void export_row_ncopy(){
 																arg("image_w"),
 																arg("image_h"),
 																arg("blob_size")));
+	def("check_exitatory_inhibitory",(void (*)(M&, unsigned int, unsigned int, unsigned int, unsigned int))check_exitatory_inhibitory<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+																arg("dst"),
+																arg("start_filter"),
+																arg("filter_pixels"),
+																arg("num_exitatory"),
+																arg("num_inhibitory")));
+
 }
 
 void export_convolution_ops(){
