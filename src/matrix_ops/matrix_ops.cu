@@ -391,10 +391,10 @@ void prod(dense_matrix<float,row_major,dev_memory_space>& dst,
 		const float& factAB,
 		const float& factC) {
 	// we use column major prod and just exchange width and height
-	int m = (transB=='t' ? B.w() : B.h());
-	int k1 = (transB=='t' ? B.h() : B.w());
-	int k2 = (transA=='t' ? A.w() : A.h());
-	int n = (transA=='t' ? A.h() : A.w());
+	int m = (transB=='t' ? B.h() : B.w());
+	int k1 = (transB=='t' ? B.w() : B.h());
+	int k2 = (transA=='t' ? A.h() : A.w());
+	int n = (transA=='t' ? A.w() : A.h());
 
 	cuvAssert(dst.h() == n);
 	cuvAssert(dst.w() == m);
@@ -402,8 +402,6 @@ void prod(dense_matrix<float,row_major,dev_memory_space>& dst,
 	cuvAssert(A.ptr());
 	cuvAssert(B.ptr());
 	cuvAssert(dst.ptr());
-	transA=(transA=='t'?'n' : 't');
-	transB=(transB=='t'?'n' : 't');
 	cublasSgemm(transB, transA, m, n, k1, factAB, B.ptr(), B.w(),A.ptr(), A.w(), factC, dst.ptr(), dst.w());
 	std::cout << cublasGetError();
 	cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
@@ -434,7 +432,7 @@ void prod(dense_matrix<float,row_major,host_memory_space>& dst,
 			CblasRowMajor,
 			CVT_TRANSPOSE(transA),
 			CVT_TRANSPOSE(transB), m, n, k1,
-			factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
+			factAB, A.ptr(), A.w(),B.ptr(), B.w(), factC, dst.ptr(), dst.w());
 }
 
 template<class V, class I, class V2, class OP>

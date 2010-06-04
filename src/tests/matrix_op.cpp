@@ -176,6 +176,41 @@ BOOST_AUTO_TEST_CASE( mat_op_mm )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( mat_op_rm_prod )
+{
+	int m = 234;
+	int n = 314;
+	int k = 413;
+
+	dense_matrix<float,row_major,host_memory_space> hA(m, k);
+	dense_matrix<float,row_major,host_memory_space> hB(k, n);
+	dense_matrix<float,row_major,host_memory_space> hC(m, n);
+
+	dense_matrix<float,row_major,dev_memory_space> dA(m, k);
+	dense_matrix<float,row_major,dev_memory_space> dB(k, n);
+	dense_matrix<float,row_major,dev_memory_space> dC(m, n);
+
+	sequence(hA);     apply_scalar_functor(hA, SF_MULT, 0.01f);
+	sequence(hB);     apply_scalar_functor(hB, SF_MULT, 0.01f);
+	sequence(hC);     apply_scalar_functor(hC, SF_MULT, 0.01f);
+
+	sequence(dA);     apply_scalar_functor(dA, SF_MULT, 0.01f);
+	sequence(dB);     apply_scalar_functor(dB, SF_MULT, 0.01f);
+	sequence(dC);     apply_scalar_functor(dC, SF_MULT, 0.01f);
+
+	prod(hC,hA,hB,'n','n');
+	prod(dC,dA,dB,'n','n');
+
+	dense_matrix<float,row_major,host_memory_space> c2(dC.h(), dC.w());
+	convert(c2,dC);
+
+	for(int i=0;i<m;i++){
+		for(int j=0;j<n;j++){
+			BOOST_CHECK_CLOSE( hC(i,j), c2(i,j), 0.01 );
+		}
+	}
+}
+
 BOOST_AUTO_TEST_CASE( mat_op_mmdim1 )
 {
 	sequence(a);     apply_scalar_functor(a, SF_MULT, 0.01f);
@@ -253,6 +288,7 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col )
 	}
 }
 
+/*
 BOOST_AUTO_TEST_CASE( mat_op_big_reduce_to_col )
 {
 	sequence(d_reduce_big);
@@ -269,6 +305,7 @@ BOOST_AUTO_TEST_CASE( mat_op_big_reduce_to_col )
 		BOOST_CHECK_CLOSE(v_col[i],x_col[i],0.01);
 	}
 }
+*/
 
 BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col_min )
 {
@@ -371,6 +408,7 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_row )
 		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.01);
 }
 
+/*
 BOOST_AUTO_TEST_CASE( mat_op_reduce_big_rm_to_row )
 {
 	dense_matrix<float,row_major,dev_memory_space> dA(32, 1179648);
@@ -394,6 +432,7 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_big_rm_to_row )
 	}
 
 }
+*/
 
 BOOST_AUTO_TEST_CASE( mat_op_view )
 {
