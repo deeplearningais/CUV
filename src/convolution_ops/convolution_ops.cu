@@ -784,7 +784,51 @@ void max_pooling_kernel(float* dst, float* img, int* indices, int imgSize, int d
  */
 
 __global__
-void first_pooling_kernel(float* dst, float* img, int imgSize, int dstSize, int poolSize, int stepSize) {
+void first_pooling_zeros_kernel(float* img, int imgSize, int stepSize) {
+	int tx = threadIdx.x; // ty = threadIdx.y;
+	int bx = blockIdx.x, by = blockIdx.y;
+
+	int p = tx + by * 256;
+	if(p >= imgSize * imgSize)
+		return;
+
+	img += bx * imgSize * imgSize;
+
+	int column = p % imgSize;
+	int row = p / imgSize;
+
+	// write result
+	if ((column  % stepSize) || (row % stepSize)){
+		img +=  p;
+		*img = 0;
+		}	
+}
+
+template<>
+	void first_pooling_zeros(dense_matrix<float,row_major,dev_memory_space>& img,
+			unsigned int poolSize
+			) {
+
+	int numImages = img.h();
+	int imgSize = sqrt(img.w());
+	cuvAssert(imgSize * imgSize == img.w());
+	int stepSize = poolSize;
+	int dstSize = (imgSize - poolSize)/stepSize + 1;
+	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
+
+	int numThreads = 256;
+	int numBlocksX = numImages;
+	int numBlocksY = ceil((float) (imgSize * imgSize)/numThreads);
+
+	dim3 grid(numBlocksX, numBlocksY);
+	dim3 threads(numThreads);
+	first_pooling_zeros_kernel<<<grid,threads>>>(img.ptr(), imgSize, stepSize);
+
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
+__global__
+void first_pooling_kernel(float* dst, float* img, int imgSize, int dstSize, int stepSize) {
 	int tx = threadIdx.x; // ty = threadIdx.y;
 	int bx = blockIdx.x, by = blockIdx.y;
 
@@ -801,6 +845,7 @@ void first_pooling_kernel(float* dst, float* img, int imgSize, int dstSize, int 
 	dst += bx * dstSize * dstSize + p;
 	*dst = img[column*stepSize + (row*stepSize)*imgSize];
 }
+
 template<>
 	void first_pooling(dense_matrix<float,row_major,dev_memory_space>& dst,
 			dense_matrix<float,row_major,dev_memory_space>& img,
@@ -822,7 +867,7 @@ template<>
 
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 threads(numThreads);
-	first_pooling_kernel<<<grid,threads>>>(dst.ptr(), img.ptr(), imgSize, dstSize, poolSize, stepSize);
+	first_pooling_kernel<<<grid,threads>>>(dst.ptr(), img.ptr(), imgSize, dstSize, stepSize);
 
 	cuvSafeCall(cudaThreadSynchronize());
 }

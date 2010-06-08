@@ -375,6 +375,11 @@ void first_pooling(dense_matrix<V,M,T,I>& dst,
 		unsigned int poolSize
 		);
 
+template<class V, class M, class T, class I>
+void first_pooling_zeros( dense_matrix<V,M,T,I>& img,
+		unsigned int poolSize
+		);
+
 /**
  * @brief Strips the padding inserted by copy_into
  * @param dst holds the stripped images. One row for each
