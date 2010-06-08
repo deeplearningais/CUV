@@ -344,23 +344,29 @@ BOOST_AUTO_TEST_CASE( mat_op_divide_col )
 
 BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
 {
-	dense_matrix<float,row_major,dev_memory_space> dA(40, 30);
-	vector<float,dev_memory_space> dV(40);
-	dense_matrix<float,row_major,host_memory_space> hA(40, 30);
-	vector<float,host_memory_space> hV(40);
+	const int m = 400;
+	const int n = 300;
 
-	sequence(dA);
+	float factOld = 1.33f;
+	float factNew = 0.2f;
+
+	dense_matrix<float,row_major,dev_memory_space> dA(m, n);
+	vector<float,dev_memory_space> dV(m);
+	dense_matrix<float,row_major,host_memory_space> hA(m, n);
+	vector<float,host_memory_space> hV(m);
+
+	sequence(dA); apply_scalar_functor(dA, SF_MULT, 0.01f);
 	sequence(dV);
-	sequence(hA);
+	sequence(hA); apply_scalar_functor(hA, SF_MULT, 0.01f);
 	sequence(hV);
 
-	reduce_to_col(dV,dA,RF_ADD,1.f,0.5f);
-	reduce_to_col(hV,hA,RF_ADD,1.f,0.5f);
+	reduce_to_col(dV,dA,RF_ADD,factNew,factOld);
+	reduce_to_col(hV,hA,RF_ADD,factNew,factOld);
 
 	vector<float,host_memory_space> hV2(dV.size());
 	convert(hV2, dV);
 
-	for(int i=0;i<30;i++)
+	for(int i=0; i<m; i++)
 		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.1);
 }
 

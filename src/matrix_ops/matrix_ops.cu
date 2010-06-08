@@ -507,11 +507,11 @@ namespace matrix_plus_vector_impl {
 		}
 	}
 }
+
 template<class __matrix_type, class __vector_type>
 void matrix_plus_col(__matrix_type& A, const __vector_type& v) {
 	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::plus<typename __matrix_type::value_type>());
 }
-
 template<class __matrix_type, class __vector_type>
 void matrix_times_col(__matrix_type& A, const __vector_type& v) {
 	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<typename __matrix_type::value_type>());
@@ -599,13 +599,26 @@ namespace reduce_to_col_impl {
 		cuvAssert(m.h() == v.size());
 		/*static const int BLOCK_SIZE = 16;*/
 		/*dim3 grid(1, m.h());                           //TODO: make reduce_to_row kernel use grids*/
-		/*dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);*/
+		/*dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1); // not working for m.h() > 65535*/
 		/*// yes, we abuse the reduce_to_row kernel here :)*/
 		/*reduce_to_row_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);*/
 		cuvAssert(rf == RF_ADD); // what else does alex support?
+
+		vector<V2,dev_memory_space> w(v.size());
+
+		if(factOld != 0.0f)
+			copy(w, v);
+
 		NVMatrix tmp(const_cast<V*>(m.ptr()),(int)m.h(),(int)m.w(),false);
 		NVMatrix dst(v.ptr(),(int)v.size(),(int)1,false);
 		tmp.aggregate(1,dst,256,NVMatrix::SUM);
+
+		if(factNew != 1.0f)
+			apply_scalar_functor(v, SF_MULT, factNew);
+
+		if(factOld != 0.0f)
+			apply_binary_functor(v, w, BF_XPBY, factOld);
+
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
