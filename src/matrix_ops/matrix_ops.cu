@@ -403,7 +403,7 @@ void prod(dense_matrix<float,row_major,dev_memory_space>& dst,
 	cuvAssert(B.ptr());
 	cuvAssert(dst.ptr());
 	cublasSgemm(transB, transA, m, n, k1, factAB, B.ptr(), B.w(),A.ptr(), A.w(), factC, dst.ptr(), dst.w());
-	std::cout << cublasGetError();
+
 	cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
 	cuvSafeCall(cudaThreadSynchronize());
 }
