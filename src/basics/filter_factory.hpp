@@ -8,6 +8,10 @@ namespace cuv{
 	template<class T, class M, class I=unsigned int>
 	class filter_factory{
 		public:
+			typedef T value_type;
+			typedef M memory_space;
+			typedef I index_type;
+		public:
 			filter_factory(int px, int py, int fs, int input_maps, int output_maps)
 			: m_px(px)
 			, m_py(py)
@@ -62,6 +66,23 @@ namespace cuv{
 					}
 				}
 				return tp_ptr;
+			}
+
+			template<class M2>
+			dense_matrix<T,column_major,M,I>*
+			extract_filter( const dia_matrix<T,M2>& dia, unsigned int filternumber){
+				dense_matrix<T,column_major,M,I>* mat = new dense_matrix<T,column_major,M,I>(m_fs*m_fs, m_input_maps);
+				fill(mat->vec(), (T)0);
+				unsigned int fi = 0;
+				for (unsigned int i = 0; i < dia.h(); ++i) 
+				{
+					if(!dia.has(i,filternumber))
+						continue;
+					mat->vec().set(fi++,dia(i,filternumber));
+					if(fi>=mat->n())
+						break;
+				}
+				return mat;
 			}
 
 			dense_matrix<T,column_major,M,I>*

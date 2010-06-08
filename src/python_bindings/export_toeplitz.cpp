@@ -70,31 +70,39 @@ export_toeplitz_common(const char* name){
 
 template<class M>
 void
-export_filter_factory(){
+export_filter_factory(const char* name){
 	typedef M mat;
 	typedef typename mat::value_type value_type;
 	typedef typename mat::memory_space memory_space;
-	typedef typename mat::memory_layout memory_layout;
 	typedef typename mat::index_type index_type;
 
-	class_<filter_factory<value_type, index_type> > ("filter_factory", init<int, int, int, int, int>())
-		.def("create_toeplitz_from_filters",(toeplitz_matrix<value_type, memory_space>*  (*)(const dense_matrix<value_type, column_major, memory_space>&))
-											 &filter_factory<value_type, index_type>::create_toeplitz_from_filters, (
-																	arg("filter matrix"))
-																	)
-		.def("extract_filters",(dense_matrix<value_type, column_major, memory_space>*  (*)(const toeplitz_matrix<value_type, memory_space>&))
-											&filter_factory<value_type, index_type>::extract_filters, (
-																	arg("toeplitz matrix"))
-																	)
+	class_<filter_factory<value_type, memory_space> > (name, init<int, int, int, int, int>())
+		//.def("create_toeplitz_from_filters",(toeplitz_matrix<value_type, memory_space>*  (*)(const dense_matrix<value_type, column_major, memory_space>&))
+		//                                     &filter_factory<value_type, memory_space>::create_toeplitz_from_filters, (
+		//                                                            arg("filter matrix"))
+		//                                                            )
+		.def("extract_filter",(dense_matrix<value_type, column_major, memory_space>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, host_memory_space>&, unsigned int))
+				&filter_factory<value_type, memory_space>::extract_filter, (
+					arg("dia matrix"), arg("filter number")),
+				return_value_policy<manage_new_object>())
+		.def("extract_filter",(dense_matrix<value_type, column_major, memory_space>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, dev_memory_space>&, unsigned int))
+				&filter_factory<value_type, memory_space>::extract_filter, (
+					arg("dia matrix"), arg("filter number")),
+				return_value_policy<manage_new_object>())
+		//.def("extract_filters",(dense_matrix<value_type, column_major, memory_space>*  (*)(const toeplitz_matrix<value_type, memory_space>&))
+		//                                    &filter_factory<value_type, memory_space>::extract_filters, (
+		//                                                            arg("toeplitz matrix"))
+		//                                                            )
 
-		.def("get_dia",(dia_matrix<value_type, memory_space, index_type>*  (*)())
-											&filter_factory<value_type, index_type>::get_dia,
-													"get filter as diagonal matrix"
+		.def("get_dia",(dia_matrix<value_type, memory_space, index_type>*  (filter_factory<value_type, memory_space>::*)())
+											&filter_factory<value_type, memory_space>::get_dia,
+													"get filter as diagonal matrix",
+											return_value_policy<manage_new_object>()
 												)
-		.def("get_toeplitz",(toeplitz_matrix<value_type, memory_space, index_type>*  (*)())
-											&filter_factory<value_type, index_type>::get_toeplitz,
-													"get filter as toeplitz matrix"
-											)
+		//.def("get_toeplitz",(toeplitz_matrix<value_type, memory_space, index_type>*  (*)())
+		//                                    &filter_factory<value_type, memory_space>::get_toeplitz,
+		//                                            "get filter as toeplitz matrix"
+		//                                    )
 		;
 }
 
@@ -103,4 +111,5 @@ export_filter_factory(){
 void export_toeplitz(){
 	export_toeplitz_common<toeplitz_matrix<float,dev_memory_space> >("dev_toeplitz_mat_float");
 	export_toeplitz_common<toeplitz_matrix<float,host_memory_space> >("host_toeplitz_mat_float");
+	export_filter_factory<filter_factory<float,host_memory_space> >("filter_factory_float");
 }

@@ -212,6 +212,14 @@ namespace cuv{
 					return (value_type) 0;
 				return (*m_vec)[ it->second * m_stride +i  ];
 			}
+			bool has(const index_type& i, const index_type& j)const ///< Return whether matrix entry is managed by sparse matrix 
+			{
+				int off = (int)j - (int)i/m_row_fact;
+				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
+				if( it == m_dia2off.end() )
+					return false;
+				return true;
+			}
 			/** 
 			 * @brief Assignment operator. Assigns vector belonging to source to destination and sets source vector to NULL
 			 * 
