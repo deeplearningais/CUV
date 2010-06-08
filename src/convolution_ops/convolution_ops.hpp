@@ -271,9 +271,14 @@ void subsample(dense_matrix<V,M,T>& dst,
  *         B2
  *         ...
  */
-template<class V, class M, class T, class I>
-void reorder(dense_matrix<V,M,T,I>& A,
+template<class __matrix_type>
+void reorder(__matrix_type& A,
 		   int blockLength);
+
+template<class __matrix_type>
+void reorder(__matrix_type& dst,
+		__matrix_type& src,
+		int blockLength);
 
 
 /**

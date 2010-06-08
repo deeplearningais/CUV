@@ -324,52 +324,73 @@ void reorder_kernel(float*dst, float* src, int len) {
 	}
 }
 
-template<>
-void reorder(dense_matrix<float,row_major,dev_memory_space>& M,
+template<class V>
+void reorder_impl(dense_matrix<V,row_major,dev_memory_space>& dst,
+		dense_matrix<V,row_major,dev_memory_space>& src,
 		  int blockLength) {
-	int patternCount = M.h();
-	int imgCount = M.w()/blockLength;
-
-	float* temp;
-	cuvSafeCall(cudaMalloc( (void**) &temp, sizeof(float) * M.n() ));
-	float* img_ptr = M.ptr();
+	int patternCount = dst.h();
+	int imgCount = dst.w()/blockLength;
 
 	dim3 grid(imgCount, patternCount);
 	dim3 threads(min(blockLength, 512));
-	reorder_kernel<<<grid,threads>>>(temp, M.ptr(), blockLength);
+	reorder_kernel<<<grid,threads>>>(dst.ptr(), src.ptr(), blockLength);
 
 	cuvSafeCall(cudaThreadSynchronize());
 
-	cuvSafeCall(cudaMemcpy(M.ptr(), temp, sizeof(float) * M.n(),cudaMemcpyDeviceToDevice));
-	M.resize(patternCount*imgCount, blockLength);
-	cuvSafeCall(cudaFree(temp));
+	dst.resize(patternCount*imgCount, blockLength);
 
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<>
-void reorder(dense_matrix<float,row_major,host_memory_space>& M,
-		  int blockLength) {
-	int patternCount = M.h();
-	int imgCount = M.w()/blockLength;
+template<class V>
+void reorder_impl(dense_matrix<V,row_major,host_memory_space>& dst,
+		dense_matrix<V,row_major,host_memory_space>& src,
+		int blockLength) {
+	int patternCount = dst.h();
+	int imgCount = dst.w()/blockLength;
 
-	float* temp = (float*) malloc(sizeof(float) * M.n());
-	float* tmp_ptr = temp;
-	float* img_ptr = M.ptr();
+	float* dst_ptr = dst.ptr();
+	float* src_ptr = src.ptr();
 
 	for(int p = 0; p < patternCount; p++) {
 		for(int m = 0; m < imgCount; m++) {
-			memcpy(	&tmp_ptr[blockLength * patternCount * m],
-					img_ptr, sizeof(float)*blockLength);
-			img_ptr += blockLength;
+			memcpy(	&dst_ptr[blockLength * patternCount * m],
+					src_ptr, sizeof(float)*blockLength);
+			src_ptr += blockLength;
 		}
-		tmp_ptr += blockLength;
+		dst_ptr += blockLength;
 	}
 
-	memcpy(M.ptr(), temp, sizeof(float) * M.n());
-	M.resize(patternCount*imgCount, blockLength);
-	free(temp);
+	dst.resize(patternCount*imgCount, blockLength);
 }
+
+template<class __matrix_type>
+void reorder(__matrix_type& M,
+		int blockLength) {
+	// create temporary destination matrix
+	__matrix_type tmp(M.h(), M.w());
+
+	// perform reorder
+	reorder_impl(tmp, M, blockLength);
+
+	// change pointer to temp matrix
+	M = tmp;
+}
+
+template<class __matrix_type>
+void reorder(__matrix_type& dst,
+		__matrix_type& src,
+		int blockLength) {
+	reorder_impl(dst, src, blockLength);
+}
+
+#define REORDER_INSTANTIATE(V) \
+	template void reorder( dense_matrix<V,row_major,host_memory_space>&, int); \
+	template void reorder( dense_matrix<V,row_major,host_memory_space>&, dense_matrix<V,row_major,host_memory_space>&, int); \
+	template void reorder( dense_matrix<V,row_major,dev_memory_space>&, int); \
+	template void reorder( dense_matrix<V,row_major,dev_memory_space>&, dense_matrix<V,row_major,dev_memory_space>&, int);
+
+REORDER_INSTANTIATE(float);
 
 template<>
 	void subsample(dense_matrix<float,row_major,dev_memory_space>& dst,
