@@ -85,263 +85,263 @@ struct Fix{
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 
-//BOOST_AUTO_TEST_CASE( convolution )
-//{
-//	fill(d_dst, 0.0f);
-//	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
-//	sequence(d_filter); apply_scalar_functor(d_filter,SF_MULT,0.001f);
-//
-//	fill(h_dst, 0.0f);
-//	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
-//	sequence(h_filter); apply_scalar_functor(h_filter,SF_MULT,0.001f);
-//
-//	convolve(d_dst,d_img,d_filter);
-//	convolve(h_dst,h_img,h_filter);
-//
-//	dense_matrix<float, row_major, host_memory_space> dst2(d_dst.h(), d_dst.w());
-//	convert(dst2,d_dst);
-//
-//	for(int i=0;i<d_dst.h();i++){
-//		for(int j=0;j<d_dst.w();j++){
-//			BOOST_CHECK_CLOSE( dst2(i,j), h_dst(i,j), 0.001 );
-//		}
-//	}
-//}
-//
-//
-//BOOST_AUTO_TEST_CASE( local_maxima )
-//{
-//	fill(d_dst, 0.0f);
-//	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
-//
-//	fill(h_dst, 0.0f);
-//	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
-//
-//	max_pooling(h_pooled, h_img, p);
-//	max_pooling(d_pooled, d_img, p);
-//
-//	dense_matrix<float, row_major, host_memory_space> pooled2(d_pooled.h(), d_pooled.w());
-//	convert(pooled2,d_pooled);
-//
-//	for(int i=0;i<d_pooled.h();i++){
-//		for(int j=0;j<d_pooled.w();j++){
-//			BOOST_CHECK_CLOSE( pooled2(i,j), h_pooled(i,j), 0.001 );
-//		}
-//	}
-//}
-//
-//BOOST_AUTO_TEST_CASE( supersampling )
-//{
-//	fill(d_dst, 0.0f);
-//	sequence(d_pooled);    apply_scalar_functor(d_pooled,   SF_MULT,0.001f);
-//
-//	fill(h_pooled, 0.0f);
-//	sequence(h_pooled);    apply_scalar_functor(h_pooled,   SF_MULT,0.001f);
-//
-//	supersample(h_img, h_pooled, p);
-//	supersample(d_img, d_pooled, p);
-//
-//	dense_matrix<float, row_major,host_memory_space> img2(d_img.h(), d_img.w());
-//	convert(img2, d_img);
-//
-//	MAT_CMP(img2, h_img, 0.001);
-//}
-//
-//BOOST_AUTO_TEST_CASE( reorder_matrix )
-//{
-//	sequence(d_dst); apply_scalar_functor(d_dst, SF_MULT,0.001f);
-//	sequence(h_dst); apply_scalar_functor(h_dst, SF_MULT,0.001f);
-//
-//	reorder(d_dst, k*k);
-//	reorder(h_dst, k*k);
-//
-//	dense_matrix<float, row_major, host_memory_space> dst2(d_dst.h(), d_dst.w());
-//	convert(dst2, d_dst);
-//
-//	MAT_CMP(dst2, h_dst, 0.1);
-//}
-//
-//BOOST_AUTO_TEST_CASE( copy_into_matrix )
-//{
-//	const int padding = 5;
-//	const int size = n + 2 * padding;
-//
-//	dense_matrix<float, row_major, host_memory_space> h_pad(h_img.h(), size * size);
-//	dense_matrix<float, row_major, dev_memory_space> d_pad(d_img.h(), size * size);
-//
-//	sequence(d_img); apply_scalar_functor(d_img, SF_MULT,0.001f);
-//	sequence(h_img); apply_scalar_functor(h_img, SF_MULT,0.001f);
-//	sequence(d_pad);
-//	sequence(h_pad);
-//
-//	copy_into(d_pad, d_img, padding);
-//	copy_into(h_pad, h_img, padding);
-//
-//	MAT_CMP(h_pad, d_pad, 0.1);
-//}
-//
-//BOOST_AUTO_TEST_CASE( local_maxima_index )
-//{
-//	initialize_mersenne_twister_seeds();
-//
-//	// part 1: calculate matrix indices
-//	fill_rnd_uniform(d_img.vec());
-//	convert(h_img, d_img);
-//
-//	dense_matrix<int,row_major,host_memory_space> h_indices(c,o*o);
-//	dense_matrix<int,row_major,dev_memory_space> d_indices(c,o*o);
-//
-//	max_pooling(h_pooled, h_img, p, 0, &h_indices);
-//	max_pooling(d_pooled, d_img, p, 0, &d_indices);
-//
-//	dense_matrix<int, row_major, host_memory_space> indices2(d_indices.h(), d_indices.w());
-//	convert(indices2,d_indices);
-//
-//	for(int i=0;i<d_indices.h();i++){
-//		for(int j=0;j<d_indices.w();j++){
-//			BOOST_CHECK_EQUAL( indices2(i,j), h_indices(i,j) );
-//		}
-//	}
-//
-//	// part 2: propagate back to those indices
-//	fill_rnd_uniform(d_pooled.vec());
-//	convert(h_pooled, d_pooled);
-//
-//	fill(h_img, 0.f);
-//	fill(d_img, 0.f);
-//
-//	supersample(h_img, h_pooled, p, &h_indices);
-//	supersample(d_img, d_pooled, p, &d_indices);
-//
-//	MAT_CMP(d_img, h_img, 0.1);
-//}
-//
-//BOOST_AUTO_TEST_CASE( max_pool_res )
-//{
-//	initialize_mersenne_twister_seeds();
-//
-//	const int n = 64;
-//	int p = 3;
-//	int l = 2;
-//	const int m = (n-p)/(p-l)+1; // resulting image size
-//	const int c = 6;
-//
-//	dense_matrix<float,row_major,host_memory_space> h_img(c,n*n);
-//	dense_matrix<float,row_major,host_memory_space> h_dst(c,m*m);
-//	dense_matrix<int,row_major,host_memory_space> h_indices(c,m*m);
-//
-//	dense_matrix<float,row_major,dev_memory_space> d_img(c,n*n);
-//	dense_matrix<float,row_major,dev_memory_space> d_dst(c,m*m);
-//	dense_matrix<int,row_major,dev_memory_space> d_indices(c,m*m);
-//
-//	fill_rnd_uniform(h_img.vec());
-//	convert(d_img, h_img);
-//
-//	max_pooling(h_dst, h_img, p, l, &h_indices);
-//	max_pooling(d_dst, d_img, p, l, &d_indices);
-//
-//	for(int k=0; k<c; k++) {
-//		for(int i=0; i<m; i++) {// loop through output image
-//			for(int j=0; j<m; j++) {
-//				float cmax = -FLT_MAX;
-//				for(int q=0; q<p; q++) { // loop through pool
-//					for(int r=0; r<p; r++) {
-//						int idx = (j*(p-l) + r) + (i*(p-l) + q)*n;
-//						if(cmax < h_img(k,idx))
-//							cmax = h_img(k,idx);
-//					}
-//				}
-//				BOOST_CHECK_EQUAL( h_dst(k,i*m+j), cmax );
-//			}
-//		}
-//	}
-//
-//	MAT_CMP(d_dst, h_dst, 0.1);
-//	MAT_CMP(d_indices, h_indices, 0.1);
-//
-//	// backprop step
-//	super_to_max(h_img, h_dst, p, l, &h_indices);
-//	super_to_max(d_img, d_dst, p, l, &d_indices);
-//
-//	MAT_CMP(h_img, d_img, 0.1);
-//}
-//
-//
-//BOOST_AUTO_TEST_CASE( row_ncopy )
-//{
-//	sequence(d_img);
-//	sequence(h_img);
-//
-//	d_img.resize(1, d_img.w()*d_img.h());
-//	h_img.resize(1, h_img.w()*h_img.h());
-//
-//	int n=128;
-//
-//	dense_matrix<float, row_major, host_memory_space> erg_h(n, h_img.w());
-//	dense_matrix<float, row_major, dev_memory_space> erg_d(n, d_img.w());
-//	fill(erg_d, 0.0f);
-//	fill(erg_h, 0.0f);
-//	for(int idx = 0; idx < erg_h.w(); idx++ ){
-//		for (int idy = 0; idy < n; idy++){
-//			erg_h.set(idy,idx, *(h_img.vec().ptr() + idx));
-//		}
-//	}
-//
-//
-//	cuv::row_ncopy(erg_d, d_img.vec(), n);
-//
-//	for(int i=0;i<erg_h.h();i++){
-//		for(int j=0;j<erg_h.w();j++){
-//			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
-//			if (i>1){
-//				BOOST_CHECK_CLOSE( erg_d(i,j), erg_d(i-1,j), 0.001 );
-//			}
-//		}
-//	}
-//
-//}
-//
-//BOOST_AUTO_TEST_CASE( strip_padding )
-//{
-//
-//	sequence(d_img);
-//	//apply_scalar_functor(d_img,   SF_MULT,0.001f);
-//
-//	int padding=2;
-//
-//	int img_width 		= sqrt(d_img.w());
-//	int stripped_width  = img_width-2*padding;
-//	dense_matrix<float, row_major, host_memory_space> erg_h(d_img.h(), stripped_width*stripped_width);
-//	dense_matrix<float, row_major, dev_memory_space> erg_d(d_img.h(), stripped_width*stripped_width);
-//	fill(erg_d, 0.0f);
-//	fill(erg_h, 0.0f);
-//
-//	cuv::strip_padding(erg_d, d_img, padding);
-//
-//	int x,y, idx, idx_padded;
-//	float val;
-//	for (int img=0; img<d_img.h(); img++){
-//		for(int px=0; px<d_img.w(); px++){
-//			x = px % img_width;
-//			y = px / img_width;
-//			if ( x >=padding && x < padding+stripped_width &&
-//				 y >=padding && y < padding+stripped_width){
-//				idx 		=	y*img_width+x;
-//				idx_padded 	=	(y-padding)*stripped_width+(x-padding);
-//
-//				val = d_img(img,idx);
-//				erg_h.set(img,idx_padded, val);
-//			}
-//		}
-//	}
-//	//std::cout << h_img ;
-//
-//	for(int i=0;i<erg_h.h();i++){
-//		for(int j=0;j<erg_h.w();j++){
-//			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
-//		}
-//	}
-//}
+BOOST_AUTO_TEST_CASE( convolution )
+{
+	fill(d_dst, 0.0f);
+	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
+	sequence(d_filter); apply_scalar_functor(d_filter,SF_MULT,0.001f);
+
+	fill(h_dst, 0.0f);
+	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
+	sequence(h_filter); apply_scalar_functor(h_filter,SF_MULT,0.001f);
+
+	convolve(d_dst,d_img,d_filter);
+	convolve(h_dst,h_img,h_filter);
+
+	dense_matrix<float, row_major, host_memory_space> dst2(d_dst.h(), d_dst.w());
+	convert(dst2,d_dst);
+
+	for(int i=0;i<d_dst.h();i++){
+		for(int j=0;j<d_dst.w();j++){
+			BOOST_CHECK_CLOSE( dst2(i,j), h_dst(i,j), 0.001 );
+		}
+	}
+}
+
+
+BOOST_AUTO_TEST_CASE( local_maxima )
+{
+	fill(d_dst, 0.0f);
+	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
+
+	fill(h_dst, 0.0f);
+	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
+
+	max_pooling(h_pooled, h_img, p);
+	max_pooling(d_pooled, d_img, p);
+
+	dense_matrix<float, row_major, host_memory_space> pooled2(d_pooled.h(), d_pooled.w());
+	convert(pooled2,d_pooled);
+
+	for(int i=0;i<d_pooled.h();i++){
+		for(int j=0;j<d_pooled.w();j++){
+			BOOST_CHECK_CLOSE( pooled2(i,j), h_pooled(i,j), 0.001 );
+		}
+	}
+}
+
+BOOST_AUTO_TEST_CASE( supersampling )
+{
+	fill(d_dst, 0.0f);
+	sequence(d_pooled);    apply_scalar_functor(d_pooled,   SF_MULT,0.001f);
+
+	fill(h_pooled, 0.0f);
+	sequence(h_pooled);    apply_scalar_functor(h_pooled,   SF_MULT,0.001f);
+
+	supersample(h_img, h_pooled, p);
+	supersample(d_img, d_pooled, p);
+
+	dense_matrix<float, row_major,host_memory_space> img2(d_img.h(), d_img.w());
+	convert(img2, d_img);
+
+	MAT_CMP(img2, h_img, 0.001);
+}
+
+BOOST_AUTO_TEST_CASE( reorder_matrix )
+{
+	sequence(d_dst); apply_scalar_functor(d_dst, SF_MULT,0.001f);
+	sequence(h_dst); apply_scalar_functor(h_dst, SF_MULT,0.001f);
+
+	reorder(d_dst, k*k);
+	reorder(h_dst, k*k);
+
+	dense_matrix<float, row_major, host_memory_space> dst2(d_dst.h(), d_dst.w());
+	convert(dst2, d_dst);
+
+	MAT_CMP(dst2, h_dst, 0.1);
+}
+
+BOOST_AUTO_TEST_CASE( copy_into_matrix )
+{
+	const int padding = 5;
+	const int size = n + 2 * padding;
+
+	dense_matrix<float, row_major, host_memory_space> h_pad(h_img.h(), size * size);
+	dense_matrix<float, row_major, dev_memory_space> d_pad(d_img.h(), size * size);
+
+	sequence(d_img); apply_scalar_functor(d_img, SF_MULT,0.001f);
+	sequence(h_img); apply_scalar_functor(h_img, SF_MULT,0.001f);
+	sequence(d_pad);
+	sequence(h_pad);
+
+	copy_into(d_pad, d_img, padding);
+	copy_into(h_pad, h_img, padding);
+
+	MAT_CMP(h_pad, d_pad, 0.1);
+}
+
+BOOST_AUTO_TEST_CASE( local_maxima_index )
+{
+	initialize_mersenne_twister_seeds();
+
+	// part 1: calculate matrix indices
+	fill_rnd_uniform(d_img.vec());
+	convert(h_img, d_img);
+
+	dense_matrix<int,row_major,host_memory_space> h_indices(c,o*o);
+	dense_matrix<int,row_major,dev_memory_space> d_indices(c,o*o);
+
+	max_pooling(h_pooled, h_img, p, 0, &h_indices);
+	max_pooling(d_pooled, d_img, p, 0, &d_indices);
+
+	dense_matrix<int, row_major, host_memory_space> indices2(d_indices.h(), d_indices.w());
+	convert(indices2,d_indices);
+
+	for(int i=0;i<d_indices.h();i++){
+		for(int j=0;j<d_indices.w();j++){
+			BOOST_CHECK_EQUAL( indices2(i,j), h_indices(i,j) );
+		}
+	}
+
+	// part 2: propagate back to those indices
+	fill_rnd_uniform(d_pooled.vec());
+	convert(h_pooled, d_pooled);
+
+	fill(h_img, 0.f);
+	fill(d_img, 0.f);
+
+	supersample(h_img, h_pooled, p, &h_indices);
+	supersample(d_img, d_pooled, p, &d_indices);
+
+	MAT_CMP(d_img, h_img, 0.1);
+}
+
+BOOST_AUTO_TEST_CASE( max_pool_res )
+{
+	initialize_mersenne_twister_seeds();
+
+	const int n = 64;
+	int p = 3;
+	int l = 2;
+	const int m = (n-p)/(p-l)+1; // resulting image size
+	const int c = 6;
+
+	dense_matrix<float,row_major,host_memory_space> h_img(c,n*n);
+	dense_matrix<float,row_major,host_memory_space> h_dst(c,m*m);
+	dense_matrix<int,row_major,host_memory_space> h_indices(c,m*m);
+
+	dense_matrix<float,row_major,dev_memory_space> d_img(c,n*n);
+	dense_matrix<float,row_major,dev_memory_space> d_dst(c,m*m);
+	dense_matrix<int,row_major,dev_memory_space> d_indices(c,m*m);
+
+	fill_rnd_uniform(h_img.vec());
+	convert(d_img, h_img);
+
+	max_pooling(h_dst, h_img, p, l, &h_indices);
+	max_pooling(d_dst, d_img, p, l, &d_indices);
+
+	for(int k=0; k<c; k++) {
+		for(int i=0; i<m; i++) {// loop through output image
+			for(int j=0; j<m; j++) {
+				float cmax = -FLT_MAX;
+				for(int q=0; q<p; q++) { // loop through pool
+					for(int r=0; r<p; r++) {
+						int idx = (j*(p-l) + r) + (i*(p-l) + q)*n;
+						if(cmax < h_img(k,idx))
+							cmax = h_img(k,idx);
+					}
+				}
+				BOOST_CHECK_EQUAL( h_dst(k,i*m+j), cmax );
+			}
+		}
+	}
+
+	MAT_CMP(d_dst, h_dst, 0.1);
+	MAT_CMP(d_indices, h_indices, 0.1);
+
+	// backprop step
+	super_to_max(h_img, h_dst, p, l, &h_indices);
+	super_to_max(d_img, d_dst, p, l, &d_indices);
+
+	MAT_CMP(h_img, d_img, 0.1);
+}
+
+
+BOOST_AUTO_TEST_CASE( row_ncopy )
+{
+	sequence(d_img);
+	sequence(h_img);
+
+	d_img.resize(1, d_img.w()*d_img.h());
+	h_img.resize(1, h_img.w()*h_img.h());
+
+	int n=128;
+
+	dense_matrix<float, row_major, host_memory_space> erg_h(n, h_img.w());
+	dense_matrix<float, row_major, dev_memory_space> erg_d(n, d_img.w());
+	fill(erg_d, 0.0f);
+	fill(erg_h, 0.0f);
+	for(int idx = 0; idx < erg_h.w(); idx++ ){
+		for (int idy = 0; idy < n; idy++){
+			erg_h.set(idy,idx, *(h_img.vec().ptr() + idx));
+		}
+	}
+
+
+	cuv::row_ncopy(erg_d, d_img.vec(), n);
+
+	for(int i=0;i<erg_h.h();i++){
+		for(int j=0;j<erg_h.w();j++){
+			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
+			if (i>1){
+				BOOST_CHECK_CLOSE( erg_d(i,j), erg_d(i-1,j), 0.001 );
+			}
+		}
+	}
+
+}
+
+BOOST_AUTO_TEST_CASE( strip_padding )
+{
+
+	sequence(d_img);
+	//apply_scalar_functor(d_img,   SF_MULT,0.001f);
+
+	int padding=2;
+
+	int img_width 		= sqrt(d_img.w());
+	int stripped_width  = img_width-2*padding;
+	dense_matrix<float, row_major, host_memory_space> erg_h(d_img.h(), stripped_width*stripped_width);
+	dense_matrix<float, row_major, dev_memory_space> erg_d(d_img.h(), stripped_width*stripped_width);
+	fill(erg_d, 0.0f);
+	fill(erg_h, 0.0f);
+
+	cuv::strip_padding(erg_d, d_img, padding);
+
+	int x,y, idx, idx_padded;
+	float val;
+	for (int img=0; img<d_img.h(); img++){
+		for(int px=0; px<d_img.w(); px++){
+			x = px % img_width;
+			y = px / img_width;
+			if ( x >=padding && x < padding+stripped_width &&
+				 y >=padding && y < padding+stripped_width){
+				idx 		=	y*img_width+x;
+				idx_padded 	=	(y-padding)*stripped_width+(x-padding);
+
+				val = d_img(img,idx);
+				erg_h.set(img,idx_padded, val);
+			}
+		}
+	}
+	//std::cout << h_img ;
+
+	for(int i=0;i<erg_h.h();i++){
+		for(int j=0;j<erg_h.w();j++){
+			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
+		}
+	}
+}
 
 BOOST_AUTO_TEST_CASE( check_exitatory_inhibitory )
 {
@@ -360,7 +360,7 @@ BOOST_AUTO_TEST_CASE( check_exitatory_inhibitory )
 	cuv::check_exitatory_inhibitory(filter_h,0,g*g,1,1);
 	safeThreadSync();
 
-	std::cout << filter_d ;
+//	std::cout << filter_d ;
 
 	for(int i=0;i<filter_h.h();i++){
 		for(int j=0;j<filter_h.w();j++){
