@@ -328,8 +328,8 @@ template<class V>
 void reorder_impl(dense_matrix<V,row_major,dev_memory_space>& dst,
 		dense_matrix<V,row_major,dev_memory_space>& src,
 		  int blockLength) {
-	int patternCount = dst.h();
-	int imgCount = dst.w()/blockLength;
+	int patternCount = src.h();
+	int imgCount = src.w()/blockLength;
 
 	dim3 grid(imgCount, patternCount);
 	dim3 threads(min(blockLength, 512));
@@ -346,8 +346,8 @@ template<class V>
 void reorder_impl(dense_matrix<V,row_major,host_memory_space>& dst,
 		dense_matrix<V,row_major,host_memory_space>& src,
 		int blockLength) {
-	int patternCount = dst.h();
-	int imgCount = dst.w()/blockLength;
+	int patternCount = src.h();
+	int imgCount = src.w()/blockLength;
 
 	float* dst_ptr = dst.ptr();
 	float* src_ptr = src.ptr();
