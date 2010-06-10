@@ -138,12 +138,11 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 	}
 
 	if (ty == 0) {
-
 		if (OP == cuv::RF_MIN || OP == cuv::RF_MAX)
 			vector[row_idx] = shared[0][tx];
 		else
 			vector[row_idx] = vector[row_idx] * factOld + shared[0][tx] * factNew;
-			//vector[row_idx] = blockDim.x;
+			//vector[row_idx] = gridDim.y;
 	}
 	__syncthreads();
 }
@@ -576,7 +575,9 @@ namespace reduce_to_col_impl {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
 		static const int BLOCK_SIZE = 16;
-		const int blocks_needed = ceil((float)m.h()/(BLOCK_SIZE*2));
+		static const int BLOCK_DIM_X = BLOCK_SIZE*2;
+		static const int BLOCK_DIM_Y = BLOCK_SIZE/2;
+		const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM_X));
 		int grid_x =0, grid_y=0;
 
 		// how to handle grid dimension constraint
@@ -586,10 +587,10 @@ namespace reduce_to_col_impl {
 		}else{
 			// try to avoid large noop blocks by adjusting x and y dimension to nearly equal size
 			grid_x = ceil(sqrt(blocks_needed));
-			grid_y = ceil(blocks_needed/grid_x);
+			grid_y = ceil((float)blocks_needed/grid_x);
 		}
 		dim3 grid(grid_x, grid_y);
-		dim3 threads(BLOCK_SIZE*2,BLOCK_SIZE/2);
+		dim3 threads(BLOCK_DIM_X,BLOCK_DIM_Y);
 		reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
