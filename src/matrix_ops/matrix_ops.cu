@@ -141,10 +141,14 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 		if (OP == cuv::RF_MIN || OP == cuv::RF_MAX)
 			vector[row_idx] = shared[0][tx];
 		else
-			vector[row_idx] = vector[row_idx] * factOld + shared[0][tx] * factNew;
-			//vector[row_idx] = gridDim.y;
+			if(factOld != 0.f){
+				vector[row_idx] = vector[row_idx] * factOld + shared[0][tx] * factNew;
+			}else
+				vector[row_idx] = shared[0][tx] * factNew;
+
+		//vector[row_idx] = row_idx;
 	}
-	__syncthreads();
+	//__syncthreads();
 }
 
 template<int BLOCK_SIZE, class T, int OP>
@@ -709,7 +713,7 @@ namespace reduce_to_row_impl {
 		}else{
 			// try to avoid large noop blocks by adjusting x and y dimension to nearly equal size
 			grid_x = ceil(sqrt(blocks_needed));
-			grid_y = ceil(blocks_needed/grid_x);
+			grid_y = ceil((float)blocks_needed/grid_x);
 		}
 
 		dim3 grid(grid_x, grid_y);
