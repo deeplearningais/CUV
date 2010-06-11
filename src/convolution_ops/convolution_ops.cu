@@ -255,7 +255,7 @@ void prob_max_pooling(vector<float,dev_memory_space>& sums,dense_matrix<float,ro
 
 	// normalize rows
 	reduce_to_col(sums,mat);                    // sums      = sum(mat, axis=1)
-	/*apply_scalar_functor(sums,SF_ADD,1.f);      // sums     += 1*/
+	apply_scalar_functor(sums,SF_ADD,1.f);      // sums     += 1
 	apply_scalar_functor(sums,SF_INV);          // sums      = 1/sums
 	matrix_times_col(mat,sums);                 // mat[:,i] *= sums
 
