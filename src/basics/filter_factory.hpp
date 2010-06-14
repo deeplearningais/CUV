@@ -69,23 +69,23 @@ namespace cuv{
 			}
 
 			template<class M2>
-			dense_matrix<T,column_major,M,I>*
+			dense_matrix<T,row_major,M,I>*
 			extract_filter( const dia_matrix<T,M2>& dia, unsigned int filternumber){
-				dense_matrix<T,column_major,M,I>* mat = new dense_matrix<T,column_major,M,I>(m_fs*m_fs, m_input_maps);
+				dense_matrix<T,row_major,M,I>* mat = new dense_matrix<T,row_major,M,I>(m_fs*m_fs, m_input_maps);
 				fill(mat->vec(), (T)0);
-				unsigned int map_size=dia.h()/m_input_maps;
-				for (unsigned int map_num = 0; map_num < m_input_maps; map_num++)
-				{
+				//unsigned int map_size=dia.h()/m_input_maps;
+				//for (unsigned int map_num = 0; map_num < m_input_maps; map_num++)
+				//{
 					unsigned int fi = 0;
-					for (unsigned int i = 0; i < map_size; ++i) 
+					for (unsigned int i = 0; i < dia.h(); ++i) 
 					{
-						if(!dia.has(i+map_num*map_size,filternumber))
+						if(!dia.has(i,filternumber))
 							continue;
-						mat->vec().set(map_num * m_fs *m_fs + fi++,dia(i+map_num*map_size,filternumber));
-						if(map_num * m_fs *m_fs+ fi>=mat->n())
+						mat->vec().set(fi++,dia(i,filternumber));
+						if(fi>=mat->n())
 							break;
 					}
-				}
+				//}
 				return mat;
 			}
 

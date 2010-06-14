@@ -81,11 +81,11 @@ export_filter_factory(const char* name){
 		//                                     &filter_factory<value_type, memory_space>::create_toeplitz_from_filters, (
 		//                                                            arg("filter matrix"))
 		//                                                            )
-		.def("extract_filter",(dense_matrix<value_type, column_major, memory_space>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, host_memory_space>&, unsigned int))
+		.def("extract_filter",(dense_matrix<value_type, row_major, memory_space>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, host_memory_space>&, unsigned int))
 				&filter_factory<value_type, memory_space>::extract_filter, (
 					arg("dia matrix"), arg("filter number")),
 				return_value_policy<manage_new_object>())
-		.def("extract_filter",(dense_matrix<value_type, column_major, memory_space>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, dev_memory_space>&, unsigned int))
+		.def("extract_filter",(dense_matrix<value_type, row_major, memory_space>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, dev_memory_space>&, unsigned int))
 				&filter_factory<value_type, memory_space>::extract_filter, (
 					arg("dia matrix"), arg("filter number")),
 				return_value_policy<manage_new_object>())
