@@ -373,8 +373,11 @@ void reorder(__matrix_type& M,
 	// perform reorder
 	reorder_impl(tmp, M, blockLength);
 
-	// change pointer to temp matrix
-	M = tmp;
+	// change pointer to temp matrix / copy
+	if(M.is_view())
+		copy(M.vec(), tmp.vec());
+	else
+		M = tmp;
 }
 
 template<class __matrix_type>
