@@ -98,6 +98,10 @@ class vector{
 	   */
 	  inline       value_type* ptr()     { return m_ptr;  }
 	  /** 
+	   * @brief Return true if this vector is a view and doesn't own the memory
+	   */
+	  inline bool is_view() const         { return m_is_view; }
+	  /**
 	   * @brief Return length of vector
 	   */
 	  inline index_type size() const         { return m_size; }
