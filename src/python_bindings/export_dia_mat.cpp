@@ -133,6 +133,8 @@ export_diamat_common(const char* name){
 		.def("dealloc",&mat::dealloc, "deallocate memory")
 		.def("save", (void (*)(mat&,std::string)) dia_io<value_type, index_type>::save_dia_mat, "save to file")
 		.def("load", (void (*)(mat&,std::string)) dia_io<value_type, index_type>::load_dia_mat, "load from file")
+		.def("set", &mat::set, "set a value")
+		.def("has", &mat::has, "whether dia matrix stores this value")
 		.def("__call__",  (value_type (mat::*)(const typename mat::index_type&, const typename mat::index_type&)const)(&mat::operator())) // igitt.
 		.def("__init__",  make_constructor(create_dia_mat<mat>))
 		.def("__init__",  make_constructor(create_dia_mat_empty<mat>))

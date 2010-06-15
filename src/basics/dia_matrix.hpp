@@ -183,7 +183,8 @@ namespace cuv{
 				const index_type i_start = std::max((int)0,-k);
 				const index_type j_start = std::max((int)0, k);
 				const index_type N = std::min(base_type::m_height - i_start, (base_type::m_width - j_start));
-				return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
+				return new vec_type(m_stride,  m_vec->ptr() + off * m_stride, true); 
+				//return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
 			} 
 			/** Return a vector (view) on the specified diagonal
 			 */
@@ -192,7 +193,8 @@ namespace cuv{
 				const index_type i_start = std::max((int)0,-k);
 				const index_type j_start = std::max((int)0, k);
 				const index_type N = std::min(base_type::m_height - i_start, (base_type::m_width - j_start));
-				return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
+				return new vec_type(m_stride,  m_vec->ptr() + off * m_stride, true); 
+				//return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
 			} 
 			inline const intvec_type& get_offsets()const{return m_offsets;} ///< Return the vector of offsets
 			inline       intvec_type& get_offsets()     {return m_offsets;} ///< return the vector of offsets
@@ -204,6 +206,14 @@ namespace cuv{
 			// ******************************
 			// read access
 			// ******************************
+			void set(const index_type& i, const index_type& j, const value_type& val)
+			{
+				int off = (int)j - (int)i/m_row_fact;
+				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
+				if( it == m_dia2off.end() )
+					return;
+				m_vec->set(it->second * m_stride +i, val);
+			}
 			value_type operator()(const index_type& i, const index_type& j)const ///< Return matrix entry (i,j)
 			{
 				int off = (int)j - (int)i/m_row_fact;
