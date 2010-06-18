@@ -527,7 +527,7 @@ __global__
 void super_to_max_kernel(float*dst, float* src, int* indices, int imgSize, int dstSize, int poolSize, int stepSize, int patchSize, int numPatches, int batch) {
 	int tx = threadIdx.x; // ty = threadIdx.y;
 	int bx = blockIdx.x;
-
+	
 	int patch = tx + batch * 256;
 
 	if(patch >= numPatches * numPatches)
@@ -570,6 +570,8 @@ void super_to_max(dense_matrix<float,row_major,dev_memory_space>& dst,
 		int overlap,
 		dense_matrix<int,row_major,dev_memory_space>* indices,
 		dense_matrix<float,row_major,dev_memory_space>* filter) {
+	cuvAssert(indices->w() == img.w());
+	cuvAssert(indices->h() == img.h());
 	cuvAssert(poolSize > overlap);
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
@@ -714,6 +716,8 @@ template<>
 			unsigned int overlap,
 			dense_matrix<int,row_major,host_memory_space>* indices,
 			dense_matrix<float,row_major,host_memory_space>* filter) {
+	cuvAssert(indices->w() == dst.w());
+	cuvAssert(indices->h() == dst.h());
 	cuvAssert(poolSize > overlap);
 	//cuvAssert( dst.w() == indices.w());
 	//cuvAssert( dst.h() == indices.h());
@@ -904,6 +908,8 @@ template<>
 			dense_matrix<int,row_major,dev_memory_space>* indices,
 			dense_matrix<float,row_major,dev_memory_space>* filter) {
 
+	cuvAssert(indices->w() == dst.w());
+	cuvAssert(indices->h() == dst.h());
 	cuvAssert(poolSize > overlap);
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
