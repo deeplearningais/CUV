@@ -716,11 +716,12 @@ template<>
 			unsigned int overlap,
 			dense_matrix<int,row_major,host_memory_space>* indices,
 			dense_matrix<float,row_major,host_memory_space>* filter) {
-	cuvAssert(indices->w() == dst.w());
-	cuvAssert(indices->h() == dst.h());
+	if (indices!=NULL) {
+		cuvAssert(indices->w() == dst.w());
+		cuvAssert(indices->h() == dst.h());
+	}
+
 	cuvAssert(poolSize > overlap);
-	//cuvAssert( dst.w() == indices.w());
-	//cuvAssert( dst.h() == indices.h());
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
 	int imgSize = sqrt(img.w());
