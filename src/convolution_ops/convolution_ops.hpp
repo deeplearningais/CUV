@@ -281,6 +281,7 @@ void reorder(__matrix_type& dst,
 		int blockLength);
 
 
+
 /**
  * @brief Propagate data from N smaller images into bigger images.
  *
@@ -411,6 +412,19 @@ void row_ncopy(dense_matrix<V,M,T,I>& dst,
 			   vector<V,T,I>& row,
 			   unsigned int n);
 
+/**
+ * @brief Fills the rows of the dst matrix with n copies of the row in the col matrix
+ * @param dst holds the target matrix with the n*width rows each containing the same source row
+ * @param col is a matrix containing the cols to be copied
+ * @param n how often the row should be copied
+ *
+ */
+template<class V, class M, class T,  class I>
+void cols_ncopy(dense_matrix<V,M,T,I>& dst,
+		dense_matrix<V,M,T,I>& col,
+			   unsigned int n);
+
+
 
 /**
  * @brief Rotates the filters in a filter matrix consisting of m filters in a row with n rows by 180 deg.
@@ -452,7 +466,8 @@ void calc_error_to_blob(	dense_matrix<V,M,T,I>& dst,
 							dense_matrix<V,M,T,I>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
-							unsigned int blob_size);
+							unsigned int blob_size,
+							float temporal_weight=1.0f);
 
 /**
  * @brief makes sure that the weights in the first numInhibitory filters are non-positive, the next numExitatory are non-negative
@@ -465,6 +480,24 @@ void calc_error_to_blob(	dense_matrix<V,M,T,I>& dst,
 
 template<class V, class M, class T, class I>
 void check_exitatory_inhibitory(
+							dense_matrix<V,M,T,I>& filter,
+							unsigned int start_filter,
+							unsigned int filter_pixels,
+							unsigned int num_inhibitory,
+							unsigned int num_exitatory);
+
+
+/**
+ * @brief expects a random weight matrix and inverts positive entries in the first numInhibitory filters that are positive and in the next numExitatory those which are negative
+ * @param dst holds the target matrix for the corrected filters
+ * @param filter is a matrix with n filters in a column and n columns
+ * @param start_filter the filter col where to start checking (i.e. skipping input/output maps filters...)
+ * @param num_inhibitory number of inhibitory filters
+ * @param num_exitatory number of exitatory filters
+ */
+
+template<class V, class M, class T, class I>
+void init_exitatory_inhibitory(
 							dense_matrix<V,M,T,I>& filter,
 							unsigned int start_filter,
 							unsigned int filter_pixels,

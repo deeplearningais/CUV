@@ -326,8 +326,8 @@ void reorder_kernel(float*dst, float* src, int len) {
 
 template<class V>
 void reorder_impl(dense_matrix<V,row_major,dev_memory_space>& dst,
-		dense_matrix<V,row_major,dev_memory_space>& src,
-		  int blockLength) {
+				  dense_matrix<V,row_major,dev_memory_space>& src,
+		  		  int blockLength) {
 	int patternCount = src.h();
 	int imgCount = src.w()/blockLength;
 
@@ -1104,6 +1104,67 @@ template<>
 	}
 }
 
+
+__global__ void cols_ncopy_kernel(float* targets, float* cols, const int rowSize, const int n) {
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int row = blockIdx.y;
+    int newRowSize = rowSize * n;
+
+    //check if index is still in matrix
+    if (idx < rowSize) {
+	int offset_src_adr = idx + rowSize * row;
+    	int offset_dst_adr = idx + newRowSize * row;
+    	for(int i=0; i < n ;i++){
+    	     *(targets + offset_dst_adr + i * rowSize)= *(cols+offset_src_adr);
+    	}
+    }
+}
+
+
+template<>
+void cols_ncopy(	dense_matrix<float,row_major, dev_memory_space>& dst,
+			dense_matrix<float,row_major, dev_memory_space>& col,
+			unsigned int n){
+	int inputSize 	= col.w()*col.h();
+	int row_size 	= col.w();
+	
+	cuvAssert(n <= 4096);
+	cuvAssert(dst.w() == row_size*n)
+	fill(dst, 0.0f);
+	int numThreads = 512;
+	int numBlocksX = ceil((float)row_size/numThreads);
+	int numBlocksY = col.h();
+	dim3 grid(numBlocksX, numBlocksY);
+	dim3 dimBlock(numThreads,1);
+	cols_ncopy_kernel<<<grid,dimBlock>>>(dst.ptr(), col.ptr(), row_size, n);
+	cuvSafeCall(cudaThreadSynchronize());
+
+}
+
+
+template<>
+void cols_ncopy(dense_matrix<float,row_major, host_memory_space>& dst,
+		dense_matrix<float,row_major, host_memory_space>& col,
+		unsigned int n){
+	int inputSize 	= col.w()*col.h();
+	int row_size 	= col.w();
+	cuvAssert(n <= 4096);
+	cuvAssert(dst.w() == row_size*n)
+	fill(dst, 0.0f);
+	for(int r = 0; r < col.h(); r++){
+		for(int c = 0; c < col.w(); c++){
+			for(int j = 0; j < n; j++){		
+				*(dst.ptr() 	+ r * row_size * n  // shift to correct row using new row width
+						+ c 		    // shift by column
+						+ j * row_size)	    // shift by old row size to the new position 
+						= *(col.ptr() + r * row_size + c); 		
+			}
+		}	
+	}
+}
+
+
+
 template<>
 	void filter_rotate(dense_matrix<float,row_major,host_memory_space>& dst,
 					    dense_matrix<float,row_major,host_memory_space>& filter,
@@ -1167,8 +1228,6 @@ template<>
 void filter_rotate(	dense_matrix<float,row_major,dev_memory_space>& dst,
 					dense_matrix<float,row_major,dev_memory_space>& filter,
 					unsigned int fs){
-
-
 		cuvAssert(dst.h() == filter.h())
 		cuvAssert(dst.w() == filter.w())
 
@@ -1268,21 +1327,24 @@ __global__ void calc_error_to_blob_kernel(float* img,
 										  float* blob,
 										  const int img_w,
 										  const int img_h,
-										  const int blob_width) {
+										  const int blob_width,
+										  float temporal_weight) {
 
 	int idx = threadIdx.x +  blockDim.x * blockIdx.x;
 	int row = blockIdx.y;
 
 	int x = idx % img_w;
 	int y = idx / img_w;
-	int center_x = round(*(blob+row*2));
-	int center_y = round(*(blob+row*2+1));
+	float center_x = *(blob+row*2);
+	float center_y = *(blob+row*2+1);
 	float a = (center_x - x)/ blob_width;
 	float b = (center_y - y)/ blob_width;
 	// destination is calculated by the row the pixel is in (row*imagesize) and the index in the picture (idx)
 	// img_w and img_h refers to the dimensions of an image (one row) in the img matrix
-	if(img_w*img_h < idx){
-		*(img+idx+row*(img_w*img_h)) = expf(-(a*a+b*b)/2) - *(src+idx+row*(img_w*img_h));
+
+	//p(x,α,σ) = 1/sqrt(2πσ²)*exp(-(x-α)²/2σ²)
+	if(idx < img_w * img_h){
+		*(img+idx+row*(img_w*img_h)) = temporal_weight*(expf(-(a*a+b*b)/2) - *(src+idx+row*(img_w*img_h)));
 	}
 }
 
@@ -1294,7 +1356,8 @@ void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 							dense_matrix<float,row_major,dev_memory_space>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
-							unsigned int blob_size){
+							unsigned int blob_size,
+							float temporal_weight){
 	cuvAssert(dst.h() == img.h());
 	cuvAssert(dst.w() == img.w());
 
@@ -1305,7 +1368,7 @@ void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 dimBlock(numThreads,1);
 
-	calc_error_to_blob_kernel<<<grid,dimBlock>>>(dst.ptr(), img.ptr(), blob_mat.ptr(), image_w, image_h, blob_size);
+	calc_error_to_blob_kernel<<<grid,dimBlock>>>(dst.ptr(), img.ptr(), blob_mat.ptr(), image_w, image_h, blob_size, temporal_weight);
 	cuvSafeCall(cudaThreadSynchronize());
 };
 
@@ -1397,6 +1460,99 @@ void check_exitatory_inhibitory(dense_matrix<float,row_major,host_memory_space>&
 		for(int r = 0; r < filter.h(); r++){
 			if(*(filter.ptr()+c+(r*row_size)) < 0)
 				*(filter.ptr()+c+(r*row_size)) = 0;
+		}
+	}
+
+};
+
+__global__ void init_exitatory_inhibitory_kernel(float* filter,
+												  const int filter_w,
+												  const int filter_h,
+												  const int start_filter,
+												  const int filter_pixels,
+												  const int num_inhibitory,
+												  const int num_exitatory) {
+
+	int idx = threadIdx.x +  blockDim.x * blockIdx.x;
+	int row = blockIdx.y;
+
+	int inhib_start_col 	= start_filter * filter_pixels;
+	int exit_start_col		= inhib_start_col + num_inhibitory*filter_pixels;
+
+	int ptr_adr =  	inhib_start_col		//move to the beginning of the block
+						+ idx				//move to column in block
+						+ (row*filter_w);	// move pointer by row many rows down
+
+	if(idx < filter_w and row<filter_h)
+		if(idx >= exit_start_col - inhib_start_col){ // if idx is in exitatory block
+			if(*(filter+ptr_adr) < 0)
+				*(filter + ptr_adr) = -1 * *(filter + ptr_adr);
+		}else{										 // if idx is in inhibitory
+			if(*(filter + ptr_adr) > 0)
+				*(filter + ptr_adr) = -1 * *(filter + ptr_adr);
+		}
+
+}
+
+template<>
+void init_exitatory_inhibitory(dense_matrix<float,row_major,dev_memory_space>& filter,
+								unsigned int start_filter,
+								unsigned int filter_pixels,
+								unsigned int num_inhibitory,
+								unsigned int num_exitatory){
+
+	int row_size = filter.w();
+	int inhib_start_col 	= start_filter * filter_pixels;
+	int inhib_end_col 		= inhib_start_col + num_inhibitory * filter_pixels - 1;
+	int exit_start_col		= inhib_end_col + 1;
+	int exit_end_col		= exit_start_col + num_exitatory * filter_pixels - 1;
+//	std::cout << "filter.h: " << filter.h() << " cols ges: "<< filter.w() <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
+	int numThreads = 512;
+	int numBlocksX = ceil((float)(exit_end_col-inhib_start_col)/numThreads);
+ 	int numBlocksY = filter.h();
+// 	std::cout << "launching " << numBlocksX << "x" << numBlocksY << "x512 Threads for " << (exit_end_col-inhib_start_col)*filter.h() <<" elements"<<std::endl;
+	dim3 grid(numBlocksX, numBlocksY);
+	dim3 dimBlock(numThreads,1);
+
+	check_exitatory_inhibitory_kernel<<<grid,dimBlock>>>( filter.ptr(),
+														  filter.w(),
+														  filter.h(),
+														  start_filter,
+														  filter_pixels,
+														  num_inhibitory,
+														  num_exitatory);
+	cuvSafeCall(cudaThreadSynchronize());
+
+};
+
+template<>
+void init_exitatory_inhibitory(dense_matrix<float,row_major,host_memory_space>& filter,
+								unsigned int start_filter,
+								unsigned int filter_pixels,
+								unsigned int num_inhibitory,
+								unsigned int num_exitatory){
+
+	int row_size = filter.w();
+	int inhib_start_col 	= start_filter * filter_pixels;
+	int inhib_end_col 		= inhib_start_col + num_inhibitory * filter_pixels-1;
+	int exit_start_col		= inhib_end_col+1;
+	int exit_end_col		= exit_start_col + num_exitatory * filter_pixels-1;
+	std::cout << "filter.h: " << filter.h() << " cols ges: "<< filter.w() <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
+
+	// horizontal direction
+	for(int c = inhib_start_col; c < inhib_end_col; c = c + 1 ){
+		// vertical direction
+		for(int r = 0; r < filter.h(); r++){
+			if(*(filter.ptr()+c+(r*row_size)) > 0)
+				*(filter.ptr()+c+(r*row_size)) = -1 * *(filter.ptr()+c+(r*row_size));
+		}
+	}
+
+	for(int c = exit_start_col; c <= exit_end_col; c = c + 1 ){
+		// vertical direction
+		for(int r = 0; r < filter.h(); r++){
+			if(*(filter.ptr()+c+(r*row_size)) < 0)
+				*(filter.ptr()+c+(r*row_size)) = -1 * *(filter.ptr()+c+(r*row_size));
 		}
 	}
 
