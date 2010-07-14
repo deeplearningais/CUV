@@ -1337,14 +1337,17 @@ __global__ void calc_error_to_blob_kernel(float* img,
 	int y = idx / img_w;
 	float center_x = *(blob+row*2);
 	float center_y = *(blob+row*2+1);
-	float a = (center_x - x)/ blob_width;
-	float b = (center_y - y)/ blob_width;
+	float a = (x - center_x)/ blob_width;
+	float b = (y - center_y)/ blob_width;
 	// destination is calculated by the row the pixel is in (row*imagesize) and the index in the picture (idx)
 	// img_w and img_h refers to the dimensions of an image (one row) in the img matrix
 
 	//p(x,α,σ) = 1/sqrt(2πσ²)*exp(-(x-α)²/2σ²)
 	if(idx < img_w * img_h){
-		*(img+idx+row*(img_w*img_h)) = temporal_weight*(expf(-(a*a+b*b)/2) - *(src+idx+row*(img_w*img_h)));
+		//*(img+idx+row*(img_w*img_h)) = temporal_weight*(expf(-(a*a+b*b)/2) - *(src+idx+row*(img_w*img_h)));
+		float gauss_value = expf(-(a*a + b*b)/2);
+		float act_val = *(src+idx+row*(img_w*img_h));
+		*(img+idx+row*(img_w*img_h)) = temporal_weight * (gauss_value - act_val);
 	}
 }
 
