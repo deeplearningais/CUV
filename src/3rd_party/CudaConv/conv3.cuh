@@ -51,38 +51,46 @@
 #include <nvmatrix.cuh>
 #include "conv_common.cuh"
 
-void convolve3_bw(NVMatrix* images, NVMatrix* filters, NVMatrix* targets);
-void convolve3_color(NVMatrix* images, NVMatrix* filters, NVMatrix* targets);
+void convolve3(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int numGroups, bool color);
 
 /*
  * This function uses block size 16x16.
  * Works for filters up to 37x37.
  */
 template<int filterSize, bool checkBounds, int stride>
-__global__ void conv3_bw_fit_16x16(float* imgs, float* filters, float* targets, const int imgSize, const int numFilters) {
+__global__ void conv3_bw_fit_16x16(float* imgs, float* filters, float* targets,
+                                   const int imgSize, const int numFiltersPerGroup, const int numGroups) {
     const int shImgSizeX = filterSize + 15, shImgSizeY = filterSize + 15;
     __shared__ float shImg[shImgSizeY][shImgSizeX];
     __shared__ float shFilter[filterSize][filterSize];
 
-    const int caseIdx = blockIdx.x;
+    const int numImgsPerGroup = gridDim.x / numGroups;
+    const int imgIdxInGroup = blockIdx.x % numImgsPerGroup;
+    const int groupIdx = blockIdx.x / numImgsPerGroup;
     const int outputPart = blockIdx.y;
     const int numOutputsX = imgSize - filterSize + 1;
     const int numOutputs = MUL24(numOutputsX, numOutputsX);
     const int outputPartY = outputPart / DIVUP(numOutputsX, 16);
     const int outputPartX = outputPart % DIVUP(numOutputsX, 16);
-    const int tidx = threadIdx.y * 16 + threadIdx.x; // thread's index within the 4x16 "plate" of threads
+    const int tidx = threadIdx.y * 16 + threadIdx.x; // thread's index within the 16x16 "plate" of threads
 
-    const int imgPixels = MUL24(imgSize, imgSize); // size of image
+    const int imgPixels = MUL24(imgSize, imgSize);
 
 //    const int shImgPixels = MUL24(shImgSizeX, shImgSizeY); // size of shared buffer for image
     const int filterPixels = filterSize * filterSize;
 
-    imgs += MUL24(numFilters, MUL24(caseIdx/stride, imgPixels)) + MUL24(outputPartY, imgSize) * 16 + outputPartX * 16; // hid acts for conv rbm
-    targets += MUL24(caseIdx, numOutputs) + MUL24(outputPartY, numOutputsX)*16 + outputPartX*16 + MUL24(threadIdx.y, numOutputsX) + threadIdx.x;
+    imgs += MUL24(MUL24(groupIdx, numImgsPerGroup/stride), numFiltersPerGroup) * imgPixels
+          + MUL24(imgIdxInGroup/stride, imgPixels)
+          + MUL24(outputPartY, imgSize) * 16 + outputPartX * 16; // hid acts for conv rbm
+    targets += MUL24(groupIdx, numImgsPerGroup) * numOutputs
+             + MUL24(imgIdxInGroup, numOutputs)
+             + MUL24(outputPartY, numOutputsX) * 16 + outputPartX * 16
+             + MUL24(threadIdx.y, numOutputsX) + threadIdx.x;
     if (filterSize <= 16)
         filters += tidx;
-    filters += (caseIdx % stride) * filterPixels;
-    const float* lastFilter = filters + filterPixels * stride * numFilters; // bad pointer
+    filters += MUL24(groupIdx, numFiltersPerGroup) * filterPixels * stride
+             + MUL24(imgIdxInGroup % stride, filterPixels);
+    const float* lastFilter = filters + filterPixels * stride * numFiltersPerGroup; // bad pointer
     float prod = 0;
     const bool compute = !checkBounds || (outputPartX * 16 + threadIdx.x < numOutputsX && outputPartY * 16 + threadIdx.y < numOutputsX);
     const int cmpX = imgSize - outputPartX * 16, cmpY = imgSize - outputPartY*16;
@@ -180,8 +188,6 @@ __global__ void conv3_bw_fit_16x16(float* imgs, float* filters, float* targets, 
             const float* myShFilter = &shFilter[filterSize - 1][filterSize - 1];
             const float* myShImg = &shImg[threadIdx.y][threadIdx.x];
 
-            // TODO: uncomment this in final version!
-
             if(filterSize < 16) {
                 #pragma unroll // commented to speed up compiling
                 for (int i = 0; i < filterSize; i++) {
@@ -205,7 +211,7 @@ __global__ void conv3_bw_fit_16x16(float* imgs, float* filters, float* targets, 
                 }
             }
         }
-        imgs += imgPixels;
+        imgs += MUL24(numImgsPerGroup/stride, imgPixels);
         filters += filterPixels * stride;
     } while (filters != lastFilter);
 
@@ -220,12 +226,15 @@ __global__ void conv3_bw_fit_16x16(float* imgs, float* filters, float* targets, 
  * Use for filters > 37x37.
  */
 template<bool checkOutputBounds, bool checkFilterBounds, int stride>
-__global__ void conv3_bw_nofit_16x16(float* imgs, float* filters, float* targets, const int imgSize, const int numFilters, const int filterSize) {
+__global__ void conv3_bw_nofit_16x16(float* imgs, float* filters, float* targets,
+        const int imgSize, const int filterSize, const int numFiltersPerGroup, const int numGroups) {
     const int shImgSizeX = 16 * 2 - 1, shImgSizeY = 16 * 2 - 1;
     __shared__ float shImg[shImgSizeY][shImgSizeX];
     __shared__ float shFilter[16][16];
 
-    const int caseIdx = blockIdx.x;
+    const int numImgsPerGroup = gridDim.x / numGroups;
+    const int imgIdxInGroup = blockIdx.x % numImgsPerGroup;
+    const int groupIdx = blockIdx.x / numImgsPerGroup;
     const int outputPart = blockIdx.y;
     const int numOutputsX = imgSize - filterSize + 1;
     const int numOutputs = MUL24(numOutputsX, numOutputsX);
@@ -234,11 +243,17 @@ __global__ void conv3_bw_nofit_16x16(float* imgs, float* filters, float* targets
     const int imgPixels = MUL24(imgSize, imgSize); // size of image
     const int filterPixels = MUL24(filterSize, filterSize);
 
-    imgs += MUL24(numFilters, MUL24(caseIdx/stride, imgPixels)) + MUL24(outputPartY, imgSize) * 16 + outputPartX * 16; // hid acts for conv rbm
-    targets += MUL24(caseIdx, numOutputs) + MUL24(outputPartY, numOutputsX) * 16 + outputPartX * 16 + MUL24(threadIdx.y, numOutputsX) + threadIdx.x;
-    filters += (caseIdx % stride) * filterPixels;
+    imgs += MUL24(MUL24(groupIdx, numImgsPerGroup/stride), numFiltersPerGroup) * imgPixels
+          + MUL24(imgIdxInGroup/stride, imgPixels)
+          + MUL24(outputPartY, imgSize) * 16 + outputPartX * 16; // hid acts for conv rbm
+    targets += MUL24(groupIdx, numImgsPerGroup) * numOutputs
+             + MUL24(imgIdxInGroup, numOutputs)
+             + MUL24(outputPartY, numOutputsX) * 16 + outputPartX * 16
+             + MUL24(threadIdx.y, numOutputsX) + threadIdx.x;
+    filters += MUL24(groupIdx, numFiltersPerGroup) * filterPixels * stride
+             + MUL24(imgIdxInGroup % stride, filterPixels);
 
-    const float* lastFilter = filters + MUL24(MUL24(filterPixels, stride), numFilters); // bad pointer, hope nothing rolls over...
+    const float* lastFilter = filters + MUL24(MUL24(filterPixels, stride), numFiltersPerGroup); // bad pointer, hope nothing rolls over...
     float prod = 0;
     const bool compute = !checkOutputBounds || (outputPartX * 16 + threadIdx.x < numOutputsX && outputPartY * 16 + threadIdx.y < numOutputsX);
     const int cmpX = imgSize - outputPartX * 16, cmpY = imgSize - outputPartY * 16;
@@ -291,8 +306,8 @@ __global__ void conv3_bw_nofit_16x16(float* imgs, float* filters, float* targets
             }
         }
 
-        imgs += imgPixels;
-        filters += MUL24(filterPixels, stride);
+        imgs += MUL24(numImgsPerGroup/stride, imgPixels);
+        filters += filterPixels * stride;
     } while (filters != lastFilter);
 
     if (compute) {

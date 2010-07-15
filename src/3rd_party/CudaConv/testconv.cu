@@ -58,7 +58,7 @@ void init_tests(int boardNum) {
     cublasInit();
     NVMatrix::initDeviceProps();
     NVMatrix::initRandom(7);
-    cutilCheckError( cutCreateTimer( &timer));
+    cutilCheckError(cutCreateTimer( &timer));
 }
 
 void test_convolve(int imgSize, int filterSize, bool color) {
@@ -66,21 +66,22 @@ void test_convolve(int imgSize, int filterSize, bool color) {
     printf("test_convolve\n");
     printf("===============================\n");
 
-    int numFilters = 64, numCases = 128;
+    int numFiltersPerGroup = 64, numImgsPerGroup = 128, numGroups = 4;
     int filterPixels = filterSize * filterSize;
     int imgPixels = imgSize * imgSize;
     int numOutputsX = imgSize - filterSize + 1;
     int numOutputs = numOutputsX * numOutputsX;
-    assert(numFilters % 8 == 0);
-    printf("Images: %d, filters: %d\n", numCases, numFilters);
+//    assert(numFiltersPerGroup % 8 == 0);
+    printf("Groups: %d\n", numGroups);
+    printf("Images: %d, filters: %d\n", numImgsPerGroup, numFiltersPerGroup);
     printf("Image size: %dx%d, filter size: %dx%d\n", imgSize, imgSize, filterSize, filterSize);
     printf("Output grid: %dx%d\n", numOutputsX, numOutputsX);
     printf("Color: %s\n", color ? "yes" : "no");
 
     int colorMult = color ? 3 : 1;
-    Matrix filters(numFilters, filterPixels * colorMult);
-    Matrix images(numCases, imgPixels * colorMult);
-    Matrix targets(numCases, numFilters * numOutputs);
+    Matrix filters(numFiltersPerGroup * numGroups, filterPixels * colorMult);
+    Matrix images(numImgsPerGroup * numGroups, imgPixels * colorMult);
+    Matrix targets(numFiltersPerGroup * numGroups, numImgsPerGroup * numOutputs);
     filters.randomizeUniform();
     images.randomizeUniform();
     targets.apply(Matrix::ZERO);
@@ -89,27 +90,25 @@ void test_convolve(int imgSize, int filterSize, bool color) {
     NVMatrix nvImages(images, true);
     NVMatrix nvTargets(targets, true); // eh why not
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
     if(color) {
-        convColorCPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numCases, numFilters);
+        convColorCPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numImgsPerGroup, numFiltersPerGroup, numGroups);
     } else {
-        convCPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numCases, numFilters);
+        convCPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numImgsPerGroup, numFiltersPerGroup, numGroups);
     }
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
     targets.print(0, 3, 0, 6);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
-    if(color) {
-        convolve_color(&nvImages, &nvFilters, &nvTargets);
-    } else {
-        convolve_bw(&nvImages, &nvFilters, &nvTargets);
-    }
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
+
+    convolve(&nvImages, &nvFilters, &nvTargets, numGroups, color);
+
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
     nvTargets.print(0, 3, 0, 6);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
@@ -130,21 +129,22 @@ void test_convolve2(int imgSize, int filterSize, bool color) {
     printf("test_convolve2\n");
     printf("===============================\n");
 
-    int numFilters = 64, numCases = 128;
+    int numFiltersPerGroup = 24, numImgsPerGroup = 64, numGroups = 4;
     int filterPixels = filterSize * filterSize;
     int imgPixels = imgSize * imgSize;
     int numOutputsX = imgSize - filterSize + 1;
     int numOutputs = numOutputsX * numOutputsX;
-    assert(numFilters % 8 == 0);
-    printf("Images: %d, filters: %d\n", numCases, numFilters);
+//    assert(numFiltersPerGroup % 8 == 0);
+    printf("Groups: %d\n", numGroups);
+    printf("Images: %d, filters: %d\n", numImgsPerGroup, numFiltersPerGroup);
     printf("Image size: %dx%d, filter size: %dx%d\n", imgSize, imgSize, filterSize, filterSize);
     printf("Output grid: %dx%d\n", numOutputsX, numOutputsX);
     printf("Color: %s\n", color ? "yes" : "no");
 
     int colorMult = color ? 3 : 1;
-    Matrix filters(numCases, numFilters * filterPixels);
-    Matrix images(numCases, imgPixels * colorMult);
-    Matrix targets(numCases, numFilters * numOutputs * colorMult);
+    Matrix filters(numFiltersPerGroup * numGroups, numImgsPerGroup * filterPixels); // == targets in test_convolve
+    Matrix images(numImgsPerGroup * numGroups, imgPixels * colorMult);
+    Matrix targets(numImgsPerGroup, numGroups * numFiltersPerGroup * numOutputs * colorMult);
     filters.randomizeUniform();
     images.randomizeUniform();
     targets.apply(Matrix::ZERO);
@@ -153,27 +153,23 @@ void test_convolve2(int imgSize, int filterSize, bool color) {
     NVMatrix nvImages(images, true);
     NVMatrix nvTargets(targets, true); // eh why not
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
     if(color) {
-        conv2ColorCPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numCases * 3, numFilters);
+        conv2ColorCPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numImgsPerGroup * 3, numFiltersPerGroup, numGroups);
     } else {
-        conv2CPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numCases, numFilters);
+        conv2CPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numImgsPerGroup, numFiltersPerGroup, numGroups);
     }
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
     targets.print(0, 3, 0, 6);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
-    if(color) {
-        convolve2_color(&nvImages, &nvFilters, &nvTargets,filterSize);
-    } else {
-        convolve2_bw(&nvImages, &nvFilters, &nvTargets, filterSize);
-    }
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
+    convolve2(&nvImages, &nvFilters, &nvTargets, filterSize, numGroups, color);
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
     nvTargets.print(0, 3, 0, 6);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
@@ -185,7 +181,6 @@ void test_convolve2(int imgSize, int filterSize, bool color) {
     cpuNVTargets.apply(Matrix::ABS);
     printf("Max diff between CPU/GPU: %.6f\n", cpuNVTargets.max());
 }
-
 
 void test_rot180(int filterSize, bool color) {
     printf("===============================\n");
@@ -208,23 +203,23 @@ void test_rot180(int filterSize, bool color) {
     NVMatrix nvFilters(filters, true);
     NVMatrix nvTargets(targets, true); // eh why not
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     rotate180CPU(filters.getData(), targets.getData(), filterSize, colorMult * numFilters);
 
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
     targets.print(0, 3, 0, 6);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     rotate180(&nvFilters, &nvTargets, color);
 
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
     nvTargets.print(0, 3, 0, 6);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
@@ -242,7 +237,7 @@ void test_padZeros(int imgSize, int paddingSize, bool color) {
     printf("test_padZeros\n");
     printf("===============================\n");
 
-    int numImages = 128;
+    int numImages = 128*48;
     int imgPixels = imgSize * imgSize;
     int targetSize = imgSize + 2*paddingSize;
     int targetPixels = targetSize * targetSize;
@@ -261,23 +256,23 @@ void test_padZeros(int imgSize, int paddingSize, bool color) {
     NVMatrix nvImages(images, true);
     NVMatrix nvTargets(targets, true); // eh why not
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     padZerosCPU(images.getData(), targets.getData(), imgSize, colorMult * numImages, paddingSize);
 
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
     targets.print(0, 3, 0, 10);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     copyInto(&nvImages, &nvTargets, paddingSize, color);
 
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
     nvTargets.print(0, 3, 0, 10);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
@@ -290,7 +285,6 @@ void test_padZeros(int imgSize, int paddingSize, bool color) {
     printf("Max diff between CPU/GPU: %.6f\n", cpuNVTargets.max());
 }
 
-
 /*
  * This tests the routines in conv3.cuh. See the documentation there for an explanation.
  */
@@ -299,21 +293,21 @@ void test_convolve3(int imgSize, int filterSize, bool color) {
     printf("test_convolve3\n");
     printf("===============================\n");
 
-    int numFilters = 64, numCases = 128;
+    int numFiltersPerGroup = 48, numImgsPerGroup = 128, numGroups = 4;
     int filterPixels = filterSize * filterSize;
     int imgPixels = imgSize * imgSize;
     int numOutputsX = imgSize - filterSize + 1;
     int numOutputs = numOutputsX * numOutputsX;
-    assert(numFilters % 8 == 0);
-    printf("Images: %d, filters: %d\n", numCases, numFilters);
+//    assert(numFiltersPerGroup % 8 == 0);
+    printf("Images: %d, filters: %d\n", numImgsPerGroup, numFiltersPerGroup);
     printf("Image size: %dx%d, filter size: %dx%d\n", imgSize, imgSize, filterSize, filterSize);
     printf("Output grid: %dx%d\n", numOutputsX, numOutputsX);
     printf("Color: %s\n", color ? "yes" : "no");
 
     int colorMult = color ? 3 : 1;
-    Matrix filters(numFilters, colorMult*filterPixels);
-    Matrix images(numCases, numFilters * imgPixels);
-    Matrix targets(numCases, numOutputs*colorMult);
+    Matrix filters(numFiltersPerGroup * numGroups, filterPixels * colorMult);
+    Matrix images(numFiltersPerGroup * numGroups, numImgsPerGroup * imgPixels);
+    Matrix targets(numImgsPerGroup * numGroups, numOutputs*colorMult);
     filters.randomizeUniform();
     images.randomizeUniform();
     targets.apply(Matrix::ZERO);
@@ -322,29 +316,27 @@ void test_convolve3(int imgSize, int filterSize, bool color) {
     NVMatrix nvImages(images, true);
     NVMatrix nvTargets(targets, true); // eh why not
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
     if(color) {
-        conv3ColorCPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numCases, numFilters*3);
+        conv3ColorCPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numImgsPerGroup, numFiltersPerGroup*3, numGroups);
     } else {
-        conv3CPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numCases, numFilters);
+        conv3CPU(images.getData(), filters.getData(), targets.getData(), imgSize, filterSize, numImgsPerGroup, numFiltersPerGroup, numGroups);
     }
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
-    targets.print(0, 3, 14, 6);
+    targets.print(0, 6, 14, 6);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 //    images.print(0,6,63*16,6);
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
-    if(color) {
-        convolve3_color(&nvImages, &nvFilters, &nvTargets);
-    } else {
-        convolve3_bw(&nvImages, &nvFilters, &nvTargets);
-    }
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
+
+    convolve3(&nvImages, &nvFilters, &nvTargets, numGroups, color);
+
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
-    nvTargets.print(0, 3, 14, 6);
+    nvTargets.print(0, 6, 14, 6);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
 
     // Compare results
@@ -377,23 +369,23 @@ void test_subsample(int imgSize, int factor) {
     NVMatrix nvImages(images, true);
     NVMatrix nvTargets(targets, true); // eh why not
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     subsampleCPU(images.getData(), targets.getData(), imgSize, factor, numImages);
 
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
     targets.print(0, 3, 0, 10);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     subsample(&nvImages, &nvTargets, factor);
 
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
     nvTargets.print(0, 3, 0, 10);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
@@ -432,23 +424,23 @@ void test_supersample(int imgSize, int factor, bool trans) {
     nvImages.copyToHost(images);
     targets.apply(Matrix::ZERO);
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     supersampleCPU(images.getData(), targets.getData(), imgSize, factor, numImages, trans);
 
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
     targets.print(0, 3, 0, 10);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     supersample(&nvImages, &nvTargets, factor);
 
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
     nvTargets.print(0, 3, 0, 10);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
@@ -487,23 +479,23 @@ void test_gridToMatrix(int imgSize, int squareSize) {
     nvImages.copyToHost(images);
     targets.apply(Matrix::ZERO);
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     gridToMatrixCPU(images.getData(), targets.getData(), imgSize, squareSize, numImages);
 
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
     targets.print(0, 3, 0, 10);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     gridToMatrix(&nvImages, &nvTargets, squareSize, true);
 
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
     nvTargets.print(0, 3, 0, 10);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
@@ -543,23 +535,23 @@ void test_matrixToGrid(int imgSize, int squareSize) {
     nvImages.copyToHost(images);
     targets.apply(Matrix::ZERO);
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     matrixToGridCPU(images.getData(), targets.getData(), imgSize, squareSize, numImages);
 
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
     targets.print(0, 3, 0, 10);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     matrixToGrid(&nvImages, &nvTargets, squareSize, true);
 
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
     nvTargets.print(0, 3, 0, 10);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
@@ -601,20 +593,20 @@ void test_localMax(int imgSize, int squareSize) {
     nvImages.copyToHost(images);
     targets.apply(Matrix::ZERO);
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     gridToMatrixCPU(images.getData(), targets.getData(), imgSize, squareSize, numImages);
     targets.sum(1, targetsSum);
     targets.eltWiseDivideByVector(targetsSum);
     matrixToGridCPU(targets.getData(), images.getData(), imgSize, squareSize, numImages);
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
     targets.print(0, 3, 0, 10);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     gridToMatrix(&nvImages, &nvTargets, squareSize, true);
     nvTargets.max(1, nvTargetsMax);
@@ -622,7 +614,7 @@ void test_localMax(int imgSize, int squareSize) {
     matrixToGrid(&nvTargets, &nvImages, squareSize, true);
 
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
     nvTargets.print(0, 3, 0, 10);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
@@ -664,20 +656,20 @@ void test_localSum(int imgSize, int squareSize) {
     nvImages.copyToHost(images);
     targets.apply(Matrix::ZERO);
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     gridToMatrixCPU(images.getData(), targets.getData(), imgSize, squareSize, numImages);
     targets.sum(1, targetsSum);
     targets.eltWiseDivideByVector(targetsSum);
     matrixToGridCPU(targets.getData(), images.getData(), imgSize, squareSize, numImages);
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
     targets.print(0, 3, 0, 10);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     gridToMatrix(&nvImages, &nvTargets, squareSize, true);
     nvTargets.sum(1, nvTargetsSum);
@@ -685,7 +677,7 @@ void test_localSum(int imgSize, int squareSize) {
     matrixToGrid(&nvTargets, &nvImages, squareSize, true);
 
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
     nvTargets.print(0, 3, 0, 10);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
@@ -723,23 +715,23 @@ void test_sampleMultinomial(int nomials) {
     printf("Multinomial distributions: %d\n",  multinomials);
     printf("Multinomial distribution size: %d\n", nomials);
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 
     sampleMultinomialCPU(multi.getData(), randoms.getData(), targets.getData(),multinomials, nomials);
 
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("CPU (partial) result:\n");
     targets.print(32*16-3, 6, 0, 8);
     printf("CPU time: %.6f msec\n", cutGetTimerValue(timer));
 
-    cutilCheckError( cutResetTimer( timer));
-    cutilCheckError( cutStartTimer( timer));
+    cutilCheckError(cutResetTimer(timer));
+    cutilCheckError(cutStartTimer(timer));
 //    nvMulti.print(3,16);
     sampleMultinomial(&nvMulti, &nvRandoms, &nvTargets);
 
     cudaThreadSynchronize();
-    cutilCheckError( cutStopTimer( timer));
+    cutilCheckError(cutStopTimer(timer));
     printf("GPU (partial) result:\n");
     nvTargets.print(32*16-3, 6, 0, 8);
     printf("GPU time: %.6f msec\n", cutGetTimerValue(timer));
@@ -757,8 +749,9 @@ void test_sampleMultinomial(int nomials) {
 int main(int argc, char** argv) {
     // This line just for compiling and examining profiler output.
 //    exit(0); conv2_bw_nofit_dynXYZ_2per<true, false,3,8,8><<<1,1>>>(NULL, NULL, NULL, 0,0, 0);
-//    exit(0); conv_bw_fit_4x16_2per<8,true,3><<<1,1>>>(NULL, NULL, NULL, 0);
+//    exit(0); conv_bw_fit_4x16_2per<9,3,8, false><<<1,1>>>(NULL, NULL, NULL, 0, 0, 0);
 //    exit(0); kSampleSmallMultinomial<15,16><<<1,1>>>(NULL, NULL, NULL, 0, 0);
+//    exit(0); conv3_bw_fit_16x16<9, true,1><<<1,1>>>(NULL, NULL, NULL, 0, 0, 0);
     int boardNum = get_board_lock();
     if (boardNum == GPU_LOCK_NO_BOARD) {
         printf("No free GPU boards!\n");
@@ -770,17 +763,18 @@ int main(int argc, char** argv) {
     }
 
     init_tests(boardNum);
-//    test_convolve(32, 8, true);
+//    test_convolve(32, 9, true);
 //    test_convolve2(32, 25, true);
-//    test_convolve3(31, 8, true);
+
+    test_convolve3(60, 40, false);
 
 //    test_rot180(7, true);
-//    test_padZeros(25, 3, false);
+//    test_padZeros(24, 8, false);
 //    test_subsample(32, 4);
 //    test_supersample(32, 4, true);
 //    test_gridToMatrix(25, 5);
 //    test_matrixToGrid(25, 5);
 //    test_localMax(32, 4);
 //    test_localSum(32, 4);
-    test_sampleMultinomial(49);
+//    test_sampleMultinomial(49);
 }

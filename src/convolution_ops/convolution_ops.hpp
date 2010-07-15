@@ -53,17 +53,20 @@ namespace cuv{
  * Convolve N patterns (images) with F filters, resulting in N*F target images.
  *
  * @param dst		holds the target images of the convolution. one row for each
- *			        input image, with one target image for each filter per row.
+ *			        filter, with one target image for each input image per row.
  * @param img		contains one input image in each row
  * @param filter	contains one filter in each row, number of filters must
- * 			        be multiples of 16.
+ * 			        be multiples of 2. Routines is fastest for multiples of 16.
+ * @param numGroups	amount of image groups. each group is convolved with it's own
+ * 					set of filters.
  *
  *  The result is added to dst.
  */
 template<class V, class M, class T, class I>
 void convolve(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& img,
-		   dense_matrix<V,M,T,I>& filter);
+		   dense_matrix<V,M,T,I>& filter,
+		   int numGroups = 1);
 
 
 /** 
@@ -72,9 +75,11 @@ void convolve(dense_matrix<V,M,T,I>& dst,
  * @param dst holds the target images of the convolution. one row for each
  *            input image, with one target images for each filter per row.
  * @param img contains one input image in each row
- * @param filter contains F filters in each row, number of filters per row must
- *               be multiples of 16.
+ * @param filter contains N filters in each row, number of rows (filters) must
+ *               be multiples of 2. Routines is fastest for multiples of 16.
  * @param numFilters number of filters (F)
+ * @param numGroups	amount of image groups. each group is convolved with it's own
+ * 					set of filters.
  *
  *  The result is added to dst.
  * 	This routine can be used to compute the weight gradients: img contains the
@@ -87,7 +92,8 @@ template<class V, class M, class T, class I>
 void convolve2(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& img,
 		   dense_matrix<V,M,T,I>& filter,
-		   int numFilters);
+		   int numFilters,
+		   int numGroups = 1);
 
 
 /** 
@@ -96,9 +102,11 @@ void convolve2(dense_matrix<V,M,T,I>& dst,
  *
  * @param dst 	holds the target images of the convolution. one row for each
  *            	input image, with one target image per row.
- * @param img 	contains F input images in each row
+ * @param img 	contains N input images in each row
  * @param filter contains one filter in each row, number of filters must
- *               be multiples of 16.
+ *               be multiples of 2. Routines is fastest for multiples of 16.
+ * @param		numGroups	amount of image groups. each group is convolved with it's own
+ * 				set of filters.
  *
  *  The result is added to dst.
  *  Filters are rotated by 180 degrees for the convolution. This routine is
@@ -110,7 +118,8 @@ void convolve2(dense_matrix<V,M,T,I>& dst,
 template<class V, class M, class T, class I>
 void convolve3(dense_matrix<V,M,T,I>& dst,
 		   dense_matrix<V,M,T,I>& img,
-		   dense_matrix<V,M,T,I>& filter);
+		   dense_matrix<V,M,T,I>& filter,
+		   int numGroups = 1);
 
 
 /** 
@@ -217,6 +226,33 @@ void supersample(dense_matrix<V,M,T,I>& dst,
 		int factor,
 		dense_matrix<int,row_major,T>* indices = NULL);
 
+
+/**
+ * @brief Resize N images of size (m x m) by a factor s into images of size (m/s x m/s)
+ *
+ * @param dst					holds the output images. One row for each image of size (m/s x m/s)
+ * @param img					contains the input images. One row for each image of size (m x m)
+ * @param factor				Scaling factor
+ * @param avoidBankConflicts	The avoidBankConflicts option causes this function to use extra
+ * 								shared memory to avoid all bank conflicts.
+ *
+ * Subsampling takes a N x (m*m) matrix of N images of size (m x m) and shrinks
+ * the images by a factor s.
+ * With the index matrix, each pixel of the original image is only assigned to
+ * one of the output pixel, depending on the index.
+ *
+ * The avoidBankConflicts option causes this function to use extra shared memory to avoid all
+ * bank conflicts. Most bank conflicts are avoided regardless of the setting of this parameter,
+ * and so setting this parameter to true will have minimal impact on performance (Alex reported
+ * a 5% improvement). (still can get 2-way conflicts if factor doesn't divide 16)
+ *
+ */
+template<class V, class M, class T>
+void subsample(dense_matrix<V,M,T>& dst,
+		dense_matrix<V,M,T>& img,
+		int factor,
+		bool avoidBankConflicts);
+
 /**
  * @brief Reorder blocks of data in a matrix
  * 
@@ -235,9 +271,15 @@ void supersample(dense_matrix<V,M,T,I>& dst,
  *         B2
  *         ...
  */
-template<class V, class M, class T, class I>
-void reorder(dense_matrix<V,M,T,I>& A,
+template<class __matrix_type>
+void reorder(__matrix_type& A,
 		   int blockLength);
+
+template<class __matrix_type>
+void reorder(__matrix_type& dst,
+		__matrix_type& src,
+		int blockLength);
+
 
 
 /**
@@ -333,6 +375,16 @@ void max_pooling(dense_matrix<V,M,T,I>& dst,
 		dense_matrix<int,row_major,T,I>* indices = NULL,
 		dense_matrix<V,M,T,I>* filter = NULL);
 
+template<class V, class M, class T, class I>
+void first_pooling(dense_matrix<V,M,T,I>& dst,
+		dense_matrix<V,M,T,I>& img,
+		unsigned int poolSize
+		);
+
+template<class V, class M, class T, class I>
+void first_pooling_zeros( dense_matrix<V,M,T,I>& img,
+		unsigned int poolSize
+		);
 
 /**
  * @brief Strips the padding inserted by copy_into
@@ -360,16 +412,29 @@ void row_ncopy(dense_matrix<V,M,T,I>& dst,
 			   vector<V,T,I>& row,
 			   unsigned int n);
 
+/**
+ * @brief Fills the rows of the dst matrix with n copies of the row in the col matrix
+ * @param dst holds the target matrix with the n*width rows each containing the same source row
+ * @param col is a matrix containing the cols to be copied
+ * @param n how often the row should be copied
+ *
+ */
+template<class V, class M, class T,  class I>
+void cols_ncopy(dense_matrix<V,M,T,I>& dst,
+		dense_matrix<V,M,T,I>& col,
+			   unsigned int n);
+
+
 
 /**
- * @brief Inverts the filters in a filter matrix consisting of m filters in a row with n rows.
+ * @brief Rotates the filters in a filter matrix consisting of m filters in a row with n rows by 180 deg.
  * @param dst holds the target matrix with the inverted filters
- * @param filter is a matrix with m filters in a row and n rows
+ * @param filter is a matrix with n filters in a column and n columns
  * @param fs the filter size
  *
  */
 template<class V, class M, class T, class I>
-void filter_inverse(   dense_matrix<V,M,T,I>& dst,
+void filter_rotate(   dense_matrix<V,M,T,I>& dst,
 					   dense_matrix<V,M,T,I>& filter,
 					   unsigned int fs);
 
@@ -381,12 +446,65 @@ void filter_inverse(   dense_matrix<V,M,T,I>& dst,
  * @param image_size the size of one map in that rows
  *
  */
+//template<class V, class M, class T, class I>
+//void add_maps_h(	dense_matrix<V,M,T,I>& dst,
+//					dense_matrix<V,M,T,I>& mat,
+//					unsigned int image_size);
+
+
+
+/**
+ * @brief calculates error matrices
+ * @param dst holds the target error matrices each in a row
+ * @param img is a matrix with n maps to be compared with a blob
+ * @param blob_mat a matrix holding the blob center information for each row in a row
+ *
+ */
 template<class V, class M, class T, class I>
-void add_maps_h(	dense_matrix<V,M,T,I>& dst,
-					dense_matrix<V,M,T,I>& mat,
-					unsigned int image_size);
+void calc_error_to_blob(	dense_matrix<V,M,T,I>& dst,
+							dense_matrix<V,M,T,I>& img,
+							dense_matrix<V,M,T,I>& blob_mat,
+							unsigned int image_w,
+							unsigned int image_h,
+							unsigned int blob_size,
+							float temporal_weight=1.0f);
+
+/**
+ * @brief makes sure that the weights in the first numInhibitory filters are non-positive, the next numExitatory are non-negative
+ * @param dst holds the target matrix for the corrected filters
+ * @param filter is a matrix with n filters in a column and n columns
+ * @param start_filter the filter col where to start checking (i.e. skipping input/output maps filters...)
+ * @param num_inhibitory number of inhibitory filters
+ * @param num_exitatory number of exitatory filters
+ */
+
+template<class V, class M, class T, class I>
+void check_exitatory_inhibitory(
+							dense_matrix<V,M,T,I>& filter,
+							unsigned int start_filter,
+							unsigned int filter_pixels,
+							unsigned int num_inhibitory,
+							unsigned int num_exitatory);
+
+
+/**
+ * @brief expects a random weight matrix and inverts positive entries in the first numInhibitory filters that are positive and in the next numExitatory those which are negative
+ * @param dst holds the target matrix for the corrected filters
+ * @param filter is a matrix with n filters in a column and n columns
+ * @param start_filter the filter col where to start checking (i.e. skipping input/output maps filters...)
+ * @param num_inhibitory number of inhibitory filters
+ * @param num_exitatory number of exitatory filters
+ */
+
+template<class V, class M, class T, class I>
+void init_exitatory_inhibitory(
+							dense_matrix<V,M,T,I>& filter,
+							unsigned int start_filter,
+							unsigned int filter_pixels,
+							unsigned int num_inhibitory,
+							unsigned int num_exitatory);
+
 
 }
-
 /** @} */ //end group convolution_ops
 #endif /* __CONVOLUTION_OPS_HPP__ */

@@ -109,7 +109,7 @@ private:
     void _init(unsigned int numRows, unsigned int numCols);
 
 public:
-    enum FUNCTIONS {LOG, LOGISTIC1, LOGISTIC2, EXP, SQUARE, SQRT, ZERO, RECIPROCAL};
+    enum FUNCTIONS {LOG, LOGISTIC1, LOGISTIC2, EXP, SQUARE, SQRT, ZERO, RECIPROCAL, SIGN};
     enum AGGREGATIONS {SUM, MAX, MIN};
     NVMatrix();
     NVMatrix(bool isTrans);
@@ -198,16 +198,25 @@ public:
     void rightMult(const NVMatrix &b, NVMatrix &target) const;
     void rightMult(const NVMatrix &b, float scaleAB);
     void randomizeUniform();
+    void addGaussianNoise(NVMatrix& stdevs);
     void addGaussianNoise(float stdev);
     void addGaussianNoise();
     void randomizeGaussian();
     void randomizeGaussian(float stdev);
+    void randomizeGaussian(NVMatrix& stdevs);
     void binarizeProbs();
+    void smallerThanScalar(float scalar, NVMatrix& target);
     void biggerThanScalar(float scalar, NVMatrix& target);
     void biggerThanScalar(float scalar);
+    void inRangeInc(float lower, float upper);
+    void inRangeInc(float lower, float upper, NVMatrix& target);
+    void inRangeExc(float lower, float upper);
+    void inRangeExc(float lower, float upper, NVMatrix& target);
 
     void biggerThan(NVMatrix& m, NVMatrix& target, int numBlocks=NUM_APPLY_BLOCKS, int numThreadsPerBlock=NUM_APPLY_THREADS_PER_BLOCK);
     void biggerThan(NVMatrix& m, int numBlocks=NUM_APPLY_BLOCKS, int numThreadsPerBlock=NUM_APPLY_THREADS_PER_BLOCK);
+    void biggerThanVector(NVMatrix& vec, NVMatrix& target);
+    void biggerThanVector(NVMatrix& vec);
 
     void _checkBounds(int startRow, int endRow, int startCol, int endCol) const;
     NVMatrix& slice(int startRow, int endRow, int startCol, int endCol) const;
@@ -226,9 +235,6 @@ public:
     void reshape(int numRows, int numCols);
     NVMatrix& reshaped(int numRows, int numCols);
 
-    void copy(NVMatrix &dest, int srcStartRow, int srcEndRow,
-            int srcStartCol, int srcEndCol, int destStartRow, int destStartCol,
-            int numBlocks, int numThreadsPerBlock) const;
     void copy(NVMatrix &dest, int srcStartRow, int srcEndRow, int srcStartCol, int srcEndCol,
                         int destStartRow, int destStartCol) const;
 
@@ -251,17 +257,19 @@ public:
     void addSum(NVMatrix& b, NVMatrix& c, float scaleThis, float scaleB, float scaleC);
     void subtract(NVMatrix& b, NVMatrix& target);
     void subtract(NVMatrix& b);
-    void addVector(NVMatrix& vec, float scaleVec, NVMatrix& target, int numBlocks=NUM_APPLY_BLOCKS, int numThreadsPerBlock=NUM_APPLY_THREADS_PER_BLOCK);
+    void addVector(NVMatrix& vec, float scaleVec, NVMatrix& target);
     void addVector(NVMatrix& vec);
     void addVector(NVMatrix& vec, float scaleVec);
     void addVector(NVMatrix& vec, NVMatrix& target);
+    void equalsVector(NVMatrix& vec, NVMatrix& target);
+    void equalsVector(NVMatrix& vec);
     void eltWiseMultByVector(NVMatrix& vec, NVMatrix& target);
     void eltWiseMultByVector(NVMatrix& vec);
     void eltWiseDivideByVector(NVMatrix& vec, NVMatrix& target);
     void eltWiseDivideByVector(NVMatrix& vec);
     void eltWiseDivideByVector2(NVMatrix& vec, NVMatrix& target);
     void eltWiseDivideByVector2(NVMatrix& vec);
-    void tile(int timesY, int timesX, NVMatrix& target, int numBlocks=NUM_APPLY_BLOCKS, int numThreadsPerBlock=NUM_APPLY_THREADS_PER_BLOCK);
+    void tile(int timesY, int timesX, NVMatrix& target);
     void scale(float scale);
     void scale(float scale, NVMatrix& target);
     void aggregate(int axis, NVMatrix& target, int numThreadsPerBlock, NVMatrix::AGGREGATIONS agg);
@@ -276,6 +284,7 @@ public:
 
     void print(int startRow, int rows, int startCol, int cols) const;
     void print(int rows, int cols) const;
+    void printShape(const char* name) const;
 
 };
 

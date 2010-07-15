@@ -41,614 +41,632 @@
 
 #include <math.h>
 #include <nvmatrix.cuh>
-#include "conv2.cuh"
+#include "conv.cuh"
 
-void _convolve2_bw(float* images, float* filters, float* targets, int numCases,
-                  int numFilters, int imgSize, int filterSize, int imagesPerFilter, bool useDynamics = false) {
+void _convolve2_bw(float* images, float* filters, float* targets, int numImgsPerGroup,
+                  int numFiltersPerGroup, int imgSize, int filterSize, int imagesPerFilter, int numGroups, bool useDynamics = false) {
     assert(imagesPerFilter == 1 || imagesPerFilter == 3);
     int numOutputsX = imgSize - filterSize + 1;
 //    int numOutputs = numOutputsX*numOutputsX;
     bool checkOutputBounds = numOutputsX % 16 != 0;
-    if (/*false  &&*/numOutputsX <= 8) {
+    if (numOutputsX <= 9) {
         /*
          * Call special dynamic routine which is fast when the number of outputs is small.
          */
         int threadsX = numOutputsX, threadsY = numOutputsX, threadsZ = 512 / (threadsX*threadsY);
-        int blocksX = numCases, blocksY = DIVUP(numFilters, threadsZ*2);
+        int blocksX = numImgsPerGroup * numGroups, blocksY = DIVUP(numFiltersPerGroup, threadsZ*2);
         bool checkFilterBounds = filterSize % threadsX != 0;
-        bool checkFilterIdxBounds = numFilters % (threadsZ*2) != 0;
+//        bool checkFilterIdxBounds = numFiltersPerGroup % (threadsZ*2) != 0;
+
         dim3 grid(blocksX, blocksY);
         dim3 threads(threadsX, threadsY, threadsZ);
-//        printf("numcases: %d, numfilters: %d, imgsize: %d, filtersize: %d\n", numCases, numFilters, imgSize, filterSize);
-//        printf("check filter bds: %d, idx bds: %d\n", checkFilterBounds, checkFilterIdxBounds);
-//        printf("grid: %dx%d\n", grid.x, grid.y);
-//        printf("threads: %dx%dx%d\n", threads.x, threads.y, threads.z);
 
         if (threadsX == 2) {
             if (checkFilterBounds) {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 1, 2, 128><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 3, 2, 128><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<true, 1, 2, 128, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 1, 2, 128><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 3, 2, 128><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<true, 3, 2, 128, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             } else {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 1, 2, 128><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 3, 2, 128><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<false, 1, 2, 128, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 1, 2, 128><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 3, 2, 128><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<false, 3, 2, 128, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             }
         } else if (threadsX == 3) {
             if (checkFilterBounds) {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 1, 3, 56><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 3, 3, 56><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<true, 1, 3, 56, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 1, 3, 56><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 3, 3, 56><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<true, 3, 3, 56, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             } else {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 1, 3, 56><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 3, 3, 56><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<false, 1, 3, 56, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 1, 3, 56><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 3, 3, 56><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<false, 3, 3, 56, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             }
-        }  else if (threadsX == 4) {
+        } else if (threadsX == 4) {
             if (checkFilterBounds) {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 1, 4, 32><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 3, 4, 32><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<true, 1, 4, 32, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 1, 4, 32><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 3, 4, 32><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<true, 3, 4, 32, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             } else {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 1, 4, 32><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 3, 4, 32><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<false, 1, 4, 32, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 1, 4, 32><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 3, 4, 32><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<false, 3, 4, 32, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             }
-        }  else if (threadsX == 5) {
+        } else if (threadsX == 5) {
             if (checkFilterBounds) {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 1, 5, 20><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 3, 5, 20><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<true, 1, 5, 20, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 1, 5, 20><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 3, 5, 20><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<true, 3, 5, 20, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             } else {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 1, 5, 20><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 3, 5, 20><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<false, 1, 5, 20, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 1, 5, 20><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 3, 5, 20><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<false, 3, 5, 20, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             }
-        }  else if (threadsX == 6) {
+        } else if (threadsX == 6) {
             if (checkFilterBounds) {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 1, 6, 14><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 3, 6, 14><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<true, 1, 6, 14, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 1, 6, 14><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 3, 6, 14><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<true, 3, 6, 14, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             } else {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 1, 6, 14><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 3, 6, 14><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<false, 1, 6, 14, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 1, 6, 14><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 3, 6, 14><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<false, 3, 6, 14, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             }
-        }  else if (threadsX == 7) {
+        } else if (threadsX == 7) {
             if (checkFilterBounds) {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 1, 7, 10><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 3, 7, 10><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<true, 1, 7, 10, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 1, 7, 10><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 3, 7, 10><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<true, 3, 7, 10, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             } else {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 1, 7, 10><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 3, 7, 10><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<false, 1, 7, 10, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 1, 7, 10><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 3, 7, 10><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<false, 3, 7, 10, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             }
-        }  else if (threadsX == 8) {
+        } else if (threadsX == 8) {
             if (checkFilterBounds) {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 1, 8, 8><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, true, 3, 8, 8><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<true, 1, 8, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 1, 8, 8><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<true, false, 3, 8, 8><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<true, 3, 8, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             } else {
-                if(checkFilterIdxBounds) {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 1, 8, 8><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, true, 3, 8, 8><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<false, 1, 8, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 } else {
-                    if (imagesPerFilter == 1) {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 1, 8, 8><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    } else {
-                        conv2_bw_nofit_dynXYZ_2per<false, false, 3, 8, 8><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFilters);
-                    }
+                    conv_bw_nofit_dynXYZ_2per<false, 3, 8, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                }
+            }
+        } else if (threadsX == 9) {
+            if (checkFilterBounds) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<true, 1, 9, 6, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_nofit_dynXYZ_2per<true, 3, 9, 6, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                }
+            } else {
+                if (imagesPerFilter == 1) {
+                    conv_bw_nofit_dynXYZ_2per<false, 1, 9, 6, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_nofit_dynXYZ_2per<false, 3, 9, 6, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
                 }
             }
         }
     } else if(filterSize > 20) {
         bool checkFilterBounds = filterSize % 16 != 0;
-        int blocksY = numFilters / 16, blocksX = numCases;
+        int threadsZ = numFiltersPerGroup > 8 ? 8 : numFiltersPerGroup > 4 ? 4 : 2;
+        int blocksY = DIVUP(numFiltersPerGroup, 2*threadsZ), blocksX = numImgsPerGroup * numGroups;
         dim3 grid(blocksX, blocksY);
-        dim3 threads(16, 4, 8);
+        dim3 threads(16, 4, threadsZ);
 
-        if(checkFilterBounds) {
-            if(imagesPerFilter == 1) {
-                conv2_bw_nofit_4x16_2per<true, 1><<<grid, threads>>>(images, filters, targets, imgSize, filterSize);
+        if(threadsZ == 8) {
+            if(checkFilterBounds) {
+                if(imagesPerFilter == 1) {
+                    conv_bw_nofit_4x16_2per<true, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_nofit_4x16_2per<true, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                }
             } else {
-                conv2_bw_nofit_4x16_2per<true, 3><<<grid, threads>>>(images, filters, targets, imgSize, filterSize);
+                if(imagesPerFilter == 1) {
+                    conv_bw_nofit_4x16_2per<false, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_nofit_4x16_2per<false, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                }
             }
-        } else {
-            if(imagesPerFilter == 1) {
-                conv2_bw_nofit_4x16_2per<false, 1><<<grid, threads>>>(images, filters, targets, imgSize, filterSize);
+        } else if(threadsZ == 4) {
+            if(checkFilterBounds) {
+                if(imagesPerFilter == 1) {
+                    conv_bw_nofit_4x16_2per<true, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_nofit_4x16_2per<true, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                }
             } else {
-                conv2_bw_nofit_4x16_2per<false, 3><<<grid, threads>>>(images, filters, targets, imgSize, filterSize);
+                if(imagesPerFilter == 1) {
+                    conv_bw_nofit_4x16_2per<false, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_nofit_4x16_2per<false, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                }
+            }
+        } else if(threadsZ == 2) {
+            if(checkFilterBounds) {
+                if(imagesPerFilter == 1) {
+                    conv_bw_nofit_4x16_2per<true, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_nofit_4x16_2per<true, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                }
+            } else {
+                if(imagesPerFilter == 1) {
+                    conv_bw_nofit_4x16_2per<false, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_nofit_4x16_2per<false, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, filterSize, numFiltersPerGroup, numGroups);
+                }
             }
         }
     } else if (filterSize > 14) {
-        int blocksY = numFilters / 8, blocksX = numCases;
+        int threadsZ = numFiltersPerGroup >= 8 ? 8 : numFiltersPerGroup >= 4 ? 4 : 2;
+        int blocksY = DIVUP(numFiltersPerGroup, threadsZ), blocksX = numImgsPerGroup * numGroups;
         dim3 grid(blocksX, blocksY);
-        dim3 threads(16, 4, 8);
+        dim3 threads(16, 4, threadsZ);
         if(filterSize == 15) {
-            if(checkOutputBounds) {
+            if(threadsZ == 8) {
                 if(imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<15, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<15, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<15, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<15, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
-            } else {
+            } else if(threadsZ == 4){
                 if(imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<15, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<15, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<15, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<15, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if(threadsZ == 2){
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<15, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_1per<15, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
         } else if(filterSize == 16) {
-            if(checkOutputBounds) {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<16, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+            if(threadsZ == 8) {
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<16, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<16, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<16, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
-            } else {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<16, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+            } else if(threadsZ == 4){
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<16, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<16, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<16, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if(threadsZ == 2){
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<16, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_1per<16, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
         } else if(filterSize == 17) {
-            if(checkOutputBounds) {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<17, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+            if(threadsZ == 8) {
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<17, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<17, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<17, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
-            } else {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<17, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+            } else if(threadsZ == 4){
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<17, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<17, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<17, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if(threadsZ == 2){
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<17, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_1per<17, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
         } else if(filterSize == 18) {
-            if(checkOutputBounds) {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<18, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+            if(threadsZ == 8) {
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<18, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<18, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<18, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
-            } else {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<18, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+            } else if(threadsZ == 4){
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<18, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<18, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<18, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if(threadsZ == 2){
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<18, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_1per<18, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
         } else if(filterSize == 19) {
-            if(checkOutputBounds) {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<19, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+            if(threadsZ == 8) {
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<19, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<19, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<19, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
-            } else {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<19, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+            } else if(threadsZ == 4){
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<19, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<19, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<19, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if(threadsZ == 2){
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<19, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_1per<19, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
         } else if(filterSize == 20) {
-            if(checkOutputBounds) {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<20, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+            if(threadsZ == 8) {
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<20, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<20, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<20, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
-            } else {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_1per<20, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+            } else if(threadsZ == 4){
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<20, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_1per<20, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_1per<20, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if(threadsZ == 2){
+                if(imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_1per<20, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_1per<20, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
         }
     } else {
-        int blocksY = numFilters / 16, blocksX = numCases;
+        int threadsZ = numFiltersPerGroup > 8 ? 8 : numFiltersPerGroup > 4 ? 4 : 2;
+        int blocksY = DIVUP(numFiltersPerGroup, 2*threadsZ), blocksX = numImgsPerGroup * numGroups;
         dim3 grid(blocksX, blocksY);
-        dim3 threads(16, 4, 8);
+        dim3 threads(16, 4, threadsZ);
+//        printf("calling unified conv1/2 routine\n");
 //            printf("blocks x: %d, blocks y: %d\n", blocksX, blocksY);
-        if (filterSize == 2) {
-            if (checkOutputBounds) {
+        if (filterSize == 1) {
+            throw "try multByScalar";
+        } else if (filterSize == 2) {
+            if (threadsZ == 8) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<2, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<2, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<2, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<2, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
 
                 }
-            } else {
+            } else if (threadsZ == 4) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<2, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<2, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<2, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
+                    conv_bw_fit_4x16_2per<2, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if (threadsZ == 2) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<2, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<2, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
         } else if (filterSize == 3) {
-            if (checkOutputBounds) {
+            if (threadsZ == 8) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<3, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<3, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<3, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<3, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
 
                 }
-            } else {
+            } else if (threadsZ == 4) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<3, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<3, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<3, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
+                    conv_bw_fit_4x16_2per<3, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
-            }
-        } else if (filterSize == 4) {
-            if (checkOutputBounds) {
+            } else if (threadsZ == 2) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<4, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<3, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<4, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
-                }
-            } else {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<4, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
-                } else {
-                    conv2_bw_fit_4x16_2per<4, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
+                    conv_bw_fit_4x16_2per<3, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
-        } else if (filterSize == 5) {
-            if (checkOutputBounds) {
+        }  else if (filterSize == 4) {
+            if (threadsZ == 8) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<5, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<4, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<5, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<4, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
 
                 }
-            } else {
+            } else if (threadsZ == 4) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<5, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<4, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<5, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
+                    conv_bw_fit_4x16_2per<4, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
-            }
-        } else if (filterSize == 6) {
-            if (checkOutputBounds) {
+            } else if (threadsZ == 2) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<6, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<4, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<6, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
-                }
-            } else {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<6, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
-                } else {
-                    conv2_bw_fit_4x16_2per<6, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
+                    conv_bw_fit_4x16_2per<4, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
-        } else if (filterSize == 7) {
-            if (checkOutputBounds) {
+        }  else if (filterSize == 5) {
+            if (threadsZ == 8) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<7, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<5, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<7, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<5, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
 
                 }
-            } else {
+            } else if (threadsZ == 4) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<7, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<5, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<7, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
+                    conv_bw_fit_4x16_2per<5, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
-            }
-        } else if (filterSize == 8) {
-            if (checkOutputBounds) {
+            } else if (threadsZ == 2) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<8, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<5, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<8, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
-                }
-            } else {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<8, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
-                } else {
-                    conv2_bw_fit_4x16_2per<8, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
+                    conv_bw_fit_4x16_2per<5, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
-        } else if (filterSize == 9) {
-            if (checkOutputBounds) {
+        }  else if (filterSize == 6) {
+            if (threadsZ == 8) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<9, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<6, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<9, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<6, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
 
                 }
-            } else {
+            } else if (threadsZ == 4) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<9, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<6, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<9, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
+                    conv_bw_fit_4x16_2per<6, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
-            }
-        } else if (filterSize == 10) {
-            if (checkOutputBounds) {
+            } else if (threadsZ == 2) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<10, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<6, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<10, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
-                }
-            } else {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<10, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
-                } else {
-                    conv2_bw_fit_4x16_2per<10, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
+                    conv_bw_fit_4x16_2per<6, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
-        } else if (filterSize == 11) {
-            if (checkOutputBounds) {
+        }  else if (filterSize == 7) {
+            if (threadsZ == 8) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<11, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<7, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<11, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<7, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
 
                 }
-            } else {
+            } else if (threadsZ == 4) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<11, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<7, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<11, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
+                    conv_bw_fit_4x16_2per<7, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
-            }
-        } else if (filterSize == 12) {
-            if (checkOutputBounds) {
+            } else if (threadsZ == 2) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<12, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<7, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<12, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
-                }
-            } else {
-                if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<12, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
-                } else {
-                    conv2_bw_fit_4x16_2per<12, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
-
+                    conv_bw_fit_4x16_2per<7, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
-        } else if (filterSize == 13) {
-            if (checkOutputBounds) {
+        }  else if (filterSize == 8) {
+            if (threadsZ == 8) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<13, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<8, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<13, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<8, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
 
                 }
-            } else {
+            } else if (threadsZ == 4) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<13, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<8, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<13, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<8, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if (threadsZ == 2) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<8, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<8, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            }
+        }  else if (filterSize == 9) {
+            if (threadsZ == 8) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<9, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<9, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
 
+                }
+            } else if (threadsZ == 4) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<9, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<9, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if (threadsZ == 2) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<9, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<9, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            }
+        }  else if (filterSize == 10) {
+            if (threadsZ == 8) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<10, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<10, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+
+                }
+            } else if (threadsZ == 4) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<10, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<10, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if (threadsZ == 2) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<10, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<10, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            }
+        }  else if (filterSize == 11) {
+            if (threadsZ == 8) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<11, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<11, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+
+                }
+            } else if (threadsZ == 4) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<11, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<11, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if (threadsZ == 2) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<11, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<11, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            }
+        }  else if (filterSize == 12) {
+            if (threadsZ == 8) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<12, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<12, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+
+                }
+            } else if (threadsZ == 4) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<12, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<12, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if (threadsZ == 2) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<12, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<12, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            }
+        }  else if (filterSize == 13) {
+            if (threadsZ == 8) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<13, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<13, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+
+                }
+            } else if (threadsZ == 4) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<13, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<13, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if (threadsZ == 2) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<13, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<13, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
         } else if (filterSize == 14) {
-            if (checkOutputBounds) {
+            if (threadsZ == 8) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<14, true, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<14, 1, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<14, true, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<14, 3, 8, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+
                 }
-            } else {
+            } else if (threadsZ == 4) {
                 if (imagesPerFilter == 1) {
-                    conv2_bw_fit_4x16_2per<14, false, 1><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<14, 1, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 } else {
-                    conv2_bw_fit_4x16_2per<14, false, 3><<<grid, threads>>>(images, filters, targets, imgSize);
+                    conv_bw_fit_4x16_2per<14, 3, 4, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                }
+            } else if (threadsZ == 2) {
+                if (imagesPerFilter == 1) {
+                    conv_bw_fit_4x16_2per<14, 1, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
+                } else {
+                    conv_bw_fit_4x16_2per<14, 3, 2, true><<<grid, threads>>>(images, filters, targets, imgSize, numFiltersPerGroup, numGroups);
                 }
             }
         }
     }
     cutilCheckMsg("kernel execution failed");
 }
-
-void convolve2_bw(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int filterSize) {
-    double dImgSize = sqrt(images->getNumCols());
-//    double dFilterSize = sqrt(filters->getNumCols());
-    assert(dImgSize == floor(dImgSize));
-    // each row in "filters" corresponds to a set of filters to convolve with the images in the same row of "images"
-    assert(images->getNumRows() == filters->getNumRows());
-    assert(filters->getNumCols() % (filterSize*filterSize) == 0);
-    //    assert(dFilterSize == floor(dFilterSize));
-    int imgSize = int(dImgSize);
-    //    int filterSize = int(dFilterSize);
-    int numCases = images->getNumRows();
-    int numFilters = filters->getNumCols() / (filterSize * filterSize);
-    int numOutputsX = imgSize - filterSize + 1;
-    int numOutputs = numOutputsX * numOutputsX;
-
-    assert(numFilters % 16 == 0);
-    assert(targets->getNumElements() == numOutputs * numFilters * numCases);
-    assert(!images->isTrans());
-    assert(!filters->isTrans());
-    assert(!targets->isTrans());
-    assert(imgSize > filterSize);
-
-    _convolve2_bw(images->getDevData(), filters->getDevData(), targets->getDevData(),
-                 numCases, numFilters, imgSize, filterSize, 1);
-}
 /*
  * Here the "filters" might represent the activities of the hidden layer of a convolutional net
  * (the output of a convolution), so the color attribute does not apply to them.
  */
-void convolve2_color(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int filterSize) {
-    assert(images->getNumCols() % 3 == 0);
-    assert(images->getNumRows() == filters->getNumRows());
-    double dImgSize = sqrt(images->getNumCols() / 3);
+void convolve2(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int filterSize, int numGroups, bool colorImages) {
+    int colorMult = colorImages ? 3 : 1;
+    int filterPixels = filterSize*filterSize;
+    assert(images->getNumCols() % colorMult == 0);
+    double dImgSize = sqrt(images->getNumCols() / colorMult);
     assert(dImgSize == floor(dImgSize));
-    assert(filters->getNumCols() % (filterSize*filterSize) == 0);
+    // each row in "filters" corresponds to a set of filters to convolve with the images in the same row of "images"
+//    assert(images->getNumRows() == filters->getNumRows());
+//    assert(filters->getNumCols() % filterPixels == 0);
+    assert(images->getNumRows() % numGroups == 0);
+    assert(filters->getNumRows() % numGroups == 0);
+    //    assert(dFilterSize == floor(dFilterSize));
     int imgSize = int(dImgSize);
-    int numCases = images->getNumRows();
-    int numFilters = filters->getNumCols() / (filterSize * filterSize);
+    //    int filterSize = int(dFilterSize);
+    int numImgsPerGroup = images->getNumRows() / numGroups;
+    int numFiltersPerGroup = filters->getNumRows() / numGroups;
     int numOutputsX = imgSize - filterSize + 1;
     int numOutputs = numOutputsX * numOutputsX;
-//    int imgPixels = imgSize * imgSize;
-//    int filterPixels = filterSize * filterSize;
 
-    assert(numFilters % 16 == 0);
-    assert(targets->getNumElements() == numOutputs * numFilters * numCases*3);
+    assert(filters->getNumCols() == numImgsPerGroup * filterPixels);
+    assert(numFiltersPerGroup % 2 == 0);
+    assert(targets->getNumElements() == numOutputs * numFiltersPerGroup * numImgsPerGroup * numGroups * colorMult);
     assert(!images->isTrans());
     assert(!filters->isTrans());
     assert(!targets->isTrans());
     assert(imgSize > filterSize);
 
     _convolve2_bw(images->getDevData(), filters->getDevData(), targets->getDevData(),
-                 numCases*3, numFilters, imgSize, filterSize, 3);
+                 numImgsPerGroup * colorMult, numFiltersPerGroup, imgSize, filterSize, colorMult, numGroups);
 }

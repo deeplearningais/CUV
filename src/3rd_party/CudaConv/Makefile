@@ -11,7 +11,7 @@ USECUBLAS   := 1
 # CUDA source files (compiled with cudacc)
 CUFILES		:= testconv.cu conv.cu conv2.cu conv3.cu testconv_extras.cu conv_util.cu nvmatrix.cu nvmatrix_kernel.cu
 # CUDA dependency files
-CU_DEPS		:= conv.cuh conv2.cuh conv3.cuh testconv_extras.cuh conv_util.cuh nvmatrix.cuh nvmatrix_kernel.cuh
+CU_DEPS		:= conv.cuh conv3.cuh testconv_extras.cuh conv_util.cuh nvmatrix.cuh nvmatrix_kernel.cuh
 
 # C/C++ source files (compiled with gcc / c++)
 CCFILES		:= convCPU.cpp gpu_locking.cpp matrix.cpp
