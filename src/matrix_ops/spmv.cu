@@ -33,7 +33,7 @@
 
 #include <iostream>
 #include <boost/any.hpp>
-#include <dia_matrix.hpp>
+#include <basics/dia_matrix.hpp>
 #include "matrix_ops.hpp"
 #include <texture.h>
 #include <boost/preprocessor/arithmetic/inc.hpp>
@@ -52,7 +52,7 @@ using namespace std;
 #define large_grid_thread_num(void) ((__umul24(blockDim.x,gridDim.x + __umul24(blockDim.y,gridDim.y))))
 
 #define MAX_NUM_IMGS_AT_ONCE 14
-#define SEQ_ROW_FACT         1,2,4
+#define SEQ_ROW_FACT         1
 #define SPMM_BLOCK_SIZE      256
 
 
@@ -84,7 +84,7 @@ namespace cuv{
 		}
 
 // this file is generated using a perl-script from spmv_kernel.cuh
-#include "spmv_kernel_inst.cuh"
+#include "spmv_dia_kernel_inst.cuh"
 
 		template <typename value_type, typename index_type>
 			void spmv_dia_device(const dia_matrix<value_type,dev_memory_space,index_type>& A, 
@@ -95,10 +95,11 @@ namespace cuv{
 					const value_type& factC)
 			{
 				const unsigned int toff = bind_x(v.ptr(), v.size());
-				spmm_device_dispatch(A,v,dst,transA,factAv,factC,toff);
+				spmm_device_dia_dispatch(A,v,dst,transA,factAv,factC,toff);
 				cuvSafeCall(cudaThreadSynchronize());
 				unbind_x(v.ptr());
 			}
+
 
 		/*template <bool transA, typename value_type, typename index_type>*/
 		/*    void spmv_dia_tex_device(const dia_matrix<value_type,dev_memory_space,index_type>& A, */
