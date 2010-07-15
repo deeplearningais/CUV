@@ -69,6 +69,7 @@
  * - Helpful functors and abstractions
  * - Sparse matrices in DIA format and matrix-multiplication for these matrices
  * - I/O functions using boost.serialization
+ * - Fast Random Number Generator
  * - Up to now, CUV was used to build dense and sparse Neural Networks and
  *   Restricted Boltzmann Machines (RBM), convolutional or locally connected.
  *
@@ -109,9 +110,7 @@
  * $ cmake -DCMAKE_BUILD_TYPE=Debug ../../
  * $ ccmake .          # adjust CUDA SDK paths to your system!
  * $ make -j
- * $ cd src
  * $ ctest             # run tests to see if it went well
- * $ cd ..
  * $ make install
  * $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
  * @endcode
@@ -126,9 +125,7 @@
  * $ cmake -DCMAKE_BUILD_TYPE=Release ../../
  * $ ccmake .          # adjust CUDA SDK paths to your system!
  * $ make -j
- * $ cd src
  * $ ctest             # run tests to see if it went well
- * $ cd ..
  * $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
  * @endcode
  *
