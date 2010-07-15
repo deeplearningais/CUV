@@ -45,7 +45,6 @@
 #include <random.hpp>
 #include <matrix_ops/rprop.hpp>
 #include <basics/filter_factory.hpp>
-#include <basics/toeplitz_matrix.hpp>
 #include <convert.hpp>
 
 using namespace cuv;
@@ -188,16 +187,6 @@ void conv_rlcnp_test(int inputSize, int filterSize, int numFilters, int numImage
 	MEASURE_TIME(dev,  conv_rlcnp<dev_memory_space>(d_dst,d_img,d_filter,c,n,f,g), 10);
 	MEASURE_TIME(host, conv_rlcnp<host_memory_space>(h_dst,h_img,h_filter,c,n,f,g), 10);
 	printf("Speedup: %3.4f\n", host/dev);
-
-	std::auto_ptr<toeplitz_matrix<float,dev_memory_space> > tp ( filter_factory<float,dev_memory_space>( n,n,g,c,f ).get_toeplitz() );
-	dense_matrix<float, column_major, dev_memory_space>  im_in(c*n*n,1);
-	dense_matrix<float, column_major, dev_memory_space>  im_out(f*n*n,1);
-	sequence( tp->vec() );
-	//MEASURE_TIME(dev_tp,  prod( im_out,*tp,im_in,'t','n' ), 10);
-	MEASURE_TIME(dev_tp,  prod( im_in,*tp,im_out,'n','n' ), 10);
-
-	printf("Speedup dev/dev_tp : %3.4f\n", dev/dev_tp);
-	printf("Speedup host/dev_tp: %3.4f\n", host/dev_tp);
 
 }
 

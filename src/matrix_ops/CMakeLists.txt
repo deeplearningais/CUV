@@ -6,17 +6,10 @@ ADD_CUSTOM_COMMAND(
 	COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/spmv_dia_kernel_inst.cuh ${CMAKE_CURRENT_SOURCE_DIR}/spmv_dia_kernel_inst.cuh
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/spmv.cu ${CMAKE_CURRENT_SOURCE_DIR}/spmv_kernel.cuh ${CMAKE_CURRENT_SOURCE_DIR}/make_spmv_header.pl
 	)
-ADD_CUSTOM_COMMAND(
-	OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/spmv_toeplitz_kernel_inst.cuh
-	COMMAND perl ${CMAKE_CURRENT_SOURCE_DIR}/make_spmv_header.pl ${CMAKE_CURRENT_SOURCE_DIR}/spmv.cu ${CMAKE_CURRENT_SOURCE_DIR}/spmv_toeplitz_kernel.cuh ${CMAKE_CURRENT_BINARY_DIR}/spmv_toeplitz_kernel_inst.cuh toeplitz
-	COMMAND cmake -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/spmv_toeplitz_kernel_inst.cuh ${CMAKE_CURRENT_SOURCE_DIR}/spmv_toeplitz_kernel_inst.cuh
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/spmv.cu ${CMAKE_CURRENT_SOURCE_DIR}/spmv_toeplitz_kernel.cuh ${CMAKE_CURRENT_SOURCE_DIR}/make_spmv_header.pl
-	)
 
 ADD_CUSTOM_TARGET(
 	generateheader
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/spmv_dia_kernel_inst.cuh
-	        ${CMAKE_CURRENT_SOURCE_DIR}/spmv_toeplitz_kernel_inst.cuh
 	)
 
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR} )
