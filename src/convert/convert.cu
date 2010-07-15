@@ -31,7 +31,7 @@
 
 
 
-#include <dia_matrix.hpp>
+#include <basics/dia_matrix.hpp>
 #include <vector_ops/vector_ops.hpp>
 #include <convert.hpp>
 
@@ -313,9 +313,7 @@ namespace cuv{
 					cuv::convert(dst.vec(), src.vec());
 					dst.post_update_offsets();
 				}
-
-
-		};
+		}
 	template<class Dst, class Src>
 		void convert(Dst& dst, const Src& src)
 		{
@@ -391,7 +389,7 @@ CONV_VEC(signed char);
 		{                                                                                \
 			typedef dia_matrix<X,host_memory_space,Z> Dst;                                        \
 			convert_impl::convert<typename Dst::value_type, typename Dst::index_type>(dst,src);  \
-		}; 
+		};                                
         
 DIA_DENSE_CONV(float,column_major,unsigned int)
 DIA_DENSE_CONV(float,row_major,unsigned int)
