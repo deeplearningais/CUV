@@ -89,6 +89,7 @@ namespace cuv{
 		  inline const vec_type* vec_ptr()const { return m_vec; }								///< Return pointer to vector containing matrix entries
 		  inline       vec_type* vec_ptr()      { return m_vec; }								///< Return pointer to vector containing matrix entries
 		  inline 	   void set(const index_type& i, const index_type& j, const value_type& val);///< Set entry at position (i,j)
+		  inline       bool is_view()      { return m_vec->is_view(); }							///< Return true if the matrix is a view
 
 			virtual ~dense_matrix(){
 				dealloc();
@@ -146,6 +147,7 @@ namespace cuv{
 
 			void dealloc() ///< Deallocate matrix entries. This calls deallocation of the vector storing entries.
 			{
+				//std::cout << "Deallocate dense matrix" << std::endl;
 				if(m_vec)
 					delete m_vec;
 				m_vec = NULL;
@@ -154,6 +156,7 @@ namespace cuv{
 			void alloc() ///< Allocate matrix entries: Create vector to store entries.
 			{
 				cuvAssert(!m_vec);
+				//std::cout << "Allocate dense matrix" << std::endl;
 				m_vec = new vec_type(m_width * m_height);
 			}
 
@@ -166,9 +169,10 @@ namespace cuv{
 			 */
 			  my_type& 
 			  operator=(my_type& o){
+				  cuvAssert(!(m_vec->is_view()));
 				  if(this==&o) return *this;
 				  this->dealloc();
-					  (base_type&) (*this)  = (base_type&) o; // copy width, height
+				  (base_type&) (*this)  = (base_type&) o; // copy width, height
 				  m_vec   = o.m_vec;
 				  o.m_vec = NULL;                // transfer ownership of memory
 				  return *this;

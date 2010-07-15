@@ -66,7 +66,7 @@ namespace cuv{
 		  typedef dia_matrix<value_type,memory_space_type,index_type> 	   my_type;				///< Type of this matix
 		public:
 		  int m_num_dia;                        ///< number of diagonals stored
-		  int m_stride;                         ///< how long the stored diagonals are
+		  unsigned int m_stride;                ///< how long the stored diagonals are
 		  vec_type* m_vec;                      ///< stores the actual data 
 		  intvec_type m_offsets;                ///< stores the offsets of the diagonals
 		  std::map<int,index_type> m_dia2off;   ///< maps a diagonal to an offset
@@ -119,7 +119,7 @@ namespace cuv{
 			inline const vec_type* vec_ptr()const{ return m_vec; } ///< Return reference to vector storing entries
 			inline       vec_type* vec_ptr()     { return m_vec; } ///< Return reference to vector storing entries
 			inline int num_dia()const{ return m_num_dia; } ///< Return number of diagonals
-			inline int stride()const { return m_stride;  }///< Return stride of matrix
+			inline unsigned int stride()const { return m_stride;  }///< Return stride of matrix
 			inline int row_fact()const{ return m_row_fact; } ///< Return steepness of diagonals
 
 			//*****************************
@@ -175,7 +175,27 @@ namespace cuv{
 				m_offsets.set(idx,val);
 				m_dia2off[val] = idx;
 			}
-			inline vec_type* get_dia(const int& i){ return new vec_type(m_stride,  m_vec->ptr() + m_dia2off[i] * m_stride, true); } ///< Return vector containing specified diagonal.
+			/** Return vector (view) containing specified diagonal.
+			 */
+			inline const vec_type* get_dia(const int& k)const{ 
+				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(k);
+				int off = it->second;
+				const index_type i_start = std::max((int)0,-k);
+				const index_type j_start = std::max((int)0, k);
+				const index_type N = std::min(base_type::m_height - i_start, (base_type::m_width - j_start));
+				return new vec_type(m_stride,  m_vec->ptr() + off * m_stride, true); 
+				//return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
+			} 
+			/** Return a vector (view) on the specified diagonal
+			 */
+			inline vec_type* get_dia(const int& k){ 
+				int off   = m_dia2off[k];
+				const index_type i_start = std::max((int)0,-k);
+				const index_type j_start = std::max((int)0, k);
+				const index_type N = std::min(base_type::m_height - i_start, (base_type::m_width - j_start));
+				return new vec_type(m_stride,  m_vec->ptr() + off * m_stride, true); 
+				//return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
+			} 
 			inline const intvec_type& get_offsets()const{return m_offsets;} ///< Return the vector of offsets
 			inline       intvec_type& get_offsets()     {return m_offsets;} ///< return the vector of offsets
 			inline int get_offset(const index_type& idx)const               ///< Return offset of specified diagonal
@@ -186,6 +206,14 @@ namespace cuv{
 			// ******************************
 			// read access
 			// ******************************
+			void set(const index_type& i, const index_type& j, const value_type& val)
+			{
+				int off = (int)j - (int)i/m_row_fact;
+				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
+				if( it == m_dia2off.end() )
+					return;
+				m_vec->set(it->second * m_stride +i, val);
+			}
 			value_type operator()(const index_type& i, const index_type& j)const ///< Return matrix entry (i,j)
 			{
 				int off = (int)j - (int)i/m_row_fact;
@@ -193,6 +221,14 @@ namespace cuv{
 				if( it == m_dia2off.end() )
 					return (value_type) 0;
 				return (*m_vec)[ it->second * m_stride +i  ];
+			}
+			bool has(const index_type& i, const index_type& j)const ///< Return whether matrix entry is managed by sparse matrix 
+			{
+				int off = (int)j - (int)i/m_row_fact;
+				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
+				if( it == m_dia2off.end() )
+					return false;
+				return true;
 			}
 			/** 
 			 * @brief Assignment operator. Assigns vector belonging to source to destination and sets source vector to NULL

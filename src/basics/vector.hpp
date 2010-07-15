@@ -40,7 +40,7 @@
  */
 #ifndef __VECTOR_HPP__
 #define __VECTOR_HPP__
-#include <cuv_general.hpp>
+#include <tools/cuv_general.hpp>
 #include <iostream>
 
 namespace cuv{
@@ -98,6 +98,10 @@ class vector{
 	   */
 	  inline       value_type* ptr()     { return m_ptr;  }
 	  /** 
+	   * @brief Return true if this vector is a view and doesn't own the memory
+	   */
+	  inline bool is_view() const         { return m_is_view; }
+	  /**
 	   * @brief Return length of vector
 	   */
 	  inline index_type size() const         { return m_size; }
