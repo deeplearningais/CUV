@@ -135,4 +135,27 @@ BOOST_AUTO_TEST_CASE( mat_transpose )
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
+BOOST_AUTO_TEST_CASE( mat_op_reduce_big_rm_to_row )
+{
+	dense_matrix<float,row_major,dev_memory_space> dA(32, 384*384*32);
+	vector<float,dev_memory_space> dV(384*384*32);
+	dense_matrix<float,row_major,host_memory_space> hA(32, 384*384*32);
+	vector<float,host_memory_space> hV(384*384*32);
+
+//	sequence(dA);
+//	sequence(dV);
+//	sequence(hA);
+//	sequence(hV);
+
+	fill(dA, 1);
+	fill(hA, 1);
+
+	fill(dV, 0);
+	fill(hV, 0);
+
+	MEASURE_TIME(dev, reduce_to_row(dV,dA,RF_ADD, 1.0f, 1.0f), 10);
+	//MEASURE_TIME(host, reduce_to_row(hV,hA,RF_ADD, 1.0f, 1.0f), 10);
+
+}
+
 BOOST_AUTO_TEST_SUITE_END()

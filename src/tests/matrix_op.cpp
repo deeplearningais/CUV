@@ -48,11 +48,12 @@ using namespace cuv;
 struct Fix{
 	static const int n=256;
 	static const int N=n*n;
-	dense_matrix<float,column_major,dev_memory_space> a,b,u,v,w;
-	dense_matrix<float,column_major,host_memory_space> s,t,r,x,z;
+	static const int big_images = 384*384*32;
+	dense_matrix<float,column_major,dev_memory_space> a,b,u,v,w,d_reduce_big;
+	dense_matrix<float,column_major,host_memory_space> s,t,r,x,z,h_reduce_big;
 	Fix()
-	:   a(1,n),b(1,n),u(n,n),v(n,n),w(n,n)
-	,   s(1,n),t(1,n),r(n,n),x(n,n),z(n,n)
+	:   a(1,n),b(1,n),u(n,n),v(n,n),w(n,n), d_reduce_big(32,big_images)
+	,   s(1,n),t(1,n),r(n,n),x(n,n),z(n,n), h_reduce_big(32,big_images)
 	{
 	}
 	~Fix(){
@@ -175,6 +176,41 @@ BOOST_AUTO_TEST_CASE( mat_op_mm )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( mat_op_rm_prod )
+{
+	int m = 234;
+	int n = 314;
+	int k = 413;
+
+	dense_matrix<float,row_major,host_memory_space> hA(m, k);
+	dense_matrix<float,row_major,host_memory_space> hB(k, n);
+	dense_matrix<float,row_major,host_memory_space> hC(m, n);
+
+	dense_matrix<float,row_major,dev_memory_space> dA(m, k);
+	dense_matrix<float,row_major,dev_memory_space> dB(k, n);
+	dense_matrix<float,row_major,dev_memory_space> dC(m, n);
+
+	sequence(hA);     apply_scalar_functor(hA, SF_MULT, 0.01f);
+	sequence(hB);     apply_scalar_functor(hB, SF_MULT, 0.01f);
+	sequence(hC);     apply_scalar_functor(hC, SF_MULT, 0.01f);
+
+	sequence(dA);     apply_scalar_functor(dA, SF_MULT, 0.01f);
+	sequence(dB);     apply_scalar_functor(dB, SF_MULT, 0.01f);
+	sequence(dC);     apply_scalar_functor(dC, SF_MULT, 0.01f);
+
+	prod(hC,hA,hB,'n','n');
+	prod(dC,dA,dB,'n','n');
+
+	dense_matrix<float,row_major,host_memory_space> c2(dC.h(), dC.w());
+	convert(c2,dC);
+
+	for(int i=0;i<m;i++){
+		for(int j=0;j<n;j++){
+			BOOST_CHECK_CLOSE( hC(i,j), c2(i,j), 0.01 );
+		}
+	}
+}
+
 BOOST_AUTO_TEST_CASE( mat_op_mmdim1 )
 {
 	sequence(a);     apply_scalar_functor(a, SF_MULT, 0.01f);
@@ -252,6 +288,25 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col )
 	}
 }
 
+/*
+BOOST_AUTO_TEST_CASE( mat_op_big_reduce_to_col )
+{
+	sequence(d_reduce_big);
+	sequence(h_reduce_big);
+	vector<float,dev_memory_space>  v_col(32); sequence(v_col);
+	vector<float,host_memory_space> x_col(32); sequence(x_col);
+	reduce_to_col(v_col,d_reduce_big,RF_ADD,1.f,0.5f);
+	reduce_to_col(x_col,h_reduce_big,RF_ADD,1.f,0.5f);
+	for(int i=0;i<32;i++){
+		float v_correct = 0;
+		for(int j=0;j<big_images;j++)
+			v_correct += d_reduce_big(i,j);
+		BOOST_CHECK_CLOSE(v_correct,v_col[i],0.01);
+		BOOST_CHECK_CLOSE(v_col[i],x_col[i],0.01);
+	}
+}
+*/
+
 BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col_min )
 {
 	sequence(v);
@@ -289,23 +344,29 @@ BOOST_AUTO_TEST_CASE( mat_op_divide_col )
 
 BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
 {
-	dense_matrix<float,row_major,dev_memory_space> dA(40, 30);
-	vector<float,dev_memory_space> dV(40);
-	dense_matrix<float,row_major,host_memory_space> hA(40, 30);
-	vector<float,host_memory_space> hV(40);
+	const int m = 400;
+	const int n = 300;
 
-	sequence(dA);
+	float factOld = 1.33f;
+	float factNew = 0.2f;
+
+	dense_matrix<float,row_major,dev_memory_space> dA(m, n);
+	vector<float,dev_memory_space> dV(m);
+	dense_matrix<float,row_major,host_memory_space> hA(m, n);
+	vector<float,host_memory_space> hV(m);
+
+	sequence(dA); apply_scalar_functor(dA, SF_MULT, 0.01f);
 	sequence(dV);
-	sequence(hA);
+	sequence(hA); apply_scalar_functor(hA, SF_MULT, 0.01f);
 	sequence(hV);
 
-	reduce_to_col(dV,dA,RF_ADD,1.f,0.5f);
-	reduce_to_col(hV,hA,RF_ADD,1.f,0.5f);
+	reduce_to_col(dV,dA,RF_ADD,factNew,factOld);
+	reduce_to_col(hV,hA,RF_ADD,factNew,factOld);
 
 	vector<float,host_memory_space> hV2(dV.size());
 	convert(hV2, dV);
 
-	for(int i=0;i<30;i++)
+	for(int i=0; i<m; i++)
 		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.1);
 }
 
@@ -353,6 +414,31 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_row )
 		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.01);
 }
 
+/*
+BOOST_AUTO_TEST_CASE( mat_op_reduce_big_rm_to_row )
+{
+	dense_matrix<float,row_major,dev_memory_space> dA(32, 1179648);
+	vector<float,dev_memory_space> dV(1179648);
+	dense_matrix<float,row_major,host_memory_space> hA(32, 1179648);
+	vector<float,host_memory_space> hV(1179648);
+
+	sequence(dA);
+	sequence(dV);
+	sequence(hA);
+	sequence(hV);
+
+	reduce_to_row(dV,dA,RF_ADD, 1.0f, 1.0f);
+	reduce_to_row(hV,hA,RF_ADD, 1.0f, 1.0f);
+
+	vector<float,host_memory_space> hV2(dV.size());
+	convert(hV2, dV);
+
+	for(int i=0;i<1179648;i++){
+		BOOST_CHECK_CLOSE(hV[i],hV2[i],0.01);
+	}
+
+}
+*/
 
 BOOST_AUTO_TEST_CASE( mat_op_view )
 {

@@ -61,8 +61,8 @@ struct Fix{
 	dense_matrix<float, row_major, dev_memory_space>  d_img,d_filter,d_dst,d_pooled;
 	dense_matrix<float, row_major, host_memory_space> h_img,h_filter,h_dst,h_pooled;
 	Fix()
-	:   d_img(c,n*n), d_filter(f,g*g), d_dst(c,f*k*k), d_pooled(c,o*o)
-	,   h_img(c,n*n), h_filter(f,g*g), h_dst(c,f*k*k), h_pooled(c,o*o)
+	:   d_img(c,n*n), d_filter(f,g*g), d_dst(f,c*k*k), d_pooled(c,o*o)
+	,   h_img(c,n*n), h_filter(f,g*g), h_dst(f,c*k*k), h_pooled(c,o*o)
 	{
 		//MEASURE_TIME("warmup", apply_scalar_functor(v, SF_EXP), 100);
 	}
@@ -343,62 +343,59 @@ BOOST_AUTO_TEST_CASE( strip_padding )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( check_exitatory_inhibitory )
+{
+	dense_matrix<float, row_major, host_memory_space> filter_h(f, c*g*g);
+	dense_matrix<float, row_major, dev_memory_space> filter_d(f, c*g*g);
+
+	sequence(filter_h);
+	sequence(filter_d);
+	apply_scalar_functor(filter_d, SF_MULT, -1);
+	apply_scalar_functor(filter_h, SF_MULT, -1);
+	//fill(filter_d, 0);
+	safeThreadSync();
+
+	cuv::check_exitatory_inhibitory(filter_d,0,g*g,1,1);
+	safeThreadSync();
+	cuv::check_exitatory_inhibitory(filter_h,0,g*g,1,1);
+	safeThreadSync();
+
+//	std::cout << filter_d ;
+
+	for(int i=0;i<filter_h.h();i++){
+		for(int j=0;j<filter_h.w();j++){
+			BOOST_CHECK_CLOSE( filter_d(i,j), filter_h(i,j), 0.001 );
+		}
+	}
+}
+
 BOOST_AUTO_TEST_CASE( reverse_filters )
 {
+	dense_matrix<float, row_major, host_memory_space> filter_h(f*c, g*g);
+	dense_matrix<float, row_major, dev_memory_space> filter_d(f*c, g*g);
 
+	dense_matrix<float, row_major, host_memory_space> erg_h(f, c*g*g);
+	dense_matrix<float, row_major, dev_memory_space> erg_d(f, c*g*g);
 
-
-
-	dense_matrix<float, row_major, host_memory_space> filter_h(c*f, g*g);
-	dense_matrix<float, row_major, dev_memory_space> filter_d(c*f, g*g);
-
-	dense_matrix<float, row_major, host_memory_space> erg_h(c, f*g*g);
-	dense_matrix<float, row_major, dev_memory_space> erg_d(c, f*g*g);
-
-	fill(filter_h, 0.0f);
-	fill(filter_d, 0.0f);
-	fill(erg_h, 0.0f);
-	fill(erg_d, 0.0f);
+	fill(filter_h, 0.0f);fill(filter_d, 0.0f);
+	fill(erg_h, 0.0f);fill(erg_d, 0.0f);
 
 	vector<float,host_memory_space> one_filter_h(g*g);
 	vector<float,dev_memory_space> one_filter_d(g*g);
-
-	sequence(one_filter_h);
-	sequence(one_filter_d);
+	sequence(one_filter_h); sequence(one_filter_d);
 
 	cuv::row_ncopy(filter_d, one_filter_d, c*f);
 	cuv::row_ncopy(filter_h, one_filter_h,c*f);
 
-	filter_d.resize(c, f*g*g);
-	filter_h.resize(c, f*g*g);
+	filter_d.resize(f, c*g*g);
+	filter_h.resize(f, c*g*g);
 
-	filter_inverse(erg_d,filter_d, g*g);
-
-	float* f_h_ptr;
-	int fs = g*g;
-	int row_offset=0;
-	f_h_ptr = filter_h.ptr();
-	int f_h_w = filter_h.w();
-	int numCases = filter_h.h();
-
-	// iterate on every filter in a row
-	for(int filter = 0; filter < f*g*g; filter = filter+g*g){
-		// iterate on every element of the filter
-		for(int y = 0; y < fs; y++){
-			// every filterrow
-			for(int nC = 0; nC <numCases; nC++){
-				row_offset = nC*f_h_w;
-				*(erg_h.ptr()+row_offset+filter+y) = *(f_h_ptr+row_offset+(fs-1)+filter-y);
-			}
-
-		}
-	}
-
-	std::cout << filter_d << std::endl << std::endl;
-
-
-
-	std::cout << erg_d ;
+	filter_rotate(erg_d,filter_d, g*g);
+	safeThreadSync();
+	filter_rotate(erg_h,filter_h, g*g);
+	safeThreadSync();
+//	std::cout << filter_d << std::endl << std::endl;
+//	std::cout << erg_d ;
 
 	for(int i=0;i<erg_h.h();i++){
 		for(int j=0;j<erg_h.w();j++){
@@ -407,46 +404,46 @@ BOOST_AUTO_TEST_CASE( reverse_filters )
 	}
 }
 
-BOOST_AUTO_TEST_CASE( add_maps )
-{
-	// c, n x n = 2, 64 x 64 - represents two (delta) maps that contribute to one destination delta map
-	// the destination delta map is calculated as the sum of the individual delta maps
-	sequence(h_img);
-	sequence(d_img);
-
-	// contains a map in each row where the summed pixels are stored
-	dense_matrix<float, row_major, host_memory_space> erg_h(c, n);
-	dense_matrix<float, row_major, dev_memory_space> erg_d(c, n);
-
-	fill(erg_h, 0.0f);
-	fill(erg_d, 0.0f);
-
-
-	float* e_ptr = erg_h.ptr();
-	float* i_ptr = h_img.ptr();
-	int imagesize = 64;
-
-	// host solution
-	for (int row = 0; row<c; row++){
-		for(int px = 0; px < n; px++){
-			for(int img = 0; img < n; img++){
-				*(e_ptr + row*erg_h.w() + px) += *(i_ptr + row*erg_h.w()    // mv to correct row in matrix
-														 + img * imagesize  // iterate on image/delta maps
-														 + px);				// iterate on pixels of destination map
-			}
-		}
-	}
-
-	add_maps_h(erg_d, d_img, n);
-
-	std::cout << erg_d ;
-
-	for(int i=0;i<erg_h.h();i++){
-		for(int j=0;j<erg_h.w();j++){
-			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
-		}
-	}
-}
+//BOOST_AUTO_TEST_CASE( add_maps )
+//{
+//	// c, n x n = 2, 64 x 64 - represents two (delta) maps that contribute to one destination delta map
+//	// the destination delta map is calculated as the sum of the individual delta maps
+//	sequence(h_img);
+//	sequence(d_img);
+//
+//	// contains a map in each row where the summed pixels are stored
+//	dense_matrix<float, row_major, host_memory_space> erg_h(c, n);
+//	dense_matrix<float, row_major, dev_memory_space> erg_d(c, n);
+//
+//	fill(erg_h, 0.0f);
+//	fill(erg_d, 0.0f);
+//
+//
+//	float* e_ptr = erg_h.ptr();
+//	float* i_ptr = h_img.ptr();
+//	int imagesize = 64;
+//
+//	// host solution
+//	for (int row = 0; row<c; row++){
+//		for(int px = 0; px < n; px++){
+//			for(int img = 0; img < n; img++){
+//				*(e_ptr + row*erg_h.w() + px) += *(i_ptr + row*erg_h.w()    // mv to correct row in matrix
+//														 + img * imagesize  // iterate on image/delta maps
+//														 + px);				// iterate on pixels of destination map
+//			}
+//		}
+//	}
+//
+//	add_maps_h(erg_d, d_img, n);
+//
+////	std::cout << erg_d ;
+//
+//	for(int i=0;i<erg_h.h();i++){
+//		for(int j=0;j<erg_h.w();j++){
+//			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
+//		}
+//	}
+//}
 
 }
 

@@ -39,6 +39,7 @@
 #include <cuv_general.hpp>
 #include <vector_ops.hpp>
 #include <dia_matrix.hpp>
+#include <matrix_ops/diagonals.hpp>
 #include <convert.hpp>
 #include <sparse_matrix_io.hpp>
 
@@ -48,7 +49,7 @@ using namespace cuv;
 static const int n=32;
 static const int m=16;
 static const int d=3;
-static const int rf=2;
+static const int rf=1;
 
 
 struct Fix{
@@ -104,7 +105,7 @@ BOOST_AUTO_TEST_CASE( spmv_dia2dense )
 	fill(w2.vec(),-1);
 	convert(w2,w);
 	MAT_CMP(w,w2,0.1);
-	cout << w <<w2;
+	//cout << w <<w2;
 }
 
 BOOST_AUTO_TEST_CASE( spmv_host2dev )
@@ -118,6 +119,15 @@ BOOST_AUTO_TEST_CASE( spmv_host2dev )
 	// dev->host
 	convert(w,w2);
 	MAT_CMP(w,w2,0.1);
+}
+
+BOOST_AUTO_TEST_CASE( avg_dia )
+{
+	cuv::vector<float,host_memory_space> avg( w.num_dia() );
+	avg_diagonals( avg, w );
+	for( int i=0;i<avg.size(); i++ ){
+		BOOST_CHECK_EQUAL( avg[ i ], mean( *w.get_dia( w.get_offset( i ) ) ) );
+	}
 }
 
 
