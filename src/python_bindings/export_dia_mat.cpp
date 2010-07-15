@@ -129,11 +129,13 @@ export_diamat_common(const char* name){
 		.add_property("num_dia",&mat::num_dia, "number of diagonals")
 		.def("__len__",&mat::n, "number of elements")
 		.def("alloc",&mat::alloc, "allocate memory")
-		.def("dia",&mat::get_dia, "return a view on one of the diagonals", return_value_policy<manage_new_object>())
+		.def("dia",(vec_type* (mat::*)(const int&))(&mat::get_dia), "return a view on one of the diagonals", return_value_policy<manage_new_object>())
 		.def("dealloc",&mat::dealloc, "deallocate memory")
 		.def("save", (void (*)(mat&,std::string)) dia_io<value_type, index_type>::save_dia_mat, "save to file")
 		.def("load", (void (*)(mat&,std::string)) dia_io<value_type, index_type>::load_dia_mat, "load from file")
-		.def("__call__",  (const value_type& (mat::*)(const typename mat::index_type&, const typename mat::index_type&)const)(&mat::operator()), return_value_policy<copy_const_reference>()) // igitt.
+		.def("set", &mat::set, "set a value")
+		.def("has", &mat::has, "whether dia matrix stores this value")
+		.def("__call__",  (value_type (mat::*)(const typename mat::index_type&, const typename mat::index_type&)const)(&mat::operator())) // igitt.
 		.def("__init__",  make_constructor(create_dia_mat<mat>))
 		.def("__init__",  make_constructor(create_dia_mat_empty<mat>))
 		.def("__init__",  make_constructor(create_dia_mat_from_dia_mat<mat>) )

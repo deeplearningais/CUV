@@ -205,6 +205,7 @@ void export_reductions(){
 	def("maximum",(float (*)(M&)) maximum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
 	def("minimum",(float (*)(typename M::vec_type&)) minimum<typename M::vec_type>);
 	def("minimum",(float (*)(M&)) minimum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+	def("mean", (float (*)(M&)) mean<typename M::value_type, typename M::memory_layout, typename M::memory_space_type, typename M::index_type>);
 	def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"),arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=1.f,arg("factor_old")=0.f));
 	def("reduce_to_row", reduce_to_row<M,typename M::vec_type>,(arg("vector"),arg("matrix"),arg("factor_new")=1.f,arg("factor_old")=0.f));
 }
@@ -245,6 +246,8 @@ template<class M>
 void
 export_multinomial_sampling(){
 	def("sample_multinomial",(void (*)(M&))sample_multinomial<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>);
+	def("first_pool",	(void (*)(M&, M&, typename M::index_type))first_pooling<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>);
+	def("first_pool_zeros",	(void (*)(M&,  typename M::index_type))first_pooling_zeros<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>);
 	def("grid_to_matrix",    (void (*)(M&,M&,int))grid_to_matrix<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>);
 	def("matrix_to_grid",    (void (*)(M&,M&,int))matrix_to_grid<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>);
 	def("prob_max_pooling",    (void (*)(typename M::vec_type&,M&,int,bool))prob_max_pooling<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>, (arg("sums"),arg("detection_layer"),arg("poolSize"),arg("sample")));
@@ -296,6 +299,8 @@ void export_matrix_ops(){
 	export_reductions<fdevr>();
 	export_learn_step<fhost>();
 	export_learn_step<fdev>();
+	export_learn_step<fhostr>();
+	export_learn_step<fdevr>();
 	export_blas2<fdev>();
 	export_blas2<fhost>();
 	export_blas2<fhostr>();

@@ -43,6 +43,14 @@
 using namespace boost::python;
 using namespace cuv;
 
+template<class T>
+long int this_ptr(const T& t){
+	return (long int)(&t);
+}
+template<class T>
+long int internal_ptr(const T& t){
+	return (long int)(t.ptr());
+}
 
 template<class T>
 void
@@ -51,14 +59,16 @@ export_vector_common(const char* name){
 	typedef typename vec::value_type value_type;
 
 	class_<vec> (name, init<int>())
-		.def("size",   &vec::size, "vector size")
 		.def("__len__",&vec::size, "vector size")
-		.def("memsize",&vec::memsize, "size of vector in memory (bytes)")
 		.def("alloc",&vec::alloc, "allocate memory")
 		.def("dealloc",&vec::dealloc, "deallocate memory")
 		.def("set",    &vec::set, "set index to value")
-		.def("at",  (value_type  (vec::*)(const typename vec::index_type&)const)(&vec::operator[]))
+		.def("__call__",  (value_type  (vec::*)(const typename vec::index_type&)const)(&vec::operator[]))
+		.add_property("size", &vec::size)
+		.add_property("memsize",&vec::memsize, "size of vector in memory (bytes)")
 		;
+	def("this_ptr", this_ptr<vec>);
+	def("internal_ptr", internal_ptr<vec>);
 	
 }
 
@@ -68,6 +78,7 @@ export_vector_conversion(){
 	def("convert", (void(*)(vector<T,dev_memory_space>&,const vector<T,host_memory_space>&)) cuv::convert);
 	def("convert", (void(*)(vector<T,host_memory_space>&,const vector<T,dev_memory_space>&)) cuv::convert);
 }
+
 
 void export_vector(){
 	export_vector_common<vector<float,dev_memory_space> >("dev_vector_float");
@@ -82,5 +93,5 @@ void export_vector(){
 	export_vector_conversion<float>();
 	export_vector_conversion<unsigned char>();
 	export_vector_conversion<int>();
-}
+	}
 

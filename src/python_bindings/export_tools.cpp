@@ -1,20 +1,20 @@
 //*LB*
 // Copyright (c) 2010, University of Bonn, Institute for Computer Science VI
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
-// 
+//
 //  * Redistributions of source code must retain the above copyright notice,
 //    this list of conditions and the following disclaimer.
 //  * Redistributions in binary form must reproduce the above copyright notice,
 //    this list of conditions and the following disclaimer in the documentation
 //    and/or other materials provided with the distribution.
-//  * Neither the name of the University of Bonn 
+//  * Neither the name of the University of Bonn
 //    nor the names of its contributors may be used to endorse or promote
 //    products derived from this software without specific prior written
 //    permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -27,83 +27,26 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
 
-
-
-
-
-
 #include <string>
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
-#include  <boost/type_traits/is_base_of.hpp>
-
+#include <boost/type_traits/is_base_of.hpp>
 #include <vector.hpp>
 #include <vector_ops/vector_ops.hpp>
 #include <convert.hpp>
+#include <convolution_ops/convolution_ops.hpp>
+#include <tools/device_tools.h>
 
-using namespace std;
+
+//using namespace std;
 using namespace boost::python;
 using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
-void export_0ary_functors(){
-    enum_<cuv::NullaryFunctor>("nullary_functor")
-        .value("FILL", NF_FILL)
-        .value("SEQ", NF_SEQ);
-
+void export_tools(){
+	def("getFreeMem",(int (*)(int))getFreeDeviceMemory,(arg("dev_idx")=0));
+	def("getMaxMem",(int (*)(int))getMaxDeviceMemory,(arg("dev_idx")=0));
+	def("setDevice",(void (*)(int))useDevice,(arg("dev_idx")=0));
+	def("countDevices",(int (*)(int))countDevices);
 }
-void export_scalar_functors() {
-    enum_<cuv::ScalarFunctor>("scalar_functor")
-        //.value("EXACT_EXP", SF_EXACT_EXP)
-        .value("EXP", SF_EXP)
-        .value("LOG", SF_LOG)
-        .value("SIGN", SF_SIGN)
-        .value("SIGM", SF_SIGM)
-        //.value("EXACT_SIGM", SF_EXACT_SIGM)
-        .value("DSIGM", SF_DSIGM)
-        .value("TANH", SF_TANH)
-        .value("DTANH", SF_DTANH)
-        .value("SQUARE", SF_SQUARE)
-        .value("SUBLIN", SF_SUBLIN)
-        .value("ENERG", SF_ENERG)
-        .value("INV", SF_INV)
-        .value("SQRT", SF_SQRT)
-        .value("NEGATE", SF_NEGATE)
-        .value("ABS", SF_ABS)
-        .value("SMAX", SF_SMAX)
-        .value("POSLIN", SF_POSLIN)
-
-        .value("ADD", SF_ADD)
-        .value("SUBTRACT", SF_SUBTRACT)
-        .value("MULT", SF_MULT)
-        .value("DIV", SF_DIV)
-        .value("MIN", SF_MIN)
-        .value("MAX", SF_MAX)
-        ;
-
-}
-
-void export_binary_functors(){
-    enum_<cuv::BinaryFunctor>("binary_functor")
-        .value("ADD", BF_ADD)
-        .value("SUBTRACT", BF_SUBTRACT)
-        .value("MULT", BF_MULT)
-        .value("DIV", BF_DIV)
-        .value("COPY", BF_COPY)
-        .value("MIN", BF_MIN)
-        .value("MAX", BF_MAX)
-
-        .value("AXPY", BF_AXPY)
-        .value("XPBY", BF_XPBY)
-        .value("AXPBY", BF_AXPBY)
-        ;
-}
-
-void export_vector_ops(){
-	export_scalar_functors();
-	export_binary_functors();
-	export_0ary_functors();
-}
-
-

@@ -74,26 +74,29 @@ struct switch_value_type{
 
 template <class M>
 void export_convolve(){
-	def("convolve",(void (*)(M&,M&, M&))convolve<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
-																							arg("dst"),
-																							arg("img"),
-																							arg("filter"))
-																						);
-	def("convolve2",(void (*)(M&,M&, M&, int))convolve2<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
+	def("convolve",(void (*)(M&,M&, M&, int))convolve<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
 																							arg("dst"),
 																							arg("img"),
 																							arg("filter"),
-																							arg("numFilters"))
+																							arg("nGroups"))
 																						);
-	def("convolve3",(void (*)(M&,M&, M&))convolve3<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
+	def("convolve2",(void (*)(M&,M&, M&, int, int))convolve2<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
 																							arg("dst"),
 																							arg("img"),
-																							arg("filter"))
+																							arg("filter"),
+																							arg("numFilters"),
+																							arg("nGroups"))
+																						);
+	def("convolve3",(void (*)(M&,M&, M&, int))convolve3<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (
+																							arg("dst"),
+																							arg("img"),
+																							arg("filter"),
+																							arg("nGroups"))
 																						);
 }
 
 template <class M>
-void export_super_to_max(){
+void export_sampling_stuff(){
 	typedef typename switch_value_type<M,int>::type Mint;
 	def("super_to_max",(void (*)(M&,M&, int, int, Mint*,M*))super_to_max<typename M::value_type, typename M::memory_layout,typename M::memory_space_type, typename M::index_type>, (
 															arg("dst"),
@@ -103,6 +106,20 @@ void export_super_to_max(){
 															arg("indices")=object(),
 															arg("filter")=object())
 														);
+	def("subsample",(void (*)(M&,M&, int, bool))subsample<typename M::value_type, typename M::memory_layout,typename M::memory_space_type>, (
+															arg("dst"),
+															arg("img"),
+															arg("factor"),
+															arg("avoidBankConflicts"))
+															);
+	def("reorder_cpy",(void (*)(M&, M&, int))reorder<M>, (
+															arg("dst_matrix"),
+															arg("src_matrix"),
+															arg("block_length")));
+	def("reorder",(void (*)(M&, int))reorder<M>, (
+																arg("matrix"),
+																arg("block_length")));
+
 
 
 }
@@ -122,29 +139,56 @@ void export_padding_ops(){
 														);
 }
 
-template <class M, class V>
-void export_row_ncopy(){
+template <class M, class N, class V>
+void export_rlcnp_stuff(){
 	def("row_ncopy",(void (*)(M&,V&, unsigned int))row_ncopy<typename M::value_type, typename M::memory_layout,typename M::memory_space_type, typename M::index_type>, (
 															arg("dst"),
 															arg("img"),
 															arg("rows")));
-	def("filter_inverse",(void (*)(M&,M&, unsigned int))filter_inverse<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+	def("cols_ncopy",(void (*)(M&,M&, unsigned int))cols_ncopy<typename M::value_type, typename M::memory_layout,typename M::memory_space_type, typename M::index_type>, (
+																arg("dst"),
+																arg("img"),
+																arg("factor")));
+	def("filter_rotate",(void (*)(M&,M&, unsigned int))filter_rotate<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
 																arg("dst"),
 																arg("filter"),
 																arg("fs")));
 
-
+//	def("add_maps_h",(void (*)(M&,M&, unsigned int))add_maps_h<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+//															arg("dst"),
+//															arg("map_matrix"),
+//															arg("map_size")));
+	def("calc_error_to_blob",(void (*)(M&,M&, M&, unsigned int, unsigned int, unsigned int,float))calc_error_to_blob<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+																arg("dst"),
+																arg("img"),
+																arg("blob_mat"),
+																arg("image_w"),
+																arg("image_h"),
+																arg("blob_size"),
+																arg("temporal_weight")));
+	def("check_exitatory_inhibitory",(void (*)(M&, unsigned int, unsigned int, unsigned int, unsigned int))check_exitatory_inhibitory<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+																arg("dst"),
+																arg("start_filter"),
+																arg("filter_pixels"),
+																arg("num_exitatory"),
+																arg("num_inhibitory")));
+	def("init_exitatory_inhibitory",(void (*)(M&, unsigned int, unsigned int, unsigned int, unsigned int))check_exitatory_inhibitory<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+																arg("dst"),
+																arg("start_filter"),
+																arg("filter_pixels"),
+																arg("num_exitatory"),
+																arg("num_inhibitory")));
 }
 
 void export_convolution_ops(){
 	export_convolve< dense_matrix<float,row_major,host_memory_space> >();
 	export_convolve< dense_matrix<float,row_major,dev_memory_space> >();
-	export_super_to_max< dense_matrix<float,row_major, host_memory_space> >();
-	export_super_to_max< dense_matrix<float,row_major, dev_memory_space>  >();
+	export_sampling_stuff< dense_matrix<float,row_major, host_memory_space> >();
+	export_sampling_stuff< dense_matrix<float,row_major, dev_memory_space>  >();
 	export_padding_ops< dense_matrix<float,row_major, host_memory_space> >();
 	export_padding_ops< dense_matrix<float,row_major, host_memory_space>  >();
 	export_padding_ops< dense_matrix<float,row_major, dev_memory_space>  >();
-	export_row_ncopy< dense_matrix<float,row_major, dev_memory_space>, vector<float,dev_memory_space>  >();
+	export_rlcnp_stuff< dense_matrix<float,row_major, dev_memory_space>, dense_matrix<int,row_major, dev_memory_space>, vector<float,dev_memory_space>  >();
 }
 
 

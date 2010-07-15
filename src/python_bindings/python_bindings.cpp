@@ -50,6 +50,7 @@ void export_random();
 void export_dia_matrix();
 void export_convolution_ops();
 void export_image_ops();
+void export_tools();
 
 BOOST_PYTHON_MODULE(cuv_python){
 	def("initCUDA", initCUDA);
@@ -64,4 +65,5 @@ BOOST_PYTHON_MODULE(cuv_python){
 	export_dia_matrix();
 	export_convolution_ops();
 	export_image_ops();
+	export_tools();
 }

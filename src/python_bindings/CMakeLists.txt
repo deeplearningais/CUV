@@ -22,6 +22,7 @@ ADD_LIBRARY(cuv_python SHARED
 	export_random.cpp
 	export_convolution_ops.cpp
 	export_image_ops.cpp
+	export_tools.cpp
     )
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES OUTPUT_NAME "cuv_python")
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES PREFIX "")
