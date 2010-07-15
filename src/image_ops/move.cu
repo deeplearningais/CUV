@@ -164,7 +164,8 @@ void __host__ __device__ set_pca_maps (T* map1, T* map2, T* map3, unsigned int i
 template <class T>
 void __host__ __device__ set_pca_maps(T* map1, T* map2, T* map3, unsigned int index, uchar1 pixel)
 {
-	map1[index] = (T)(pixel.x * 0.007843137f - 1.0f);
+	/*map1[index] = (T)(pixel.x * 0.007843137f - 1.0f);*/
+	map1[index] = (T)(pixel.x);
 }
 
 
