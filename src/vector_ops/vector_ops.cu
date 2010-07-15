@@ -118,6 +118,10 @@ template<class T>
 struct uf_is_inf{  __device__  __host__     bool operator()(const T& t)      const{ return t == INFINITY || t == -INFINITY; } };
 
 template<class T>
+struct uf_poslin{  __device__  __host__     T operator()(const T& t)      const{ return (t > 0)*t; } };
+
+
+template<class T>
 struct bf_sigm_temp{ __device__  __host__       T operator()(const T& t, const T& temp) const{ return ((T)1)/(((T)1)+exp(-t / (T)(temp))); } };
 
 template<class T>
@@ -501,6 +505,7 @@ struct apply_scalar_functor_impl{
 			case SF_SQRT:       launch_unary_kernel(v,v, uf_sqrt<value_type>()); break;
 			case SF_SMAX:       launch_unary_kernel(v,v, uf_smax<value_type>()); break;
 			case SF_NEGATE:     launch_unary_kernel(v,v, thrust::negate<value_type>()); break;
+			case SF_POSLIN:     launch_unary_kernel(v,v, uf_poslin<value_type>()); break;
 			default:
 			 cuvAssert(false);
 		}
