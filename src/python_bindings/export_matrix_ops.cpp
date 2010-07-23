@@ -66,6 +66,27 @@ struct switch_value_type{
 	typedef dense_matrix<NewVT, typename Mat::memory_layout, typename Mat::memory_space_type, typename Mat::index_type> type;
 };
 
+template<class VT, class MST, class IT>
+boost::python::tuple matrix_arg_max(dense_matrix<VT, row_major, MST, IT>& mat){
+	IT idx = arg_max(mat.vec());	
+	return boost::python::make_tuple(idx / mat.w(), idx % mat.w());
+}
+template<class VT, class MST, class IT>
+boost::python::tuple matrix_arg_max(dense_matrix<VT, column_major, MST, IT>& mat){
+	IT idx = arg_max(mat.vec());	
+	return boost::python::make_tuple(idx % mat.h(), idx / mat.h());
+}
+template<class VT, class MST, class IT>
+boost::python::tuple matrix_arg_min(dense_matrix<VT, row_major, MST, IT>& mat){
+	IT idx = arg_min(mat.vec());	
+	return boost::python::make_tuple(idx / mat.w(), idx % mat.w());
+}
+template<class VT, class MST, class IT>
+boost::python::tuple matrix_arg_min(dense_matrix<VT, column_major, MST, IT>& mat){
+	IT idx = arg_min(mat.vec());	
+	return boost::python::make_tuple(idx % mat.h(), idx / mat.h());
+}
+
 template<class R, class S, class T>
 void export_blas3() {
 	def("prod",&prod<R,S,T>, (
@@ -206,6 +227,8 @@ void export_reductions(){
 	def("minimum",(float (*)(typename M::vec_type&)) minimum<typename M::vec_type>);
 	def("minimum",(float (*)(M&)) minimum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
 	def("mean", (float (*)(M&)) mean<typename M::value_type, typename M::memory_layout, typename M::memory_space_type, typename M::index_type>);
+	def("arg_max",  (tuple(*)(M&)) matrix_arg_max<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
+	def("arg_min",  (tuple(*)(M&)) matrix_arg_min<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
 	def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"),arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=1.f,arg("factor_old")=0.f));
 	def("reduce_to_row", reduce_to_row<M,typename M::vec_type>,(arg("vector"),arg("matrix"),arg("factor_new")=1.f,arg("factor_old")=0.f));
 }
