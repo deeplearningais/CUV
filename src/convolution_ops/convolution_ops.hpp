@@ -454,20 +454,25 @@ void filter_rotate(   dense_matrix<V,M,T,I>& dst,
 
 
 /**
- * @brief calculates error matrices
+ * @brief calculates error maps
  * @param dst holds the target error matrices each in a row
  * @param img is a matrix with n maps to be compared with a blob
  * @param blob_mat a matrix holding the blob center information for each row in a row
+ * @param interval_size multiplier of gaussian in: interval_size * (teacher) + interval_offset
+ * @param interval_offset additive of gaussian in: interval_size * (teacher) + interval_offset
  *
+ * For each map oder pic in img this function generates a map where the teacher is a gaussian with the corresponding coords in blob_mat as center
  */
 template<class V, class M, class T, class I>
-void calc_error_to_blob(	dense_matrix<V,M,T,I>& dst,
+void calc_error_to_blob(				dense_matrix<V,M,T,I>& dst,
 							dense_matrix<V,M,T,I>& img,
 							dense_matrix<V,M,T,I>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
 							unsigned int blob_size,
-							float temporal_weight=1.0f);
+							float temporal_weight=1.0f,
+							float interval_size=1.0f,
+							float interval_offset=0.0f);
 
 /**
  * @brief makes sure that the weights in the first numInhibitory filters are non-positive, the next numExitatory are non-negative
