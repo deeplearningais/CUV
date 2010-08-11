@@ -909,8 +909,6 @@ template<>
 			dense_matrix<int,row_major,dev_memory_space>* indices,
 			dense_matrix<float,row_major,dev_memory_space>* filter) {
 
-	cuvAssert(indices->w() == dst.w());
-	cuvAssert(indices->h() == dst.h());
 	cuvAssert(poolSize > overlap);
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
@@ -1328,26 +1326,31 @@ __global__ void calc_error_to_blob_kernel(float* img,
 										  const int img_w,
 										  const int img_h,
 										  const int blob_width,
-										  float temporal_weight) {
+										  const int num_maps,
+										  float temporal_weight,
+										  float interval_size,
+										  float interval_offset) {
 
 	int idx = threadIdx.x +  blockDim.x * blockIdx.x;
 	int row = blockIdx.y;
 
 	int x = idx % img_w;
 	int y = idx / img_w;
+
 	float center_x = *(blob+row*2);
 	float center_y = *(blob+row*2+1);
-	float a = (x - center_x)/ blob_width;
-	float b = (y - center_y)/ blob_width;
+
+	float a = (float)(x - center_x)/ blob_width;
+	float b = (float)(y - center_y)/ blob_width;
+
 	// destination is calculated by the row the pixel is in (row*imagesize) and the index in the picture (idx)
 	// img_w and img_h refers to the dimensions of an image (one row) in the img matrix
 
 	//p(x,α,σ) = 1/sqrt(2πσ²)*exp(-(x-α)²/2σ²)
 	if(idx < img_w * img_h){
-		//*(img+idx+row*(img_w*img_h)) = temporal_weight*(expf(-(a*a+b*b)/2) - *(src+idx+row*(img_w*img_h)));
-		float gauss_value = expf(-(a*a + b*b)/2);
+		float gauss_value = interval_size*expf(-(a*a + b*b)/2.f)-interval_offset;
 		float act_val = *(src+idx+row*(img_w*img_h));
-		*(img+idx+row*(img_w*img_h)) = temporal_weight * (gauss_value - act_val);
+		*(img+idx+row*(img_w*img_h)) =(temporal_weight * (gauss_value - act_val));
 	}
 }
 
@@ -1360,7 +1363,9 @@ void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 							unsigned int image_w,
 							unsigned int image_h,
 							unsigned int blob_size,
-							float temporal_weight){
+							float temporal_weight,
+							float interval_size,
+							float interval_offset){
 	cuvAssert(dst.h() == img.h());
 	cuvAssert(dst.w() == img.w());
 
@@ -1368,10 +1373,21 @@ void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 	int numBlocksX = ceil((float)img.w()/numThreads);
 	int numBlocksY = dst.h();
 
+	int numTeacherMaps = blob_mat.h();
+
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 dimBlock(numThreads,1);
 
-	calc_error_to_blob_kernel<<<grid,dimBlock>>>(dst.ptr(), img.ptr(), blob_mat.ptr(), image_w, image_h, blob_size, temporal_weight);
+	calc_error_to_blob_kernel<<<grid,dimBlock>>>(	dst.ptr(),
+													img.ptr(),
+													blob_mat.ptr(),
+													image_w,
+													image_h,
+													blob_size,
+													numTeacherMaps,
+													temporal_weight,													
+													interval_size,
+													interval_offset);
 	cuvSafeCall(cudaThreadSynchronize());
 };
 
