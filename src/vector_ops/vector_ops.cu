@@ -607,7 +607,24 @@ var(__vector_type& v){
 	float m = mean(v);
 	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_base_op<float, bf_squared_diff<float,value_type> >(m), init, bf_plus<float,value_type>()) / (float)v.size();
 }
-
+template<class __vector_type>
+typename __vector_type::index_type
+arg_max(__vector_type& v){
+	typedef typename __vector_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+	ptr_type begin(v.ptr());
+	ptr_type elem = thrust::max_element(begin, begin	+v.size());
+	return thrust::distance(begin,elem);
+}
+template<class __vector_type>
+typename __vector_type::index_type
+arg_min(__vector_type& v){
+	typedef typename __vector_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+	ptr_type begin(v.ptr());
+	ptr_type elem = thrust::min_element(begin, begin	+v.size());
+	return thrust::distance(begin,elem);
+}
 /*
  * Template instantiations
  */
@@ -638,7 +655,9 @@ var(__vector_type& v){
 	template float norm1<vector<X,Y> >(vector<X,Y>&); \
 	template float norm2<vector<X,Y> >(vector<X,Y>&); \
 	template float mean<vector<X,Y> >(vector<X,Y>&);  \
-	template float var<vector<X,Y> >(vector<X,Y>&); 
+	template float var<vector<X,Y> >(vector<X,Y>&); \
+	template typename vector<X,Y>::index_type     arg_max<vector<X,Y> >(vector<X,Y>&); \
+	template typename vector<X,Y>::index_type     arg_min<vector<X,Y> >(vector<X,Y>&);
 
 
 #define SIMPLE_INSTANTIATOR(X) \

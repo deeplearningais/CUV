@@ -357,6 +357,27 @@ namespace cuv{
    */
   template<class __vector_type1> float var(__vector_type1& v);
 
+  /** 
+   * @brief Return the index of the maximum element
+   * 
+   * @param v Target vector
+   * 
+   * @return index of max element
+   */
+  template<class __vector_type1> 
+	  typename __vector_type1::index_type 
+	  arg_max(__vector_type1& v);
+  /** 
+   * @brief Return the index of the minimum element
+   * 
+   * @param v Target vector
+   * 
+   * @return index of min element
+   */
+  template<class __vector_type1> 
+	  typename __vector_type1::index_type 
+	  arg_min(__vector_type1& v);
+
  /** @} */ //end group reductions_vectors
 
 } // cuv
