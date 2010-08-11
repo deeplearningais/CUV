@@ -381,7 +381,7 @@ __global__ void kSumRows(float* mat, float* matSum, int width, int height, int s
     }
 }
 
-__device__ float myMax(float a, float b) {
+inline __device__ float myMax(float a, float b) {
     return a > b ? a : b;
 }
 /*

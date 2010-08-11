@@ -42,6 +42,7 @@
 #include <thrust/sequence.h>
 #include <thrust/transform_reduce.h>
 #include <thrust/generate.h>
+#include <thrust/logical.h>
 
 #include <cuv_general.hpp>
 #include <cutil_inline.h>
@@ -73,28 +74,27 @@ template<class T>
 struct memspace_cuv2thrustptr<T,cuv::dev_memory_space> { typedef thrust::device_ptr<T> ptr_type; };
 
 template<class T>
-/*struct uf_exp{  __host__ __device__         T operator()(const T& t)const{ return __expf(t);    } };*/
-struct uf_exp{  __host__ __device__         T operator()(const T& t)const{ return exp(t);    } };
+struct uf_exp{  __host__ __device__         T operator()(const T& t)const{ return expf(t);    } };
 template<class T>
-struct uf_exact_exp{  __device__ __host__   T operator()(const T& t)const{ return exp(t);    } };
+struct uf_exact_exp{  __device__ __host__   T operator()(const T& t)const{ return expf(t);    } };
 template<class T>
-struct uf_log{  __device__ __host__         T operator()(const T& t)      const{ return log(t);    } };
+struct uf_log{  __device__ __host__         T operator()(const T& t)      const{ return logf(t);    } };
 template<class T>
 struct uf_sign{  __device__ __host__        T operator()(const T& t)      const{ return sgn((float)t);    } };
 template<class T>
 
 #ifdef __DEVICE_EMULATION__
-	struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+exp(-t));    } };
+	struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+expf(-t));    } };
 #else
-	struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+__expf(-t));    } };
+	struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+expf(-t));    } };
 #endif
 
 template<class T>
-struct uf_exact_sigm{  __device__  __host__ T operator()(const T& t)      const{ return ((T)1)/(((T)1)+exp(-t));    } };
+struct uf_exact_sigm{  __device__  __host__ T operator()(const T& t)      const{ return ((T)1)/(((T)1)+expf(-t));    } };
 template<class T>
 struct uf_dsigm{  __device__ __host__       T operator()(const T& t)      const{ return t * (((T)1)-t); } };
 template<class T>
-struct uf_tanh{  __device__  __host__       T operator()(const T& t)      const{ return tanh(t); } };
+struct uf_tanh{  __device__  __host__       T operator()(const T& t)      const{ return tanhf(t); } };
 template<class T>
 struct uf_dtanh{  __device__  __host__      T operator()(const T& t)      const{ return ((T)1) - (t*t); } };
 template<class T>
@@ -102,30 +102,43 @@ struct uf_square{  __device__  __host__     T operator()(const T& t)      const{
 template<class T>
 struct uf_sublin{  __device__  __host__     T operator()(const T& t)      const{ return ((T)1)-t; } };
 template<class T>
-struct uf_energ{  __device__  __host__      T operator()(const T& t)      const{ return -log(t); } };
+struct uf_energ{  __device__  __host__      T operator()(const T& t)      const{ return -logf(t); } };
 template<class T>
 struct uf_inv{  __device__  __host__        T operator()(const T& t)      const{ return ((T)1)/(t+((T)0.00000001)); } };
 template<class T>
-struct uf_sqrt{  __device__  __host__       T operator()(const T& t)      const{ return sqrt(t); } };
+struct uf_sqrt{  __device__  __host__       T operator()(const T& t)      const{ return sqrtf(t); } };
 template<class T>
-struct uf_abs{  __device__  __host__       T operator()(const T& t)      const{ return fabs(t); } };
+struct uf_abs{  __device__  __host__       T operator()(const T& t)      const{ return t < T(0) ? -t : t; } };
 template<class T>
 struct uf_smax{  __device__  __host__      T operator()(const T& t)      const{ return (((T)1)/t - (T) 1) * t; } };
 
 template<class T>
-struct uf_is_nan{  __device__  __host__     bool operator()(const T& t)      const{ return (t!=t) ; } };
+struct uf_is_nan{                 __device__  __host__   bool operator()(const T& t)             const{ return (t!=t) ; } };
+template<>
+struct uf_is_nan<int>{            __device__  __host__   bool operator()(const int& t)           const{ return false ; } };
+template<>
+struct uf_is_nan<unsigned char>{  __device__  __host__   bool operator()(const unsigned char& t) const{ return false ; } };
+template<>
+struct uf_is_nan<signed char>{    __device__  __host__   bool operator()(const signed char& t)   const{ return false ; } };
+
 template<class T>
-struct uf_is_inf{  __device__  __host__     bool operator()(const T& t)      const{ return t == INFINITY || t == -INFINITY; } };
+struct uf_is_inf{                 __device__  __host__     bool operator()(const T& t)            const{ return (bool)!isfinite(t); } };
+template<>                                                                                        
+struct uf_is_inf<int>{            __device__  __host__     bool operator()(const int t)           const{ return false; } };
+template<>                                                                                        
+struct uf_is_inf<signed char>{    __device__  __host__     bool operator()(const signed char t)   const{ return false; } };
+template<>
+struct uf_is_inf<unsigned char>{  __device__  __host__     bool operator()(const unsigned char t) const{ return false; } };
 
 template<class T>
 struct uf_poslin{  __device__  __host__     T operator()(const T& t)      const{ return (t > 0)*t; } };
 
 
 template<class T>
-struct bf_sigm_temp{ __device__  __host__       T operator()(const T& t, const T& temp) const{ return ((T)1)/(((T)1)+exp(-t / (T)(temp))); } };
+struct bf_sigm_temp{ __device__  __host__       T operator()(const T& t, const T& temp)           const{ return ((T)1)/(((T)1)+expf(-t / (T)(temp))); } };
 
 template<class T>
-struct tf_tanh{  __device__  __host__       T operator()(const T& x, const T& a, const T& b)      const{ return a * tanh(b * x); } };
+struct tf_tanh{  __device__  __host__       T operator()(const T& x, const T& a, const T& b)      const{ return a * tanhf(b * x); } };
 template<class T>
 struct tf_dtanh{  __device__  __host__      T operator()(const T& x, const T& a, const T& b)      const{ return b/a * (a+x) * (a-x); } };
 
@@ -135,6 +148,7 @@ struct uf_base_op{
   const T x;
   const binary_functor bf;
   uf_base_op(const T& _x):x(_x),bf(){};
+  __device__ __host__
   T operator()(const T& t){ return bf(t,x); }
 };
 template<class T, class ternary_functor>
@@ -142,6 +156,7 @@ struct uf_base_op3{
   const T x,y;
   const ternary_functor tf;
   uf_base_op3(const T& _x, const T& _y):x(_x),y(_y),tf(){};
+  __device__ __host__
   T operator()(const T& t){ return tf(t,x,y); }
 };
 
@@ -161,13 +176,13 @@ struct bf_divides{  __device__  __host__    T operator()(const T& t, const U& u)
 template<class T, class U>
 struct bf_squared_diff{__device__ __host__  T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
 template<class T, class U>
-struct bf_and{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t && u; } };
+struct bf_and{__device__ __host__   T operator()(const T& t, const U& u)      const{ return t && u; } };
 template<class T, class U>
-struct bf_or{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t || u; } };
+struct bf_or{ __device__ __host__   T operator()(const T& t, const U& u)      const{ return t || u; } };
 template<class T, class U>
-struct bf_min{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t<u ? t : u; } };
+struct bf_min{ __device__ __host__  T operator()(const T& t, const U& u)      const{ return t<u ? t : u; } };
 template<class T, class U>
-struct bf_max{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t>u ? t : u; } };
+struct bf_max{ __device__ __host__  T operator()(const T& t, const U& u)      const{ return t>u ? t : u; } };
 
 // functors with parameter
 template<class T, class U>
@@ -522,7 +537,8 @@ has_inf(__vector_type& v){
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
 	bool init=false;
-	return  thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_is_inf<value_type>(), init, bf_or<bool,bool>());
+	uf_is_inf<value_type> uo;
+	return  thrust::any_of(v_ptr, v_ptr+v.size(), uo);
 }
 template<class __vector_type>
 bool
@@ -531,7 +547,8 @@ has_nan(__vector_type& v){
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
 	bool init=false;
-	return  thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_is_nan<value_type>(), init, bf_or<bool,bool>());
+	uf_is_nan<value_type> uo;
+	return  thrust::any_of(v_ptr, v_ptr+v.size(), uo);
 }
 template<class __vector_type>
 float
@@ -549,7 +566,9 @@ norm1(__vector_type& v){
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
 	float init=0;
-	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_abs<float>(), init, bf_plus<float,value_type>());
+	uf_abs<float> unary_op;
+	bf_plus<float,value_type> binary_op;
+	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), unary_op, init, binary_op);
 }
 template<class __vector_type>
 float
