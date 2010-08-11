@@ -1,11 +1,3 @@
-  • Main Page
-  • Related Pages
-  • Modules
-  • Namespaces
-  • Classes
-  • Files
-  • [search] [Search              ] [close]
-
 CUV Documentation
 
 0.9.0
@@ -51,8 +43,19 @@ Implemented Functionality
   • Helpful functors and abstractions
   • Sparse matrices in DIA format and matrix-multiplication for these matrices
   • I/O functions using boost.serialization
+  • Fast Random Number Generator
   • Up to now, CUV was used to build dense and sparse Neural Networks and
     Restricted Boltzmann Machines (RBM), convolutional or locally connected.
+
+Documentation
+
+  • The documentation can be generated from the code or accessed on the
+    internet: http://www.ais.uni-bonn.de/deep_learning/doc/html/index.html
+
+Contact
+
+  • We are eager to help you get going with CUV and improve it continuously!
+    http://www.ais.uni-bonn.de/deep_learning/index.html
 
 Installation
 
@@ -63,8 +66,8 @@ For C++ libs, you will need:
   • libboost-dev >= 1.37
   • libblas-dev
   • libtemplate-perl -- (we might get rid of this dependency soon)
+  • NVIDIA CUDA (tm), including SDK. We support versions 2.X and 3.0.
   • thrust library (from http://code.google.com/p/thrust/)
-  • NVIDIA CUDA (tm), including SDK
   • doxygen (if you want to build the documentation yourself)
 
 For Python Integration, you additionally have to install
@@ -92,9 +95,7 @@ Building a debug version:
  $ cmake -DCMAKE_BUILD_TYPE=Debug ../../
  $ ccmake .          # adjust CUDA SDK paths to your system!
  $ make -j
- $ cd src
  $ ctest             # run tests to see if it went well
- $ cd ..
  $ make install
  $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
 
@@ -107,9 +108,7 @@ Building a release version:
  $ cmake -DCMAKE_BUILD_TYPE=Release ../../
  $ ccmake .          # adjust CUDA SDK paths to your system!
  $ make -j
- $ cd src
  $ ctest             # run tests to see if it went well
- $ cd ..
  $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
 
 Building the documentation
@@ -178,7 +177,7 @@ C++-Code
  sequence(B);
 
  apply_binary_functor(A,B,BF_MULT);  // elementwise multiplication
- prod(C,A,B, &apos;n&apos;,&apos;t&apos;);               // matrix multiplication
+ prod(C,A,B, 'n','t');               // matrix multiplication
 
 Python Code
 
@@ -192,9 +191,4 @@ Python Code
  cp.sequence(A,0)
  cp.sequence(B,0)
  cp.apply_binary_functor(B,A,cp.binary_functor.MULT) # elementwise multiplication
- cp.prod(C,A,B,&apos;n&apos;,&apos;t&apos;)                              # matrix multiplication
-
- All Classes Namespaces Files Functions Variables Typedefs Enumerations Friends
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Generated on Tue Apr 27 12:39:49 2010 for CUV by  doxygen 1.6.1
+ cp.prod(C,A,B,'n','t')                              # matrix multiplication
