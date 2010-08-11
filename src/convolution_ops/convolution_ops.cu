@@ -909,8 +909,6 @@ template<>
 			dense_matrix<int,row_major,dev_memory_space>* indices,
 			dense_matrix<float,row_major,dev_memory_space>* filter) {
 
-	cuvAssert(indices->w() == dst.w());
-	cuvAssert(indices->h() == dst.h());
 	cuvAssert(poolSize > overlap);
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
