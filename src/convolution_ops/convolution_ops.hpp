@@ -469,7 +469,7 @@ void calc_error_to_blob(				dense_matrix<V,M,T,I>& dst,
 							dense_matrix<V,M,T,I>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
-							unsigned int blob_size,
+							float sigma,
 							float temporal_weight=1.0f,
 							float interval_size=1.0f,
 							float interval_offset=0.0f);

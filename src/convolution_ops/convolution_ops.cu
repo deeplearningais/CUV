@@ -909,6 +909,10 @@ template<>
 			dense_matrix<int,row_major,dev_memory_space>* indices,
 			dense_matrix<float,row_major,dev_memory_space>* filter) {
 
+	if (indices!=NULL) {
+		cuvAssert(indices->w() == dst.w());
+		cuvAssert(indices->h() == dst.h());
+	}
 	cuvAssert(poolSize > overlap);
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
@@ -918,10 +922,6 @@ template<>
 	int dstSize = (imgSize - poolSize)/stepSize + 1;
 	cuvAssert(dstSize * dstSize == dst.w());
 	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
-	if(indices){
-		cuvAssert(indices->w() == dst.w());
-		cuvAssert(indices->h() == dst.h());
-	}
 
 	int numThreads = 256;
 	int numBlocksX = numImages;
@@ -1190,7 +1190,7 @@ template<>
 /*
  * this is limited to 22 x 22 filter kernels yet
  */
-__global__ void filter_rotate_kernel(float* dst, float* src, const int w, const int h, const int fs) {
+__global__ void filter_rotate_kernel(float* dst, float* src, const int h, const int w, const int fs, const int size) {
 
 	const int col_idx = threadIdx.x;
 	const int row_idx = blockIdx.y;
@@ -1201,7 +1201,7 @@ __global__ void filter_rotate_kernel(float* dst, float* src, const int w, const 
 	int px_adr_glob = 0;
 
 	// check if col idx is less than the number of cells in one row and less than the number of cells at all (at bottom of matrix)
-	if( (col_idx < w) && (row_idx * w + col_idx <= w*h*fs)){
+	if( (col_idx < w) && (row_idx * w + col_idx <= size)){
 		// I. load pixels in a coalesced way
 
 		// global memory adress for pixel
@@ -1244,13 +1244,13 @@ void filter_rotate(	dense_matrix<float,row_major,dev_memory_space>& dst,
 		int _w = numFiltersPerRow*fs;
 
 		int numThreads = 512;
-		int numBlocksX = ceil((float)filter.w()/numThreads);
-		int numBlocksY = filter.h();
+		int numBlocksX = 1;
+		int numBlocksY = _h;
 		dim3 grid(numBlocksX, numBlocksY);
 		dim3 dimBlock(numThreads,1);
 
 //		std::cout << "filter.h =  " << filter.h() << std::endl;
-		filter_rotate_kernel<<<grid,dimBlock>>>(dst.ptr(), filter.ptr(), _w, _h, fs);
+		filter_rotate_kernel<<<grid,dimBlock>>>(dst.ptr(), filter.ptr(), _h, _w, fs, filter.h()*filter.w());
 		cuvSafeCall(cudaThreadSynchronize());
 
 }
@@ -1325,7 +1325,7 @@ __global__ void calc_error_to_blob_kernel(float* img,
 										  float* blob,
 										  const int img_w,
 										  const int img_h,
-										  const int blob_width,
+										  float sigma,
 										  const int num_maps,
 										  float temporal_weight,
 										  float interval_size,
@@ -1340,8 +1340,8 @@ __global__ void calc_error_to_blob_kernel(float* img,
 	float center_x = *(blob+row*2);
 	float center_y = *(blob+row*2+1);
 
-	float a = (float)(x - center_x)/ blob_width;
-	float b = (float)(y - center_y)/ blob_width;
+	float a = (float)(x - center_x)/ sigma;
+	float b = (float)(y - center_y)/ sigma;
 
 	// destination is calculated by the row the pixel is in (row*imagesize) and the index in the picture (idx)
 	// img_w and img_h refers to the dimensions of an image (one row) in the img matrix
@@ -1362,7 +1362,7 @@ void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 							dense_matrix<float,row_major,dev_memory_space>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
-							unsigned int blob_size,
+							float sigma,
 							float temporal_weight,
 							float interval_size,
 							float interval_offset){
@@ -1383,7 +1383,7 @@ void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 													blob_mat.ptr(),
 													image_w,
 													image_h,
-													blob_size,
+													sigma,
 													numTeacherMaps,
 													temporal_weight,													
 													interval_size,
