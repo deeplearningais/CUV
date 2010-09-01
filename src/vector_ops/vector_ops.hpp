@@ -91,6 +91,9 @@ namespace cuv{
 		SF_ABS,
 		SF_SMAX,
 		SF_POSLIN,
+		// rectifying transfer function
+		SF_RECT,
+		SF_DRECT,
 
 		// with param
 		SF_ADD,
