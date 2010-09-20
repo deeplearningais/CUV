@@ -31,6 +31,7 @@
 #include <stdexcept>
 #include <cublas.h>
 #include <cblas.h>
+#include <stdio.h>
 
 #include <cuv_general.hpp>
 #include <3rd_party/CudaConv/nvmatrix.cuh>
@@ -38,6 +39,7 @@
 #include <float.h>
 #include "matrix_ops.hpp"
 #include <limits>
+#include "../tools/cuPrintf.cu"
 
 #ifdef __CDT_PARSER__
 #define __global__
@@ -136,16 +138,28 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 		offset >>= 1;
 		__syncthreads();
 	}
-
+	
 	if (ty == 0) {
+		if (row_idx >= nCols){
+			cuPrintf("Value is: %d\n", row_idx);
+		}
 		if (OP == cuv::RF_MIN || OP == cuv::RF_MAX)
 			vector[row_idx] = shared[0][tx];
 		else
 			if(factOld != 0.f){
+				if (isnan(vector[row_idx])){
+					cuPrintf("Value of vector[%d]: %d\n", row_idx, vector[row_idx]);
+				}
+				if (isnan(shared[0][tx])){
+					cuPrintf("Value of shared[0][%d]: %d\n", tx, shared[0][tx]);
+				}
 				vector[row_idx] = vector[row_idx] * factOld + shared[0][tx] * factNew;
-			}else
+			}else{
+				if (isnan(shared[0][tx])){
+					cuPrintf("Value of shared[0][%d]: %d\n", tx, shared[0][tx]);
+				}
 				vector[row_idx] = shared[0][tx] * factNew;
-
+			}
 		//vector[row_idx] = row_idx;
 	}
 	//__syncthreads();
@@ -344,7 +358,7 @@ void prod(dense_matrix<float,column_major,dev_memory_space>& dst,
 
 	cublasSgemm(transA, transB, m, n, k1, factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
 	cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
-	cuvSafeCall(cudaThreadSynchronize());
+	//cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
@@ -408,7 +422,7 @@ void prod(dense_matrix<float,row_major,dev_memory_space>& dst,
 	cublasSgemm(transB, transA, m, n, k1, factAB, B.ptr(), B.w(),A.ptr(), A.w(), factC, dst.ptr(), dst.w());
 
 	cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
-	cuvSafeCall(cudaThreadSynchronize());
+	//cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
@@ -480,7 +494,7 @@ namespace matrix_plus_vector_impl {
 		int num_threads = min(512,A.w());
 		int num_blocks = min(1024,A.h());
 		matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
-		cuvSafeCall(cudaThreadSynchronize());
+		//cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class I, class V2, class OP>
 	void matrix_plus_col(dense_matrix<V,column_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op) {
@@ -488,7 +502,7 @@ namespace matrix_plus_vector_impl {
 		int num_threads = 512;
 		int num_blocks = min(512,(int)ceil((float)A.n() / num_threads));
 		matrix_plus_vector_kernel_column_major2<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
-		cuvSafeCall(cudaThreadSynchronize());
+		//cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class I, class V2, class OP>
 	void matrix_plus_col(dense_matrix<V,column_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op) {
@@ -525,6 +539,7 @@ void matrix_divide_col(__matrix_type& A, const __vector_type& v) {
 }
 
 namespace reduce_to_col_impl {
+
 	template<int rf,class V,class I, class V2>
 	void reduce_to_col(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld) {
 		cuvAssert(m.ptr() != NULL);
@@ -595,8 +610,11 @@ namespace reduce_to_col_impl {
 		}
 		dim3 grid(grid_x, grid_y);
 		dim3 threads(BLOCK_DIM_X,BLOCK_DIM_Y);
+		cudaPrintfInit();		
 		reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
-		cuvSafeCall(cudaThreadSynchronize());
+		//cuvSafeCall(cudaThreadSynchronize());
+		cudaPrintfDisplay(NULL, true);
+		cudaPrintfEnd();
 	}
 	template<int rf,class V,class I, class V2>
 	void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld) {
@@ -624,7 +642,7 @@ namespace reduce_to_col_impl {
 		if(factOld != 0.0f)
 			apply_binary_functor(v, w, BF_XPBY, factOld);
 
-		cuvSafeCall(cudaThreadSynchronize());
+		//cuvSafeCall(cudaThreadSynchronize());
 	}
 
 }
@@ -694,7 +712,7 @@ namespace reduce_to_row_impl {
 		dim3 grid(1, m.w());
 		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
 		reduce_to_row_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
-		cuvSafeCall(cudaThreadSynchronize());
+		//cuvSafeCall(cudaThreadSynchronize());
 	}
 
 	template<int rf,class V,class I, class V2>
@@ -719,8 +737,11 @@ namespace reduce_to_row_impl {
 		dim3 grid(grid_x, grid_y);
 		dim3 threads(BLOCK_SIZE*2, BLOCK_SIZE/2);
 		// yes, we abuse the reduce_to_col kernel here :)
+		cudaPrintfInit();
 		reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);
-		cuvSafeCall(cudaThreadSynchronize());
+		cudaPrintfDisplay(std::cout, true);
+		cudaPrintfEnd();
+		//cuvSafeCall(cudaThreadSynchronize());
 	}
 
 }
@@ -762,7 +783,7 @@ void argmax_to_row(vector<int,dev_memory_space>&v, const dense_matrix<float,colu
 		v_ptr += MAX_GRID_SIZE;
 		w -= MAX_GRID_SIZE;
 	}while(u == MAX_GRID_SIZE);
-	cuvSafeCall(cudaThreadSynchronize());
+	//cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
@@ -783,7 +804,7 @@ void argmax_to_column(vector<int,dev_memory_space>&v, const dense_matrix<float,r
 		v_ptr += MAX_GRID_SIZE;
 		h -= MAX_GRID_SIZE;
 	}while(u == MAX_GRID_SIZE);
-	cuvSafeCall(cudaThreadSynchronize());
+	//cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
@@ -839,7 +860,7 @@ void transpose(dense_matrix<float,column_major, dev_memory_space>& dst,
 	dim3 gridSize(numBlocksX, numBlocksY, 1);
 	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
 	transpose_kernel<BLOCK_SIZE,float><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
-	cuvSafeCall(cudaThreadSynchronize());
+	//cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
@@ -855,7 +876,7 @@ void transpose(dense_matrix<float,row_major,dev_memory_space>& dst,
 	dim3 gridSize(numBlocksX, numBlocksY, 1);
 	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
 	transpose_kernel<BLOCK_SIZE,float><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
-	cuvSafeCall(cudaThreadSynchronize());
+	//cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
