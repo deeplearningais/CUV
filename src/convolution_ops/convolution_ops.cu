@@ -1329,7 +1329,8 @@ __global__ void calc_error_to_blob_kernel(float* img,
 										  const int num_maps,
 										  float temporal_weight,
 										  float interval_size,
-										  float interval_offset) {
+										  float interval_offset,
+										  const int window_radius) {
 
 	int idx = threadIdx.x +  blockDim.x * blockIdx.x;
 	int row = blockIdx.y;
@@ -1348,9 +1349,19 @@ __global__ void calc_error_to_blob_kernel(float* img,
 
 	//p(x,α,σ) = 1/sqrt(2πσ²)*exp(-(x-α)²/2σ²)
 	if(idx < img_w * img_h){
-		float gauss_value = interval_size*expf(-(a*a + b*b)/2.f)-interval_offset;
-		float act_val = *(src+idx+row*(img_w*img_h));
-		*(img+idx+row*(img_w*img_h)) =(temporal_weight * (gauss_value - act_val));
+		if (window_radius > 0){
+			if(		window_radius*window_radius > pow(a*sigma,2) + pow(a*sigma,2)
+				or 	(x == center_x and y==center_y)){
+				float gauss_value = interval_size*expf(-(a*a + b*b)/2.f)-interval_offset;
+				float act_val = *(src+idx+row*(img_w*img_h));
+				*(img+idx+row*(img_w*img_h)) =(temporal_weight * (gauss_value - act_val));
+			}else
+				*(img+idx+row*(img_w*img_h)) = 0.0f;
+		}else{
+			float gauss_value = interval_size*expf(-(a*a + b*b)/2.f)-interval_offset;
+			float act_val = *(src+idx+row*(img_w*img_h));
+			*(img+idx+row*(img_w*img_h)) =(temporal_weight * (gauss_value - act_val));
+		}
 	}
 }
 
@@ -1365,7 +1376,8 @@ void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 							float sigma,
 							float temporal_weight,
 							float interval_size,
-							float interval_offset){
+							float interval_offset,
+							unsigned int window_radius){
 	cuvAssert(dst.h() == img.h());
 	cuvAssert(dst.w() == img.w());
 
@@ -1387,8 +1399,52 @@ void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 													numTeacherMaps,
 													temporal_weight,													
 													interval_size,
-													interval_offset);
+													interval_offset,
+													window_radius);
 	cuvSafeCall(cudaThreadSynchronize());
+};
+
+template<>
+void calc_error_to_blob(	dense_matrix<float,row_major,host_memory_space>& dst,
+							dense_matrix<float,row_major,host_memory_space>& img,
+							dense_matrix<float,row_major,host_memory_space>& blob_mat,
+							unsigned int image_w,
+							unsigned int image_h,
+							float sigma,
+							float temporal_weight,
+							float interval_size,
+							float interval_offset,
+							unsigned int window_radius){
+	cuvAssert(dst.h() == img.h());
+	cuvAssert(dst.w() == img.w());
+
+	float center_x 		= 0;
+	float center_y	 	= 0;
+	float a 			= 0;
+	float b 			= 0;
+	float gauss_value 	= 0;
+	float act_val 		= 0;
+	int idx 			= 0;
+	int mapsize = image_w*image_h;
+
+	for(int y=0; y < image_h; y++){
+		for(int x=0; x < image_w; x++){
+			for(int map = 0; map < blob_mat.h(); map++){
+				center_x = *(blob_mat.ptr()+map*2);
+				center_y = *(blob_mat.ptr()+map*2+1);
+
+				a = (float)(x - center_x)/ sigma;
+				b = (float)(y - center_y)/ sigma;
+
+				idx = y * image_w + x;
+
+				gauss_value = interval_size*expf(-(a*a + b*b)/2.f)-interval_offset;
+				act_val = *(img.ptr()+idx+map*mapsize);
+				*(dst.ptr()+idx+map*mapsize) =(temporal_weight * (gauss_value - act_val));
+			}
+		}
+	}
+
 };
 
 __global__ void check_exitatory_inhibitory_kernel(float* filter,
