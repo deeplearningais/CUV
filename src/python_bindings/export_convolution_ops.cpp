@@ -159,7 +159,7 @@ void export_rlcnp_stuff(){
 //															arg("dst"),
 //															arg("map_matrix"),
 //															arg("map_size")));
-	def("calc_error_to_blob",(void (*)(M&,M&, M&, unsigned int, unsigned int, float,float, float, float))calc_error_to_blob<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+	def("calc_error_to_blob",(void (*)(M&,M&, M&, unsigned int, unsigned int, float,float, float, float, unsigned int))calc_error_to_blob<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
 																arg("dst"),
 																arg("img"),
 																arg("blob_mat"),
@@ -168,7 +168,8 @@ void export_rlcnp_stuff(){
 																arg("sigma_squared"),
 																arg("temporal_weight"),
 																arg("interval_size"),
-																arg("interval_offset")));
+																arg("interval_offset"),
+																arg("window_size")));
 	def("check_exitatory_inhibitory",(void (*)(M&, unsigned int, unsigned int, unsigned int, unsigned int))check_exitatory_inhibitory<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
 																arg("dst"),
 																arg("start_filter"),

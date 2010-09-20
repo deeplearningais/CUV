@@ -43,7 +43,7 @@
 #include <matrix_ops/rprop.hpp>
 #include <convert.hpp>
 #include <convolution_ops/convolution_ops.hpp>
-
+#include <float.h>
 //using namespace std;
 using namespace boost::python;
 using namespace cuv;
@@ -330,10 +330,13 @@ void export_matrix_ops(){
 	export_blas2<fhost>();
 	export_blas2<fhostr>();
 	export_blas2<fdevr>();
+
 	export_blockview<fdev>();
 	export_blockview<fhost>();
 	export_blockview<fdevr>();
-	//export_pooling<fhostr>();
+	export_blockview<fhostr>();
+
+	export_pooling<fhostr>();
 	export_pooling<fdevr>();
 	// transpose
 	export_transpose<fhost>();
