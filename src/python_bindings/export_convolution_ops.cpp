@@ -193,6 +193,7 @@ void export_convolution_ops(){
 	export_padding_ops< dense_matrix<float,row_major, host_memory_space>  >();
 	export_padding_ops< dense_matrix<float,row_major, dev_memory_space>  >();
 	export_rlcnp_stuff< dense_matrix<float,row_major, dev_memory_space>, dense_matrix<int,row_major, dev_memory_space>, vector<float,dev_memory_space>  >();
+	export_rlcnp_stuff< dense_matrix<float,row_major, host_memory_space>, dense_matrix<int,row_major, host_memory_space>, vector<float,host_memory_space>  >();
 }
 
 
