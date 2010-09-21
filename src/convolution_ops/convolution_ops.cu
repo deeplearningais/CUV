@@ -171,7 +171,7 @@ void convolve2(dense_matrix<float,row_major,host_memory_space>& dst,
 		  int numGroups) {
 	int imgSize = sqrt(img.w());
 	int numImages = img.h();
-	int filterSize = sqrt(filter.w()/numFilters);
+	int filterSize = sqrt(filter.w()/numImages);
 	int dstSize = sqrt(dst.w()/numFilters);
 
 	conv2CPU(img.ptr(), filter.ptr(), dst.ptr(), imgSize, filterSize, numImages, numFilters, numGroups);
