@@ -40,15 +40,14 @@ namespace rbm{
 
 		template<class V, class I>
 		void sigm_temperature(cuv::dense_matrix<V,column_major,host_memory_space,I>& m, const cuv::vector<V,host_memory_space,I>& temp){
-			cuvAssert(m.h() == temp.size())
+			cuvAssert(m.w() == temp.size())
 			V* mptr = m.ptr();
-			const V* end  = temp.ptr() + temp.size();
 			for(unsigned int col=0;col<m.w();col++){
-				const V* tptr = temp.ptr();
-				while(tptr < end){
-					*mptr = 1.0/(1.0+exp(-*mptr / *tptr));
+				const V T = temp[col];
+				const V* end  = mptr + m.h();
+				while(mptr < end){
+					*mptr = 1.0/(1.0+exp(-*mptr / T));
 					mptr++; 
-					tptr++;
 				}
 			}
 		}
