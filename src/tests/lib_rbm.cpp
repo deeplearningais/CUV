@@ -27,47 +27,66 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
 
-
-
-
-
-#include <string>
-#include <boost/python.hpp>
-#include <boost/python/extract.hpp>
-
+#define BOOST_TEST_MODULE lib_rbm
+#include <boost/test/included/unit_test.hpp>
+#include <boost/test/floating_point_comparison.hpp>
+#include <iostream>
+#include <cuv_test.hpp>
 
 #include <cuv_general.hpp>
-#include <random/random.hpp>
+#include <dense_matrix.hpp>
+#include <convert.hpp>
+#include <vector_ops.hpp>
+#include <matrix_ops.hpp>
+#include <libs/rbm/rbm.hpp>
 
-using namespace boost::python;
 using namespace cuv;
+using namespace cuv::libs::rbm;
+struct Fix{
+	static const int N=10;
+	vector<float,host_memory_space> v;
+	dense_matrix<float,column_major,host_memory_space> m;
+	Fix()
+	:   v(N)
+	,	m(10,N){}
 
-void export_vector();
-void export_vector_ops();
-void export_dense_matrix();
-void export_matrix_ops();
-void export_random();
-void export_dia_matrix();
-void export_convolution_ops();
-void export_image_ops();
-void export_tools();
-void export_libs_rbm();
+	~Fix(){
+	}
+};
 
-BOOST_PYTHON_MODULE(cuv_python){
-	def("initCUDA", initCUDA);
-	def("exitCUDA", exitCUDA);
-	def("safeThreadSync", safeThreadSync);
-	def("initialize_mersenne_twister_seeds", initialize_mersenne_twister_seeds);
-	export_vector();
-	export_vector_ops();
-	export_dense_matrix();
-	export_matrix_ops();
-	export_random();
-	export_dia_matrix();
-	export_convolution_ops();
-	export_image_ops();
-	export_tools();
-	export_libs_rbm();
+BOOST_FIXTURE_TEST_SUITE( s, Fix )
+
+BOOST_AUTO_TEST_CASE( set_bits )
+{
+	dense_matrix<float,column_major,dev_memory_space> m2(m.h(),m.w());
+	set_binary_sequence(m,  0);
+	set_binary_sequence(m2, 0);
+
+	MAT_CMP(m, m2, 0.001);
+}
+BOOST_AUTO_TEST_CASE( sigm_temp_host )
+{
+   fill(v,2);
+   sequence(m);
+   dense_matrix<float,column_major,host_memory_space> m2(m.h(),m.w());
+   convert(m2, m);
+
+   sigm_temperature(m, v);
+   apply_scalar_functor(m2,SF_SIGM,2);
+
+   MAT_CMP(m, m2, 0.001);
+}
+BOOST_AUTO_TEST_CASE( sigm_temp_dev )
+{
+   fill(v,2);
+   sequence(m);
+   dense_matrix<float,column_major,dev_memory_space> m2(m.h(),m.w());
+   convert(m2, m);
+
+   sigm_temperature(m, v);
+   apply_scalar_functor(m2,SF_SIGM,2);
+
+   MAT_CMP(m, m2, 0.001);
 }
 
-
+BOOST_AUTO_TEST_SUITE_END()
