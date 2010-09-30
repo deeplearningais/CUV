@@ -116,9 +116,10 @@ void export_sampling_stuff(){
 															arg("dst_matrix"),
 															arg("src_matrix"),
 															arg("block_length")));
-	def("reorder",(void (*)(M&, int))reorder<M>, (
-																arg("matrix"),
-																arg("block_length")));
+	def("reorder",(void (*)(M&, M&, int))reorder<M>, (
+															arg("dst_matrix"),
+															arg("src_matrix"),
+															arg("block_length")));
 
 
 
@@ -158,16 +159,17 @@ void export_rlcnp_stuff(){
 //															arg("dst"),
 //															arg("map_matrix"),
 //															arg("map_size")));
-	def("calc_error_to_blob",(void (*)(M&,M&, M&, unsigned int, unsigned int, unsigned int,float, float,float))calc_error_to_blob<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
+	def("calc_error_to_blob",(void (*)(M&,M&, M&, unsigned int, unsigned int, float,float, float, float, unsigned int))calc_error_to_blob<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
 																arg("dst"),
 																arg("img"),
 																arg("blob_mat"),
 																arg("image_w"),
 																arg("image_h"),
-																arg("blob_size"),
+																arg("sigma_squared"),
 																arg("temporal_weight"),
 																arg("interval_size"),
-																arg("interval_offset")));
+																arg("interval_offset"),
+																arg("window_size")));
 	def("check_exitatory_inhibitory",(void (*)(M&, unsigned int, unsigned int, unsigned int, unsigned int))check_exitatory_inhibitory<typename M::value_type, typename M::memory_layout, typename M::memory_space_type,typename M::index_type>, (
 																arg("dst"),
 																arg("start_filter"),
@@ -191,6 +193,7 @@ void export_convolution_ops(){
 	export_padding_ops< dense_matrix<float,row_major, host_memory_space>  >();
 	export_padding_ops< dense_matrix<float,row_major, dev_memory_space>  >();
 	export_rlcnp_stuff< dense_matrix<float,row_major, dev_memory_space>, dense_matrix<int,row_major, dev_memory_space>, vector<float,dev_memory_space>  >();
+	export_rlcnp_stuff< dense_matrix<float,row_major, host_memory_space>, dense_matrix<int,row_major, host_memory_space>, vector<float,host_memory_space>  >();
 }
 
 
