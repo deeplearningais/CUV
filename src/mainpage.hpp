@@ -72,6 +72,10 @@
  * - Fast Random Number Generator
  * - Up to now, CUV was used to build dense and sparse Neural Networks and
  *   Restricted Boltzmann Machines (RBM), convolutional or locally connected.
+ * 
+ * Documentation
+ * - The documentation can be generated from the code or accessed on the internet:
+ *   http://www.ais.uni-bonn.de/deep_learning/doc/html/index.html
  *
  * @section installation  Installation
  *
@@ -81,7 +85,7 @@
  * - libboost-dev >= 1.37
  * - libblas-dev
  * - libtemplate-perl -- (we might get rid of this dependency soon)
- * - NVIDIA CUDA (tm), including SDK
+ * - NVIDIA CUDA (tm), including SDK. We support versions 2.X and 3.0.
  * - thrust library (from http://code.google.com/p/thrust/)
  * - doxygen (if you want to build the documentation yourself)
  *
