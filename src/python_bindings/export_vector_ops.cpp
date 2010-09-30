@@ -73,6 +73,8 @@ void export_scalar_functors() {
         .value("ABS", SF_ABS)
         .value("SMAX", SF_SMAX)
         .value("POSLIN", SF_POSLIN)
+        .value("RECT", SF_RECT)
+        .value("DRECT", SF_DRECT)
 
         .value("ADD", SF_ADD)
         .value("SUBTRACT", SF_SUBTRACT)
