@@ -34,40 +34,26 @@
 #include <string>
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
+#include <pyublas/numpy.hpp>
 
+#include <dense_matrix.hpp>
+#include <libs/rbm/rbm.hpp>
 
-#include <cuv_general.hpp>
-#include <random/random.hpp>
-
+//using namespace std;
 using namespace boost::python;
 using namespace cuv;
+using namespace cuv::libs::rbm;
+namespace ublas = boost::numeric::ublas;
 
-void export_vector();
-void export_vector_ops();
-void export_dense_matrix();
-void export_matrix_ops();
-void export_random();
-void export_dia_matrix();
-void export_convolution_ops();
-void export_image_ops();
-void export_tools();
-void export_libs_rbm();
-
-BOOST_PYTHON_MODULE(cuv_python){
-	def("initCUDA", initCUDA);
-	def("exitCUDA", exitCUDA);
-	def("safeThreadSync", safeThreadSync);
-	def("initialize_mersenne_twister_seeds", initialize_mersenne_twister_seeds);
-	export_vector();
-	export_vector_ops();
-	export_dense_matrix();
-	export_matrix_ops();
-	export_random();
-	export_dia_matrix();
-	export_convolution_ops();
-	export_image_ops();
-	export_tools();
-	export_libs_rbm();
+template<class V, class L, class M, class I>
+void export_libs_rbm_detail(){
+	typedef dense_matrix<V,L,M,I> mat;
+	typedef vector<V,M,I> vec;
+	def("set_binary_sequence", set_binary_sequence<mat>, (arg("matrix"), arg("startvalue")));
+	def("sigm_temperature", sigm_temperature<mat,vec>, (arg("matrix"), arg("temperature")));
 }
 
-
+void export_libs_rbm(){
+	export_libs_rbm_detail<float,column_major,host_memory_space,unsigned int>();
+	export_libs_rbm_detail<float,column_major,dev_memory_space,unsigned int>();
+}

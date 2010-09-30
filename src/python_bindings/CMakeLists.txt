@@ -23,6 +23,7 @@ ADD_LIBRARY(cuv_python SHARED
 	export_convolution_ops.cpp
 	export_image_ops.cpp
 	export_tools.cpp
+	export_libs_rbm.cpp
     )
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES OUTPUT_NAME "cuv_python")
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES PREFIX "")
@@ -36,6 +37,7 @@ TARGET_LINK_LIBRARIES( cuv_python
 		cuv_matrix_ops
 		cuv_convolution_ops
 		cuv_image_ops
+		cuv_rbm
         #${Boost_LIBRARIES}
 		${Boost_DATE_TIME_LIBRARY_RELEASE}
 		${Boost_PYTHON_LIBRARY_RELEASE}
