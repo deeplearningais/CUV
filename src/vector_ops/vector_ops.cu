@@ -144,7 +144,7 @@ struct tf_dtanh{  __device__  __host__      T operator()(const T& x, const T& a,
 
 // rectifying transferfunctions a is param beta
 template<class T, class A>
-struct tf_rect{  __device__  __host__       T operator()(const T& x, const A& a)      const{ return log(1+ expf(a*x))/a; } };
+struct tf_rect{  __device__  __host__       T operator()(const T& x, const A& a)      const{ return (T) log(1.0 + (double)exp((double)a*x))/a; } };
 template<class T, class A>
 struct tf_drect{  __device__  __host__      T operator()(const T& x, const A& a)      const{ return 1-1/(x*expf(a)); } };
 
@@ -580,6 +580,15 @@ norm1(__vector_type& v){
 }
 template<class __vector_type>
 float
+sum(__vector_type& v){
+	typedef typename __vector_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(v.ptr());
+	float init=0.0;
+	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,value_type>());
+}
+template<class __vector_type>
+float
 maximum(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
@@ -599,11 +608,7 @@ minimum(__vector_type& v){
 template<class __vector_type>
 float
 mean(__vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type v_ptr(v.ptr());
-	float init=0;
-	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,value_type>()) / (float)v.size();
+	return   sum(v) / (float)v.size();
 }
 template<class __vector_type>
 float
