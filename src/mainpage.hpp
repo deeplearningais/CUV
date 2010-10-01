@@ -69,8 +69,13 @@
  * - Helpful functors and abstractions
  * - Sparse matrices in DIA format and matrix-multiplication for these matrices
  * - I/O functions using boost.serialization
+ * - Fast Random Number Generator
  * - Up to now, CUV was used to build dense and sparse Neural Networks and
  *   Restricted Boltzmann Machines (RBM), convolutional or locally connected.
+ * 
+ * Documentation
+ * - The documentation can be generated from the code or accessed on the internet:
+ *   http://www.ais.uni-bonn.de/deep_learning/doc/html/index.html
  *
  * @section installation  Installation
  *
@@ -80,7 +85,8 @@
  * - libboost-dev >= 1.37
  * - libblas-dev
  * - libtemplate-perl -- (we might get rid of this dependency soon)
- * - NVIDIA CUDA (tm), including SDK
+ * - NVIDIA CUDA (tm), including SDK. We support versions 2.X and 3.0.
+ * - thrust library (from http://code.google.com/p/thrust/)
  * - doxygen (if you want to build the documentation yourself)
  *
  * For Python Integration, you additionally have to install
@@ -106,7 +112,7 @@
  * $ mkdir -p build/debug
  * $ cd build/debug
  * $ cmake -DCMAKE_BUILD_TYPE=Debug ../../
- * $ ccmake .          # adjust paths to your system!
+ * $ ccmake .          # adjust CUDA SDK paths to your system!
  * $ make -j
  * $ ctest             # run tests to see if it went well
  * $ make install
@@ -121,7 +127,7 @@
  * $ mkdir -p build/release
  * $ cd build/release
  * $ cmake -DCMAKE_BUILD_TYPE=Release ../../
- * $ ccmake .          # adjust paths to your system!
+ * $ ccmake .          # adjust CUDA SDK paths to your system!
  * $ make -j
  * $ ctest             # run tests to see if it went well
  * $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
