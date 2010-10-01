@@ -146,8 +146,8 @@ struct tf_dtanh{  __device__  __host__      T operator()(const T& x, const T& a,
 template<class T, class A>
 struct tf_rect{  __device__  __host__       T operator()(const T& x, const A& a)      const{
 	T ax = a*x;
-	if(-ax < -87.33f)
-		return (T) 0;
+	if(ax > 87.33f)
+		return (T) x;
 	return log(1.0f+expf(ax))/a;
 }};
 /*template<class T, class A>*/
