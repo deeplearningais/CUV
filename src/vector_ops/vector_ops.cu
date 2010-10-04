@@ -672,6 +672,7 @@ arg_min(__vector_type& v){
 	template bool has_nan<vector<X,Y> >(vector<X,Y>&); \
 	template float minimum<vector<X,Y> >(vector<X,Y>&); \
 	template float maximum<vector<X,Y> >(vector<X,Y>&); \
+	template float sum<vector<X,Y> >(vector<X,Y>&); \
 	template float norm1<vector<X,Y> >(vector<X,Y>&); \
 	template float norm2<vector<X,Y> >(vector<X,Y>&); \
 	template float mean<vector<X,Y> >(vector<X,Y>&);  \
