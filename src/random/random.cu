@@ -408,8 +408,8 @@ namespace cuv{
 
 		// Upload the initial configurations to the GPU.
 		cuvSafeCall(cudaMemcpyToSymbol(MT, mtStripped, sizeof(mt_struct_stripped) * MT_RNG_COUNT, 0, cudaMemcpyHostToDevice));
-		dim3 threads(512,1);
-		dim3 grid(MT_RNG_COUNT/512,1,1);
+		dim3 threads(256,1);
+		dim3 grid(MT_RNG_COUNT/256,1,1);
 		rnd_init_dev<<<grid,threads>>>();
 
 		cuvSafeCall(cudaThreadSynchronize());
@@ -428,8 +428,8 @@ namespace cuv{
 		cuvAssert(g_mersenne_twister_initialized);
 
 		binarize<float> rng;
-		dim3 threads(512,1);
-		dim3 grid(MT_RNG_COUNT/512,1,1);
+		dim3 threads(256,1);
+		dim3 grid(MT_RNG_COUNT/256,1,1);
 		kBinarize<<<grid,threads>>>(v.ptr(),v.size(),rng);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
@@ -453,8 +453,8 @@ namespace cuv{
 		cuvAssert(g_mersenne_twister_initialized);
 
 		rnd_uniform<float> rng(0.f,1.f);
-		dim3 threads(512,1);
-		dim3 grid(MT_RNG_COUNT/512,1,1);
+		dim3 threads(256,1);
+		dim3 grid(MT_RNG_COUNT/256,1,1);
 		kRndUniform<<<grid,threads>>>(v.ptr(),v.size(),rng);
 
 		cuvSafeCall(cudaThreadSynchronize());
@@ -476,8 +476,8 @@ namespace cuv{
 		cuvAssert(v.ptr());
 		cuvAssert((v.size()%2) == 0);
 		rnd_normal<float2> rng(std);
-		dim3 threads(512,1);
-		dim3 grid(MT_RNG_COUNT/512,1,1);
+		dim3 threads(256,1);
+		dim3 grid(MT_RNG_COUNT/256,1,1);
 		using namespace std;
 		kRndNormal<<<grid,threads>>>((float2*)v.ptr(),v.size()/2,rng);
 		cuvSafeCall(cudaThreadSynchronize());
