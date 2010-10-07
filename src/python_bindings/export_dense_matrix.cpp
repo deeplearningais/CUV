@@ -232,12 +232,15 @@ numpy2dev_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
 }
 
 /*
- * convert a numpy matrix to a device matrix.
+ * convert a numpy matrix to a host matrix.
+ *   TODO: slightly hackish, since space is allocated and deleted later on.
+ *   Possible solution: A special constructor for matrix, which leaves it uninitialized.
  */
 template<class T, class Mfrom, class Mto>
 dense_matrix<T,Mto,host_memory_space>*
 numpy2host_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
-	dense_matrix<T,Mto,host_memory_space>* to = mat_view<T,Mto,Mfrom>(m);
+	dense_matrix<T,Mto,host_memory_space>* to = new dense_matrix<T,Mto,host_memory_space>(1,1);
+	cuv::convert(*to,mat_view<T,Mto,Mfrom>(m));
 	return to;
 }
 
