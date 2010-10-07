@@ -7,6 +7,8 @@ INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/convolution_ops )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/random )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src )
 
+FIND_PACKAGE( BLAS REQUIRED)
+
 ADD_EXECUTABLE( test_basic basic.cpp )
 TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools cuv_matrix_ops cuv_convert)
 
@@ -44,7 +46,7 @@ ADD_EXECUTABLE( test_conv_op conv_op.cpp )
 TARGET_LINK_LIBRARIES( test_conv_op cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_convolution_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
 
 ADD_EXECUTABLE( test_conv_op_speed conv_op_speed.cpp )
-TARGET_LINK_LIBRARIES( test_conv_op_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_convolution_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+TARGET_LINK_LIBRARIES( test_conv_op_speed cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_convolution_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} ${BLAS_LIBRARIES} )
 
 ADD_EXECUTABLE( test_random random.cpp )
 TARGET_LINK_LIBRARIES( test_random cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_random)

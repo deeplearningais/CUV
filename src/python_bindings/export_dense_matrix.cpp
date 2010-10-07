@@ -176,7 +176,7 @@ export_dense_matrix_common(std::string name){
  */
 template <class T, class M, class M2>
 void
-export_dense_matrix_pushpull(std::string typen){
+export_dense_matrix(std::string typen){
 	export_dense_matrix_common<dense_matrix<T, M, dev_memory_space> >  ( std::string( "dev_matrix_" ) + (typen));
 	export_dense_matrix_common<dense_matrix<T, M2, host_memory_space> >( std::string( "host_matrix_" ) + (typen));
 	def("convert", (void(*)(dense_matrix<T,M,dev_memory_space>&,const dense_matrix<T,M2,host_memory_space>&)) cuv::convert);
@@ -232,6 +232,16 @@ numpy2dev_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
 }
 
 /*
+ * convert a numpy matrix to a device matrix.
+ */
+template<class T, class Mfrom, class Mto>
+dense_matrix<T,Mto,host_memory_space>*
+numpy2host_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
+	dense_matrix<T,Mto,host_memory_space>* to = mat_view<T,Mto,Mfrom>(m);
+	return to;
+}
+
+/*
  * convert a dense matrix on the device to a new numpy-matrix
  */
 template<class T, class Mfrom, class Mto_ublas, class Mto_cuv>
@@ -264,6 +274,16 @@ void export_numpy2dev_dense_mat(const char* c){
 	typedef typename matrix2ublas_traits<Mfrom>::storage_type Mfrom_ublas_type;
 	def(c, numpy2dev_dense_mat<T,Mfrom_ublas_type,Mto>, return_value_policy<manage_new_object>());
 }
+
+/*
+ * export conversion of numpy matrix to host matrix (helper function)
+ */
+template<class T, class Mfrom, class Mto>
+void export_numpy2host_dense_mat(const char* c){
+	typedef typename matrix2ublas_traits<Mfrom>::storage_type Mfrom_ublas_type;
+	def(c, numpy2host_dense_mat<T,Mfrom_ublas_type,Mto>, return_value_policy<manage_new_object>());
+}
+
 /*
  * export conversion of device matrix to numpy matrix (helper function)
  */
@@ -294,6 +314,19 @@ export_numpy2dev_dense_mats(){
 	export_numpy2dev_dense_mat<T,row_major,column_major>("push_cm");
 	export_numpy2dev_dense_mat<T,row_major,row_major>("push");
 }
+
+/*
+ * export conversion of numpy matrices to host matrices for various types
+ */
+template<class T>
+void
+export_numpy2host_dense_mats(){
+	export_numpy2host_dense_mat<T,column_major,column_major>("push_host");
+	export_numpy2host_dense_mat<T,column_major,row_major>("push_host_rm");
+	export_numpy2host_dense_mat<T,row_major,column_major>("push_host_cm");
+	export_numpy2host_dense_mat<T,row_major,row_major>("push_host");
+}
+
 /*
  * export conversion of device matrices to numpy matrices for various types
  */
@@ -320,20 +353,20 @@ export_host_dense_mat2numpys(){
  *   calls exporters for various value_types, column/row major combinations etc.
  */
 void export_dense_matrix(){
-	// push and pull host matrices
-	export_dense_matrix_pushpull<float,column_major,column_major>("cmf");
-	export_dense_matrix_pushpull<float,row_major,row_major>("rmf");
+	//export host and device matrices and conversions
+	export_dense_matrix<float,column_major,column_major>("cmf");
+	export_dense_matrix<float,row_major,row_major>("rmf");
 
-	export_dense_matrix_pushpull<signed char,column_major,column_major>("cmsc");
-	export_dense_matrix_pushpull<signed char,row_major,row_major>("rmsc");
+	export_dense_matrix<signed char,column_major,column_major>("cmsc");
+	export_dense_matrix<signed char,row_major,row_major>("rmsc");
 
-	export_dense_matrix_pushpull<unsigned char,column_major,column_major>("cmuc");
-	export_dense_matrix_pushpull<unsigned char,row_major,row_major>("rmuc");
+	export_dense_matrix<unsigned char,column_major,column_major>("cmuc");
+	export_dense_matrix<unsigned char,row_major,row_major>("rmuc");
 
-	export_dense_matrix_pushpull<int,column_major,column_major>("cmi");
-	export_dense_matrix_pushpull<int,row_major,row_major>("rmi");
+	export_dense_matrix<int,column_major,column_major>("cmi");
+	export_dense_matrix<int,row_major,row_major>("rmi");
 
-	// numpy --> host matrix
+	// numpy --> host matrix view
 	export_dense_matrix_views<int>();
 	export_dense_matrix_views<float>();
 	export_dense_matrix_views<signed char>();
@@ -344,6 +377,12 @@ void export_dense_matrix(){
 	export_numpy2dev_dense_mats<float>();
 	export_numpy2dev_dense_mats<signed char>();
 	export_numpy2dev_dense_mats<unsigned char>();
+
+	// numpy --> host matrix
+	export_numpy2host_dense_mats<int>();
+	export_numpy2host_dense_mats<float>();
+	export_numpy2host_dense_mats<signed char>();
+	export_numpy2host_dense_mats<unsigned char>();
 
 	// dev matrix --> numpy matrix
 	export_dev_dense_mat2numpys<int>();
