@@ -239,9 +239,9 @@ numpy2dev_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
 template<class T, class Mfrom, class Mto>
 dense_matrix<T,Mto,host_memory_space>*
 numpy2host_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
-	dense_matrix<T,Mto,host_memory_space>* to = new dense_matrix<T,Mto,host_memory_space>(1,1);
 	dense_matrix<T,Mto,host_memory_space>* from = mat_view<T,Mto,Mfrom>(m);
-	cuv::convert(*to,*from);
+	dense_matrix<T,Mto,host_memory_space>* to = new dense_matrix<T,Mto,host_memory_space>(from->h(), from->w());
+	cuv::copy(*to,*from);
 	delete from;
 	return to;
 }
