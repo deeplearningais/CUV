@@ -58,7 +58,7 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 struct Fix{
 	vector<float,dev_memory_space> v;
 	vector<float,host_memory_space> x;
-	static const int n = 8092;
+	static const int n =32368;
 	Fix()
 		:v(n),x(n) // needs large sample number.
 	{
