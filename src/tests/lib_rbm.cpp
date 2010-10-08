@@ -42,6 +42,18 @@
 
 using namespace cuv;
 using namespace cuv::libs::rbm;
+
+struct MyConfig {
+	static const int dev = CUDA_TEST_DEVICE;
+	MyConfig()   { 
+		printf("Testing on device=%d\n",dev);
+		initCUDA(dev); 
+	}
+	~MyConfig()  { exitCUDA();  }
+};
+
+BOOST_GLOBAL_FIXTURE( MyConfig );
+
 struct Fix{
 	static const int N=10;
 	vector<float,host_memory_space> v;

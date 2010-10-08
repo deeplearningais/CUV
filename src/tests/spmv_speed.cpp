@@ -66,6 +66,17 @@ static const unsigned int nm = m/n;  // number of maps in output layer
 		MSG = 1000000.0f*tim.perf();            \
 	}
 
+struct MyConfig {
+	static const int dev = CUDA_TEST_DEVICE;
+	MyConfig()   { 
+		printf("Testing on device=%d\n",dev);
+		initCUDA(dev); 
+	}
+	~MyConfig()  { exitCUDA();  }
+};
+
+BOOST_GLOBAL_FIXTURE( MyConfig );
+
 struct Fix{
 	dia_matrix<float,host_memory_space>   A;
 	dense_matrix<float,column_major,host_memory_space> A_;

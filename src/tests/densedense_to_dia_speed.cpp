@@ -67,6 +67,17 @@ static const int k = 96;
 static const int fs = 8;
 static const int nm = m/n;
 
+struct MyConfig {
+	static const int dev = CUDA_TEST_DEVICE;
+	MyConfig()   { 
+		printf("Testing on device=%d\n",dev);
+		initCUDA(dev); 
+	}
+	~MyConfig()  { exitCUDA();  }
+};
+
+BOOST_GLOBAL_FIXTURE( MyConfig );
+
 struct Fix{
 	dia_matrix<float,dev_memory_space>   C;
 	dense_matrix<float,column_major,dev_memory_space> A;

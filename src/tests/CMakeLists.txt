@@ -63,13 +63,16 @@ TARGET_LINK_LIBRARIES( test_lib_rbm cuv_basics cuv_tools cuv_convert cuv_vector_
 ADD_TEST( basics  "${CMAKE_BINARY_DIR}/src/tests/test_basic" )
 ADD_TEST( convert "${CMAKE_BINARY_DIR}/src/tests/test_convert" )
 ADD_TEST( vec_op "${CMAKE_BINARY_DIR}/src/tests/test_vec_op" )
-ADD_TEST( random "${CMAKE_BINARY_DIR}/src/tests/test_random" )
+ADD_TEST( matrix_op "${CMAKE_BINARY_DIR}/src/tests/test_mat_op" )
+ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/src/tests/test_dia_mat" )
 ADD_TEST( spmv "${CMAKE_BINARY_DIR}/src/tests/test_spmv" )
 ADD_TEST( densedense_to_dia "${CMAKE_BINARY_DIR}/src/tests/test_densedense_to_dia" )
-ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/src/tests/test_dia_mat" )
-ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/src/tests/test_conv_op" )
+ADD_TEST( random "${CMAKE_BINARY_DIR}/src/tests/test_random" )
 ADD_TEST( lib_rbm "${CMAKE_BINARY_DIR}/src/tests/test_lib_rbm" )
-ADD_TEST( memory  "${CMAKE_BINARY_DIR}/src/tests/test_memory" )
+ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/src/tests/test_conv_op" )
+
+# test for memory leak. takes to long and bug was fixed
+#ADD_TEST( memory  "${CMAKE_BINARY_DIR}/src/tests/test_memory" )
 
 # speed tests just take too long.
 #ADD_TEST( vec_op_speed "${CMAKE_BINARY_DIR}/tests/test_vec_op_speed" )

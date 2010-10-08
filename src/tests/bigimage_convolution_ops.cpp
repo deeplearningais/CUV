@@ -53,6 +53,18 @@
 
 using namespace cuv;
 
+struct MyConfig {
+	static const int dev = CUDA_TEST_DEVICE;
+	MyConfig()   { 
+		printf("Testing on device=%d\n",dev);
+		initCUDA(dev); 
+	}
+	~MyConfig()  { exitCUDA();  }
+};
+
+
+BOOST_GLOBAL_FIXTURE( MyConfig );
+
 struct Fix{
 	static const int c = 2;  // # patterns (images)
 	static const int n = 1024;  // image size
