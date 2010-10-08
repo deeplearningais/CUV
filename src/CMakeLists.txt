@@ -1,13 +1,12 @@
 cmake_minimum_required( VERSION 2.6 FATAL_ERROR )
 
-OPTION(CUDA_SHARED "Wether shared version of CUDA is to be used, must be true for python bindings!" ON)
-IF(CUDA_SHARED)
+OPTION(CUV_PYTHON_BINDINGS "Whether shared version of CUDA is to be used, must be true for python bindings!" ON)
+IF(CUV_PYTHON_BINDINGS)
 #	use this for python bindings. However, We need to recompile CUDA for this on every computer!
 	SET(CMAKE_CXX_FLAGS "-fPIC") # for FindCUDA, needed for python shared lib
-	SET(CUDA_SDK_ROOT_DIR "/usr/local/src/cuda_shared" CACHE STRING "Location of CUDA SDK") 
-ELSE(CUDA_SHARED)
-	SET(CUDA_SDK_ROOT_DIR "/usr/local/src/cuda" CACHE STRING "Location of CUDA SDK")
-ENDIF(CUDA_SHARED)
+ENDIF(CUV_PYTHON_BINDINGS)
+
+SET(CUDA_SDK_ROOT_DIR "/usr/local/cuda/C" CACHE STRING "Location of CUDA SDK") 
 
 SET (CUDA_TEST_DEVICE "0" CACHE STRING "Which CUDA device should the tests be run on, if multiple devices are present.")
 add_definitions(-DCUDA_TEST_DEVICE=${CUDA_TEST_DEVICE})
@@ -46,9 +45,9 @@ add_subdirectory(libs)
 
 add_subdirectory(tests)
 
-IF(CUDA_SHARED)
+IF(CUV_PYTHON_BINDINGS)
 	add_subdirectory(python_bindings)
-ENDIF(CUDA_SHARED)
+ENDIF(CUV_PYTHON_BINDINGS)
 
 
 CUDA_BUILD_CLEAN_TARGET()
