@@ -57,7 +57,7 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	static const int n=256;
+	static const int n=128;
 	static const int N=n*n;
 	static const int big_images = 384*384*32;
 	dense_matrix<float,column_major,dev_memory_space> a,b,u,v,w,d_reduce_big;
