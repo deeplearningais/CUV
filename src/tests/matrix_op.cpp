@@ -180,8 +180,8 @@ BOOST_AUTO_TEST_CASE( mat_op_mm )
 
 	dense_matrix<float,column_major,host_memory_space> u2(u.h(), u.w());
 	convert(u2,u);
-	for(int i=0;i<256;i++){
-		for(int j=0;j<256;j++){
+	for(int i=0;i<u2.h();i++){
+		for(int j=0;j<u2.h();j++){
 			BOOST_CHECK_CLOSE( u2(i,j), r(i,j), 0.01 );
 		}
 	}
@@ -234,9 +234,9 @@ BOOST_AUTO_TEST_CASE( mat_op_mmdim1 )
 	dense_matrix<float,column_major,host_memory_space> b2(b.h(), b.w());
 	convert(b2,b);
 
-	for(int i=0;i<256;i++) {
+	for(int i=0;i<z.h();i++) {
 		float val = 0.0f;
-		for(int j=0;j<256;j++) {
+		for(int j=0;j<z.w();j++) {
 			val += s(0,j) * z(i,j);
 		}
 		BOOST_CHECK_CLOSE( b2(0,i), val, 0.01 );
