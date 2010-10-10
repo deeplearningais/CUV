@@ -236,7 +236,7 @@ void argmax_row_kernel(const T* matrix, I* vector, int nCols, int nRows) {
 		return;
 	int off = blockDim.x;
 
-	shVal[tx] = (T) -FLT_MAX; // dangerous for some data types
+	shVal[tx] = (T) INT_MIN; // dangerous for some data types
 	shIdx[tx] = 0;
 
 	int idx = by * nRows + bx * blockDim.x + tx;
@@ -277,7 +277,7 @@ void argmax_row_kernel(const T* matrix, I* vector, int nCols, int nRows) {
 // potential speedup by 5 possible for "fine-grained transpose"
 template<int BLOCK_SIZE, class T>
 __global__
-void transpose_kernel(T* dst, T* src, int width, int height) {
+void transpose_kernel(T* dst, const T* src, int width, int height) {
 	const int bx = blockIdx.x * blockDim.x;
 	const int by = blockIdx.y * blockDim.y;
 	const int tx = bx + threadIdx.x;
@@ -335,6 +335,38 @@ dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type>* blo
 	return blockview(matrix,start_rows,num_rows,start_cols,num_cols, __memory_layout());
 }
 
+__global__ void bitflip_kernel(float* M, int height, int row, int n) {
+	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int off = blockDim.x * gridDim.x;
+    for (unsigned int i = idx; i < n; i += off){
+		M[i * height + row] = 1 - M[i * height + row];
+	}
+
+}
+
+namespace bitflip_row_impl{
+	template<class V, class I>
+	void bitflip(dense_matrix<V,column_major,dev_memory_space,I>& m, const I& row){
+		int num_threads = (int) min(512.f, ceil((float)sqrt(m.w())));
+		int num_blocks  = (int) ceil((float)m.w()/num_threads);
+		bitflip_kernel<<<num_blocks,num_threads>>>(m.ptr(),m.h(),row, m.w());
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+	template<class V, class I>
+	void bitflip(dense_matrix<V,column_major,host_memory_space,I>& m, const I& row){
+		for(int i=0;i<m.w();i++)
+			m.set(row,i,(V)(1.f-m(row,i)));
+	}
+}
+// bitflip a row of a column-major matrix
+template<class __value_type, class __memory_layout, class __memory_space_type, class __index_type>
+void bitflip(dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type>& matrix,
+		__index_type row){
+		assert(row<m.h());
+		assert(m.ptr());
+		bitflip_row_impl::bitflip(matrix,row);
+}
+
 /// column major blas3
 template<>
 void prod(dense_matrix<float,column_major,dev_memory_space>& dst,
@@ -358,7 +390,7 @@ void prod(dense_matrix<float,column_major,dev_memory_space>& dst,
 
 	cublasSgemm(transA, transB, m, n, k1, factAB, A.ptr(), A.h(),B.ptr(), B.h(), factC, dst.ptr(), dst.h());
 	cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
-	//cuvSafeCall(cudaThreadSynchronize());
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
@@ -422,7 +454,7 @@ void prod(dense_matrix<float,row_major,dev_memory_space>& dst,
 	cublasSgemm(transB, transA, m, n, k1, factAB, B.ptr(), B.w(),A.ptr(), A.w(), factC, dst.ptr(), dst.w());
 
 	cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
-	//cuvSafeCall(cudaThreadSynchronize());
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
@@ -494,7 +526,7 @@ namespace matrix_plus_vector_impl {
 		int num_threads = min(512,A.w());
 		int num_blocks = min(1024,A.h());
 		matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
-		//cuvSafeCall(cudaThreadSynchronize());
+		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class I, class V2, class OP>
 	void matrix_plus_col(dense_matrix<V,column_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op) {
@@ -502,7 +534,7 @@ namespace matrix_plus_vector_impl {
 		int num_threads = 512;
 		int num_blocks = min(512,(int)ceil((float)A.n() / num_threads));
 		matrix_plus_vector_kernel_column_major2<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
-		//cuvSafeCall(cudaThreadSynchronize());
+		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class I, class V2, class OP>
 	void matrix_plus_col(dense_matrix<V,column_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op) {
@@ -612,7 +644,7 @@ namespace reduce_to_col_impl {
 		dim3 threads(BLOCK_DIM_X,BLOCK_DIM_Y);
 		cudaPrintfInit();		
 		reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
-		//cuvSafeCall(cudaThreadSynchronize());
+		cuvSafeCall(cudaThreadSynchronize());
 		cudaPrintfDisplay(NULL, true);
 		cudaPrintfEnd();
 	}
@@ -642,7 +674,7 @@ namespace reduce_to_col_impl {
 		if(factOld != 0.0f)
 			apply_binary_functor(v, w, BF_XPBY, factOld);
 
-		//cuvSafeCall(cudaThreadSynchronize());
+		cuvSafeCall(cudaThreadSynchronize());
 	}
 
 }
@@ -712,7 +744,7 @@ namespace reduce_to_row_impl {
 		dim3 grid(1, m.w());
 		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
 		reduce_to_row_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
-		//cuvSafeCall(cudaThreadSynchronize());
+		cuvSafeCall(cudaThreadSynchronize());
 	}
 
 	template<int rf,class V,class I, class V2>
@@ -737,11 +769,8 @@ namespace reduce_to_row_impl {
 		dim3 grid(grid_x, grid_y);
 		dim3 threads(BLOCK_SIZE*2, BLOCK_SIZE/2);
 		// yes, we abuse the reduce_to_col kernel here :)
-		cudaPrintfInit();
 		reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);
-		cudaPrintfDisplay(std::cout, true);
-		cudaPrintfEnd();
-		//cuvSafeCall(cudaThreadSynchronize());
+		cuvSafeCall(cudaThreadSynchronize());
 	}
 
 }
@@ -765,57 +794,59 @@ void reduce_to_row(__vector_type&v, const __matrix_type& m,reduce_functor rf, co
 	}
 }
 
-template<>
-void argmax_to_row(vector<int,dev_memory_space>&v, const dense_matrix<float,column_major, dev_memory_space>& m) {
+namespace argmax_to_XXX_impl{
+
+template<class V, class V2, class I>
+void argmax_to_row(vector<V2,dev_memory_space>&v, const dense_matrix<V,column_major, dev_memory_space, I>& m) {
 	cuvAssert(m.ptr() != NULL);
 	cuvAssert(m.w() == v.size());
 	static const int BLOCK_SIZE = 16;
-	unsigned int w = m.w();
-	unsigned int u;
-	float* m_ptr = (float*) m.ptr();
+	I w = m.w();
+	I u;
+	const V* m_ptr = m.ptr();
 	int* v_ptr = v.ptr();
 	do {
 		u = min(w, MAX_GRID_SIZE);
 		dim3 grid(1, u);
 		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-		argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m_ptr,v_ptr,u,m.h());
+		argmax_row_kernel<BLOCK_SIZE><<<grid,threads>>>(m_ptr,v_ptr,u,m.h());
 		m_ptr += m.h() * MAX_GRID_SIZE;
 		v_ptr += MAX_GRID_SIZE;
 		w -= MAX_GRID_SIZE;
 	}while(u == MAX_GRID_SIZE);
-	//cuvSafeCall(cudaThreadSynchronize());
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<>
-void argmax_to_column(vector<int,dev_memory_space>&v, const dense_matrix<float,row_major, dev_memory_space>& m) {
+template<class V, class V2, class I>
+void argmax_to_column(vector<V2,dev_memory_space, I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m) {
 	cuvAssert(m.ptr() != NULL);
 	cuvAssert(m.h() == v.size());
 	static const int BLOCK_SIZE = 16;
-	unsigned int h = m.h();
-	unsigned int u;
-	float* m_ptr = (float*) m.ptr();
-	int* v_ptr = v.ptr();
+	I h = m.h();
+	I u;
+	V* m_ptr = (V*) m.ptr();
+	V2* v_ptr = v.ptr();
 	do {
 		u = min(h, MAX_GRID_SIZE);
 		dim3 grid(1, u);
 		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-		argmax_row_kernel<BLOCK_SIZE,float,int><<<grid,threads>>>(m_ptr,v_ptr,u,m.w());
+		argmax_row_kernel<BLOCK_SIZE><<<grid,threads>>>(m_ptr,v_ptr,u,m.w());
 		m_ptr += m.w() * MAX_GRID_SIZE;
 		v_ptr += MAX_GRID_SIZE;
 		h -= MAX_GRID_SIZE;
 	}while(u == MAX_GRID_SIZE);
-	//cuvSafeCall(cudaThreadSynchronize());
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<>
-void argmax_to_row(vector<int,host_memory_space>&v, const dense_matrix<float,column_major, host_memory_space>& m) {
+template<class V, class V2, class I>
+void argmax_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major, host_memory_space,I>& m) {
 	cuvAssert(m.ptr() != NULL);
 	cuvAssert(m.w() == v.size());
-	const float* ptr = m.ptr();
-	int* res = v.ptr();
+	const V* ptr = m.ptr();
+	V2* res = v.ptr();
 	for(int i=0; i<m.w();i++) {
 		int idx = 0;
-		float val = *ptr;
+		V val = *ptr;
 		for(int j=0; j<m.h();j++) {
 			if(*ptr > val) {
 				val = *ptr;
@@ -827,15 +858,15 @@ void argmax_to_row(vector<int,host_memory_space>&v, const dense_matrix<float,col
 	}
 }
 
-template<>
-void argmax_to_column(vector<int,host_memory_space>&v, const dense_matrix<float,row_major,host_memory_space>& m) {
+template<class V, class V2, class I>
+void argmax_to_column(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m) {
 	cuvAssert(m.ptr() != NULL);
 	cuvAssert(m.h() == v.size());
-	const float* ptr = m.ptr();
-	int* res = v.ptr();
+	const V* ptr = m.ptr();
+	V2* res = v.ptr();
 	for(int i=0; i<m.h();i++) {
 		int idx = 0;
-		float val = *ptr;
+		V val = *ptr;
 		for(int j=0; j<m.w();j++) {
 			if(*ptr > val) {
 				val = *ptr;
@@ -847,45 +878,58 @@ void argmax_to_column(vector<int,host_memory_space>&v, const dense_matrix<float,
 	}
 }
 
-template<>
-void transpose(dense_matrix<float,column_major, dev_memory_space>& dst,
-		dense_matrix<float,column_major, dev_memory_space>& src) {
+}
+
+template<class V, class M>
+void argmax_to_column(V&v, const M& m) {
+	argmax_to_XXX_impl::argmax_to_column(v,m);
+}
+template<class V, class M>
+void argmax_to_row(V&v, const M& m) {
+	argmax_to_XXX_impl::argmax_to_row(v,m);
+}
+
+namespace transpose_impl{
+
+template<class V, class I>
+void transpose(dense_matrix<V,column_major, dev_memory_space, I>& dst,
+		 const dense_matrix<V,column_major, dev_memory_space, I>& src) {
 	cuvAssert(dst.w() == src.h());
 	cuvAssert(dst.h() == src.w());
-	const int width = dst.w();
-	const int height = dst.h();
+	const I width = dst.w();
+	const I height = dst.h();
 	static const int BLOCK_SIZE = 16;
 	const int numBlocksX = ceil((float)width / BLOCK_SIZE);
 	const int numBlocksY = ceil((float)height / BLOCK_SIZE);
 	dim3 gridSize(numBlocksX, numBlocksY, 1);
 	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
-	transpose_kernel<BLOCK_SIZE,float><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
-	//cuvSafeCall(cudaThreadSynchronize());
+	transpose_kernel<BLOCK_SIZE><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<>
-void transpose(dense_matrix<float,row_major,dev_memory_space>& dst,
-		dense_matrix<float,row_major, dev_memory_space>& src) {
+template<class V, class I>
+void transpose(dense_matrix<V,row_major,dev_memory_space, I>& dst,
+		 const dense_matrix<V,row_major,dev_memory_space, I>& src) {
 	cuvAssert(dst.w() == src.h());
 	cuvAssert(dst.h() == src.w());
-	const int width = dst.h();
-	const int height = dst.w();
+	const I width = dst.h();
+	const I height = dst.w();
 	static const int BLOCK_SIZE = 16;
 	const int numBlocksX = ceil((float)width / BLOCK_SIZE);
 	const int numBlocksY = ceil((float)height / BLOCK_SIZE);
 	dim3 gridSize(numBlocksX, numBlocksY, 1);
 	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
-	transpose_kernel<BLOCK_SIZE,float><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
-	//cuvSafeCall(cudaThreadSynchronize());
+	transpose_kernel<BLOCK_SIZE><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<>
-void transpose(dense_matrix<float,column_major,host_memory_space>& dst,
-		dense_matrix<float,column_major,host_memory_space>& src) {
+template<class V, class I>
+void transpose(dense_matrix<V,column_major,host_memory_space, I>& dst,
+		 const dense_matrix<V,column_major,host_memory_space, I>& src) {
 	cuvAssert(dst.w() == src.h());
 	cuvAssert(dst.h() == src.w());
-	float* dst_ptr = dst.ptr();
-	float* src_ptr = src.ptr();
+	V* dst_ptr = dst.ptr();
+	const V* src_ptr = src.ptr();
 	for(int i=0; i<dst.w(); i++) {
 		for(int j=0; j<dst.h(); j++) {
 			*dst_ptr++ = src_ptr[j*src.h()];
@@ -894,19 +938,25 @@ void transpose(dense_matrix<float,column_major,host_memory_space>& dst,
 	}
 }
 
-template<>
-void transpose(dense_matrix<float,row_major,host_memory_space>& dst,
-		dense_matrix<float,row_major,host_memory_space>& src) {
+template<class V, class I>
+void transpose(dense_matrix<V,row_major,host_memory_space, I>& dst,
+		 const dense_matrix<V,row_major,host_memory_space, I>& src) {
 	cuvAssert(dst.w() == src.h());
 	cuvAssert(dst.h() == src.w());
-	float* dst_ptr = dst.ptr();
-	float* src_ptr = src.ptr();
+	V* dst_ptr = dst.ptr();
+	const V* src_ptr = src.ptr();
 	for(int i=0; i<dst.h(); i++) {
 		for(int j=0; j<dst.w(); j++) {
 			*dst_ptr++ = src_ptr[j*src.w()];
 		}
 		src_ptr++;
 	}
+}
+}
+
+template<class M>
+void transpose(M& dst, const M& src){
+	transpose_impl::transpose(dst,src);
 }
 
 #define INSTANTIATE_MV(V,M) \
@@ -933,6 +983,29 @@ void transpose(dense_matrix<float,row_major,host_memory_space>& dst,
   template dense_matrix<V,M,host_memory_space,I>* blockview(dense_matrix<V,M,host_memory_space,I>&,I,I,I,I); \
   template dense_matrix<V,M, dev_memory_space,I>* blockview(dense_matrix<V,M, dev_memory_space,I>&,I,I,I,I);
 
+#define INSTANTIATE_TRANSPOSE(V,M,I) \
+  template void transpose(dense_matrix<V,M,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&); \
+  template void transpose(dense_matrix<V,M,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&); 
+
+#define INSTANTIATE_ARGMAX_TO_ROW(V,M,I) \
+  template void argmax_to_row(vector<int,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
+  template void argmax_to_row(vector<int,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);  
+#define INSTANTIATE_ARGMAX_TO_COL(V,M,I) \
+  template void argmax_to_column(vector<int,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
+  template void argmax_to_column(vector<int,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);   
+
+
+INSTANTIATE_ARGMAX_TO_COL(float,row_major,unsigned int);
+INSTANTIATE_ARGMAX_TO_COL(int,row_major,unsigned int);
+
+INSTANTIATE_ARGMAX_TO_ROW(float,column_major,unsigned int);
+INSTANTIATE_ARGMAX_TO_ROW(int,column_major,unsigned int);
+
+INSTANTIATE_TRANSPOSE(float,column_major,unsigned int);
+INSTANTIATE_TRANSPOSE(float,row_major,unsigned int);
+INSTANTIATE_TRANSPOSE(int,column_major,unsigned int);
+INSTANTIATE_TRANSPOSE(int,row_major,unsigned int);
+
 INSTANTIATE_MV(float, column_major);
 INSTANTIATE_MV(float, row_major);
 
@@ -941,5 +1014,8 @@ INSTANTIATE_REDROW(float,row_major);
 
 INSTANTIATE_BLOCKVIEW(float,column_major,unsigned int);
 INSTANTIATE_BLOCKVIEW(float,row_major,unsigned int);
+
+template void bitflip(dense_matrix<float,column_major,host_memory_space>&, unsigned int);
+template void bitflip(dense_matrix<float,column_major,dev_memory_space>&, unsigned int);
 
 }; // cuv
