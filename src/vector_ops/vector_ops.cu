@@ -537,6 +537,7 @@ struct apply_scalar_functor_impl{
 			case SF_SQRT:       launch_unary_kernel(v,v, uf_sqrt<value_type>()); break;
 			case SF_SMAX:       launch_unary_kernel(v,v, uf_smax<value_type>()); break;
 			case SF_NEGATE:     launch_unary_kernel(v,v, thrust::negate<value_type>()); break;
+			case SF_ABS:        launch_unary_kernel(v,v, thrust::absolute_value<value_type>()); break;
 			case SF_POSLIN:     launch_unary_kernel(v,v, uf_poslin<value_type>()); break;
 			default:
 				cout << "No suitable no-parameter scalar functor was found." << endl;
