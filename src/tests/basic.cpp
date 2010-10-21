@@ -42,6 +42,7 @@
 
 #include <cuv_general.hpp>
 #include <dense_matrix.hpp>
+#include <cuda_array.hpp>
 #include <convert.hpp>
 
 using namespace cuv;
@@ -131,5 +132,46 @@ BOOST_AUTO_TEST_CASE( set_vector_elements )
 	}
 }
 
+/** 
+ * @test 
+ * @brief allocating and destroying a cuda_array
+ */
+BOOST_AUTO_TEST_CASE( cuda_array_alloc )
+{
+	cuda_array<float,dev_memory_space> ca(1024,768);
+	BOOST_CHECK(ca.ptr());
+}
+
+/** 
+ * @test 
+ * @brief copying a dense matrix to a cuda_array
+ */
+BOOST_AUTO_TEST_CASE( cuda_array_assign )
+{
+	cuda_array<float,dev_memory_space> ca(1024,768);
+	dense_matrix<float,row_major,dev_memory_space> dm(1024,768);
+	ca.assign(dm);
+}
+
+/** 
+ * @test 
+ * @brief bind a cuda_array to a texture
+ */
+BOOST_AUTO_TEST_CASE( cuda_array_bind )
+{
+	dense_matrix<float,row_major,dev_memory_space> dm(128,64);
+	for(int i=0;i<128;i++){
+		for(int j=0;j<64;j++){
+			dm.set(i,j,i);
+		}
+	}
+	cuda_array<float,dev_memory_space> ca(dm);
+	ca.bind();
+	for(int i=0;i<128;i++){
+		for(int j=0;j<64;j++){
+			BOOST_CHECK_EQUAL(dm(i,j),ca.get(i,j));
+		}
+	}
+}
 
 BOOST_AUTO_TEST_SUITE_END()
