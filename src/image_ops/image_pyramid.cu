@@ -53,12 +53,33 @@ namespace cuv{
 				downLevel[y * downLevelPitch + x] = (buf[0] + buf[4] + 4*(buf[1] + buf[3]) + 6 * buf[2]) * NORM_FACTOR;
 			}
 		}
+	template<class T>
+	__global__
+		void
+		gaussian_pyramid_upsample_kernel(T* upLevel,
+				size_t upLevelPitch,
+				unsigned int upWidth, unsigned int upHeight)
+		{
+			// calculate normalized texture coordinates
+			unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+			unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+			if(x < upWidth && y < upHeight) {
+				float u0 = (x/2.f);
+				float v0 = (y/2.f);
+
+				texref<T> tex;
+				upLevel[y * upLevelPitch + x] = tex(u0,v0);
+			}
+		}
 
 
 	template<class V,class S, class I>
 		void gaussian_pyramid_downsample(
 				dense_matrix<V,row_major,S,I>& dst,
 				const cuda_array<V,S,I>& src){
+			cuvAssert(dst.w() < src.w());
+			cuvAssert(dst.h() < src.h());
 
 			dim3 grid(iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h(), CB_TILE_H));
 			dim3 threads(CB_TILE_W, CB_TILE_H);
@@ -82,12 +103,47 @@ namespace cuv{
 			cudaUnbindTexture(tex);
 			checkCudaError("cudaUnbindTexture");
 		}
+	template<class V,class S, class I>
+		void gaussian_pyramid_upsample(
+				dense_matrix<V,row_major,S,I>& dst,
+				const cuda_array<V,S,I>& src){
+			cuvAssert(dst.w() > src.w());
+			cuvAssert(dst.h() > src.h());
+
+			dim3 grid(iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h(), CB_TILE_H));
+			dim3 threads(CB_TILE_W, CB_TILE_H);
+
+			typedef typename texref<V>::type textype;
+			textype& tex = texref<V>::get();
+			cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<V>();
+			tex.normalized = false;
+			tex.filterMode = cudaFilterModeLinear;
+			tex.addressMode[0] = cudaAddressModeClamp;
+			tex.addressMode[1] = cudaAddressModeClamp;
+			cudaBindTextureToArray(tex, src.ptr(), channelDesc);
+			checkCudaError("cudaBindTextureToArray");
+
+			gaussian_pyramid_upsample_kernel<<<grid,threads>>>(dst.ptr(),
+					dst.w(),
+					dst.w(),
+					dst.h());
+			cuvSafeCall(cudaThreadSynchronize());
+
+			cudaUnbindTexture(tex);
+			checkCudaError("cudaUnbindTexture");
+		}
 
 	// explicit instantiation
 	template void gaussian_pyramid_downsample(
 			dense_matrix<float,row_major,dev_memory_space,unsigned int>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src);
 	template void gaussian_pyramid_downsample(
+			dense_matrix<unsigned char,row_major,dev_memory_space,unsigned int>& dst,
+			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src);
+	template void gaussian_pyramid_upsample(
+			dense_matrix<float,row_major,dev_memory_space,unsigned int>& dst,
+			const cuda_array<float,dev_memory_space,unsigned int>& src);
+	template void gaussian_pyramid_upsample(
 			dense_matrix<unsigned char,row_major,dev_memory_space,unsigned int>& dst,
 			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src);
 }

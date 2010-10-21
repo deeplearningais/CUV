@@ -59,6 +59,9 @@ void export_image_pyramid(){
 	def("gaussian_pyramid_downsample",
 			(void(*)(dense_matrix<V,row_major,S,I>&dst, const cuda_array<V,S,I>& src))
 			gaussian_pyramid_downsample<V,S,I>, (arg("dst"),arg("src")));
+	def("gaussian_pyramid_upsample",
+			(void(*)(dense_matrix<V,row_major,S,I>&dst, const cuda_array<V,S,I>& src))
+			gaussian_pyramid_upsample<V,S,I>, (arg("dst"),arg("src")));
 }
 
 void export_image_ops(){

@@ -41,15 +41,27 @@ def color_test(ni):
 
 def test_cuda_array(pic):
     pic_h = cp.push_host(pic)
+
+    # downsample pic_h
     tmp = (np.array([pic_h.h,pic_h.w])/2).astype('uint32')
     down  = cp.dev_matrix_rmf(tmp[0],tmp[1])
     ca    = cp.dev_cuda_array_f(pic_h.h,pic_h.w)
     ca.assign(pic_h)
     cp.gaussian_pyramid_downsample(down,ca)
-    x     = cp.pull(down)
-    print x
-    plt.matshow(x)
+
+    # upsample downsampled
+    ca    = cp.dev_cuda_array_f(down.h,down.w)
+    ca.assign(down)
+    up    = cp.dev_matrix_rmf(pic_h.h, pic_h.w)
+    cp.gaussian_pyramid_upsample(up,ca)
+    print cp.pull(up)
+
+    plt.matshow(cp.pull(down))
+    plt.title("Downsampled")
     plt.matshow(pic)
+    plt.title("Original")
+    plt.matshow(cp.pull(up))
+    plt.title("Upsampled")
     plt.show()
     ca.dealloc()
 
@@ -59,6 +71,8 @@ def run():
     pig = Image.open("tests/data/gray_square.gif").resize((128,128)).convert("L")
     #color_test(np.asarray(pic).reshape(128**2*4,1))
     #gray_test( np.asarray(pig).reshape(128**2  ,1))
+
+    pig = Image.open("tests/data/gray_square.gif").resize((640,480)).convert("L")
     test_cuda_array(np.asarray(pig).astype("float32"))
     cp.exitCUDA()
 
