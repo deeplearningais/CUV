@@ -34,42 +34,49 @@
 #include <string>
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
+#include <pyublas/numpy.hpp>
+#include  <boost/type_traits/is_base_of.hpp>
+#include <cuda_array.hpp>
 
-
-#include <cuv_general.hpp>
-#include <random/random.hpp>
-
+using namespace std;
 using namespace boost::python;
 using namespace cuv;
+namespace ublas = boost::numeric::ublas;
+namespace bp    = boost::python;
 
-void export_vector();
-void export_vector_ops();
-void export_dense_matrix();
-void export_cuda_array();
-void export_matrix_ops();
-void export_random();
-void export_dia_matrix();
-void export_convolution_ops();
-void export_image_ops();
-void export_tools();
-void export_libs_rbm();
+/*
+ * Export the cuda_array class
+ */
+template<class T>
+void
+export_cuda_array(std::string name){
+	typedef T mat;
+	typedef typename mat::value_type value_type;
+	typedef typename mat::index_type index_type;
 
-BOOST_PYTHON_MODULE(cuv_python){
-	def("initCUDA", initCUDA);
-	def("exitCUDA", exitCUDA);
-	def("safeThreadSync", safeThreadSync);
-	def("initialize_mersenne_twister_seeds", initialize_mersenne_twister_seeds);
-	export_vector();
-	export_vector_ops();
-	export_dense_matrix();
-	export_cuda_array();
-	export_matrix_ops();
-	export_random();
-	export_dia_matrix();
-	export_convolution_ops();
-	export_image_ops();
-	export_tools();
-	export_libs_rbm();
+	class_<mat>(name.c_str(), init<typename mat::index_type, typename mat::index_type>())
+		.def("__len__",&mat::n, "matrix number of elements")
+		.def("alloc",  &mat::alloc, "allocate memory")
+		.def("dealloc",&mat::dealloc, "deallocate memory")
+		//.def("bind",&mat::bind, "bind to 2D texture")
+		//.def("unbind",&mat::unbind, "unbind from 2D texture")
+		.def("assign", (void (mat::*)(const dense_matrix<value_type,row_major,dev_memory_space,index_type>&))(&mat::assign), "assign a device dense_matrix to cuda_array")
+		.def("assign", (void (mat::*)(const dense_matrix<value_type,row_major,host_memory_space,index_type>&))(&mat::assign), "assign a host dense_matrix to cuda_array")
+		.def("at",    (value_type (mat::*)(const index_type&,const index_type&))(&mat::operator()), "value at this position")
+		.add_property("h", &mat::h)
+		.add_property("w", &mat::w)
+		.add_property("n", &mat::n)
+		;
+}
+
+
+/*
+ * MAIN export function
+ *   calls exporters for various value_types, column/row major combinations etc.
+ */
+void export_cuda_array(){
+	export_cuda_array<cuda_array<float,dev_memory_space> >("dev_cuda_array_f");
+	export_cuda_array<cuda_array<unsigned char,dev_memory_space> >("dev_cuda_array_uc");
 }
 
 
