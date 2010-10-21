@@ -99,6 +99,7 @@ cuda_array_get_kernel(unsigned char* output, I i, I j){
 template<class V,class S, class I>
 V
 cuda_array<V,S,I>::operator()(const I& i, const I& j)const{
+	cuvAssert(false); // only works with (broken) bind active!
 	V *tmp_d, tmp_h;
 	cudaMalloc(&tmp_d,sizeof(V));
 	cuda_array_get_kernel<<<1,1>>>(tmp_d,i,j);
