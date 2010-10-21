@@ -36,9 +36,11 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 
-#include <dense_matrix.hpp>
+#include <basics/dense_matrix.hpp>
+#include <basics/cuda_array.hpp>
 
 #include <image_ops/move.hpp>
+#include <image_ops/image_pyramid.hpp>
 
 //using namespace std;
 using namespace boost::python;
@@ -52,7 +54,16 @@ void export_move(){
 			image_move<M,N>, (arg("dst"),arg("src"),arg("image_w"),arg("image_h"),arg("num_maps"),arg("xshift"),arg("yshift")));
 }
 
+template<class V, class S, class I>
+void export_image_pyramid(){
+	def("gaussian_pyramid_downsample",
+			(void(*)(dense_matrix<V,row_major,S,I>&dst, const cuda_array<V,S,I>& src))
+			gaussian_pyramid_downsample<V,S,I>, (arg("dst"),arg("src")));
+}
+
 void export_image_ops(){
 	export_move<dense_matrix<float,column_major,dev_memory_space>,dense_matrix<unsigned char,column_major,dev_memory_space> >();
 	export_move<dense_matrix<unsigned char,column_major,dev_memory_space>,dense_matrix<unsigned char,column_major,dev_memory_space> >();
+	export_image_pyramid<float,dev_memory_space,unsigned int>();
+	export_image_pyramid<unsigned char,dev_memory_space,unsigned int>();
 }

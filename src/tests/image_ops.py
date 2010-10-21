@@ -39,11 +39,28 @@ def color_test(ni):
     plt.matshow(res[2*ts**2:3*ts**2,0].reshape(ts,ts), cmap = plt.cm.bone_r)
     plt.show()
 
+def test_cuda_array(pic):
+    pic_h = cp.push_host(pic)
+    tmp = (np.array([pic_h.h,pic_h.w])/2).astype('uint32')
+    down  = cp.dev_matrix_rmf(tmp[0],tmp[1])
+    ca    = cp.dev_cuda_array_f(pic_h.h,pic_h.w)
+    ca.assign(pic_h)
+    cp.gaussian_pyramid_downsample(down,ca)
+    x     = cp.pull(down)
+    print x
+    plt.matshow(x)
+    plt.matshow(pic)
+    plt.show()
+    ca.dealloc()
+
 def run():
+    cp.initCUDA(0)
     pic = Image.open("tests/data/colored_square.jpg").resize((128,128)).convert("RGBA")
     pig = Image.open("tests/data/gray_square.gif").resize((128,128)).convert("L")
     #color_test(np.asarray(pic).reshape(128**2*4,1))
-    gray_test( np.asarray(pig).reshape(128**2  ,1))
+    #gray_test( np.asarray(pig).reshape(128**2  ,1))
+    test_cuda_array(np.asarray(pig).astype("float32"))
+    cp.exitCUDA()
 
 if __name__ == "__main__":
     run()
