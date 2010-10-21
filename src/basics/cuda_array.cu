@@ -31,15 +31,32 @@ void cuda_array<V,S,I>::dealloc(){
 	}
 }
 
-template<class V,class S, class I>
-void cuda_array<V,S,I>::bind(){
-	cuvAssert(m_ptr!=NULL);
-	typedef typename texref<V>::type textype;
-	textype& tex = texref<V>::get();
-	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<V>();
-	cudaBindTextureToArray(tex, m_ptr, channelDesc);
-	checkCudaError("cudaBindTextureToArray");
-}
+/*
+ *template<class V,class S, class I>
+ *void cuda_array<V,S,I>::bind()const{
+ *    cuvAssert(m_ptr!=NULL);
+ *    typedef typename texref<V>::type textype;
+ *    textype& tex = texref<V>::get();
+ *    cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<V>();
+ *    tex.normalized = false;
+ *    tex.filterMode = cudaFilterModePoint;
+ *    tex.addressMode[0] = cudaAddressModeClamp;
+ *    tex.addressMode[1] = cudaAddressModeClamp;
+ *    cudaBindTextureToArray(tex, m_ptr, channelDesc);
+ *    checkCudaError("cudaBindTextureToArray");
+ *}
+ */
+
+/*
+ *template<class V,class S, class I>
+ *void cuda_array<V,S,I>::unbind()const{
+ *    cuvAssert(m_ptr!=NULL);
+ *    typedef typename texref<V>::type textype;
+ *    textype& tex = texref<V>::get();
+ *    cudaUnbindTexture(tex);
+ *    checkCudaError("cudaUnbindTexture");
+ *}
+ */
 
 #define CA cuda_array<V,S,I>
 template<class V,class S, class I>
@@ -55,7 +72,7 @@ void cuda_array<V,S,I>::assign(const dense_matrix<V,row_major,dev_memory_space,I
 	cuvAssert(src.ptr()!=NULL);
 	cuvAssert(src.w()  == m_width);
 	cuvAssert(src.h() == m_height);
-	cudaMemcpyToArray(ptr(), 0, 0, src.ptr(), src.memsize(), cudaMemcpyDeviceToDevice);
+	cudaMemcpy2DToArray(ptr(), 0, 0, src.ptr(), src.w(), src.w(), src.h(), cudaMemcpyDeviceToDevice);
 	checkCudaError("cudaMemcpyToArray");
 }
 
@@ -81,7 +98,7 @@ cuda_array_get_kernel(unsigned char* output, I i, I j){
 
 template<class V,class S, class I>
 V
-cuda_array<V,S,I>::get(const I& i, const I& j)const{
+cuda_array<V,S,I>::operator()(const I& i, const I& j)const{
 	V *tmp_d, tmp_h;
 	cudaMalloc(&tmp_d,sizeof(V));
 	cuda_array_get_kernel<<<1,1>>>(tmp_d,i,j);
@@ -93,11 +110,11 @@ cuda_array<V,S,I>::get(const I& i, const I& j)const{
 #define INST(V,M,I) \
 	template void cuda_array<V,M,I>::alloc();   \
 	template void cuda_array<V,M,I>::dealloc();   \
-	template void cuda_array<V,M,I>::bind();   \
 	template void cuda_array<V,M,I>::assign(const dense_matrix<V,row_major,host_memory_space,I>&);   \
 	template void cuda_array<V,M,I>::assign(const dense_matrix<V,row_major,dev_memory_space,I>&);    \
-	template V cuda_array<V,M,I>::get(const I&, const I&)const;   
+	template V cuda_array<V,M,I>::operator()(const I&, const I&)const;   
 
 INST(float,dev_memory_space,unsigned int);
+INST(unsigned char,dev_memory_space,unsigned int);
 
 }

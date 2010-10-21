@@ -45,14 +45,16 @@ namespace cuv
 		  ~cuda_array(){ //< when destroying, delete associated memory
 			  dealloc();
 		  }
+		  inline index_type w()const{return m_width;}
+		  inline index_type h()const{return m_height;}
+		  inline index_type n()const{return m_width*m_height;}
 		  inline       cudaArray* ptr()      {return m_ptr;}
 		  inline const cudaArray* ptr() const{return m_ptr;}
-		  void bind();
 		  void alloc();
 		  void dealloc();
 		  void assign(const dense_matrix<__value_type,row_major,dev_memory_space,__index_type>& src);
 		  void assign(const dense_matrix<__value_type,row_major,host_memory_space,__index_type>& src);
-		  __value_type get(const __index_type& i, const __index_type& j)const;
+		  __value_type operator()(const __index_type& i, const __index_type& j)const;
 	};
 }
 
