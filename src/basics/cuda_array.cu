@@ -72,7 +72,8 @@ void cuda_array<V,S,I>::assign(const dense_matrix<V,row_major,dev_memory_space,I
 	cuvAssert(src.ptr()!=NULL);
 	cuvAssert(src.w()  == m_width);
 	cuvAssert(src.h() == m_height);
-	cudaMemcpy2DToArray(ptr(), 0, 0, src.ptr(), src.w(), src.w(), src.h(), cudaMemcpyDeviceToDevice);
+	/*cudaMemcpy2DToArray(ptr(), 0, 0, src.ptr(), src.w(), src.w(), src.h(), cudaMemcpyDeviceToDevice);*/ // does not work with upsample for some reason (?)
+	cudaMemcpyToArray(ptr(), 0, 0, src.ptr(), src.memsize(), cudaMemcpyDeviceToDevice);
 	checkCudaError("cudaMemcpyToArray");
 }
 
