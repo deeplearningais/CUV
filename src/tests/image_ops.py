@@ -5,7 +5,7 @@ import pyublas
 import numpy as np
 import cuv_python as cp
 import matplotlib.pyplot as plt
-from ipdb import set_trace
+from timeit import Timer
 
 
 def to_cmuc(x):
@@ -39,6 +39,16 @@ def color_test(ni):
     plt.matshow(res[2*ts**2:3*ts**2,0].reshape(ts,ts), cmap = plt.cm.bone_r)
     plt.show()
 
+def testbuildpyra(pic,input_channels,pyramid_channels):
+    pic_d = cp.push(pic)
+    pyr = cp.dev_image_pyramid_f(pic_d.h/2,pic_d.w/input_channels/2,4,pyramid_channels)
+    pyr.build(pic_d,4)
+    #plt.matshow(cp.pull(pyr.get(0,0)))
+    #plt.matshow(cp.pull(pyr.get(0,1)))
+    #plt.matshow(cp.pull(pyr.get(0,2)))
+    #plt.show()
+
+
 def test_cuda_array(pic):
     pic_h = cp.push_host(pic)
 
@@ -66,15 +76,28 @@ def test_cuda_array(pic):
     ca.dealloc()
 
 def run():
-    cp.initCUDA(0)
     pic = Image.open("tests/data/colored_square.jpg").resize((128,128)).convert("RGBA")
     pig = Image.open("tests/data/gray_square.gif").resize((128,128)).convert("L")
     #color_test(np.asarray(pic).reshape(128**2*4,1))
     #gray_test( np.asarray(pig).reshape(128**2  ,1))
 
     pig = Image.open("tests/data/gray_square.gif").resize((640,480)).convert("L")
-    test_cuda_array(np.asarray(pig).astype("float32"))
-    cp.exitCUDA()
+    #test_cuda_array(np.asarray(pig).astype("float32"))
+
 
 if __name__ == "__main__":
+    cp.initCUDA(0)
+
+    #pic = Image.open("tests/data/gray_square.gif").resize((1024,768)).convert("RGB")
+    #pic = np.asarray(pic).astype("float32")
+    pic = Image.open("tests/data/gray_square.gif").resize((1024,768)).convert("RGBA")
+    pic = np.asarray(pic).astype("float32").reshape(768,1024*4)
+    for x in xrange(1): # warmup
+        testbuildpyra(pic,input_channels=4,pyramid_channels=3)
+
+    t = Timer('testbuildpyra(pic,4,3)','from %s import testbuildpyra, cp, pic'%__name__)
+    print t.timeit(number=1000)/1000
+
     run()
+
+    cp.exitCUDA()
