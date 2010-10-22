@@ -45,9 +45,9 @@
 void _convolve_bw(float* images, float* filters, float* targets, int numImgsPerGroup,
                   int numFiltersPerGroup, int numGroups, int imgSize, int filterSize, int stride, bool useDynamics = false) {
     assert(stride == 1 || stride == 3);
-    int numOutputsX = imgSize - filterSize + 1;
+    /*int numOutputsX = imgSize - filterSize + 1;*/
 //    int numOutputs = numOutputsX*numOutputsX;
-    bool checkOutputBounds = numOutputsX % 16 != 0;
+    /*bool checkOutputBounds = numOutputsX % 16 != 0;*/
     if(filterSize > 20) {
         bool checkFilterBounds = filterSize % 16 != 0;
         int threadsZ = numFiltersPerGroup > 8 ? 8 : numFiltersPerGroup > 4 ? 4 : 2;
@@ -529,17 +529,17 @@ void convolve(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int numGro
     int filterSize = int(dFilterSize);
     int numImgsPerGroup = images->getNumRows() / numGroups;
     int numFiltersPerGroup = filters->getNumRows() / numGroups;
-    int numOutputsX = imgSize - filterSize + 1;
-    int numOutputs = numOutputsX * numOutputsX;
     int imgPixels = imgSize * imgSize;
     int filterPixels = filterSize * filterSize;
+    /*int numOutputsX = (imgSize - filterSize + 1);*/
 
     assert(numFiltersPerGroup % 2 == 0);
-    assert(targets->getNumElements() == numOutputs * numFiltersPerGroup * numImgsPerGroup * numGroups);
+    assert(targets->getNumElements() == (imgSize - filterSize + 1)*(imgSize - filterSize + 1)* numFiltersPerGroup * numImgsPerGroup * numGroups);
     assert(!images->isTrans());
     assert(!filters->isTrans());
     assert(!targets->isTrans());
     assert(imgSize > filterSize);
+	
 
     if(!color) {
         _convolve_bw(images->getDevData(), filters->getDevData(), targets->getDevData(),

@@ -42,7 +42,6 @@
 #define CONV_COMMON_CUH_
 
 #define MUL24 __mul24
-#define MIN(x, y) ((x) > (y) ? (y) : (x))
 
 #ifndef DIVUP
 #define DIVUP(x, y) (((x) + (y) - 1) / (y))

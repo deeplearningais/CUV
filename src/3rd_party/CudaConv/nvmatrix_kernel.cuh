@@ -477,7 +477,7 @@ __global__ void kAggShortRows(float* mat, float* matSum, int width, int height) 
     bool doSum = tidx < AGG_SHORT_ROWS_THREADS_Y ;
 
     if (blockRowIdx < height) {
-#pragma unroll
+//#pragma unroll
         for (int y = 0; y < AGG_SHORT_ROWS_LOOPS_Y*AGG_SHORT_ROWS_THREADS_Y; y += AGG_SHORT_ROWS_THREADS_Y) {
 //            if (y * AGG_SHORT_ROWS_THREADS_Y + idxY >= height) {
 //                return; // we're done here
@@ -550,7 +550,7 @@ __global__ void kAggShortRows2(float* mat, float* matSum, int width, int height)
     bool doSum = tidx < AGG_SHORT_ROWS_THREADS_Y;
     if(blockRowIdx < height) {
 
-#pragma unroll
+//#pragma unroll
         for (int y = 0; y < AGG_SHORT_ROWS_LOOPS_Y*AGG_SHORT_ROWS_THREADS_Y; y += AGG_SHORT_ROWS_THREADS_Y) {
 //            if (y * AGG_SHORT_ROWS_THREADS_Y + idxY >= height) {
 //                return; // we're done here
