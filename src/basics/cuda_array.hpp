@@ -22,22 +22,25 @@ namespace cuv
 		  using base_type::m_height;
 
 		private:
-		  cudaArray*                  m_ptr;   //< data storage in cudaArray
+		  cudaArray*         m_ptr;   //< data storage in cudaArray
+		  unsigned int       m_dim;   //< the dimension of a single value (can be 1 or 4)
 
 		public:
 		  /**
 		   * Construct uninitialized memory with given width/height
 		   */
-		  cuda_array(const index_type& height, const index_type& width)
+		  cuda_array(const index_type& height, const index_type& width, const unsigned int dim=1)
 			  :base_type(height, width)
 			  ,m_ptr(NULL)
+			  ,m_dim(dim)
 		  {
 			  alloc();
 		  }
 		  template<class S>
-		  cuda_array(const dense_matrix<value_type,row_major,S,index_type>& src) //< construct by copying a dense matrix
-		  : base_type(src.h(), src.w())
+		  cuda_array(const dense_matrix<value_type,row_major,S,index_type>& src, const unsigned int dim=1) //< construct by copying a dense matrix
+		  : base_type(src.h(), src.w()/dim)
 		  , m_ptr(NULL)
+		  , m_dim(dim)
 		  {
 			  alloc();
 			  assign(src);

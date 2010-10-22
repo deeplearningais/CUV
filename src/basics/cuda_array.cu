@@ -16,11 +16,26 @@ template<> struct texref<unsigned char>{
 
 namespace cuv{
 
+template<class T> struct single_to_4{};
+template<>        struct single_to_4<float>        {typedef float4 type;};
+template<>        struct single_to_4<unsigned char>{typedef uchar4 type;};
+
 template<class V,class S, class I>
 void cuda_array<V,S,I>::alloc(){
 	cuvAssert(m_ptr==NULL);
-	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<V>();
-	cudaMallocArray(&m_ptr, &channelDesc, m_width, m_height);
+	typedef typename single_to_4<V>::type V4;
+	cudaChannelFormatDesc channelDesc  = cudaCreateChannelDesc<V>();
+	cudaChannelFormatDesc channelDesc4 = cudaCreateChannelDesc<V4>();
+	switch(m_dim){
+		case 1:
+			cudaMallocArray(&m_ptr, &channelDesc, m_width, m_height);
+			break;
+		case 4:
+			cudaMallocArray(&m_ptr, &channelDesc4, m_width, m_height);
+			break;
+		default:
+			cuvAssert(false);
+	}
 	checkCudaError("cudaMallocArray");
 }
 template<class V,class S, class I>
@@ -58,21 +73,21 @@ void cuda_array<V,S,I>::dealloc(){
  *}
  */
 
+
 #define CA cuda_array<V,S,I>
 template<class V,class S, class I>
 void cuda_array<V,S,I>::assign(const dense_matrix<V, row_major, host_memory_space, I>& src){
 	cuvAssert(src.ptr()!=NULL);
-	cuvAssert(src.w()  == m_width);
-	cuvAssert(src.h() == m_height);
+	cuvAssert(src.w()/m_dim == m_width);
+	cuvAssert(src.h()       == m_height);
 	cudaMemcpyToArray(ptr(), 0, 0, src.ptr(), src.memsize(), cudaMemcpyHostToDevice);
 	checkCudaError("cudaMemcpyToArray");
 }
 template<class V,class S, class I>
 void cuda_array<V,S,I>::assign(const dense_matrix<V,row_major,dev_memory_space,I>& src){
 	cuvAssert(src.ptr()!=NULL);
-	cuvAssert(src.w()  == m_width);
-	cuvAssert(src.h() == m_height);
-	/*cudaMemcpy2DToArray(ptr(), 0, 0, src.ptr(), src.w(), src.w(), src.h(), cudaMemcpyDeviceToDevice);*/ // does not work with upsample for some reason (?)
+	cuvAssert(src.w()/m_dim  == m_width);
+	cuvAssert(src.h()        == m_height);
 	cudaMemcpyToArray(ptr(), 0, 0, src.ptr(), src.memsize(), cudaMemcpyDeviceToDevice);
 	checkCudaError("cudaMemcpyToArray");
 }
