@@ -1,3 +1,40 @@
+//*LB*
+// Copyright (c) 2010, University of Bonn, Institute for Computer Science VI
+// All rights reserved.
+// 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 
+//  * Redistributions of source code must retain the above copyright notice,
+//    this list of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//  * Neither the name of the University of Bonn 
+//    nor the names of its contributors may be used to endorse or promote
+//    products derived from this software without specific prior written
+//    permission.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//*LE*
+
+/** 
+ * @file image_pyramid.hpp
+ * @brief classes/methods dealing with the construction of image pyramids
+ * @ingroup image_ops
+ * @author Hannes Schulz
+ * @date 2010-10-22
+ */
+
 #ifndef __IMAGE_PYRAMID_HPP__
 #define __IMAGE_PYRAMID_HPP__
 
@@ -8,23 +45,43 @@
 
 namespace cuv{
 
+	/**
+	 * @brief image pyramid decreasing in size logarithmically.
+	 */
 	template <class __matrix_type>
 	class image_pyramid
 	{
 	public:
-		typedef __matrix_type              matrix_type;
-		typedef typename matrix_type::value_type    value_type;
-		typedef typename matrix_type::memory_layout memory_layout;
-		typedef typename matrix_type::index_type    index_type;
+		typedef __matrix_type              matrix_type;            ///< the type of the contained matrices
+		typedef typename matrix_type::value_type    value_type;    ///< the type of one value in the matrix
+		typedef typename matrix_type::memory_layout memory_layout; ///< the memory layout (assumed to be row_major!)
+		typedef typename matrix_type::index_type    index_type;    ///< the index_type
+
+		/**
+		 * construct an image pyramid.
+		 *
+		 * @param img_h height of one image at base
+		 * @param img_w width of one image at base
+		 * @param depth depth of the pyramid (0..depth-1)
+		 * @param dim   the pixel dimension (can be 1 or 3)
+		 */
 		image_pyramid( int img_h, int img_w, int depth, int dim );
+		/**
+		 * Get a view on a channel in the pyramid.
+		 * @param depth    level of the pyramid
+		 * @param channel  channel (red, for example)
+		 */
 		matrix_type* get(int depth, int channel);
-		inline int dim(){return m_dim;}
-		inline unsigned int base_h(){return m_base_height;}
-		inline unsigned int base_w(){return m_base_width;}
-		inline unsigned int depth(){return m_matrices.size();}
+		inline int dim(){return m_dim;}                           ///< dimension of a single value in the matrix
+		inline unsigned int base_h(){return m_base_height;}       ///< image height at base of matrix
+		inline unsigned int base_w(){return m_base_width;}        ///< image width at base of matrix
+		inline unsigned int depth(){return m_matrices.size();}    ///< depth of pyramid
 
 		/**
 		 * @brief build the pyramid given an image.
+		 *
+		 * @param src                  pyramid represents scaled versions of this
+		 * @param interleaved_channels can be either 1 (grayscale) or 4 (RGBA, only RGB is used though).
 		 */
 		template<class __arg_matrix_type>
 		void build(const __arg_matrix_type& src, const unsigned int interleaved_channels){
@@ -33,6 +90,9 @@ namespace cuv{
 			typedef typename __arg_matrix_type::index_type   argindex_type;
 			typedef cuda_array<argval_type,argmemspace_type,argindex_type> argca_type;
 
+			/////////////
+			// create base image at level 0
+			////////////
 			if(    src.h() == m_base_height*m_dim // the image dimensions match the input --> just copy.
 				&& src.w() == m_base_width
 			){
@@ -60,6 +120,9 @@ namespace cuv{
 				}
 			}
 
+			/////////////
+			// fill upper levels
+			////////////
 			for(int i=1;i<m_matrices.size();i++){
 				for(int d=0;d<m_dim;d++){
 					matrix_type* srcview = get(i-1,d);
@@ -103,6 +166,14 @@ namespace cuv{
 		}
 	}
 
+/**
+ * @brief sample down an image by a factor of 2
+ *
+ * @param dst     target matrix; when interleaved_channels is 4,
+ *                this should be a matrix which is 3 times as high as src
+ * @param src     source matrix; when interleaved_channels is 4, this should have dim=4 set
+ * @param interleaved_channels can be 1 (grayscale) or 4 (RGBA)
+ */
 template<class T,class S, class I>
 void gaussian_pyramid_downsample(
 	dense_matrix<T,row_major,S,I>& dst,

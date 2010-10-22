@@ -33,9 +33,6 @@ template<> struct texref<uchar4>{
 
 
 namespace cuv{
-	//                         
-	// Gaussian 5 x 5 kernel = [1, 4, 6, 4, 1]/16
-	//
 	template<class T> __device__ T plus4(const T& a, const T& b){ 
 		T tmp = a;
 		tmp.x += b.x;
@@ -50,6 +47,9 @@ namespace cuv{
 		tmp.z *= s;
 		return tmp;
 	}
+	//                         
+	// Gaussian 5 x 5 kernel = [1, 4, 6, 4, 1]/16
+	//
 	template<class S, class T>
 	__global__
 		void
@@ -84,6 +84,8 @@ namespace cuv{
 		}
 	//                         
 	// Gaussian 5 x 5 kernel = [1, 4, 6, 4, 1]/16
+	// inspired by http://sourceforge.net/projects/openvidia/files/CUDA%20Bayesian%20Optical%20Flow/
+	// with bugfix...
 	//
 	template<class T>
 	__global__
@@ -164,10 +166,9 @@ namespace cuv{
 
 			dim3 grid,threads;
 			switch(interleaved_channels){
-				case 1:
+				case 1: // deals with a single channel
 					grid = dim3 (iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h(), CB_TILE_H));
 					threads = dim3 (CB_TILE_W, CB_TILE_H);
-					/*std::cout << "Case 1: "<<std::endl;*/
 					cuvAssert(dst.w() < src.w());
 					cuvAssert(dst.h() < src.h());
 					cudaBindTextureToArray(tex, src.ptr(), channelDesc);
@@ -180,11 +181,11 @@ namespace cuv{
 					cudaUnbindTexture(tex);
 					checkCudaError("cudaUnbindTexture");
 					break;
-				case 4:
-					/*std::cout << "Case 4: "<<interleaved_channels<<" "<<dst.h()<<" "<<dst.w()<<std::endl;*/
+				case 4: // deals with 4 interleaved channels (and writes to 3(!))
 					cuvAssert(dst.w()   < src.w());
 					cuvAssert(dst.h() / 3 < src.h()); 
 					cuvAssert(dst.h() % 3 == 0); // three channels in destination (non-interleaved)
+					cuvAssert(src.dim()==4);
 					grid    = dim3(iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h()/3, CB_TILE_H));
 					threads = dim3(CB_TILE_W, CB_TILE_H);
 					cudaBindTextureToArray(tex4, src.ptr(), channelDesc4);
@@ -204,6 +205,8 @@ namespace cuv{
 			cuvSafeCall(cudaThreadSynchronize());
 
 		}
+
+	// Upsampling with hardware linear interpolation
 	template<class V,class S, class I>
 		void gaussian_pyramid_upsample(
 				dense_matrix<V,row_major,S,I>& dst,
@@ -261,6 +264,10 @@ namespace cuv{
 				dst[y * dstPitch + x] = (TDest) arg_min;
 			}
 		}
+
+
+	// determine a number out of [0,3] for every pixel which should vary
+	// smoothly and according to detail level in the image
 	template<class VDest, class V, class S, class I>
 		void get_pixel_classes(
 			dense_matrix<VDest,row_major,S,I>& dst,
