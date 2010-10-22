@@ -55,18 +55,33 @@ void export_move(){
 }
 
 template<class V, class S, class I>
-void export_image_pyramid(){
+void export_image_pyramid_functions(){
 	def("gaussian_pyramid_downsample",
-			(void(*)(dense_matrix<V,row_major,S,I>&dst, const cuda_array<V,S,I>& src))
-			gaussian_pyramid_downsample<V,S,I>, (arg("dst"),arg("src")));
+			(void(*)(dense_matrix<V,row_major,S,I>&dst, const cuda_array<V,S,I>& src, const unsigned int))
+			gaussian_pyramid_downsample<V,S,I>, (arg("dst"),arg("src"),arg("interleaved_channels")));
 	def("gaussian_pyramid_upsample",
 			(void(*)(dense_matrix<V,row_major,S,I>&dst, const cuda_array<V,S,I>& src))
 			gaussian_pyramid_upsample<V,S,I>, (arg("dst"),arg("src")));
 }
 
+template<class M>
+void export_image_pyramid(std::string name){
+	typedef image_pyramid<M> pyr;
+	class_<pyr>(name.c_str(), init<int,int,int,int>())
+		.def("get",             &pyr::get,(arg("depth"),arg("channel")=0), return_value_policy<manage_new_object>())
+		.def("build",           (void (pyr::*)(const M&, const unsigned int)) &pyr::build, (arg("src"), arg("interleaved_channels")=1))
+		.add_property("base_h", &pyr::base_h)
+		.add_property("base_w", &pyr::base_w)
+		.add_property("depth",  &pyr::depth)
+		.add_property("dim",    &pyr::dim)
+		;
+}
+
 void export_image_ops(){
 	export_move<dense_matrix<float,column_major,dev_memory_space>,dense_matrix<unsigned char,column_major,dev_memory_space> >();
 	export_move<dense_matrix<unsigned char,column_major,dev_memory_space>,dense_matrix<unsigned char,column_major,dev_memory_space> >();
-	export_image_pyramid<float,dev_memory_space,unsigned int>();
-	export_image_pyramid<unsigned char,dev_memory_space,unsigned int>();
+	export_image_pyramid_functions<float,dev_memory_space,unsigned int>();
+	export_image_pyramid_functions<unsigned char,dev_memory_space,unsigned int>();
+	export_image_pyramid<dense_matrix<float, row_major,dev_memory_space, unsigned int> >("dev_image_pyramid_f");
+	export_image_pyramid<dense_matrix<unsigned char, row_major,dev_memory_space, unsigned int> >("dev_image_pyramid_uc");
 }

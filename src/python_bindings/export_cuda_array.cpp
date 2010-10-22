@@ -54,7 +54,7 @@ export_cuda_array(std::string name){
 	typedef typename mat::value_type value_type;
 	typedef typename mat::index_type index_type;
 
-	class_<mat>(name.c_str(), init<typename mat::index_type, typename mat::index_type>())
+	class_<mat>(name.c_str(), init<typename mat::index_type, typename mat::index_type, const unsigned int>())
 		.def("__len__",&mat::n, "matrix number of elements")
 		.def("alloc",  &mat::alloc, "allocate memory")
 		.def("dealloc",&mat::dealloc, "deallocate memory")
