@@ -56,6 +56,9 @@ void export_move(){
 
 template<class V, class S, class I>
 void export_image_pyramid_functions(){
+	def("gaussian",
+			(void(*)(dense_matrix<V,row_major,S,I>&dst, const cuda_array<V,S,I>& src))
+			gaussian<V,S,I>, (arg("dst"),arg("src")));
 	def("gaussian_pyramid_downsample",
 			(void(*)(dense_matrix<V,row_major,S,I>&dst, const cuda_array<V,S,I>& src, const unsigned int))
 			gaussian_pyramid_downsample<V,S,I>, (arg("dst"),arg("src"),arg("interleaved_channels")));
@@ -64,11 +67,21 @@ void export_image_pyramid_functions(){
 			gaussian_pyramid_upsample<V,S,I>, (arg("dst"),arg("src")));
 }
 
+template<class VDest, class V, class S, class I>
+void export_pixel_classes(){
+	def("get_pixel_classes",
+			(void(*)(dense_matrix<VDest,row_major,S,I>&dst, 
+					 const cuda_array<V,S,I>& src, 
+					 float))
+			get_pixel_classes<VDest,V,S,I>, (arg("dst"),arg("src"),arg("scale_fact")));
+}
+
 template<class M>
 void export_image_pyramid(std::string name){
 	typedef image_pyramid<M> pyr;
 	class_<pyr>(name.c_str(), init<int,int,int,int>())
 		.def("get",             &pyr::get,(arg("depth"),arg("channel")=0), return_value_policy<manage_new_object>())
+		.def("get_all_channels",  &pyr::get_all_channels,(arg("depth")),   return_internal_reference<>())
 		.def("build",           (void (pyr::*)(const M&, const unsigned int)) &pyr::build, (arg("src"), arg("interleaved_channels")=1))
 		.add_property("base_h", &pyr::base_h)
 		.add_property("base_w", &pyr::base_w)
@@ -82,6 +95,11 @@ void export_image_ops(){
 	export_move<dense_matrix<unsigned char,column_major,dev_memory_space>,dense_matrix<unsigned char,column_major,dev_memory_space> >();
 	export_image_pyramid_functions<float,dev_memory_space,unsigned int>();
 	export_image_pyramid_functions<unsigned char,dev_memory_space,unsigned int>();
+	
+	export_pixel_classes<unsigned char, unsigned char,dev_memory_space,unsigned int>();
+	export_pixel_classes<unsigned char, float,dev_memory_space,unsigned int>();
+	export_pixel_classes<float, float,  dev_memory_space,unsigned int>();
+
 	export_image_pyramid<dense_matrix<float, row_major,dev_memory_space, unsigned int> >("dev_image_pyramid_f");
 	export_image_pyramid<dense_matrix<unsigned char, row_major,dev_memory_space, unsigned int> >("dev_image_pyramid_uc");
 }

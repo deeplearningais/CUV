@@ -72,6 +72,7 @@ namespace cuv{
 		 * @param channel  channel (red, for example)
 		 */
 		matrix_type* get(int depth, int channel);
+		matrix_type* get_all_channels(int depth);
 		inline int dim(){return m_dim;}                           ///< dimension of a single value in the matrix
 		inline unsigned int base_h(){return m_base_height;}       ///< image height at base of matrix
 		inline unsigned int base_w(){return m_base_width;}        ///< image width at base of matrix
@@ -118,6 +119,8 @@ namespace cuv{
 					gaussian_pyramid_downsample(*dstview, cpy,1);
 					delete dstview;
 				}
+			}else{
+				cuvAssert(false);
 			}
 
 			/////////////
@@ -148,7 +151,18 @@ namespace cuv{
 		cuvAssert(depth   < m_matrices.size());
 		cuvAssert(channel < m_dim);
 		matrix_type& mat = m_matrices[depth];
-		return new matrix_type(mat.h()/m_dim,mat.w(),mat.ptr()+channel*m_base_height*m_base_width,true);
+		//std::cout << "asking for channel "<<channel<<" in matrix of size "<<mat.h()<<"x"<<mat.w()<<std::endl;
+		unsigned int w = mat.w();
+		unsigned int h = mat.h();
+		return new matrix_type(h/m_dim,w,mat.ptr()+channel*w*h/m_dim,true);
+	}
+
+	template <class __matrix_type>
+	typename image_pyramid<__matrix_type>::matrix_type*
+	image_pyramid<__matrix_type>::get_all_channels(int depth){
+		cuvAssert(depth   < m_matrices.size());
+		matrix_type& mat = m_matrices[depth];
+		return &mat;
 	}
 
 	template <class __matrix_type>
@@ -182,6 +196,19 @@ void gaussian_pyramid_downsample(
 );
 template<class T,class S, class I>
 void gaussian_pyramid_upsample(
+	dense_matrix<T,row_major,S,I>& dst,
+	const cuda_array<T,S,I>& src
+);
+
+template<class TDest, class T,class S, class I>
+void get_pixel_classes(
+	dense_matrix<TDest,row_major,S,I>& dst,
+	const cuda_array<T,S,I>&           src,
+	float scale_fact
+);
+
+template<class T,class S, class I>
+void gaussian(
 	dense_matrix<T,row_major,S,I>& dst,
 	const cuda_array<T,S,I>& src
 );

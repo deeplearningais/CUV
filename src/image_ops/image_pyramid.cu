@@ -50,7 +50,7 @@ namespace cuv{
 	//                         
 	// Gaussian 5 x 5 kernel = [1, 4, 6, 4, 1]/16
 	//
-	template<class S, class T>
+	template<class T4, class T>
 	__global__
 		void
 		gaussian_pyramid_downsample_kernel4val(T* downLevel,
@@ -61,25 +61,26 @@ namespace cuv{
 			unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
 			unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-			S buf[KERNEL_SIZE];
+			T4 buf[KERNEL_SIZE];
 
 			if(x < downWidth && y < downHeight) {
 
 				float u0 = (2.f * x) - HALF_KERNEL;
 				float v0 = (2.f * y) - HALF_KERNEL;
 
-				texref<S> tex;
+				texref<T4> tex;
 				for(int i = 0; i < KERNEL_SIZE; i++) {
-					S tmp;
+					T4 tmp;
 					tmp = plus4(                   tex(u0    , v0 + i) , tex(u0 + 4, v0 + i));
 					tmp = plus4(tmp, mul4(4, plus4(tex(u0 + 1, v0 + i) , tex(u0 + 3, v0 + i))));
 					tmp = plus4(tmp, mul4(6,       tex(u0 + 2, v0 + 2)));
 					buf[i] = tmp;
 				}
 
-				downLevel[y * downLevelPitch + x + 0*downLevelPitch*downHeight] = (buf[0].x + buf[4].x + 4*(buf[1].x + buf[3].x) + 6 * buf[2].x) * NORM_FACTOR;
-				downLevel[y * downLevelPitch + x + 1*downLevelPitch*downHeight] = (buf[0].y + buf[4].y + 4*(buf[1].y + buf[3].y) + 6 * buf[2].y) * NORM_FACTOR;
-				downLevel[y * downLevelPitch + x + 2*downLevelPitch*downHeight] = (buf[0].z + buf[4].z + 4*(buf[1].z + buf[3].z) + 6 * buf[2].z) * NORM_FACTOR;
+				unsigned int pos = y*downLevelPitch + x;
+				downLevel[pos + 0*downLevelPitch*downHeight] = (buf[0].x + buf[4].x + 4*(buf[1].x + buf[3].x) + 6 * buf[2].x) * NORM_FACTOR;
+				downLevel[pos + 1*downLevelPitch*downHeight] = (buf[0].y + buf[4].y + 4*(buf[1].y + buf[3].y) + 6 * buf[2].y) * NORM_FACTOR;
+				downLevel[pos + 2*downLevelPitch*downHeight] = (buf[0].z + buf[4].z + 4*(buf[1].z + buf[3].z) + 6 * buf[2].z) * NORM_FACTOR;
 			}
 		}
 	//                         
@@ -115,6 +116,37 @@ namespace cuv{
 				downLevel[y * downLevelPitch + x] = (buf[0] + buf[4] + 4*(buf[1] + buf[3]) + 6 * buf[2]) * NORM_FACTOR;
 			}
 		}
+
+	// Gaussian 5 x 5 kernel = [1, 4, 6, 4, 1]/16
+	//
+	template<class T>
+	__global__
+		void
+		gaussian_kernel(T* dst,
+				size_t dstPitch,
+				unsigned int dstWidth, unsigned int dstHeight)
+		{
+			// calculate normalized texture coordinates
+			unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+			unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+			if(x < dstWidth && y < dstHeight) {
+				float buf[KERNEL_SIZE];
+
+				float u0 = x - (float)HALF_KERNEL;
+				float v0 = y - (float)HALF_KERNEL;
+
+				texref<T> tex;
+				for(int i = 0; i < KERNEL_SIZE; i++) {
+					buf[i] = 
+						(    tex(u0    , v0 + i) + tex(u0 + 4, v0 + i)) + 
+						4 * (tex(u0 + 1, v0 + i) + tex(u0 + 3, v0 + i)) +
+						6 *  tex(u0 + 2, v0 + 2);
+				}
+
+				dst[y * dstPitch + x] = (buf[0] + buf[4] + 4*(buf[1] + buf[3]) + 6 * buf[2]) * NORM_FACTOR;
+			}
+		}
 	template<class T>
 	__global__
 		void
@@ -139,6 +171,35 @@ namespace cuv{
 	template<class T> struct single_to_4{};
 	template<>        struct single_to_4<float>        {typedef float4 type;};
 	template<>        struct single_to_4<unsigned char>{typedef uchar4 type;};
+	template<class V,class S, class I>
+		void gaussian(
+				dense_matrix<V,row_major,S,I>& dst,
+				const cuda_array<V,S,I>& src){
+
+			typedef typename texref<V>::type textype;
+			textype& tex = texref<V>::get();
+			tex.normalized = false;
+			tex.filterMode = cudaFilterModePoint;
+			tex.addressMode[0] = cudaAddressModeClamp;
+			tex.addressMode[1] = cudaAddressModeClamp;
+
+			dim3 grid,threads;
+			grid = dim3 (iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h(), CB_TILE_H));
+			threads = dim3 (CB_TILE_W, CB_TILE_H);
+			cuvAssert(dst.w() == src.w());
+			cuvAssert(dst.h() == src.h());
+			cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<V>();
+			cudaBindTextureToArray(tex, src.ptr(), channelDesc);
+			checkCudaError("cudaBindTextureToArray");
+			gaussian_kernel<<<grid,threads>>>(dst.ptr(),
+					dst.w(),
+					dst.w(),
+					dst.h());
+			cuvSafeCall(cudaThreadSynchronize());
+			cudaUnbindTexture(tex);
+			checkCudaError("cudaUnbindTexture");
+
+		}
 	template<class V,class S, class I>
 		void gaussian_pyramid_downsample(
 				dense_matrix<V,row_major,S,I>& dst,
@@ -188,6 +249,7 @@ namespace cuv{
 					cuvAssert(src.dim()==4);
 					grid    = dim3(iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h()/3, CB_TILE_H));
 					threads = dim3(CB_TILE_W, CB_TILE_H);
+					fill(dst.vec(), (V)0);
 					cudaBindTextureToArray(tex4, src.ptr(), channelDesc4);
 					checkCudaError("cudaBindTextureToArray");
 					gaussian_pyramid_downsample_kernel4val<V4,V><<<grid,threads>>>(
@@ -238,30 +300,48 @@ namespace cuv{
 		}
 
 
-	template<class TDest, class T>
+	template<class T>
+	__device__
+	T colordist(float u0, float v0, 
+			    float u1, float v1,
+			const float& u_offset, const unsigned int& dim){
+		T d0 = (T) 0;
+		texref<T> tex;
+		for(int i=0;i<dim;i++){
+			 float f = tex(u0,v0) - tex(u1,v1);
+			 d0 += f*f;
+			 v0 += u_offset;
+			 v1 += u_offset;
+		}
+		return d0;
+	}
+	template<class T, class TDest>
 	__global__
 		void
 		get_pixel_classes_kernel(TDest* dst,
 				size_t dstPitch, unsigned int dstWidth, unsigned int dstHeight,
-				T* src_orig,
+				float offset,
 				float scale_fact)
 		{
 			// calculate normalized texture coordinates
 			unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
 			unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-			texref<T> tex;
 
-			const float N = 1.f;
+			const float N = 2.f;
 			if(x < dstWidth && y < dstHeight) {
-				T orig = src_orig[y*dstPitch + x];
 				float u0 = (x/scale_fact);
 				float v0 = (y/scale_fact);
 
-				T min_val = tex(u0-N,v0-N);
-				unsigned char arg_min = 0;
-				T val = tex(u0+N,v0-N);
+				unsigned char arg_min_cd = 0;
+				T min_cd = colordist<T>(u0,v0,u0+N,v0+N,offset,3u);
+				T val    = colordist<T>(u0,v0,u0+N,v0-N,offset,3u);
+				if(val<min_cd){ min_cd = val; arg_min_cd = 1; }
+				val      = colordist<T>(u0,v0,u0-N,v0+N,offset,3u);
+				if(val<min_cd){ min_cd = val; arg_min_cd = 2; }
+				val      = colordist<T>(u0,v0,u0-N,v0-N,offset,3u);
+				if(val<min_cd){ min_cd = val; arg_min_cd = 3; }
 
-				dst[y * dstPitch + x] = (TDest) arg_min;
+				dst[y * dstPitch + x] = arg_min_cd;
 			}
 		}
 
@@ -271,13 +351,9 @@ namespace cuv{
 	template<class VDest, class V, class S, class I>
 		void get_pixel_classes(
 			dense_matrix<VDest,row_major,S,I>& dst,
-			const dense_matrix<V,row_major,S,I>& src_orig,
 			const cuda_array<V,S,I>&             src_smooth,
 			float scale_fact
 		){
-			cuvAssert(dst.w() == src_orig.w());
-			cuvAssert(dst.h() == src_orig.h());
-
 			dim3 grid(iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h(), CB_TILE_H));
 			dim3 threads(CB_TILE_W, CB_TILE_H);
 
@@ -291,9 +367,11 @@ namespace cuv{
 			cudaBindTextureToArray(tex, src_smooth.ptr(), channelDesc);
 			checkCudaError("cudaBindTextureToArray");
 
-			get_pixel_classes_kernel<<<grid,threads>>>(dst.ptr(),
+			cuvAssert(src_smooth.h() % 3 == 0);
+			float offset = src_smooth.h()/3;
+			get_pixel_classes_kernel<float><<<grid,threads>>>(dst.ptr(),
 					dst.w(), dst.w(), dst.h(),
-					src_orig.ptr(),
+					offset,
 					scale_fact
 					);
 			cuvSafeCall(cudaThreadSynchronize());
@@ -303,6 +381,13 @@ namespace cuv{
 		}
 
 	// explicit instantiation
+	template void gaussian(
+			dense_matrix<float,row_major,dev_memory_space,unsigned int>& dst,
+			const cuda_array<float,dev_memory_space,unsigned int>& src);
+	template void gaussian(
+			dense_matrix<unsigned char,row_major,dev_memory_space,unsigned int>& dst,
+			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src);
+
 	template void gaussian_pyramid_downsample(
 			dense_matrix<float,row_major,dev_memory_space,unsigned int>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src,
@@ -317,4 +402,17 @@ namespace cuv{
 	template void gaussian_pyramid_upsample(
 			dense_matrix<unsigned char,row_major,dev_memory_space,unsigned int>& dst,
 			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src);
+
+	template void get_pixel_classes(
+			dense_matrix<unsigned char,row_major,dev_memory_space,unsigned int>& dst,
+			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src,
+			float scale_fact);
+	template void get_pixel_classes(
+			dense_matrix<float,row_major,dev_memory_space,unsigned int>& dst,
+			const cuda_array<float,dev_memory_space,unsigned int>& src,
+			float scale_fact);
+	template void get_pixel_classes(
+			dense_matrix<unsigned char,row_major,dev_memory_space,unsigned int>& dst,
+			const cuda_array<float,dev_memory_space,unsigned int>& src,
+			float scale_fact);
 }
