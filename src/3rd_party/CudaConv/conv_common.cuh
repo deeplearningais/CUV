@@ -43,6 +43,14 @@
 
 #define MUL24 __mul24
 
+#ifndef MAX
+#define MAX(x, y) ((x) < (y) ? (x): (y))
+#endif
+
+#ifndef MIN
+#define MIN(x, y) ((x) < (y) ? (x): (y))
+#endif
+
 #ifndef DIVUP
 #define DIVUP(x, y) (((x) + (y) - 1) / (y))
 #endif
