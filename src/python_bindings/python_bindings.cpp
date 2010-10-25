@@ -54,7 +54,7 @@ void export_image_ops();
 void export_tools();
 void export_libs_rbm();
 
-BOOST_PYTHON_MODULE(cuv_python){
+BOOST_PYTHON_MODULE(_cuv_python){
 	def("initCUDA", initCUDA);
 	def("exitCUDA", exitCUDA);
 	def("safeThreadSync", safeThreadSync);
