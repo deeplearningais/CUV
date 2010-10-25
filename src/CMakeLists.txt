@@ -46,7 +46,7 @@ add_subdirectory(libs)
 add_subdirectory(tests)
 
 IF(CUV_PYTHON_BINDINGS)
-	add_subdirectory(python_bindings)
+	add_subdirectory(cuv_python)
 ENDIF(CUV_PYTHON_BINDINGS)
 
 
