@@ -93,34 +93,11 @@ void cuda_array<V,S,I>::assign(const dense_matrix<V,row_major,dev_memory_space,I
 }
 
 
-
-template<class V, class I>
-__global__
-void
-cuda_array_get_kernel(V* output, I i, I j){
-}
-template<class I>
-__global__
-void
-cuda_array_get_kernel(float* output, I i, I j){
-	*output = tex2D(cuda_array_tex_float,j,i);
-}
-template<class I>
-__global__
-void
-cuda_array_get_kernel(unsigned char* output, I i, I j){
-	*output = tex2D(cuda_array_tex_uchar,j,i);
-}
-
 template<class V,class S, class I>
 V
 cuda_array<V,S,I>::operator()(const I& i, const I& j)const{
 	cuvAssert(false); // only works with (broken) bind active!
-	V *tmp_d, tmp_h;
-	cudaMalloc(&tmp_d,sizeof(V));
-	cuda_array_get_kernel<<<1,1>>>(tmp_d,i,j);
-	cudaMemcpy(&tmp_h,tmp_d,sizeof(V),cudaMemcpyDeviceToHost);
-	return tmp_h;
+	return 0;
 }
 
 // explicit instantiations
