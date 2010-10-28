@@ -15,11 +15,22 @@ def __shape(x):
 def __np(x):
     return cp.pull(x)
 
-dev_matrix_cmf.save = __sav_dense
-dev_matrix_cmf.copy = __cpy
-dev_matrix_cmf.shape = property(__shape)
-dev_matrix_cmf.np = property(__np)
-dev_matrix_cmf.has_nan = property(lambda x:cp.has_nan(x))
-dev_matrix_cmf.has_inf = property(lambda x:cp.has_inf(x))
-dev_dia_matrix_f.shape = property(__shape)
-dev_dia_matrix_f.np = property(__np)
+# Combine strings to form all exported combinations of types
+# For all types add convenience functions
+
+for memory_space in ["dev","host"]:
+    for value_type in ["f","sc","uc","i"]:
+        for memory_layout in ["rm","cm"]:
+            dense_type=eval(memory_space+"_matrix_"+memory_layout+value_type)
+
+            dense_type.save = __sav_dense
+            dense_type.copy = __cpy
+            dense_type.shape = property(__shape)
+            dense_type.np = property(__np)
+            dense_type.has_nan = property(lambda x:cp.has_nan(x))
+            dense_type.has_inf = property(lambda x:cp.has_inf(x))
+
+    dia_type=eval(memory_space+"_dia_matrix_f")
+
+    dia_type.shape = property(__shape)
+    dia_type.np = property(__np)
