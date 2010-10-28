@@ -82,6 +82,10 @@ struct uf_log{  __device__ __host__         T operator()(const T& t)      const{
 template<class T>
 struct uf_sign{  __device__ __host__        T operator()(const T& t)      const{ return sgn((float)t);    } };
 template<class T>
+struct uf_abs{  __device__ __host__        T operator()(const T& t)      const{ return t<0 ? -t : t;    } };
+template<>
+struct uf_abs<unsigned char>{  __device__ __host__        unsigned char operator()(const unsigned char& t)      const{ return t;    } };
+template<class T>
 
 #ifdef __DEVICE_EMULATION__
 	struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+expf(-t));    } };
@@ -107,8 +111,6 @@ template<class T>
 struct uf_inv{  __device__  __host__        T operator()(const T& t)      const{ return ((T)1)/(t+((T)0.00000001)); } };
 template<class T>
 struct uf_sqrt{  __device__  __host__       T operator()(const T& t)      const{ return sqrtf(t); } };
-template<class T>
-struct uf_abs{  __device__  __host__       T operator()(const T& t)      const{ return t < T(0) ? -t : t; } };
 template<class T>
 struct uf_smax{  __device__  __host__      T operator()(const T& t)      const{ return (((T)1)/t - (T) 1) * t; } };
 
@@ -535,6 +537,7 @@ struct apply_scalar_functor_impl{
 			case SF_SQRT:       launch_unary_kernel(v,v, uf_sqrt<value_type>()); break;
 			case SF_SMAX:       launch_unary_kernel(v,v, uf_smax<value_type>()); break;
 			case SF_NEGATE:     launch_unary_kernel(v,v, thrust::negate<value_type>()); break;
+			case SF_ABS:        launch_unary_kernel(v,v, uf_abs<value_type>()); break;
 			case SF_POSLIN:     launch_unary_kernel(v,v, uf_poslin<value_type>()); break;
 			default:
 			 cuvAssert(false);
