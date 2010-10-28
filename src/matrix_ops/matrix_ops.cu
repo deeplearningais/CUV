@@ -222,7 +222,7 @@ void argmax_row_kernel(const T* matrix, I* vector, int nCols, int nRows) {
 		return;
 	int off = blockDim.x;
 
-	shVal[tx] = (T) -FLT_MAX; // dangerous for some data types
+	shVal[tx] = (T) INT_MIN; // dangerous for some data types
 	shIdx[tx] = 0;
 
 	int idx = by * nRows + bx * blockDim.x + tx;
