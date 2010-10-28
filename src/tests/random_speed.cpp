@@ -57,6 +57,17 @@
 
 using namespace cuv;
 
+struct MyConfig {
+	static const int dev = CUDA_TEST_DEVICE;
+	MyConfig()   { 
+		printf("Testing on device=%d\n",dev);
+		initCUDA(dev); 
+	}
+	~MyConfig()  { exitCUDA();  }
+};
+
+BOOST_GLOBAL_FIXTURE( MyConfig );
+
 struct Fix{
 	vector<float,dev_memory_space> v;
 	vector<float,host_memory_space> x;
@@ -64,11 +75,9 @@ struct Fix{
 	Fix()
 		:v(n),x(n) // needs large sample number.
 	{
-		//initCUDA(1);
 		initialize_mersenne_twister_seeds();
 	}
 	~Fix(){
-		//exitCUDA();
 	}
 };
 

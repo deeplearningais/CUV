@@ -43,6 +43,17 @@
 
 using namespace cuv;
 
+struct MyConfig {
+	static const int dev = CUDA_TEST_DEVICE;
+	MyConfig()   { 
+		printf("Testing on device=%d\n",dev);
+		initCUDA(dev); 
+	}
+	~MyConfig()  { exitCUDA();  }
+};
+
+BOOST_GLOBAL_FIXTURE( MyConfig );
+
 struct Fix{
 	vector<float,dev_memory_space> v,w;
 	static const int N = 8092;

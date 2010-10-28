@@ -42,9 +42,22 @@
 
 #include <cuv_general.hpp>
 #include <dense_matrix.hpp>
+#include <cuda_array.hpp>
 #include <convert.hpp>
 
 using namespace cuv;
+
+struct MyConfig {
+	static const int dev = CUDA_TEST_DEVICE;
+	MyConfig()   { 
+		printf("Testing on device=%d\n",dev);
+		initCUDA(dev); 
+	}
+	~MyConfig()  { exitCUDA();  }
+};
+
+
+BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	static const int N=256;
@@ -117,6 +130,27 @@ BOOST_AUTO_TEST_CASE( set_vector_elements )
 		BOOST_CHECK_EQUAL(v[i], (float) i/N );
 		BOOST_CHECK_EQUAL(w[i], (float) i/N );
 	}
+}
+
+/** 
+ * @test 
+ * @brief allocating and destroying a cuda_array
+ */
+BOOST_AUTO_TEST_CASE( cuda_array_alloc )
+{
+	cuda_array<float,dev_memory_space> ca(1024,768);
+	BOOST_CHECK(ca.ptr());
+}
+
+/** 
+ * @test 
+ * @brief copying a dense matrix to a cuda_array
+ */
+BOOST_AUTO_TEST_CASE( cuda_array_assign )
+{
+	cuda_array<float,dev_memory_space> ca(1024,768);
+	dense_matrix<float,row_major,dev_memory_space> dm(1024,768);
+	ca.assign(dm);
 }
 
 
