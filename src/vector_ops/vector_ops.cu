@@ -590,6 +590,15 @@ norm1(__vector_type& v){
 }
 template<class __vector_type>
 float
+sum(__vector_type& v){
+	typedef typename __vector_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(v.ptr());
+	float init=0.0;
+	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,value_type>());
+}
+template<class __vector_type>
+float
 maximum(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
@@ -609,11 +618,7 @@ minimum(__vector_type& v){
 template<class __vector_type>
 float
 mean(__vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type v_ptr(v.ptr());
-	float init=0;
-	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,value_type>()) / (float)v.size();
+	return   sum(v) / (float)v.size();
 }
 template<class __vector_type>
 float
@@ -670,6 +675,7 @@ arg_min(__vector_type& v){
 	template bool has_nan<vector<X,Y> >(vector<X,Y>&); \
 	template float minimum<vector<X,Y> >(vector<X,Y>&); \
 	template float maximum<vector<X,Y> >(vector<X,Y>&); \
+	template float sum<vector<X,Y> >(vector<X,Y>&); \
 	template float norm1<vector<X,Y> >(vector<X,Y>&); \
 	template float norm2<vector<X,Y> >(vector<X,Y>&); \
 	template float mean<vector<X,Y> >(vector<X,Y>&);  \
