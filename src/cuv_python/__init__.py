@@ -3,7 +3,7 @@ from _cuv_python import *
 
 def __cpy(x):
     x2 = x.__class__(x.h,x.w)
-    apply_binary_functor(x2.vec,x.vec,cp.binary_functor.COPY)
+    apply_binary_functor(x2.vec,x.vec,binary_functor.COPY)
     return x2
 
 def __sav_dense(x, file):
