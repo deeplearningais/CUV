@@ -312,6 +312,14 @@ namespace cuv{
    */
   template<class __vector_type1> bool has_nan(__vector_type1& v);
   /** 
+   * @brief Return the sum of a vector 
+   * 
+   * @param v vector
+   * 
+   * @return sum of v 
+   */
+  template<class __vector_type1> float sum(__vector_type1& v);
+  /** 
    * @brief Return the two-norm or Euclidean norm of a vector 
    * 
    * @param v Target vector
