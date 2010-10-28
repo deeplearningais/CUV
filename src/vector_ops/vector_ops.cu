@@ -495,6 +495,7 @@ struct apply_scalar_functor_impl{
 			case SF_TANH:      launch_unary_kernel(v,v,uf_base_op3<value_type, tf_tanh<value_type> >(param,param2)); break;
 			case SF_DTANH:     launch_unary_kernel(v,v,uf_base_op3<value_type, tf_dtanh<value_type> >(param,param2)); break;
 			default:
+				cout << "No suitable two-parameter scalar functor was found." << endl;
 				cuvAssert(false);
 		}
 	}
@@ -514,6 +515,7 @@ struct apply_scalar_functor_impl{
 			case SF_RECT:      launch_unary_kernel(v,v,uf_base_op<value_type, tf_rect<value_type,__arg_value_type> >(param)); break;
 			case SF_DRECT:     launch_unary_kernel(v,v,uf_base_op<value_type, tf_drect<value_type,__arg_value_type> >(param)); break;
 			default:
+				cout << "No suitable one-parameter scalar functor was found." << endl;
 				cuvAssert(false);
 		}
 	}
@@ -540,7 +542,8 @@ struct apply_scalar_functor_impl{
 			case SF_ABS:        launch_unary_kernel(v,v, uf_abs<value_type>()); break;
 			case SF_POSLIN:     launch_unary_kernel(v,v, uf_poslin<value_type>()); break;
 			default:
-			 cuvAssert(false);
+				cout << "No suitable no-parameter scalar functor was found." << endl;
+			 	cuvAssert(false);
 		}
 	}
 };
