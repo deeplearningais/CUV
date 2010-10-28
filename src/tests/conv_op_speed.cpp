@@ -272,7 +272,7 @@ void conv_vs_conv2_speed(int inputSize, int numInputMaps, int filterSize, int nu
 	int m = inputSize-filterSize+1;
 
 	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i (for %i patterns)\n", k, n,n, f, g,g, p);
-	printf("Result are %i*%i images of size %ix%i.\n", f, k,k);
+	printf("Result are %i*%i images of size %ix%i.\n", f,f, k,k);
 
 	dense_matrix<float, row_major, dev_memory_space>  d_img1(p, n*n);
 	dense_matrix<float, row_major, dev_memory_space>  d_filter1(f, g*g);
@@ -312,7 +312,7 @@ void conv_vs_conv_speed(int inputSize, int numInputMaps, int filterSize, int num
 	int m = inputSize-filterSize+1;
 
 	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i (for %i patterns)\n", k, n,n, f, g,g, p);
-	printf("Result are %i*%i images of size %ix%i.\n", f, k,k);
+	printf("Result are %i*%i images of size %ix%i.\n", f,f, k,k);
 
 	dense_matrix<float, row_major, dev_memory_space>  d_img1(p, n*n);
 	dense_matrix<float, row_major, dev_memory_space>  d_filter1(f, g*g);
