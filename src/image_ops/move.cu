@@ -247,7 +247,8 @@ move_image_kernel(dst_pixel* dst, const pixel* src, char xshift, char yshift, un
 
 	pixel pixel1, pixel2, pixel3, pixel4;
 	pixel ipx;
-	uchar4 graypx,grayipx;
+	uchar4 graypx;
+	uchar4 grayipx;
 
 	// Fetch colors of four adjacent pixels from texture.
 	// If out of range, use default color defined above.
