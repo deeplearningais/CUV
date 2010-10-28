@@ -321,6 +321,38 @@ dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type>* blo
 	return blockview(matrix,start_rows,num_rows,start_cols,num_cols, __memory_layout());
 }
 
+__global__ void bitflip_kernel(float* M, int height, int row, int n) {
+	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int off = blockDim.x * gridDim.x;
+    for (unsigned int i = idx; i < n; i += off){
+		M[i * height + row] = 1 - M[i * height + row];
+	}
+
+}
+
+namespace bitflip_row_impl{
+	template<class V, class I>
+	void bitflip(dense_matrix<V,column_major,dev_memory_space,I>& m, const I& row){
+		int num_threads = (int) min(512.f, ceil((float)sqrt(m.w())));
+		int num_blocks  = (int) ceil((float)m.w()/num_threads);
+		bitflip_kernel<<<num_blocks,num_threads>>>(m.ptr(),m.h(),row, m.w());
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+	template<class V, class I>
+	void bitflip(dense_matrix<V,column_major,host_memory_space,I>& m, const I& row){
+		for(int i=0;i<m.w();i++)
+			m.set(row,i,(V)(1.f-m(row,i)));
+	}
+}
+// bitflip a row of a column-major matrix
+template<class __value_type, class __memory_layout, class __memory_space_type, class __index_type>
+void bitflip(dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type>& matrix,
+		__index_type row){
+		assert(row<matrix.h());
+		assert(matrix.ptr());
+		bitflip_row_impl::bitflip(matrix,row);
+}
+
 /// column major blas3
 template<>
 void prod(dense_matrix<float,column_major,dev_memory_space>& dst,
