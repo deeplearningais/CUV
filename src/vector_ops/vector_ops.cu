@@ -554,7 +554,6 @@ has_inf(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
-	bool init=false;
 	uf_is_inf<value_type> uo;
 	return  thrust::any_of(v_ptr, v_ptr+v.size(), uo);
 }
@@ -564,7 +563,6 @@ has_nan(__vector_type& v){
 	typedef typename __vector_type::value_type value_type;
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(v.ptr());
-	bool init=false;
 	uf_is_nan<value_type> uo;
 	return  thrust::any_of(v_ptr, v_ptr+v.size(), uo);
 }
