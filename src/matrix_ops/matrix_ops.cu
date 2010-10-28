@@ -263,7 +263,7 @@ void argmax_row_kernel(const T* matrix, I* vector, int nCols, int nRows) {
 // potential speedup by 5 possible for "fine-grained transpose"
 template<int BLOCK_SIZE, class T>
 __global__
-void transpose_kernel(T* dst, T* src, int width, int height) {
+void transpose_kernel(T* dst, const T* src, int width, int height) {
 	const int bx = blockIdx.x * blockDim.x;
 	const int by = blockIdx.y * blockDim.y;
 	const int tx = bx + threadIdx.x;
