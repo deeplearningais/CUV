@@ -173,6 +173,15 @@ namespace cuv{
   template<class V, class M, class T, class I> bool has_nan(dense_matrix<V,M,T,I>& v){return has_nan(v.vec());}
 
   /** 
+   * @brief Return the sum of a matrix 
+   * 
+   * @param v Target matrix
+   * 
+   * @return sum of v 
+   */
+  template<class V, class M, class T, class I> float sum(dense_matrix<V,M,T,I>& v){return sum(v.vec());}
+
+  /** 
    * @brief Return the two-norm or Euclidean norm of a matrix 
    * 
    * @param v Target matrix
@@ -431,7 +440,7 @@ namespace cuv{
    * @param src Source matrix 
    * 
    */
-  template<class V, class M, class T, class I> void transpose(dense_matrix<V,M,T,I>&  dst, dense_matrix<V,M,T,I>&  src);
+  template<class __matrix_type> void transpose(__matrix_type&  dst, const __matrix_type&  src);
 
   /** @} */ // end group blas2
 } // cuv
