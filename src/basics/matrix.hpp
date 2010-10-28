@@ -93,8 +93,8 @@ class matrix
 		  inline index_type w()const  { return m_width;                } ///< Return matrix width
 		  inline index_type h()const  { return m_height;               } ///< Return matrix height
 		  inline index_type n()const  { return w()*h();                } ///< Return number of entries in matrix
-		  virtual void alloc() = 0; 									 ///< Purely virtual
-		  virtual void dealloc() = 0; 									 ///< Purely virtual
+		  //virtual void alloc() = 0; 									 ///< Purely virtual
+		  //virtual void dealloc() = 0; 									 ///< Purely virtual
 	};
 }
 
