@@ -640,7 +640,7 @@ static int outputPrintfData(char *fmt, char *data)
 
             // Everything else is just printed out as-is
             default:
-                fprintf(printf_fp, format);
+                fprintf(printf_fp, "%s",format);
                 break;
         }
         data += CUPRINTF_ALIGN_SIZE;         // Move on to next argument
