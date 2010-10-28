@@ -7,6 +7,8 @@ INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/convolution_ops )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/random )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src )
 
+FIND_PACKAGE( BLAS REQUIRED)
+
 ADD_EXECUTABLE( test_basic basic.cpp )
 TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools cuv_matrix_ops cuv_convert)
 
