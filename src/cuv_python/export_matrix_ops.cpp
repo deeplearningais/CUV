@@ -220,6 +220,8 @@ void export_reductions(){
 	def("has_inf",(bool (*)(M&)) has_inf<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
 	def("has_nan",(bool (*)(typename M::vec_type&)) has_nan<typename M::vec_type>);
 	def("has_nan",(bool (*)(M&)) has_nan<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+	def("sum",(float (*)(typename M::vec_type&)) sum<typename M::vec_type>);
+	def("sum",(float (*)(M&)) sum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
 	def("norm1",(float (*)(typename M::vec_type&)) norm1<typename M::vec_type>);
 	def("norm1",(float (*)(M&)) norm1<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
 	def("norm2",(float (*)(typename M::vec_type&)) norm2<typename M::vec_type>);
@@ -243,6 +245,12 @@ void export_blas2(){
 }
 
 template <class M>
+void export_bitflip(){
+	typedef typename M::index_type I;
+	def("bitflip",(void(*)(M&,I))
+			bitflip<typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+}
+template <class M>
 void export_blockview(){
 	typedef typename M::index_type I;
 	def("blockview",(M*(*)(M&,I,I,I,I))
@@ -264,7 +272,7 @@ void export_learn_step(){
 template<class T>
 void
 export_transpose(){
-	def("transpose", (void (*)(T&,T&))transpose);
+	def("transpose", (void (*)(T&,const T&))transpose);
 }
 
 template<class M>
@@ -330,6 +338,9 @@ void export_matrix_ops(){
 	export_blas2<fhost>();
 	export_blas2<fhostr>();
 	export_blas2<fdevr>();
+
+	export_bitflip<fdev>();
+	export_bitflip<fhost>();
 
 	export_blockview<fdev>();
 	export_blockview<fhost>();
