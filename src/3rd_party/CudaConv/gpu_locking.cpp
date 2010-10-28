@@ -50,7 +50,7 @@ void _exit_perr(const char* func) {
 }
 
 void _exit_err(const char* msg) {
-    fprintf(stderr, msg);
+    fprintf(stderr,"%s",msg);
     exit(EXIT_FAILURE);
 }
 

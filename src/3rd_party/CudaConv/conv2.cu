@@ -47,8 +47,7 @@ void _convolve2_bw(float* images, float* filters, float* targets, int numImgsPer
                   int numFiltersPerGroup, int imgSize, int filterSize, int imagesPerFilter, int numGroups, bool useDynamics = false) {
     assert(imagesPerFilter == 1 || imagesPerFilter == 3);
     int numOutputsX = imgSize - filterSize + 1;
-//    int numOutputs = numOutputsX*numOutputsX;
-    bool checkOutputBounds = numOutputsX % 16 != 0;
+    /*bool checkOutputBounds = numOutputsX % 16 != 0;*/
     if (numOutputsX <= 9) {
         /*
          * Call special dynamic routine which is fast when the number of outputs is small.
@@ -642,7 +641,6 @@ void _convolve2_bw(float* images, float* filters, float* targets, int numImgsPer
  */
 void convolve2(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int filterSize, int numGroups, bool colorImages) {
     int colorMult = colorImages ? 3 : 1;
-    int filterPixels = filterSize*filterSize;
     assert(images->getNumCols() % colorMult == 0);
     double dImgSize = sqrt(images->getNumCols() / colorMult);
     assert(dImgSize == floor(dImgSize));
@@ -656,12 +654,11 @@ void convolve2(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int filte
     //    int filterSize = int(dFilterSize);
     int numImgsPerGroup = images->getNumRows() / numGroups;
     int numFiltersPerGroup = filters->getNumRows() / numGroups;
-    int numOutputsX = imgSize - filterSize + 1;
-    int numOutputs = numOutputsX * numOutputsX;
+    /*int numOutputsX = (imgSize - filterSize + 1);*/
 
-    assert(filters->getNumCols() == numImgsPerGroup * filterPixels);
+    assert(filters->getNumCols() == numImgsPerGroup * filterSize*filterSize);
     assert(numFiltersPerGroup % 2 == 0);
-    assert(targets->getNumElements() == numOutputs * numFiltersPerGroup * numImgsPerGroup * numGroups * colorMult);
+    assert(targets->getNumElements() == (imgSize - filterSize + 1)*(imgSize - filterSize + 1) * numFiltersPerGroup * numImgsPerGroup * numGroups * colorMult);
     assert(!images->isTrans());
     assert(!filters->isTrans());
     assert(!targets->isTrans());

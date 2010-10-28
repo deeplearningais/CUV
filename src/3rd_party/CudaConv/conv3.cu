@@ -635,10 +635,10 @@ void convolve3(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int numGr
     int imgSize = int(sqrt(double(imgPixels)));
     int filterSize = int(sqrt(double(filterPixels)));
 
-    int numOutputsX = imgSize - filterSize + 1;
-    int numOutputs = numOutputsX * numOutputsX;
-    assert(targets->getNumCols() == numOutputs * colorMult);
-//    assert(targets->getNumElements() == numOutputs * numImgsPerGroup * numGroups * colorMult);
+    /*int numOutputsX = (imgSize - filterSize + 1);*/
+    /*int numOutputs = numOutputsX * numOutputX;*/
+    assert(targets->getNumCols() == (imgSize - filterSize + 1)*(imgSize - filterSize + 1) * colorMult);
+//    assert(targets->getNumElements() == (imgSize - filterSize + 1)(imgSize - filterSize + 1)numOutputs * numImgsPerGroup * numGroups * colorMult);
     assert(!images->isTrans());
     assert(!filters->isTrans());
     assert(!targets->isTrans());
