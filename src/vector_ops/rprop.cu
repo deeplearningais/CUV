@@ -39,8 +39,11 @@
 #define ETA_P 1.2f
 #define ETA_M 0.5f
 #define DELTA_MAX 50.0f
-#define DELTA_MIN (1.0E-6)
+#define DELTA_MIN (1.0E-8)
 
+#ifdef __CDT_PARSER__
+#define __global__
+#endif
 
 template<class T, class S>
 __global__ void rprop_kernel(T*W, T* dW, S* dW_old, T* rate, int n, T decay) {
@@ -86,7 +89,6 @@ namespace cuv{
 	template<class V, class S, class I>
 	void
 	rprop_impl(vector<V,dev_memory_space,I>& W, vector<V,dev_memory_space,I>& dW, vector<S,dev_memory_space,I>& dW_old, vector<V,dev_memory_space,I>& rate, V decay){
-		cuvAssert(decay < 1);
 		cuvAssert(decay >= 0);
 		int num_threads = 512;
 		int num_blocks  = min(512,(int)ceil((float)dW.size() / num_threads));
