@@ -142,9 +142,16 @@ struct tf_tanh{  __device__  __host__       T operator()(const T& x, const T& a,
 template<class T>
 struct tf_dtanh{  __device__  __host__      T operator()(const T& x, const T& a, const T& b)      const{ return b/a * (a+x) * (a-x); } };
 
-// rectifying transferfunctions a is param beta
+// rectifying transfer function. a is param beta
 template<class T, class A>
-struct tf_rect{  __device__  __host__       T operator()(const T& x, const A& a)      const{ return log(1+ expf(a*x))/a; } };
+struct tf_rect{  __device__  __host__       T operator()(const T& x, const A& a)      const{
+	T ax = a*x;
+	if(ax > 87.33f)
+		return (T) x;
+	return log(1.0f+expf(ax))/a;
+}};
+/*template<class T, class A>*/
+/*struct tf_rect{  __device__  __host__       T operator()(const T& x, const A& a)      const{ return (T) log(1.0 + (double)exp((double)a*x))/a; } };*/
 template<class T, class A>
 struct tf_drect{  __device__  __host__      T operator()(const T& x, const A& a)      const{ return 1-1/(x*expf(a)); } };
 
