@@ -304,17 +304,29 @@ namespace cuv{
 	__device__
 	T colordist(float u0, float v0, 
 			    float u1, float v1,
-			const float& u_offset, const unsigned int& dim){
+			const float& offset, const unsigned int& dim){
 		T d0 = (T) 0;
 		texref<T> tex;
-		for(int i=0;i<dim;i++){
+		for(unsigned int i=0;i<dim;i++){
 			 float f = tex(u0,v0) - tex(u1,v1);
 			 d0 += f*f;
-			 v0 += u_offset;
-			 v1 += u_offset;
+			 v0 += offset;
+			 v1 += offset;
 		}
 		return d0;
 	}
+	template<class T>
+	struct summer{
+		T mt;
+		__device__ summer():mt(0){}
+		__device__ void operator()(const T& t ){ mt+=t; }
+	};
+	template<class T>
+	struct expsummer{
+		T mt;
+		__device__ expsummer():mt(0){}
+		__device__ void operator()(const T& t ){ mt+=exp(-t); }
+	};
 	template<class T, class TDest>
 	__global__
 		void
@@ -327,21 +339,37 @@ namespace cuv{
 			unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
 			unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-			const float N = 2.f;
+			const float N = 1.f;
 			if(x < dstWidth && y < dstHeight) {
 				float u0 = (x/scale_fact);
 				float v0 = (y/scale_fact);
 
+				summer<T> sum;
+
 				unsigned char arg_min_cd = 0;
 				T min_cd = colordist<T>(u0,v0,u0+N,v0+N,offset,3u);
+				sum(min_cd);
+
 				T val    = colordist<T>(u0,v0,u0+N,v0-N,offset,3u);
 				if(val<min_cd){ min_cd = val; arg_min_cd = 1; }
+				sum(val);
+
 				val      = colordist<T>(u0,v0,u0-N,v0+N,offset,3u);
 				if(val<min_cd){ min_cd = val; arg_min_cd = 2; }
+				sum(val);
+
 				val      = colordist<T>(u0,v0,u0-N,v0-N,offset,3u);
 				if(val<min_cd){ min_cd = val; arg_min_cd = 3; }
+				sum(val);
 
-				dst[y * dstPitch + x] = arg_min_cd;
+
+				TDest tmp = make_uchar4( 
+						arg_min_cd % 2 ? 255: 0,
+						arg_min_cd > 1 ? 255: 0,0,
+						max(0.f,min(255.f,sum.mt - 4*min_cd)) // for summer
+						/*max(0.f,min(255.f,255.f * exp(-min_cd)/sum.mt)) // for expsummer*/
+						);
+				dst[y * dstPitch + x] = tmp;;
 			}
 		}
 
@@ -368,9 +396,11 @@ namespace cuv{
 			checkCudaError("cudaBindTextureToArray");
 
 			cuvAssert(src_smooth.h() % 3 == 0);
+			cuvAssert(dst.w() % 4 == 0); // float4!
 			float offset = src_smooth.h()/3;
-			get_pixel_classes_kernel<float><<<grid,threads>>>(dst.ptr(),
-					dst.w(), dst.w(), dst.h(),
+			offset=0;
+			get_pixel_classes_kernel<float><<<grid,threads>>>((uchar4*)dst.ptr(),
+					dst.w()/4, dst.w()/4, dst.h(),
 					offset,
 					scale_fact
 					);

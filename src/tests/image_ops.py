@@ -5,6 +5,7 @@ import pyublas
 import numpy as np
 import cuv_python as cp
 import matplotlib.pyplot as plt
+from scipy.ndimage.filters import gaussian_filter
 from timeit import Timer
 
 
@@ -39,14 +40,60 @@ def color_test(ni):
     plt.matshow(res[2*ts**2:3*ts**2,0].reshape(ts,ts), cmap = plt.cm.bone_r)
     plt.show()
 
-def testbuildpyra(pic,input_channels,pyramid_channels):
+def build_pyramid_GPU(pic,input_channels,pyramid_channels):
     pic_d = cp.push(pic)
     pyr = cp.dev_image_pyramid_f(pic_d.h/2,pic_d.w/input_channels/2,4,pyramid_channels)
     pyr.build(pic_d,4)
-    #plt.matshow(cp.pull(pyr.get(0,0)))
-    #plt.matshow(cp.pull(pyr.get(0,1)))
-    #plt.matshow(cp.pull(pyr.get(0,2)))
+
+def build_pyramid_CPU(pic):
+    L = [pic]
+    for i in xrange(4):
+        pic = gaussian_filter(pic,1)
+        pic = pic[::2,::2].copy()
+        L.append(pic)
+
+def smooth(pic):
+    ca = cp.dev_cuda_array_f(pic.h,pic.w,1)
+    ca.assign(pic)
+    cp.gaussian(pic,ca)
+    ca.dealloc()
+def test_pixel_classes():
+    w, h = 512,512
+    input_channels, pyramid_channels = 4,3
+    pic = Image.open("tests/data/lena.bmp").resize((w,h)).convert("RGBA")
+    pic = np.asarray(pic).astype("float32").reshape(h,w*4)
+    pic_d = cp.push(pic)
+    pyr = cp.dev_image_pyramid_f(pic_d.h/2,pic_d.w/input_channels/2,4,pyramid_channels)
+    pyr.build(pic_d,4)
+    plt.matshow(pic[0:h:2,0:4*w:8])
+    #plt.matshow(cp.pull(pyr.get(1,0)))
+    #plt.title("Channel0")
+    #plt.matshow(cp.pull(pyr.get(1,1)))
+    #plt.title("Channel1")
+    #plt.matshow(cp.pull(pyr.get(1,2)))
+    #plt.title("Channel2")
+    #plt.matshow(cp.pull(pyr.get_all_channels(1)))
+    #plt.title("allchannels level 1")
     #plt.show()
+
+    # create source image from higher level of pyramid
+    pic1 = pyr.get_all_channels(0)
+    for i in xrange(10): smooth(pic1)
+    plt.matshow(cp.pull(pic1)[:h/2,:w])
+    ca = cp.dev_cuda_array_f(pic1.h,pic1.w,1)
+    ca.assign(pic1)
+
+    # create destination matrix
+    pic0 = pyr.get(0)
+    dst = cp.dev_matrix_rmuc(pic0.h,pic0.w*4) # uchar4
+
+    # generate pixel classes and visualize
+    cp.get_pixel_classes(dst,ca,1)
+    tmp = cp.pull(dst)
+    tmp = Image.frombuffer("CMYK", (pic0.w,pic0.h), cp.pull(dst).flatten(), "raw", "CMYK", 0, 1 ).resize((2*512,2*512), Image.NEAREST)
+    tmp.show()
+    print cp.pull(dst)
+    plt.show()
 
 
 def test_cuda_array(pic):
@@ -84,20 +131,29 @@ def run():
     pig = Image.open("tests/data/gray_square.gif").resize((640,480)).convert("L")
     #test_cuda_array(np.asarray(pig).astype("float32"))
 
+def test_gaussian_pyramid_construction():
+    print "Color Pyramid Construction on GPU: ",
+    global pic
+    w, h = 640,480
+    pic = Image.open("tests/data/gray_square.gif").resize((w,h)).convert("RGBA")
+    pic = np.asarray(pic).astype("float32").reshape(h,w*4)
+    for x in xrange(1): # warmup
+       build_pyramid_GPU(pic,input_channels=4,pyramid_channels=3)
+    t = Timer('build_pyramid_GPU(pic,4,3)','from %s import build_pyramid_GPU, cp, pic'%__name__)
+    print t.timeit(number=100)/100
+
+    print "Grayscale Pyramid Construction on CPU: ",
+    pic = Image.open("tests/data/gray_square.gif").resize((w,h)).convert("RGB")
+    pic = np.asarray(pic).astype("float32")
+    t = Timer('build_pyramid_CPU(pic)','from %s import build_pyramid_CPU, pic'%__name__)
+    print t.timeit(number=100)/100
+
 
 if __name__ == "__main__":
     cp.initCUDA(0)
 
-    #pic = Image.open("tests/data/gray_square.gif").resize((1024,768)).convert("RGB")
-    #pic = np.asarray(pic).astype("float32")
-    pic = Image.open("tests/data/gray_square.gif").resize((1024,768)).convert("RGBA")
-    pic = np.asarray(pic).astype("float32").reshape(768,1024*4)
-    for x in xrange(1): # warmup
-        testbuildpyra(pic,input_channels=4,pyramid_channels=3)
-
-    t = Timer('testbuildpyra(pic,4,3)','from %s import testbuildpyra, cp, pic'%__name__)
-    print t.timeit(number=1000)/1000
-
     run()
+    test_pixel_classes()
+    test_gaussian_pyramid_construction()
 
     cp.exitCUDA()
