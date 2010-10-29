@@ -7,7 +7,7 @@ def __cpy(x):
     return x2
 
 def __sav_dense(x, file):
-    np.save(file.replace(".npy",""),cp.pull(x))
+    np.save(file.replace(".npy",""),pull(x))
 
 def __shape(x):
     return (x.h,x.w)
@@ -27,8 +27,8 @@ for memory_space in ["dev","host"]:
             dense_type.copy = __cpy
             dense_type.shape = property(__shape)
             dense_type.np = property(__np)
-            dense_type.has_nan = property(lambda x:cp.has_nan(x))
-            dense_type.has_inf = property(lambda x:cp.has_inf(x))
+            dense_type.has_nan = property(lambda x:has_nan(x))
+            dense_type.has_inf = property(lambda x:has_inf(x))
 
     dia_type=eval(memory_space+"_dia_matrix_f")
 
