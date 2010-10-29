@@ -5,7 +5,6 @@ import pyublas
 import numpy as np
 import cuv_python as cp
 import matplotlib.pyplot as plt
-from ipdb import set_trace
 
 
 def to_cmuc(x):
