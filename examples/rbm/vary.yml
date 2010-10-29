@@ -1,0 +1,46 @@
+---
+default_sectio:   global
+settletime:   5000
+want_ini: 0
+run_blocks: [partfunc]
+#precond: test ! -e /tmp/block_remote_jobs
+blocks:
+  - name: partfunc
+    #local_abort_cond: python analyse/extr2.py nats ${directory}-seed${seed} info-0-${idx}.pickle
+    run:  python -O analyse/calc_part_func.py -b ${directory}-seed${seed} -i ${idx} -d ${vp_device}
+    vary:
+      - name: idx
+        vals: 
+          - glob{4,-0-(.*)\.npy,${directory}-seed${seed}/weights-0-*.npy}
+      - name: directory
+        vals:
+           - mnist-cd1-lr0001
+           - mnist-cd1-lr001
+           - mnist-cd1-lr01
+           - mnist-cd1-lr1
+           #- mnist-pcd-lr0001
+           #- mnist-pcd-lr001
+           #- mnist-pcd-lr01
+           #- mnist-pcd-lr1
+      - name: seed
+        vals: [1, 2, 3, 4]
+
+  - name: ais
+    local_abort_cond: python analyse/extr2.py ais_nats ${directory}-seed${seed} info-0-${idx}.pickle
+    run:  python -O ais/ais.py -p ${directory}-seed${seed} -i ${idx} -d ${vp_device}
+    vary:
+      - name: idx
+        vals: 
+          - glob{4,-0-(.*)\.npy,${directory}-seed${seed}/weights-0-*.npy}
+      - name: directory
+        vals: 
+           - mnist-cd1-lr0001
+           - mnist-cd1-lr001
+           - mnist-cd1-lr01
+           - mnist-cd1-lr1
+           - mnist-pcd-lr0001
+           - mnist-pcd-lr001
+           - mnist-pcd-lr01
+           - mnist-pcd-lr1
+      - name: seed
+        vals: [1, 2, 3, 4]

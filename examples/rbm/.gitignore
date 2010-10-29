@@ -1,0 +1,16 @@
+*.pyc
+*.pyo
+*.npy
+*.py-
+*~
+*.pickle
+.*.swp
+.*.swo
+Session.vim
+*.png
+*.cache
+*.url
+*.ini
+tags
+*.avi
+*/*.ini
