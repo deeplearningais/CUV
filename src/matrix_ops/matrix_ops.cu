@@ -148,15 +148,15 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 		else
 			if(factOld != 0.f){
 				if (isnan(vector[row_idx])){
-					cuPrintf("Value of vector[%d]: %d\n", row_idx, vector[row_idx]);
+					/*cuPrintf("Value of vector[%d]: %d\n", row_idx, vector[row_idx]);*/
 				}
 				if (isnan(shared[0][tx])){
-					cuPrintf("Value of shared[0][%d]: %d\n", tx, shared[0][tx]);
+					/*cuPrintf("Value of shared[0][%d]: %d\n", tx, shared[0][tx]);*/
 				}
 				vector[row_idx] = vector[row_idx] * factOld + shared[0][tx] * factNew;
 			}else{
 				if (isnan(shared[0][tx])){
-					cuPrintf("Value of shared[0][%d]: %d\n", tx, shared[0][tx]);
+					/*cuPrintf("Value of shared[0][%d]: %d\n", tx, shared[0][tx]);*/
 				}
 				vector[row_idx] = shared[0][tx] * factNew;
 			}
