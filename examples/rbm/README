@@ -1,0 +1,196 @@
+cuv RBM
+Hannes Schulz (schulz@ais.uni-bonn.de)
+Andreas Mueller (amueller@ais.uni-bonn.de)
+
+11/4/2010
+
+The implementation is not as short as it could be but is build to be very
+modular with lots of functionality. A special emphasis is laid on easy
+extendability.
+
+Functionality:
+
+	- Restricted Boltzmann Machine Training
+		- With n-step Contrastive Divergence
+		- With persistent Contrastive Divergence
+		- Weight decay, momentum, batch-learning
+		- Binary or gaussian visible nodes
+
+	- Restricted Boltzmann Machine Evaluation
+		- Sampling from the model
+		- Visualizing Filters
+		- Annealed Importance Sampling for approximating the partition function
+		- Calculating the partition function exactly
+		- Visualization and saving of hidden representations
+
+	- Stacking RBMs to Deep Belief Networks
+		- Sampling from DBNs
+
+	- Deep Boltzmann Machine Training
+		- With n-step Contrastive Divergence
+		- With persistent Contrastive Divergence
+	
+	- Deep Boltzmann Machine Evaluation
+		- Sampling from the model
+
+	
+	- Neural Network Traing
+		- Backpropagation of error
+		- RPROP
+		- Weight decay, momentum, batch-learning
+		- Variable number of layers
+		- Cross entropy training
+
+	- Finetuning
+		- Initalizing a Neural Network with an RBM and DBM
+		- All of the above functionality can be used
+
+	- Training on Image Data
+		- Visualization of input, filters and samples from the model
+		- on-the-fly modifications to trainingset via gaussian noise or translations
+
+Prerequisits
+	This program uses the cuv library.
+	You can download it at http://www.ais.uni-bonn.de/deep_learning/downloads.html.
+	There you can also find build instructions.
+
+	Python Packages:
+	You need numpy, scipy, matplotlib to run this program.
+	These can be easyly installed on an Ubuntu or Debian linux with
+		> sudo apt-get install python-numpy python-scipy python-matplotlib 
+
+
+General usage:
+	Depending on options there are three training phases:
+	1) Layer wise RBM training
+	2) DBM training
+	3) Finetuning
+	Each training phase can be stopped by pressing Ctrl+C.
+	This saves the current weights and starts the next phase.
+	During layer wise RBM training, Ctrl+C finishes training
+	of one layer and continues with training the next RBM layer.
+
+	All parameters are saved in the info-0.pickle so that they can be recovered at all times.
+	By defaults, weights are saved only after each training phase (indicated by a postfix).
+	Using the --save_every option, one can save every X weight updates which is handy
+	if one wants to analyse learning.
+
+	During RBM and DBM learning, the "reconstruction error" is shown every 100 weight updates.
+	During MLP learning, training error is shown every epoch and test error is shown every
+	ten epochs.
+
+Command-line Options
+	All command line options can be printed with
+		> ./caller.py --help
+
+	There is a brief explanation to every one.
+	The most important options that are used for both finetuning (MLP) and pretraining (RBM) are:
+		--l_size
+			The size of the hidden layers, separated with dots.
+			The size of the visible and (if any) output layer are determined by the dataset.
+			Example: Training on a dataset of dimension 100 with 5 classes, --l_size 80.50
+			will yield a 100-80-50 DBN that is then finetuned as a 100-80-50-5 neural network.
+
+		--dataset
+			Choses the dataset. Build in is support for MNIST, Caltech 101 and some toy datasets.
+			You can download MNIST at http://yann.lecun.com/exdb/mnist/ and Caltech 101 at
+			http://www.vision.caltech.edu/Image_Datasets/Caltech101/.
+
+		--device
+			Chooses the GPU you want to use. It is not recommended to start more than
+			one instance on the same GPU.
+
+		--workdir
+			Write all output files (pickles with learning information, weights)
+			into this directory
+
+		--load	
+			Load weights from the directory given with --workdir.
+			This can be done either for visualization (default) or to continue training.
+			Can be one of none,pretraining,dbm,finetuning,latest.
+			None (default) means no weights are loaded and everything in workdir is
+			overwritten. pretraining, dbm, finetuning specify that the weights
+			that where saved AFTER this training phase are loaded.
+			Latest means the latest training phase that was saved is loaded.
+			(Here latest is not timestamp but pretraining then DBM then finetuning)
+
+		--continue_learning <Layernum>
+			Continue RBM learning in layer <Layernum>.
+			For finetuning, the whole network is learned.
+
+
+	All other options without the prefix "finetune" only apply to the RBM where those
+	with the prefix "finetune" apply only to the MLP.
+
+Datasets
+	MNIST
+		Dataset of handwritten digits.
+		You need to download it from http://yann.lecun.com/exdb/mnist/.
+
+	MNIST Validation
+		Randomly chosen 50000 examples for training and 10000 for validation (which is now the "testing" set),
+		both chosen from the MNIST trainingset.
+
+	Shifter
+		Very small toy dataset, comes with the RBM.
+	
+	Bars and Stripes
+		Another very small toy dataset.
+
+	Caltech
+		Natural images, reshaped and padded.
+		You need to download it from http://www.vision.caltech.edu/Image_Datasets/Caltech101/.
+		Then the "extract_caltech.py" from the datasets folder can be used to generate a file that
+		can be read by the RBM.
+
+Using Your Own Dataset
+	To use your own dataset, just define a new class in dataset.py.
+	It needs to inherit from the DataSet class.
+	You need to set at least self.data, cfg.py and cfg.px.
+	For image data, px times py is the size of a single image.
+	If your data is not image data, set either one to 1 and the other to the dataset dimensionality.
+	If you have image data with multiple channels, set cfg.maps_bottom to the number of images.
+	These variables are used for visualization purposes only.
+	You also need to "register" the dataset in "helper_classes.py" as a member of the enum Dataset.
+
+Examples
+	Training a DBM with 3 hidden layers on MNIST using PCD and generating a video of sampling 100 steps:
+	> ./caller.py --dataset mnist --cd_type pcd --l_size 500.500.1000 --dbm 1 --video 1 --weight_updates 100000 --eval_steps 100 -w /tmp/dbm
+
+	Or shorter (since mnist and PCD are default):
+	> ./caller.py --l_size 500.500.1000 --dbm 1 --video 1 --weight_updates 100000 --eval_steps 100 -w /tmp/dbm
+
+	Training an one layer MLP on MNIST using random translations of the training set with RPROP and maximum entropy error function:
+	> ./caller.py --pretrain 0 --finetune 1 --l_size 500 --finetune_translation_max 1 --finetune_epochs 200 -w /tmp/mlp_rprop
+
+	The same but with backpropagation with weight-decay and MSE error function:
+	> ./caller.py --pretrain 0 --finetune 1 --l_size 500 --finetune_translation_max 1 --finetune_epochs 200 --finetune_rpop 0 --finetune_learnrate 0.001 --finetune_cost 0.01 --finetune_softmax 0 -w /tmp/mlp_backprop
+
+	The same but with two hidden layers and pretraining using DBN trained with PCD:
+	> ./caller.py --finetune 1 --l_size 500.500 --finetune_translation_max 1 -w /tmp/mlp_pretraining
+
+
+Annealed Importance Sampling
+	Annealed importance sampling was proposed for RBM evaluation by Ruslan Salakhutdiov in "On the Quantitative Analysis of Deep Belief Networks." (http://www.mit.edu/~rsalakhu/papers/dbn_ais.pdf)
+	This is an implementation of the method described in this paper. It works together with the RBM implementation by
+	reading parameters from a given work directory.
+	Usually it can simply be called with:
+	> python ais/ais.py -p <directory> -d 0
+	where <directory> is the working directory of the RBM.
+	The output is the estimated partition function and the resulting data likelihood under the model.
+	The result of the computation is saved in a pickle in the working directory and the calculation is not repeated
+	if the script is called again with the same directory.
+
+Calculating The Partition Function
+	It is possible to calculate the partition function directly by summing out the visible (or hidden) units
+	analytically and then summing over the others numerically.
+	This script is written in a way to sum out the hidden units numerically.
+	This means runtime is (nearly) independent of the number of visible units, but exponential in the number of hidden nodes.
+	For about 25 hidden nodes, it can be computed in reasonable time.
+	Usage of the script is very simple:
+	> python analyse/calc_part_func.py --device 0 --basename <directory> --idx pretrain
+	The result of the computation is saved in a pickle in the working directory and the calculation is not repeated
+	if the script is called again with the same directory unless "--force-overwrite" is given as a command line option.
+
+
+Have fun!
