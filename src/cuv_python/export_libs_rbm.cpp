@@ -53,7 +53,15 @@ void export_libs_rbm_detail(){
 	def("sigm_temperature", sigm_temperature<mat,vec>, (arg("matrix"), arg("temperature")));
 }
 
+template<class V, class L, class M, class I>
+void export_set_local_conn(){
+	typedef dense_matrix<V,L,M,I> mat;
+	typedef vector<V,M,I> vec;
+	def("set_local_connectivity_in_dense_matrix", set_local_connectivity_in_dense_matrix<mat>, (arg("matrix"), arg("factor"),arg("patchsize"),arg("px"),arg("py")));
+}
+
 void export_libs_rbm(){
 	export_libs_rbm_detail<float,column_major,host_memory_space,unsigned int>();
 	export_libs_rbm_detail<float,column_major,dev_memory_space,unsigned int>();
+	export_set_local_conn<float,column_major,dev_memory_space,unsigned int>();
 }

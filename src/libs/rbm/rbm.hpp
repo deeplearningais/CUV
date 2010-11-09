@@ -9,6 +9,25 @@ namespace rbm{
 	void set_binary_sequence(__matrix_type& m, const int& start);
 	template<class __matrix_type,class __vector_type>
 	void sigm_temperature(__matrix_type& m, const __vector_type& temp);
+
+	/**
+	 * simulate a local connectivity pattern.
+	 *
+	 * This simulates the local connectivity in a dense matrix by setting
+	 * values to zero which are not part of the local connectivity.
+	 *
+	 * assume the lower layer image has dimension vx times vy and the upper
+	 * layer has size hx times hy. The lower layer has vm maps, the upper layer
+	 * has hm maps.
+	 *
+	 * @param m       the matrix, should have dimension vx*vy*vm times hx*hy*hm
+	 * @param factor  equivalent to (hx*hv) / (vx*vy). So if the above image
+	 *                size is half of the lower, factor is 0.25.
+	 * @param vx      as explained above
+	 * @param vy      as explained above
+	 */
+	template<class __matrix_type>
+	void set_local_connectivity_in_dense_matrix(__matrix_type& m, float factor, int patchsize, int vx, int vy);
 }
 }
 }
