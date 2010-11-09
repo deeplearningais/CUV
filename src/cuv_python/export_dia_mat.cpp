@@ -174,6 +174,35 @@ dev_dia_mat2numpy(dia_matrix<T,dev_memory_space>&m){
 }
 
 
+template<class M>
+void
+export_filter_factory(const char* name){
+	typedef M mat;
+	typedef typename mat::value_type value_type;
+	typedef typename mat::memory_space memory_space;
+	typedef typename mat::index_type index_type;
+
+	class_<filter_factory<value_type, memory_space> > (name, init<int, int, int, int, int>())
+		.def("extract_filter",(dense_matrix<value_type, row_major, memory_space>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, host_memory_space>&, unsigned int))
+				&filter_factory<value_type, memory_space>::extract_filter, (
+					arg("dia matrix"), arg("filter number")),
+				return_value_policy<manage_new_object>())
+		.def("extract_filter",(dense_matrix<value_type, row_major, memory_space>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, dev_memory_space>&, unsigned int))
+				&filter_factory<value_type, memory_space>::extract_filter, (
+					arg("dia matrix"), arg("filter number")),
+				return_value_policy<manage_new_object>())
+		//.def("extract_filters",(dense_matrix<value_type, column_major, memory_space>*  (*)(const toeplitz_matrix<value_type, memory_space>&))
+		//                                    &filter_factory<value_type, memory_space>::extract_filters, (
+		//                                                            arg("toeplitz matrix"))
+		//                                                            )
+
+		.def("get_dia",(dia_matrix<value_type, memory_space, index_type>*  (filter_factory<value_type, memory_space>::*)())
+											&filter_factory<value_type, memory_space>::get_dia,
+													"get filter as diagonal matrix",
+											return_value_policy<manage_new_object>()
+												)
+		;
+}
 
 template <class T>
 void
@@ -189,6 +218,7 @@ void export_dia_matrix(){
 	export_diamat_common<dia_matrix<float,host_memory_space> >("host_dia_matrix_f");
 	export_block_descriptors<float>("f");
 	export_diamat_conversion<float>();
+	export_filter_factory<filter_factory<float,host_memory_space> >("filter_factory_float");
 
 	//def("densedense_to_dia", densedense_to_dia<dia_matrix<float,dev_memory_space>, dev_block_descriptor<float>, dev_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
 	//def("densedense_to_dia", densedense_to_dia<dia_matrix<float,host_memory_space>,host_block_descriptor<float>,host_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
