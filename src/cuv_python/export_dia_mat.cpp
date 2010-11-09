@@ -44,6 +44,7 @@
 
 #include <dia_matrix.hpp>
 #include <sparse_matrix_io.hpp>
+#include <basics/filter_factory.hpp>
 #include <matrix_ops/matrix_ops.hpp>
 #include <matrix_ops/densedense_to_sparse.hpp>
 #include <convert.hpp>
