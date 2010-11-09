@@ -15,6 +15,12 @@ def __shape(x):
 def __np(x):
     return pull(x)
 
+def __getitem__(x,key):
+    return x.at(*key)
+
+def __setitem__(x,key,value):
+    x.set(*key,value=value)
+
 # Combine strings to form all exported combinations of types
 # For all types add convenience functions
 
@@ -29,6 +35,8 @@ for memory_space in ["dev","host"]:
             dense_type.np = property(__np)
             dense_type.has_nan = property(lambda x:has_nan(x))
             dense_type.has_inf = property(lambda x:has_inf(x))
+            dense_type.__getitem__=__getitem__
+            dense_type.__setitem__=__setitem__
 
     dia_type=eval(memory_space+"_dia_matrix_f")
 
