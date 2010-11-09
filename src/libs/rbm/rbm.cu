@@ -97,41 +97,45 @@ namespace rbm{
 		/******************************
 		  local connectivity kernel
 		 ******************************/
-		__global__ void local_connectivity_kernel(float* mat ,int h,int w, int map_h, int map_w, int num_map_hid, int patchsize, int px, int py) {
-			const int i = threadIdx.x + blockIdx.x * blockDim.x;
-			const int j = threadIdx.y + blockIdx.y * blockDim.y;
-			if ((i>=map_h) || (j>=map_w)) return;
+		template<class T>
+		__global__ void local_connectivity_kernel(T* mat ,int h,int w, int pix_v, int pix_h, int num_map_hid, int patchsize, int px, int py, int maxdist_from_main_dia) {
+			const int i = threadIdx.x + blockIdx.x * blockDim.x; // i changes with the visible unit
+			const int j = threadIdx.y + blockIdx.y * blockDim.y; // j changes with the hidden unit
+			if ((i>=pix_v) || (j>=pix_h)) return;
 
-			const int  map_hid  = (j * map_h)/map_w;  // scale h
+			const int  map_hid  = (j * pix_v)/pix_h;  // map_hid is now in the same coordinate frame as map_vis (scaled up in most cases...)
 			const int& map_vis  = i;
-			const int v_y     = map_vis % py;
-			const int h_y     = map_hid % px;
-			const int v_x     = map_vis / py;
-			const int h_x     = map_hid / px;
-			if(abs(v_y-h_y)   > patchsize
-					|| abs(v_x-h_x)   > patchsize)
-				for(int hidx = i; hidx<h; hidx  += map_h)
-					for(int idx = j; idx<num_map_hid*map_w; idx += map_w) // -1: bias
-						mat[idx*h + hidx]=0;
-			for(int hidx = i; hidx<h; hidx  += map_h)
-				for(int b=num_map_hid*map_w; b<w; b += blockDim.y){
-					int col = (b+threadIdx.y);
-					if(col<w)
-						mat[col*h+hidx]=0;
-				}
+			const int  v_y     = map_vis % py;
+			const int  h_y     = map_hid % px;
+			const int  v_x     = map_vis / py;
+			const int  h_x     = map_hid / px;
+			const int  num_map_vis = h / (px*py);
+
+			const bool outpatch = (    abs(v_y-h_y)   > patchsize || abs(v_x-h_x)   > patchsize); // we are not in the patch
+			for(int hidx = 0; hidx<num_map_vis; hidx++) // loop over visible maps
+				for(int idx = 0; idx<num_map_hid; idx++)// loop over hidden maps
+					if(outpatch || abs(idx-hidx)>maxdist_from_main_dia) 
+						mat[(idx*pix_h+j)*h + hidx*pix_v+i]=(T)0; // reset this value
+
+			for(int hidx = i; hidx<h; hidx  += pix_v)
+			   for(int b=num_map_hid*pix_h; b<w; b += blockDim.y){
+				   int col = (b+threadIdx.y);
+				   if(col<w)
+					   mat[col*h+hidx]=(T)0;
+			   }
 		}
 
 		template<class V, class I>
-		void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<V,column_major,dev_memory_space,I>& m, float factor, int patchsize, int px, int py){
+		void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<V,column_major,dev_memory_space,I>& m, float factor, int patchsize, int px, int py, int maxdist_from_main_dia){
 			cuvAssert(m.ptr());
 			/*int num_maps_lo = (m.h()) / (px*py);*/
-			int map_h = px*py;
-			int map_w = ceil(map_h * factor);
+			int pix_v = px*py;
+			int pix_h = ceil(pix_v * factor);
 			static const int bs = 16;
-			dim3 blocks(ceil(map_h/(float)bs),ceil(map_w/(float)bs));
+			dim3 blocks(ceil(pix_v/(float)bs),ceil(pix_h/(float)bs));
 			dim3 threads(bs,bs);
-			int num_maps = (m.w()) / map_w;
-			local_connectivity_kernel<<<blocks,threads>>>(m.ptr(),m.h(),m.w(),map_h,map_w,num_maps, patchsize,px,py);
+			int num_maps = (m.w()) / pix_h;
+			local_connectivity_kernel<<<blocks,threads>>>(m.ptr(),m.h(),m.w(),pix_v,pix_h,num_maps, patchsize,px,py,maxdist_from_main_dia);
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 	}
@@ -145,8 +149,8 @@ void sigm_temperature(__matrix_type& m, const __vector_type& temp){
 	detail::sigm_temperature(m,temp);
 }
 template<class __matrix_type>
-void set_local_connectivity_in_dense_matrix(__matrix_type& m, float factor, int patchsize, int px, int py){
-	detail::set_local_connectivity_in_dense_matrix(m,factor, patchsize, px, py);
+void set_local_connectivity_in_dense_matrix(__matrix_type& m, float factor, int patchsize, int px, int py, int maxdist_from_main_dia){
+	detail::set_local_connectivity_in_dense_matrix(m,factor, patchsize, px, py, maxdist_from_main_dia);
 }
 
 
@@ -158,7 +162,7 @@ INST(float,column_major,host_memory_space,unsigned int);
 INST(float,column_major,dev_memory_space,unsigned int);
 
 template
-void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<float,column_major,dev_memory_space>& m, float factor, int patchsize, int px, int py);
+void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<float,column_major,dev_memory_space>& m, float factor, int patchsize, int px, int py, int);
 
 }
 }
