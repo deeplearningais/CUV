@@ -138,6 +138,34 @@ namespace rbm{
 			local_connectivity_kernel<<<blocks,threads>>>(m.ptr(),m.h(),m.w(),pix_v,pix_h,num_maps, patchsize,px,py,maxdist_from_main_dia);
 			cuvSafeCall(cudaThreadSynchronize());
 		}
+
+
+		/**********************************
+		  copy at rowidx
+		 **********************************/
+		template <class VM, class VV, class I>
+		__global__
+		void copy_at_rowidx_kernel(VM*dst, const VM*src, const VV* ridx, const I h, const I w, const I b, const unsigned int offset){
+			unsigned int tidx = threadIdx.x + blockIdx.x*blockDim.x;
+			if(tidx >= w) return;
+
+			const unsigned int col_offset = tidx*h;
+			for(unsigned int i=0; i<b; i++){
+				I r   = (I) ridx[w*i+tidx];
+				const unsigned int map_offset = offset*i;
+				dst[col_offset+map_offset + r] = src[col_offset+map_offset + r];
+			}
+		}
+		template<class VM, class VV, class I>
+		void copy_at_rowidx(cuv::dense_matrix<VM,column_major,dev_memory_space,I>& dst, const cuv::dense_matrix<VM,column_major,dev_memory_space,I>& src, const cuv::dense_matrix<VV,column_major,dev_memory_space,I>& rowidx, const unsigned int offset){
+			cuvAssert(dst.w() == src.w());
+			cuvAssert(dst.h() == src.h());
+			cuvAssert(rowidx.h() == src.w());
+			dim3 block(512);
+			dim3 grid(ceil(dst.w()/float(block.x)));
+
+			copy_at_rowidx_kernel<<<grid,block>>>(dst.ptr(), src.ptr(), rowidx.ptr(), dst.h(), dst.w(), rowidx.w(), offset);
+		}
 	}
 
 template<class __matrix_type>
@@ -152,6 +180,10 @@ template<class __matrix_type>
 void set_local_connectivity_in_dense_matrix(__matrix_type& m, float factor, int patchsize, int px, int py, int maxdist_from_main_dia){
 	detail::set_local_connectivity_in_dense_matrix(m,factor, patchsize, px, py, maxdist_from_main_dia);
 }
+template<class __matrix_type,class __matrix_type2>
+void copy_at_rowidx(__matrix_type& dst, const __matrix_type&  src, const __matrix_type2& rowidx, const unsigned int offset){
+	detail::copy_at_rowidx(dst,src,rowidx, offset);
+}
 
 
 #define INST(V,L,M,I) \
@@ -163,6 +195,8 @@ INST(float,column_major,dev_memory_space,unsigned int);
 
 template
 void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<float,column_major,dev_memory_space>& m, float factor, int patchsize, int px, int py, int);
+template
+void copy_at_rowidx(cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const unsigned int);
 
 }
 }

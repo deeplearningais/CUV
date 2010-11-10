@@ -60,8 +60,16 @@ void export_set_local_conn(){
 	def("set_local_connectivity_in_dense_matrix", set_local_connectivity_in_dense_matrix<mat>, (arg("matrix"), arg("factor"),arg("patchsize"),arg("px"),arg("py"),arg("maxdist_from_main_dia")));
 }
 
+template<class V, class L, class M, class I>
+void export_copy_at_rowidx(){
+	typedef dense_matrix<V,L,M,I> mat;
+	typedef vector<V,M,I> vec;
+	def("copy_at_rowidx", copy_at_rowidx<mat,mat>, (arg("dst"), arg("src"),arg("rowidx"),arg("offset")));
+}
+
 void export_libs_rbm(){
 	export_libs_rbm_detail<float,column_major,host_memory_space,unsigned int>();
 	export_libs_rbm_detail<float,column_major,dev_memory_space,unsigned int>();
 	export_set_local_conn<float,column_major,dev_memory_space,unsigned int>();
+	export_copy_at_rowidx<float,column_major,dev_memory_space,unsigned int>();
 }

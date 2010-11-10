@@ -42,8 +42,28 @@ namespace rbm{
 	 */
 	template<class __matrix_type>
 	void set_local_connectivity_in_dense_matrix(__matrix_type& m, float factor, int patchsize, int vx, int vy, int maxdist_from_main_dia=1E6);
-}
-}
-}
+
+
+
+	/** 
+	 * copy one matrix into another but only at specified positions.
+	 *
+	 * @param dst    the target matrix (N x M)
+	 * @param src    the source matrix (N x M)
+	 * @param rowidx contains row indices (M x B). The values at position b*offset+rowidx(m,b) will be copied.
+	 * @param offset offset (see rowidx)
+	 *
+	 *
+	 * This kernel can be used to compute serial gibbs updates of a laterally
+	 * connected RBM hidden layer. Then, offset is the size of one map in the
+	 * hidden layer, src is the actual result of the calculation and dst is the
+	 * one where only selected values are changed.
+	 *
+	 * rowidx must be set to indices which are at most as large as the mapsize (<offset, that is).
+	 * note that for at least _some_ consecutive read operations, rowidx is somewhat "transposed".
+	 */
+	template<class __matrix_type,class __matrix_type2>
+	void copy_at_rowidx(__matrix_type& dst, const __matrix_type&  src, const __matrix_type2& rowidx, const unsigned int offset);
+} } }
 
 #endif /* __RBM__HPP__ */
