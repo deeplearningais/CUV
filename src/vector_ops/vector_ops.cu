@@ -146,16 +146,16 @@ struct tf_dtanh{  __device__  __host__      T operator()(const T& x, const T& a,
 
 // rectifying transfer function. a is param beta
 template<class T, class A>
-struct tf_rect{  __device__  __host__       T operator()(const T& x, const A& a)      const{
+struct bf_rect{  __device__  __host__       T operator()(const T& x, const A& a)      const{
 	T ax = a*x;
 	if(ax > 87.33f)
 		return (T) x;
 	return log(1.0f+expf(ax))/a;
 }};
 /*template<class T, class A>*/
-/*struct tf_rect{  __device__  __host__       T operator()(const T& x, const A& a)      const{ return (T) log(1.0 + (double)exp((double)a*x))/a; } };*/
+/*struct bf_rect{  __device__  __host__       T operator()(const T& x, const A& a)      const{ return (T) log(1.0 + (double)exp((double)a*x))/a; } };*/
 template<class T, class A>
-struct tf_drect{  __device__  __host__      T operator()(const T& x, const A& a)      const{ return 1-1/(x*expf(a)); } };
+struct bf_drect{  __device__  __host__      T operator()(const T& x, const A& a)      const{ return 1-1/(x*expf(a)); } };
 
 
 template<class T, class binary_functor>
@@ -512,8 +512,8 @@ struct apply_scalar_functor_impl{
 			case SF_SUBTRACT:  launch_unary_kernel(v,v,uf_base_op<value_type, thrust::minus<value_type> >(param)); break;
 			case SF_MIN:       launch_unary_kernel(v,v,uf_base_op<value_type, bf_min<value_type,__arg_value_type> >(param)); break;
 			case SF_MAX:       launch_unary_kernel(v,v,uf_base_op<value_type, bf_max<value_type,__arg_value_type> >(param)); break;
-			case SF_RECT:      launch_unary_kernel(v,v,uf_base_op<value_type, tf_rect<value_type,__arg_value_type> >(param)); break;
-			case SF_DRECT:     launch_unary_kernel(v,v,uf_base_op<value_type, tf_drect<value_type,__arg_value_type> >(param)); break;
+			case SF_RECT:      launch_unary_kernel(v,v,uf_base_op<value_type, bf_rect<value_type,__arg_value_type> >(param)); break;
+			case SF_DRECT:     launch_unary_kernel(v,v,uf_base_op<value_type, bf_drect<value_type,__arg_value_type> >(param)); break;
 			default:
 				cout << "No suitable one-parameter scalar functor was found." << endl;
 				cuvAssert(false);
