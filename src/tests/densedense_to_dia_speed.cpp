@@ -80,7 +80,7 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	dia_matrix<float,dev_memory_space>   C_dev;
-	dense_matrix<float,column_major,dev_memory_space> A_dev
+	dense_matrix<float,column_major,dev_memory_space> A_dev;
 	dense_matrix<float,column_major,dev_memory_space> B_dev;
 	Fix()
 	:   C_dev(n,m,fs*fs*nm,n)
