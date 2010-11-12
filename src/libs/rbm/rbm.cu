@@ -1,3 +1,4 @@
+#include <iostream>
 #include "../../basics/dense_matrix.hpp"
 #include "rbm.hpp"
 
@@ -90,6 +91,81 @@ namespace rbm{
 		void sigm_temperature(cuv::dense_matrix<V,row_major,dev_memory_space,I>& m, const cuv::vector<V,dev_memory_space,I>& temp){
 			// TODO: make column-major view, then call again
 		}
+
+
+
+		/******************************
+		  local connectivity kernel
+		 ******************************/
+		template<class T>
+		__global__ void local_connectivity_kernel(T* mat ,int h,int w, int pix_v, int pix_h, int num_map_hid, int patchsize, int px, int py, int maxdist_from_main_dia) {
+			const int i = threadIdx.x + blockIdx.x * blockDim.x; // i changes with the visible unit
+			const int j = threadIdx.y + blockIdx.y * blockDim.y; // j changes with the hidden unit
+			if ((i>=pix_v) || (j>=pix_h)) return;
+
+			const int  map_hid  = (j * pix_v)/pix_h;  // map_hid is now in the same coordinate frame as map_vis (scaled up in most cases...)
+			const int& map_vis  = i;
+			const int  v_y     = map_vis % py;
+			const int  h_y     = map_hid % px;
+			const int  v_x     = map_vis / py;
+			const int  h_x     = map_hid / px;
+			const int  num_map_vis = h / (px*py);
+
+			const bool outpatch = (    abs(v_y-h_y)   > patchsize || abs(v_x-h_x)   > patchsize); // we are not in the patch
+			for(int hidx = 0; hidx<num_map_vis; hidx++) // loop over visible maps
+				for(int idx = 0; idx<num_map_hid; idx++)// loop over hidden maps
+					if(outpatch || abs(idx-hidx)>maxdist_from_main_dia) 
+						mat[(idx*pix_h+j)*h + hidx*pix_v+i]=(T)0; // reset this value
+
+			for(int hidx = i; hidx<h; hidx  += pix_v)
+			   for(int b=num_map_hid*pix_h; b<w; b += blockDim.y){
+				   int col = (b+threadIdx.y);
+				   if(col<w)
+					   mat[col*h+hidx]=(T)0;
+			   }
+		}
+
+		template<class V, class I>
+		void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<V,column_major,dev_memory_space,I>& m, float factor, int patchsize, int px, int py, int maxdist_from_main_dia){
+			cuvAssert(m.ptr());
+			/*int num_maps_lo = (m.h()) / (px*py);*/
+			int pix_v = px*py;
+			int pix_h = ceil(pix_v * factor);
+			static const int bs = 16;
+			dim3 blocks(ceil(pix_v/(float)bs),ceil(pix_h/(float)bs));
+			dim3 threads(bs,bs);
+			int num_maps = (m.w()) / pix_h;
+			local_connectivity_kernel<<<blocks,threads>>>(m.ptr(),m.h(),m.w(),pix_v,pix_h,num_maps, patchsize,px,py,maxdist_from_main_dia);
+			cuvSafeCall(cudaThreadSynchronize());
+		}
+
+
+		/**********************************
+		  copy at rowidx
+		 **********************************/
+		template <class VM, class VV, class I>
+		__global__
+		void copy_at_rowidx_kernel(VM*dst, const VM*src, const VV* ridx, const I h, const I w, const I b, const unsigned int offset){
+			unsigned int tidx = threadIdx.x + blockIdx.x*blockDim.x;
+			if(tidx >= w) return;
+
+			const unsigned int col_offset = tidx*h;
+			for(unsigned int i=0; i<b; i++){
+				I r   = (I) ridx[w*i+tidx];
+				const unsigned int map_offset = offset*i;
+				dst[col_offset+map_offset + r] = src[col_offset+map_offset + r];
+			}
+		}
+		template<class VM, class VV, class I>
+		void copy_at_rowidx(cuv::dense_matrix<VM,column_major,dev_memory_space,I>& dst, const cuv::dense_matrix<VM,column_major,dev_memory_space,I>& src, const cuv::dense_matrix<VV,column_major,dev_memory_space,I>& rowidx, const unsigned int offset){
+			cuvAssert(dst.w() == src.w());
+			cuvAssert(dst.h() == src.h());
+			cuvAssert(rowidx.h() == src.w());
+			dim3 block(512);
+			dim3 grid(ceil(dst.w()/float(block.x)));
+
+			copy_at_rowidx_kernel<<<grid,block>>>(dst.ptr(), src.ptr(), rowidx.ptr(), dst.h(), dst.w(), rowidx.w(), offset);
+		}
 	}
 
 template<class __matrix_type>
@@ -100,6 +176,14 @@ template<class __matrix_type,class __vector_type>
 void sigm_temperature(__matrix_type& m, const __vector_type& temp){
 	detail::sigm_temperature(m,temp);
 }
+template<class __matrix_type>
+void set_local_connectivity_in_dense_matrix(__matrix_type& m, float factor, int patchsize, int px, int py, int maxdist_from_main_dia){
+	detail::set_local_connectivity_in_dense_matrix(m,factor, patchsize, px, py, maxdist_from_main_dia);
+}
+template<class __matrix_type,class __matrix_type2>
+void copy_at_rowidx(__matrix_type& dst, const __matrix_type&  src, const __matrix_type2& rowidx, const unsigned int offset){
+	detail::copy_at_rowidx(dst,src,rowidx, offset);
+}
 
 
 #define INST(V,L,M,I) \
@@ -108,6 +192,11 @@ void sigm_temperature(__matrix_type& m, const __vector_type& temp){
 
 INST(float,column_major,host_memory_space,unsigned int);
 INST(float,column_major,dev_memory_space,unsigned int);
+
+template
+void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<float,column_major,dev_memory_space>& m, float factor, int patchsize, int px, int py, int);
+template
+void copy_at_rowidx(cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const unsigned int);
 
 }
 }
