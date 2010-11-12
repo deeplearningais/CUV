@@ -39,7 +39,6 @@
 #include <cuv_general.hpp>
 #include <vector_ops.hpp>
 #include <dia_matrix.hpp>
-#include <matrix_ops/diagonals.hpp>
 #include <convert.hpp>
 #include <sparse_matrix_io.hpp>
 
