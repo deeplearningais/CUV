@@ -79,13 +79,13 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	dia_matrix<float,dev_memory_space>   C;
-	dense_matrix<float,column_major,dev_memory_space> A;
-	dense_matrix<float,column_major,dev_memory_space> B;
+	dia_matrix<float,dev_memory_space>   C_dev;
+	dense_matrix<float,column_major,dev_memory_space> A_dev
+	dense_matrix<float,column_major,dev_memory_space> B_dev;
 	Fix()
-	:   C(n,m,fs*fs*nm,n)
-	,   A(n,k)
-	,   B(m,k)
+	:   C_dev(n,m,fs*fs*nm,n)
+	,   A_dev(n,k)
+	,   B_dev(m,k)
 	{
 		cerr << "-------------------------------"<<endl;
 		std::vector<int> off;
@@ -96,10 +96,10 @@ struct Fix{
 				{
 					off[i*fs+j + m*fs*fs] = i*28+j;
 				}
-		C.set_offsets(off);
-		sequence(A);
-		sequence(B);
-		sequence(C.vec());
+		C_dev.set_offsets(off);
+		sequence(A_dev);
+		sequence(B_dev);
+		sequence(C_dev.vec());
 	}
 	~Fix(){
 	}
@@ -110,15 +110,15 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( dd2s_speed_host_host )
 {
-	fill(C.vec(),0);
+	fill(C_dev.vec(),0);
 
-	dia_matrix<float,host_memory_space>   C2(C.h(),C.w(),C.num_dia(),C.stride());
-	dense_matrix<float,column_major,host_memory_space> C2dense(C.h(),C.w());
-	dense_matrix<float,column_major,host_memory_space> A2(A.h(),A.w());
-	dense_matrix<float,column_major,host_memory_space> B2(B.h(),B.w());
-	convert(C2,C);
-	convert(A2,A);
-	convert(B2,B);
+	dia_matrix<float,host_memory_space>   C2(C_dev.h(),C_dev.w(),C_dev.num_dia(),C_dev.stride());
+	dense_matrix<float,column_major,host_memory_space> C2dense(C_dev.h(),C_dev.w());
+	dense_matrix<float,column_major,host_memory_space> A2(A_dev.h(),A_dev.w());
+	dense_matrix<float,column_major,host_memory_space> B2(B_dev.h(),B_dev.w());
+	convert(C2,C_dev);
+	convert(A2,A_dev);
+	convert(B2,B_dev);
 	convert(C2dense,C2);
 
 	host_block_descriptor<float> bdh(C2);
@@ -130,18 +130,18 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_host_host )
 
 BOOST_AUTO_TEST_CASE( dd2s_speed_dev_host )
 {
-	fill(C.vec(),0);
+	fill(C_dev.vec(),0);
 
-	dia_matrix<float,host_memory_space> C2(C.h(),C.w(),C.num_dia(),C.stride());
-	dense_matrix<float,column_major,host_memory_space> A2(A.h(),A.w());
-	dense_matrix<float,column_major,host_memory_space> B2(B.h(),B.w());
-	convert(C2,C);
-	convert(A2,A);
-	convert(B2,B);
+	dia_matrix<float,host_memory_space> C2(C_dev.h(),C_dev.w(),C_dev.num_dia(),C_dev.stride());
+	dense_matrix<float,column_major,host_memory_space> A2(A_dev.h(),A_dev.w());
+	dense_matrix<float,column_major,host_memory_space> B2(B_dev.h(),B_dev.w());
+	convert(C2,C_dev);
+	convert(A2,A_dev);
+	convert(B2,B_dev);
 
-	dev_block_descriptor<float>  bdd(C);
+	dev_block_descriptor<float>  bd_dev(C_dev);
 	host_block_descriptor<float> bdh(C2);
-	MEASURE_TIME(dev_dia ,densedense_to_dia(C,bdd,A,B),10);
+	MEASURE_TIME(dev_dia ,densedense_to_dia(C_dev,bd_dev,A_dev,B_dev),10);
 	MEASURE_TIME(host_dia,densedense_to_dia(C2,bdh,A2,B2),10);
 	printf("Speedup: %3.4f\n", host_dia/dev_dia);
 }
@@ -150,19 +150,19 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_sparse_dense )
 {
 	if(n>8092 || m>8092)
 	   return; // otherwise, we get out of memory errors!
-	fill(C.vec(),0);
+	fill(C_dev.vec(),0);
 
 	// make a dev_dense_matrix equivalent to the dia-matrix
-	dense_matrix<float,column_major,dev_memory_space> Cd(C.h(),C.w());
-	dia_matrix<float,host_memory_space> C2(C.h(),C.w(),C.num_dia(),C.stride());
-	dense_matrix<float,column_major,host_memory_space> C_2(C.h(),C.w());
-	convert(C2,C);  // dev->host
+	dense_matrix<float,column_major,dev_memory_space> Cd(C_dev.h(),C_dev.w());
+	dia_matrix<float,host_memory_space> C2(C_dev.h(),C_dev.w(),C_dev.num_dia(),C_dev.stride());
+	dense_matrix<float,column_major,host_memory_space> C_2(C_dev.h(),C_dev.w());
+	convert(C2,C_dev);  // dev->host
 	convert(C_2,C2); // dia->dense
 	convert(Cd,C_2); // host->dev
 
-	dev_block_descriptor<float> bd(C);
-	MEASURE_TIME(dev_dia ,densedense_to_dia(C,bd,A,B),10);
-	MEASURE_TIME(dev_dense,prod(Cd,A,B,'n','t'),10);
+	dev_block_descriptor<float> bd(C_dev);
+	MEASURE_TIME(dev_dia ,densedense_to_dia(C_dev,bd,A_dev,B_dev),10);
+	MEASURE_TIME(dev_dense,prod(Cd,A_dev,B_dev,'n','t'),10);
 	printf("Speedup: %3.4f\n", dev_dense/dev_dia);
 }
 

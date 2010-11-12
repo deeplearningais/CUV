@@ -113,12 +113,12 @@ BOOST_AUTO_TEST_CASE( mat_plus_vec )
 
 BOOST_AUTO_TEST_CASE( mat_plus_vec_row_maj )
 {
-	dense_matrix<float,row_major,dev_memory_space> V(v_dev.h(),v_dev.w()); sequence(V);
-	dense_matrix<float,row_major,host_memory_space> X(v_host.h(),v_host.w()); sequence(X);
+	dense_matrix<float,row_major,dev_memory_space> V_dev(v_dev.h(),v_dev.w()); sequence(V_dev);
+	dense_matrix<float,row_major,host_memory_space> X_host(v_host.h(),v_host.w()); sequence(X_host);
 	vector<float,dev_memory_space>   v_vec(n); sequence(v_vec);
 	vector<float,host_memory_space>  x_vec(n); sequence(x_vec);
-	MEASURE_TIME(dev,  matrix_plus_col(V,v_vec), 10);
-	MEASURE_TIME(host, matrix_plus_col(X,x_vec), 10);
+	MEASURE_TIME(dev,  matrix_plus_col(V_dev,v_vec), 10);
+	MEASURE_TIME(host, matrix_plus_col(X_host,x_vec), 10);
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
@@ -127,34 +127,34 @@ BOOST_AUTO_TEST_CASE( mat_transpose )
 	const int n = 256;
 	const int m = 4096;
 
-	dense_matrix<float,column_major,dev_memory_space> V(n,m), W(m,n); sequence(V);
-	dense_matrix<float,column_major,host_memory_space> X(n,m), Y(m,n); sequence(X);
+	dense_matrix<float,column_major,dev_memory_space> V_dev(n,m), W(m,n); sequence(V_dev);
+	dense_matrix<float,column_major,host_memory_space> X_host(n,m), Y(m,n); sequence(X_host);
 
-	MEASURE_TIME(dev,  transpose(W,V), 10);
-	MEASURE_TIME(host, transpose(Y,X), 10);
+	MEASURE_TIME(dev,  transpose(W,V_dev), 10);
+	MEASURE_TIME(host, transpose(Y,X_host), 10);
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
 BOOST_AUTO_TEST_CASE( mat_op_reduce_big_rm_to_row )
 {
-	dense_matrix<float,row_major,dev_memory_space> dA(32, 384*384*32);
-	vector<float,dev_memory_space> dV(384*384*32);
-	dense_matrix<float,row_major,host_memory_space> hA(32, 384*384*32);
-	vector<float,host_memory_space> hV(384*384*32);
+	dense_matrix<float,row_major,dev_memory_space> A_dev(32, 384*384*32);
+	vector<float,dev_memory_space> V_dev(384*384*32);
+	dense_matrix<float,row_major,host_memory_space> A_host(32, 384*384*32);
+	vector<float,host_memory_space> V_host(384*384*32);
 
-//	sequence(dA);
-//	sequence(dV);
-//	sequence(hA);
-//	sequence(hV);
+//	sequence(A_dev);
+//	sequence(V_dev);
+//	sequence(A_host);
+//	sequence(V_host);
 
-	fill(dA, 1);
-	fill(hA, 1);
+	fill(A_dev, 1);
+	fill(A_host, 1);
 
-	fill(dV, 0);
-	fill(hV, 0);
+	fill(V_dev, 0);
+	fill(V_host, 0);
 
-	MEASURE_TIME(dev, reduce_to_row(dV,dA,RF_ADD, 1.0f, 1.0f), 10);
-	//MEASURE_TIME(host, reduce_to_row(hV,hA,RF_ADD, 1.0f, 1.0f), 10);
+	MEASURE_TIME(dev, reduce_to_row(V_dev,A_dev,RF_ADD, 1.0f, 1.0f), 10);
+	//MEASURE_TIME(host, reduce_to_row(V_host,A_host,RF_ADD, 1.0f, 1.0f), 10);
 
 }
 
