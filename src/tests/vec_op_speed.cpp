@@ -147,35 +147,35 @@ BOOST_AUTO_TEST_CASE( vec_add )
 BOOST_AUTO_TEST_CASE( vec_rprop )
 {
 	vector<signed char,dev_memory_space> dW_old(n);
-	vector<float,dev_memory_space>       dW(n);
-	vector<float,dev_memory_space>       W(n);
+	vector<float,dev_memory_space>       dW_dev(n);
+	vector<float,dev_memory_space>       W_dev(n);
 	vector<float,dev_memory_space>       rate(n);
 	vector<signed char,host_memory_space> h_dW_old(n);
-	vector<float,host_memory_space>       h_W(n);
-	vector<float,host_memory_space>       h_dW(n);
+	vector<float,host_memory_space>       W_host(n);
+	vector<float,host_memory_space>       dw_host(n);
 	vector<float,host_memory_space>       h_rate(n);
-	sequence(dW);           apply_scalar_functor(dW, SF_ADD, -10.f);
+	sequence(dW_dev);           apply_scalar_functor(dW_dev, SF_ADD, -10.f);
 	sequence(dW_old);
 	fill(rate, 1.f);
-	sequence(h_dW);         apply_scalar_functor(dW, SF_ADD, -10.f);
+	sequence(dw_host);         apply_scalar_functor(dW_dev, SF_ADD, -10.f);
 	sequence(h_dW_old);
 	fill(h_rate, 1.f);
 
-	MEASURE_TIME(dev,  cuv::rprop(W,dW,dW_old,rate), 10);
-	MEASURE_TIME(host, cuv::rprop(h_W,h_dW,h_dW_old,h_rate), 10);
+	MEASURE_TIME(dev,  rprop(W_dev,dW_dev,dW_old,rate), 10);
+	MEASURE_TIME(host, rprop(W_host,dw_host,h_dW_old,h_rate), 10);
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
 
 BOOST_AUTO_TEST_CASE( vec_lswd )
 {
-	vector<float,dev_memory_space>       dW(n);
-	vector<float,dev_memory_space>       W(n);
-	vector<float,host_memory_space>       h_W(n);
-	vector<float,host_memory_space>       h_dW(n);
+	vector<float,dev_memory_space>       dW_dev(n);
+	vector<float,dev_memory_space>       W_dev(n);
+	vector<float,host_memory_space>       W_host(n);
+	vector<float,host_memory_space>       dw_host(n);
 
-	MEASURE_TIME(dev,  cuv::learn_step_weight_decay(W,dW,1.f,0.05f), 10);
-	MEASURE_TIME(host, cuv::learn_step_weight_decay(h_W,h_dW,1.f,0.05f), 10);
+	MEASURE_TIME(dev,  learn_step_weight_decay(W_dev,dW_dev,1.f,0.05f), 10);
+	MEASURE_TIME(host, learn_step_weight_decay(W_host,dw_host,1.f,0.05f), 10);
 	printf("Speedup: %3.4f\n", host/dev);
 }
 

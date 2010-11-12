@@ -78,19 +78,19 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	dia_matrix<float,host_memory_space>   A;
+	dia_matrix<float,host_memory_space>   A_host;
 	dense_matrix<float,column_major,host_memory_space> A_;
-	dense_matrix<float,column_major,host_memory_space> B,B_,BLarge;
-	dense_matrix<float,column_major,host_memory_space> C,C_,CLarge;
+	dense_matrix<float,column_major,host_memory_space> B,B_,BLarge_host;
+	dense_matrix<float,column_major,host_memory_space> C,C_,CLarge_host;
 	Fix()
-	:   A(n,m,fs*fs*nm,n)
+	:   A_host(n,m,fs*fs*nm,n)
 	,   A_(n,m)
 	,   B(m,1)
 	,   B_(m,1)
 	,   C(n,1)
 	,   C_(n,1)
-	,   BLarge(m,k)
-	,   CLarge(n,k)
+	,   BLarge_host(m,k)
+	,   CLarge_host(n,k)
 	{
 		std::vector<int> off;
 		off.resize(fs*fs*nm);
@@ -100,15 +100,15 @@ struct Fix{
 				{
 					off[i*fs+j + m*fs*fs] = i*px+j;
 				}
-		A.set_offsets(off);
-		sequence(A.vec());
+		A_host.set_offsets(off);
+		sequence(A_host.vec());
 		sequence(C);
 		sequence(B);
 		if(px>64)
 			return;
 		sequence(B_);
 		sequence(C_);
-		convert(A_,A);
+		convert(A_,A_host);
 	}
 	~Fix(){
 	}
@@ -123,27 +123,27 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 	if(px>64)
 		return;
 	dense_matrix<float,column_major,host_memory_space> Ahostdense(n,m);
-	convert(Ahostdense,A);
+	convert(Ahostdense,A_host);
 
 	dense_matrix<float,column_major,dev_memory_space> Adevdense(n,m);
 	convert(Adevdense,Ahostdense);
 
-	dia_matrix<float,dev_memory_space>   Adevdia(n,m,A.num_dia(),A.stride());
-	convert(Adevdia,A);
+	dia_matrix<float,dev_memory_space>   Adevdia(n,m,A_host.num_dia(),A_host.stride());
+	convert(Adevdia,A_host);
 
-	dense_matrix<float,column_major,dev_memory_space> CLarge2(CLarge.h(), CLarge.w());
-	convert(CLarge2,CLarge);
-	dense_matrix<float,column_major,dev_memory_space> BLarge2(BLarge.h(), BLarge.w());
-	convert(BLarge2,BLarge);
+	dense_matrix<float,column_major,dev_memory_space> CLarge2_dev(CLarge_host.h(), CLarge_host.w());
+	convert(CLarge2_dev,CLarge_host);
+	dense_matrix<float,column_major,dev_memory_space> BLarge2(BLarge_host.h(), BLarge_host.w());
+	convert(BLarge2,BLarge_host);
 
 	float factAv = 2.f, factC = 1.3f;
 	//float factAv = 1.f, factC = 0.f;
-	MEASURE_TIME(dev_dense, prod(CLarge2, Adevdense, BLarge2,'n','n',factAv,factC),  10);
-	MEASURE_TIME(dev_dia , prod(CLarge2,Adevdia,BLarge2,'n','n',factAv,factC), 10);
+	MEASURE_TIME(dev_dense, prod(CLarge2_dev, Adevdense, BLarge2,'n','n',factAv,factC),  10);
+	MEASURE_TIME(dev_dia , prod(CLarge2_dev,Adevdia,BLarge2,'n','n',factAv,factC), 10);
 	printf("Speedup: %3.4f\n", dev_dense/dev_dia);
 
-	MEASURE_TIME(dev_dense_t, prod(BLarge2,Adevdense,CLarge2,'t','n',factAv,factC), 10);
-	MEASURE_TIME(dev_dia_t , prod(BLarge2,Adevdense,CLarge2,'t','n',factAv,factC), 10);
+	MEASURE_TIME(dev_dense_t, prod(BLarge2,Adevdense,CLarge2_dev,'t','n',factAv,factC), 10);
+	MEASURE_TIME(dev_dia_t , prod(BLarge2,Adevdense,CLarge2_dev,'t','n',factAv,factC), 10);
 	printf("Speedup: %3.4f\n", dev_dense_t/dev_dia_t);
 
 	BOOST_CHECK_LT(dev_dia,  dev_dense);
@@ -151,21 +151,21 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 }
 BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dia )
 {
-	dia_matrix<float,dev_memory_space> A2(n,m,A.num_dia(),A.stride());
-	convert(A2,A);
-	dense_matrix<float,column_major,dev_memory_space> CLarge2(CLarge.h(), CLarge.w());
-	convert(CLarge2,CLarge);
-	dense_matrix<float,column_major,dev_memory_space> BLarge2(BLarge.h(), BLarge.w());
-	convert(BLarge2,BLarge);
+	dia_matrix<float,dev_memory_space> A2(n,m,A_host.num_dia(),A_host.stride());
+	convert(A2,A_host);
+	dense_matrix<float,column_major,dev_memory_space> CLarge2_dev(CLarge_host.h(), CLarge_host.w());
+	convert(CLarge2_dev,CLarge_host);
+	dense_matrix<float,column_major,dev_memory_space> BLarge2(BLarge_host.h(), BLarge_host.w());
+	convert(BLarge2,BLarge_host);
 
 	float factAv = 2.f, factC = 1.3f;
 	//float factAv = 1.f, factC = 0.f;
-	MEASURE_TIME(host_dia, prod(CLarge, A, BLarge,'n','n',factAv,factC),  2);
-	MEASURE_TIME(dev_dia , prod(CLarge2,A2,BLarge2,'n','n',factAv,factC), 2);
+	MEASURE_TIME(host_dia, prod(CLarge_host, A_host, BLarge_host,'n','n',factAv,factC),  2);
+	MEASURE_TIME(dev_dia , prod(CLarge2_dev,A2,BLarge2,'n','n',factAv,factC), 2);
 	printf("Speedup: %3.4f\n", host_dia/dev_dia);
 
-	MEASURE_TIME(host_dia_t, prod(BLarge,A,CLarge,'t','n',factAv,factC), 2);
-	MEASURE_TIME(dev_dia_t , prod(BLarge2,A2,CLarge2,'t','n',factAv,factC), 2);
+	MEASURE_TIME(host_dia_t, prod(BLarge_host,A_host,CLarge_host,'t','n',factAv,factC), 2);
+	MEASURE_TIME(dev_dia_t , prod(BLarge2,A2,CLarge2_dev,'t','n',factAv,factC), 2);
 	printf("Speedup: %3.4f\n", host_dia_t/dev_dia_t);
 
 	BOOST_CHECK_LT(dev_dia,  host_dia);
@@ -176,12 +176,12 @@ BOOST_AUTO_TEST_CASE( spmv_host_speed )
 	if(px>64)
 		return;
    float factAv = 2.f, factC = 1.3f;
-   MEASURE_TIME(sparse_host, prod(CLarge,A,BLarge,'n','n',factAv,factC), 10);
-   MEASURE_TIME(dense_host , prod(CLarge,A_,BLarge,'n','n',factAv,factC), 10);
+   MEASURE_TIME(sparse_host, prod(CLarge_host,A_host,BLarge_host,'n','n',factAv,factC), 10);
+   MEASURE_TIME(dense_host , prod(CLarge_host,A_,BLarge_host,'n','n',factAv,factC), 10);
    printf("Speedup: %3.4f\n", dense_host/sparse_host);
 
-   MEASURE_TIME(sparse_host_t, prod(BLarge,A,CLarge,'t','n',factAv,factC), 10);
-   MEASURE_TIME(dense_host_t , prod(BLarge,A_,CLarge,'t','n',factAv,factC), 10);
+   MEASURE_TIME(sparse_host_t, prod(BLarge_host,A_host,CLarge_host,'t','n',factAv,factC), 10);
+   MEASURE_TIME(dense_host_t , prod(BLarge_host,A_,CLarge_host,'t','n',factAv,factC), 10);
    printf("Speedup: %3.4f\n", dense_host_t/sparse_host_t);
 
    BOOST_CHECK_LT(sparse_host,  dense_host);
