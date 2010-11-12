@@ -113,24 +113,24 @@ void conv_speed_test(int inputSize, int filterSize, int numFilters, int numImage
 	printf("Convolving %i images of size %ix%i with %i filters of size %ix%i.\n", c, n,n, f, g,g);
 	printf("Result are %i*%i images of size %ix%i\n", c,f, k,k);
 
-	dense_matrix<float, row_major, dev_memory_space>  d_img(c, n*n);
-	dense_matrix<float, row_major, dev_memory_space>  d_filter(f, g*g);
-	dense_matrix<float, row_major, dev_memory_space>  d_dst(c, f*k*k);
+	dense_matrix<float, row_major, dev_memory_space>  img_dev(c, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  filter_dev(f, g*g);
+	dense_matrix<float, row_major, dev_memory_space>  dst_dev(c, f*k*k);
 
-	dense_matrix<float, row_major, host_memory_space>  h_img(c, n*n);
-	dense_matrix<float, row_major, host_memory_space>  h_filter(f, g*g);
-	dense_matrix<float, row_major, host_memory_space>  h_dst(c, f*k*k);
+	dense_matrix<float, row_major, host_memory_space>  img_host(c, n*n);
+	dense_matrix<float, row_major, host_memory_space>  filter_host(f, g*g);
+	dense_matrix<float, row_major, host_memory_space>  dst_host(c, f*k*k);
 
-	fill(d_dst, 0.0f);
-	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
-	sequence(d_filter); apply_scalar_functor(d_filter,SF_MULT,0.001f);
+	fill(dst_dev, 0.0f);
+	sequence(img_dev);    apply_scalar_functor(img_dev,   SF_MULT,0.001f);
+	sequence(filter_dev); apply_scalar_functor(filter_dev,SF_MULT,0.001f);
 
-	fill(h_dst, 1.0f);
-	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
-	sequence(h_filter); apply_scalar_functor(h_filter,SF_MULT,0.001f);
+	fill(dst_host, 1.0f);
+	sequence(img_host);    apply_scalar_functor(img_host,   SF_MULT,0.001f);
+	sequence(filter_host); apply_scalar_functor(filter_host,SF_MULT,0.001f);
 
-	MEASURE_TIME(dev,  convolve(d_dst,d_img,d_filter), 10);
-	MEASURE_TIME(host, convolve(h_dst,h_img,h_filter), 10);
+	MEASURE_TIME(dev,  convolve(dst_dev,img_dev,filter_dev), 10);
+	MEASURE_TIME(host, convolve(dst_host,img_host,filter_host), 10);
 
 	printf("Speedup: %3.4f\n", host/dev);
 }
@@ -166,26 +166,26 @@ void conv_rlcnp_test(int inputSize, int filterSize, int numFilters, int numImage
 	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i using convolve2().\n", c, n,n, f, g,g);
 	printf("Result are %i*%i images of size %ix%i\n", c,f, k,k);
 
-	dense_matrix<float, row_major, dev_memory_space>  d_img(c, n*n);
-	dense_matrix<float, row_major, dev_memory_space>  d_filter(c, f*g*g);
-	dense_matrix<float, row_major, dev_memory_space>  d_dst(c, k*k);
+	dense_matrix<float, row_major, dev_memory_space>  img_dev(c, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  filter_dev(c, f*g*g);
+	dense_matrix<float, row_major, dev_memory_space>  dst_dev(c, k*k);
 
-	dense_matrix<float, row_major, host_memory_space>  h_img(c, n*n);
-	dense_matrix<float, row_major, host_memory_space>  h_filter(c, f*g*g);
-	dense_matrix<float, row_major, host_memory_space>  h_dst(c, k*k);
+	dense_matrix<float, row_major, host_memory_space>  img_host(c, n*n);
+	dense_matrix<float, row_major, host_memory_space>  filter_host(c, f*g*g);
+	dense_matrix<float, row_major, host_memory_space>  dst_host(c, k*k);
 
-	fill(d_dst, 0.0f);
-	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
-	sequence(d_filter); apply_scalar_functor(d_filter,SF_MULT,0.001f);
+	fill(dst_dev, 0.0f);
+	sequence(img_dev);    apply_scalar_functor(img_dev,   SF_MULT,0.001f);
+	sequence(filter_dev); apply_scalar_functor(filter_dev,SF_MULT,0.001f);
 
-	fill(h_dst, 1.0f);
-	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
-	sequence(h_filter); apply_scalar_functor(h_filter,SF_MULT,0.001f);
+	fill(dst_host, 1.0f);
+	sequence(img_host);    apply_scalar_functor(img_host,   SF_MULT,0.001f);
+	sequence(filter_host); apply_scalar_functor(filter_host,SF_MULT,0.001f);
 
 
 
-	MEASURE_TIME(dev,  conv_rlcnp<dev_memory_space>(d_dst,d_img,d_filter,c,n,f,g), 10);
-	MEASURE_TIME(host, conv_rlcnp<host_memory_space>(h_dst,h_img,h_filter,c,n,f,g), 10);
+	MEASURE_TIME(dev,  conv_rlcnp<dev_memory_space>(dst_dev,img_dev,filter_dev,c,n,f,g), 10);
+	MEASURE_TIME(host, conv_rlcnp<host_memory_space>(dst_host,img_host,filter_host,c,n,f,g), 10);
 	printf("Speedup: %3.4f\n", host/dev);
 
 }
@@ -202,62 +202,62 @@ void conv2_speed_test(int inputSize, int filterSize, int numFilters, int numImag
 	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i using convolve2().\n", c, n,n, f, g,g);
 	printf("Result are %i*%i images of size %ix%i\n", c,f, k,k);
 
-	dense_matrix<float, row_major, dev_memory_space>  d_img(c, n*n);
-	dense_matrix<float, row_major, dev_memory_space>  d_filter(c, f*g*g);
-	dense_matrix<float, row_major, dev_memory_space>  d_dst(c, f*k*k);
+	dense_matrix<float, row_major, dev_memory_space>  img_dev(c, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  filter_dev(c, f*g*g);
+	dense_matrix<float, row_major, dev_memory_space>  dst_dev(c, f*k*k);
 
-	dense_matrix<float, row_major, host_memory_space>  h_img(c, n*n);
-	dense_matrix<float, row_major, host_memory_space>  h_filter(c, f*g*g);
-	dense_matrix<float, row_major, host_memory_space>  h_dst(c, f*k*k);
+	dense_matrix<float, row_major, host_memory_space>  img_host(c, n*n);
+	dense_matrix<float, row_major, host_memory_space>  filter_host(c, f*g*g);
+	dense_matrix<float, row_major, host_memory_space>  dst_host(c, f*k*k);
 
-	fill(d_dst, 0.0f);
-	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
-	sequence(d_filter); apply_scalar_functor(d_filter,SF_MULT,0.001f);
+	fill(dst_dev, 0.0f);
+	sequence(img_dev);    apply_scalar_functor(img_dev,   SF_MULT,0.001f);
+	sequence(filter_dev); apply_scalar_functor(filter_dev,SF_MULT,0.001f);
 
-	fill(h_dst, 1.0f);
-	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
-	sequence(h_filter); apply_scalar_functor(h_filter,SF_MULT,0.001f);
+	fill(dst_host, 1.0f);
+	sequence(img_host);    apply_scalar_functor(img_host,   SF_MULT,0.001f);
+	sequence(filter_host); apply_scalar_functor(filter_host,SF_MULT,0.001f);
 
-	MEASURE_TIME(dev,  convolve2(d_dst,d_img,d_filter, f), 10);
-	MEASURE_TIME(host, convolve2(h_dst,h_img,h_filter, f), 10);
+	MEASURE_TIME(dev,  convolve2(dst_dev,img_dev,filter_dev, f), 10);
+	MEASURE_TIME(host, convolve2(dst_host,img_host,filter_host, f), 10);
 
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
 
-void conv1_iter(dense_matrix<float, row_major, dev_memory_space>& d_img,
-		dense_matrix<float, row_major, dev_memory_space>& d_filter,
-		dense_matrix<float, row_major, dev_memory_space>& d_dst,
+void conv1_iter(dense_matrix<float, row_major, dev_memory_space>& img_dev,
+		dense_matrix<float, row_major, dev_memory_space>& filter_dev,
+		dense_matrix<float, row_major, dev_memory_space>& dst_dev,
 		int numInputMaps) {
-	fill(d_dst, 0.0f);
+	fill(dst_dev, 0.0f);
 	for(int i = 0; i < numInputMaps; i++)
-		convolve(d_dst, d_img, d_filter);
+		convolve(dst_dev, img_dev, filter_dev);
 }
 
-void conv1_pass(dense_matrix<float, row_major, dev_memory_space>& d_img,
-		dense_matrix<float, row_major, dev_memory_space>& d_filter,
-		dense_matrix<float, row_major, dev_memory_space>& d_dst,
-		dense_matrix<float, row_major, dev_memory_space>& d_temp,
+void conv1_pass(dense_matrix<float, row_major, dev_memory_space>& img_dev,
+		dense_matrix<float, row_major, dev_memory_space>& filter_dev,
+		dense_matrix<float, row_major, dev_memory_space>& dst_dev,
+		dense_matrix<float, row_major, dev_memory_space>& temp_dev,
 		int numInputMaps) {
-	fill(d_dst, 0.0f);
-	int numFilters = d_dst.h();
-	convolve(d_temp, d_img, d_filter, numInputMaps);
-	d_temp.resize(d_temp.h()/numFilters, d_temp.w()*numFilters);
-	reduce_to_row(d_dst.vec(), d_temp);
-	d_temp.resize(d_temp.h()*numFilters, d_temp.w()/numFilters);
+	fill(dst_dev, 0.0f);
+	int numFilters = dst_dev.h();
+	convolve(temp_dev, img_dev, filter_dev, numInputMaps);
+	temp_dev.resize(temp_dev.h()/numFilters, temp_dev.w()*numFilters);
+	reduce_to_row(dst_dev.vec(), temp_dev);
+	temp_dev.resize(temp_dev.h()*numFilters, temp_dev.w()/numFilters);
 }
 
-void conv2_pass(dense_matrix<float, row_major, dev_memory_space>& d_img,
-		dense_matrix<float, row_major, dev_memory_space>& d_filter,
-		dense_matrix<float, row_major, dev_memory_space>& d_dst,
-		dense_matrix<float, row_major, dev_memory_space>& d_temp,
+void conv2_pass(dense_matrix<float, row_major, dev_memory_space>& img_dev,
+		dense_matrix<float, row_major, dev_memory_space>& filter_dev,
+		dense_matrix<float, row_major, dev_memory_space>& dst_dev,
+		dense_matrix<float, row_major, dev_memory_space>& temp_dev,
 		int numPatterns) {
-	fill(d_temp, 0.0f);
-	convolve2(d_temp, d_img, d_filter, d_filter.h());
+	fill(temp_dev, 0.0f);
+	convolve2(temp_dev, img_dev, filter_dev, filter_dev.h());
 	// note: this is not the correct summation! but it's at least as computationally intense
-	d_temp.resize(d_temp.h()/numPatterns, d_temp.w()*numPatterns);
-	reduce_to_row(d_dst.vec(), d_temp);
-	d_temp.resize(d_temp.h()*numPatterns, d_temp.w()/numPatterns);
+	temp_dev.resize(temp_dev.h()/numPatterns, temp_dev.w()*numPatterns);
+	reduce_to_row(dst_dev.vec(), temp_dev);
+	temp_dev.resize(temp_dev.h()*numPatterns, temp_dev.w()/numPatterns);
 }
 
 // compare whether iterating over conv() or calling conv2() and accumulating is faster
@@ -274,23 +274,23 @@ void conv_vs_conv2_speed(int inputSize, int numInputMaps, int filterSize, int nu
 	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i (for %i patterns)\n", k, n,n, f, g,g, p);
 	printf("Result are %i*%i images of size %ix%i.\n", f,f, k,k);
 
-	dense_matrix<float, row_major, dev_memory_space>  d_img1(p, n*n);
-	dense_matrix<float, row_major, dev_memory_space>  d_filter1(f, g*g);
-	dense_matrix<float, row_major, dev_memory_space>  d_dst1(f, p*m*m);
+	dense_matrix<float, row_major, dev_memory_space>  img1_dev(p, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  filter1_dev(f, g*g);
+	dense_matrix<float, row_major, dev_memory_space>  dst1_dev(f, p*m*m);
 
-	sequence(d_img1);    apply_scalar_functor(d_img1,   SF_MULT,0.001f);
-	sequence(d_filter1); apply_scalar_functor(d_filter1,SF_MULT,0.001f);
+	sequence(img1_dev);    apply_scalar_functor(img1_dev,   SF_MULT,0.001f);
+	sequence(filter1_dev); apply_scalar_functor(filter1_dev,SF_MULT,0.001f);
 
-	dense_matrix<float, row_major, dev_memory_space>  d_img2(k*p, n*n);
-	dense_matrix<float, row_major, dev_memory_space>  d_filter2(f, k*p*g*g);
-	dense_matrix<float, row_major, dev_memory_space>  d_temp(k*p, f*m*m);
-	dense_matrix<float, row_major, dev_memory_space>  d_dst2(f, p*m*m);
+	dense_matrix<float, row_major, dev_memory_space>  img2_dev(k*p, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  filter2_dev(f, k*p*g*g);
+	dense_matrix<float, row_major, dev_memory_space>  temp_dev(k*p, f*m*m);
+	dense_matrix<float, row_major, dev_memory_space>  dst2_dev(f, p*m*m);
 
-	sequence(d_img2);    apply_scalar_functor(d_img2,   SF_MULT,0.001f);
-	sequence(d_filter2); apply_scalar_functor(d_filter2,SF_MULT,0.001f);
+	sequence(img2_dev);    apply_scalar_functor(img2_dev,   SF_MULT,0.001f);
+	sequence(filter2_dev); apply_scalar_functor(filter2_dev,SF_MULT,0.001f);
 
-	MEASURE_TIME(conv1, conv1_iter(d_img1, d_filter1, d_dst1, k), 10);
-	MEASURE_TIME(conv2, conv2_pass(d_img2, d_filter2, d_dst2, d_temp, p), 10);
+	MEASURE_TIME(conv1, conv1_iter(img1_dev, filter1_dev, dst1_dev, k), 10);
+	MEASURE_TIME(conv2, conv2_pass(img2_dev, filter2_dev, dst2_dev, temp_dev, p), 10);
 
 	printf("Convolve1: %3.4f\n", conv1);
 	printf("Convolve2: %3.4f\n", conv2);
@@ -314,23 +314,23 @@ void conv_vs_conv_speed(int inputSize, int numInputMaps, int filterSize, int num
 	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i (for %i patterns)\n", k, n,n, f, g,g, p);
 	printf("Result are %i*%i images of size %ix%i.\n", f,f, k,k);
 
-	dense_matrix<float, row_major, dev_memory_space>  d_img1(p, n*n);
-	dense_matrix<float, row_major, dev_memory_space>  d_filter1(f, g*g);
-	dense_matrix<float, row_major, dev_memory_space>  d_dst1(f, p*m*m);
+	dense_matrix<float, row_major, dev_memory_space>  img1_dev(p, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  filter1_dev(f, g*g);
+	dense_matrix<float, row_major, dev_memory_space>  dst1_dev(f, p*m*m);
 
-	sequence(d_img1);    apply_scalar_functor(d_img1,   SF_MULT,0.001f);
-	sequence(d_filter1); apply_scalar_functor(d_filter1,SF_MULT,0.001f);
+	sequence(img1_dev);    apply_scalar_functor(img1_dev,   SF_MULT,0.001f);
+	sequence(filter1_dev); apply_scalar_functor(filter1_dev,SF_MULT,0.001f);
 
-	dense_matrix<float, row_major, dev_memory_space>  d_img2(k*p, n*n);
-	dense_matrix<float, row_major, dev_memory_space>  d_filter2(k*f, g*g);
-	dense_matrix<float, row_major, dev_memory_space>  d_temp(k*f, p*m*m);
-	dense_matrix<float, row_major, dev_memory_space>  d_dst2(f, p*m*m);
+	dense_matrix<float, row_major, dev_memory_space>  img2_dev(k*p, n*n);
+	dense_matrix<float, row_major, dev_memory_space>  filter2_dev(k*f, g*g);
+	dense_matrix<float, row_major, dev_memory_space>  temp_dev(k*f, p*m*m);
+	dense_matrix<float, row_major, dev_memory_space>  dst2_dev(f, p*m*m);
 
-	sequence(d_img2);    apply_scalar_functor(d_img2,   SF_MULT,0.001f);
-	sequence(d_filter2); apply_scalar_functor(d_filter2,SF_MULT,0.001f);
+	sequence(img2_dev);    apply_scalar_functor(img2_dev,   SF_MULT,0.001f);
+	sequence(filter2_dev); apply_scalar_functor(filter2_dev,SF_MULT,0.001f);
 
-	MEASURE_TIME(conv_iter, conv1_iter(d_img1, d_filter1, d_dst1, k), 10);
-	MEASURE_TIME(conv_pass, conv1_pass(d_img2, d_filter2, d_dst2, d_temp, k), 10);
+	MEASURE_TIME(conv_iter, conv1_iter(img1_dev, filter1_dev, dst1_dev, k), 10);
+	MEASURE_TIME(conv_pass, conv1_pass(img2_dev, filter2_dev, dst2_dev, temp_dev, k), 10);
 
 	printf("conv_iter: %3.4f\n", conv_iter);
 	printf("conv_pass: %3.4f\n", conv_pass);
@@ -382,34 +382,34 @@ BOOST_AUTO_TEST_CASE( maxima_plus_index_speed )
 	const int p = 4;
 	const int o = n/p;
 
-	dense_matrix<float,row_major, host_memory_space> h_img(c,n*n);
-	dense_matrix<float,row_major, host_memory_space> d_img(c,n*n);
-	dense_matrix<float,row_major, host_memory_space> h_pooled(c,o*o);
-	dense_matrix<float,row_major, host_memory_space> d_pooled(c,o*o);
-	dense_matrix<int,row_major, host_memory_space> h_indices(c,o*o);
-	dense_matrix<int,row_major, host_memory_space> d_indices(c,o*o);
+	dense_matrix<float,row_major, host_memory_space> img_host(c,n*n);
+	dense_matrix<float,row_major, host_memory_space> img_dev(c,n*n);
+	dense_matrix<float,row_major, host_memory_space> pooled_host(c,o*o);
+	dense_matrix<float,row_major, host_memory_space> pooled_dev(c,o*o);
+	dense_matrix<int,row_major, host_memory_space> indices_host(c,o*o);
+	dense_matrix<int,row_major, host_memory_space> indices_dev(c,o*o);
 
 
 	initialize_mersenne_twister_seeds();
 
 	// part 1: calculate matrix indices
-	fill_rnd_uniform(d_img.vec());
-	convert(h_img, d_img);
+	fill_rnd_uniform(img_dev.vec());
+	convert(img_host, img_dev);
 
-	MEASURE_TIME(host_max, max_pooling(h_pooled, h_img, p, 0, &h_indices), 10 );
-	MEASURE_TIME(dev_max, max_pooling(d_pooled, d_img, p, 0, &d_indices), 10 );
+	MEASURE_TIME(host_max, max_pooling(pooled_host, img_host, p, 0, &indices_host), 10 );
+	MEASURE_TIME(dev_max, max_pooling(pooled_dev, img_dev, p, 0, &indices_dev), 10 );
 
 	printf("Speedup pooling: %3.4f\n", host_max/dev_max);
 
 	// part 2: propagate back to those indices
-	fill_rnd_uniform(d_pooled.vec());
-	convert(h_pooled, d_pooled);
+	fill_rnd_uniform(pooled_dev.vec());
+	convert(pooled_host, pooled_dev);
 
-	fill(h_img, 0.f);
-	fill(d_img, 0.f);
+	fill(img_host, 0.f);
+	fill(img_dev, 0.f);
 
-	MEASURE_TIME(host_sup, supersample(h_img, h_pooled, p, &h_indices), 10 );
-	MEASURE_TIME(dev_sup, supersample(d_img, d_pooled, p, &d_indices), 10 );
+	MEASURE_TIME(host_sup, supersample(img_host, pooled_host, p, &indices_host), 10 );
+	MEASURE_TIME(dev_sup, supersample(img_dev, pooled_dev, p, &indices_dev), 10 );
 
 	printf("Speedup: %3.4f\n", host_sup/dev_sup);
 
@@ -423,24 +423,24 @@ BOOST_AUTO_TEST_CASE( max_pool_with_overlap )
 	const int m = (n-p)/(p-l)+1; // resulting image size
 	const int c = 100;
 
-	dense_matrix<float,row_major, host_memory_space> h_img(c,n*n);
-	dense_matrix<float,row_major, host_memory_space> h_dst(c,m*m);
-	dense_matrix<int,row_major, host_memory_space> h_indices(c,m*m);
+	dense_matrix<float,row_major, host_memory_space> img_host(c,n*n);
+	dense_matrix<float,row_major, host_memory_space> dst_host(c,m*m);
+	dense_matrix<int,row_major, host_memory_space> indices_host(c,m*m);
 
-	dense_matrix<float,row_major, host_memory_space> d_img(c,n*n);
-	dense_matrix<float,row_major, host_memory_space> d_dst(c,m*m);
-	dense_matrix<int,row_major, host_memory_space> d_indices(c,m*m);
+	dense_matrix<float,row_major, host_memory_space> img_dev(c,n*n);
+	dense_matrix<float,row_major, host_memory_space> dst_dev(c,m*m);
+	dense_matrix<int,row_major, host_memory_space> indices_dev(c,m*m);
 
-	sequence(h_img);
-	sequence(d_img);
+	sequence(img_host);
+	sequence(img_dev);
 
-	MEASURE_TIME(host, max_pooling(h_dst, h_img, p, l, &h_indices), 10 );
-	MEASURE_TIME(dev, max_pooling(d_dst, d_img, p, l, &d_indices), 10 );
+	MEASURE_TIME(host, max_pooling(dst_host, img_host, p, l, &indices_host), 10 );
+	MEASURE_TIME(dev, max_pooling(dst_dev, img_dev, p, l, &indices_dev), 10 );
 
 	printf("Speedup forward: %3.4f\n", host/dev);
 
-	MEASURE_TIME(host_bw, super_to_max(h_img, h_dst, p, l, &h_indices), 10 );
-	MEASURE_TIME(dev_bw, super_to_max(d_img, d_dst, p, l, &d_indices), 10 );
+	MEASURE_TIME(host_bw, super_to_max(img_host, dst_host, p, l, &indices_host), 10 );
+	MEASURE_TIME(dev_bw, super_to_max(img_dev, dst_dev, p, l, &indices_dev), 10 );
 
 	printf("Speedup backward: %3.4f\n", host_bw/dev_bw);
 }
