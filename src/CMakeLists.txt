@@ -8,7 +8,7 @@ ENDIF(CUV_PYTHON_BINDINGS)
 
 SET(CUDA_SDK_ROOT_DIR "/usr/local/cuda/C" CACHE STRING "Location of CUDA SDK") 
 
-SET (CUDA_TEST_DEVICE "3" CACHE STRING "Which CUDA device should the tests be run on, if multiple devices are present.")
+SET (CUDA_TEST_DEVICE "6" CACHE STRING "Which CUDA device should the tests be run on, if multiple devices are present.")
 add_definitions(-DCUDA_TEST_DEVICE=${CUDA_TEST_DEVICE})
 
 FIND_PACKAGE(CUDA)

@@ -132,14 +132,15 @@ BOOST_AUTO_TEST_CASE( spmv_host2dev )
 	MAT_CMP(w,w2,0.1);
 }
 
-BOOST_AUTO_TEST_CASE( avg_dia )
-{
-	cuv::vector<float,host_memory_space> avg( w.num_dia() );
-	avg_diagonals( avg, w );
-	for( int i=0;i<avg.size(); i++ ){
-		BOOST_CHECK_EQUAL( avg[ i ], mean( *w.get_dia( w.get_offset( i ) ) ) );
-	}
-}
+//BOOST_AUTO_TEST_CASE( avg_dia )
+// NOT IMPLEMENTED at the moment
+//{
+	//cuv::vector<float,host_memory_space> avg( w.num_dia() );
+	//avg_diagonals( avg, w );
+	//for( int i=0;i<avg.size(); i++ ){
+		//BOOST_CHECK_EQUAL( avg[ i ], mean( *w.get_dia( w.get_offset( i ) ) ) );
+	//}
+//}
 
 
 
