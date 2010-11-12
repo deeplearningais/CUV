@@ -83,5 +83,5 @@ ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/src/tests/test_conv_op" )
 #ADD_TEST( random_speed "${CMAKE_BINARY_DIR}/tests/test_random_speed" )
 
 SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
-ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/src/python_bindings python -c 'import cuv_python as cp'" )
+ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/src/ python -c 'import cuv_python as cp'" )
 
