@@ -64,7 +64,7 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	static const int c = 2;  // # patterns (images)
-	static const int n = 64;  // image size
+	static const int n = 32;  // image size
 	static const int f = 16;   // # filters
 	static const int p = 8;	   // pooling size
 	static const int g = 8;    // filter size
