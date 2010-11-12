@@ -69,11 +69,11 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	vector<float,dev_memory_space> v;
-	vector<float,host_memory_space> x;
+	vector<float,dev_memory_space> v_dev;
+	vector<float,host_memory_space> v_host;
 	static const int n = 150*150*96;
 	Fix()
-		:v(n),x(n) // needs large sample number.
+		:v_dev(n),v_host(n) // needs large sample number.
 	{
 		initialize_mersenne_twister_seeds();
 	}
@@ -87,26 +87,26 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( random_uniform )
 {
-	MEASURE_TIME(dev, fill_rnd_uniform(v), 10);
-	MEASURE_TIME(host, fill_rnd_uniform(x), 10);
+	MEASURE_TIME(dev, fill_rnd_uniform(v_dev), 10);
+	MEASURE_TIME(host, fill_rnd_uniform(v_host), 10);
 	printf("Speedup: %3.4f\n", host/dev);
 	BOOST_CHECK_LT(dev,host);
 }
 BOOST_AUTO_TEST_CASE( random_normal )
 {
-	apply_0ary_functor(v,NF_FILL,0);
-	apply_0ary_functor(x,NF_FILL,0);	
-	MEASURE_TIME(dev,add_rnd_normal(v),10);
-	MEASURE_TIME(host,add_rnd_normal(x),10);
+	apply_0ary_functor(v_dev,NF_FILL,0);
+	apply_0ary_functor(v_host,NF_FILL,0);	
+	MEASURE_TIME(dev,add_rnd_normal(v_dev),10);
+	MEASURE_TIME(host,add_rnd_normal(v_host),10);
 	printf("Speedup: %3.4f\n", host/dev);
 	BOOST_CHECK_LT(dev,host);
 }
 BOOST_AUTO_TEST_CASE( binarize )
 {
-	fill_rnd_uniform(v);
-	fill_rnd_uniform(x);
-	MEASURE_TIME(dev,rnd_binarize(v),10);
-	MEASURE_TIME(host,rnd_binarize(x),10);
+	fill_rnd_uniform(v_dev);
+	fill_rnd_uniform(v_host);
+	MEASURE_TIME(dev,rnd_binarize(v_dev),10);
+	MEASURE_TIME(host,rnd_binarize(v_host),10);
 	printf("Speedup: %3.4f\n", host/dev);
 	BOOST_CHECK_LT(dev,host);
 }

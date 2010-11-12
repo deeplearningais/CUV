@@ -72,13 +72,13 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	static const int n = 784*2048; 
-	vector<float,dev_memory_space>  v,w;
-	vector<float,host_memory_space> x,z;
+	vector<float,dev_memory_space>  v_dev,w_dev;
+	vector<float,host_memory_space> v_host,w_host;
 	Fix()
-	:   v(n),w(n)
-	,   x(n),z(n)
+	:   v_dev(n),w_dev(n)
+	,   v_host(n),w_host(n)
 	{
-		//MEASURE_TIME("warmup", apply_scalar_functor(v, SF_EXP), 100);
+		//MEASURE_TIME("warmup", apply_scalar_functor(v_dev, SF_EXP), 100);
 	}
 	~Fix(){
 	}
@@ -90,56 +90,56 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( vec_rnd )
 {
-	MEASURE_TIME(rnd_uniform,      fill_rnd_uniform(v), 100);
-	MEASURE_TIME(rnd_uniform_host, fill_rnd_uniform(x) , 100);
+	MEASURE_TIME(rnd_uniform,      fill_rnd_uniform(v_dev), 100);
+	MEASURE_TIME(rnd_uniform_host, fill_rnd_uniform(v_host) , 100);
 	printf("Speedup: %3.4f\n", rnd_uniform_host/rnd_uniform);
 
-	MEASURE_TIME(rnd_normal,      add_rnd_normal(v), 100);
-	MEASURE_TIME(rnd_normal_host, add_rnd_normal(x) , 100);
+	MEASURE_TIME(rnd_normal,      add_rnd_normal(v_dev), 100);
+	MEASURE_TIME(rnd_normal_host, add_rnd_normal(v_host) , 100);
 
 	printf("Speedup: %3.4f\n", rnd_normal_host/rnd_normal);
 }
 
 BOOST_AUTO_TEST_CASE( vec_ops_exp )
 {
-	sequence(v);
-	sequence(x);
-	MEASURE_TIME(dev , apply_scalar_functor(v, SF_EXP), 1000);
-	MEASURE_TIME(host, apply_scalar_functor(x, SF_EXP), 1000);
+	sequence(v_dev);
+	sequence(v_host);
+	MEASURE_TIME(dev , apply_scalar_functor(v_dev, SF_EXP), 1000);
+	MEASURE_TIME(host, apply_scalar_functor(v_host, SF_EXP), 1000);
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
 BOOST_AUTO_TEST_CASE( vec_ops_unary2 )
 {
-	sequence(v);
-	sequence(x);
-	MEASURE_TIME(mult_dev, apply_scalar_functor(v, SF_MULT,0.01f), 1000);
-	MEASURE_TIME(mult_host, apply_scalar_functor(x, SF_MULT,0.01f), 1000);
+	sequence(v_dev);
+	sequence(v_host);
+	MEASURE_TIME(mult_dev, apply_scalar_functor(v_dev, SF_MULT,0.01f), 1000);
+	MEASURE_TIME(mult_host, apply_scalar_functor(v_host, SF_MULT,0.01f), 1000);
 	printf("Speedup: %3.4f\n", mult_host/mult_dev);
-	MEASURE_TIME(add_dev,  apply_scalar_functor(v, SF_ADD,0.01f), 1000);
-	MEASURE_TIME(add_host,  apply_scalar_functor(x, SF_ADD,0.01f), 1000);
+	MEASURE_TIME(add_dev,  apply_scalar_functor(v_dev, SF_ADD,0.01f), 1000);
+	MEASURE_TIME(add_host,  apply_scalar_functor(v_host, SF_ADD,0.01f), 1000);
 	printf("Speedup: %3.4f\n", add_host/add_dev);
 }
 
 BOOST_AUTO_TEST_CASE( vec_xpby )
 {
-	sequence(v);
-	sequence(w);
-	sequence(x);
-	sequence(z);
-	MEASURE_TIME(dev, apply_binary_functor(v,w, BF_XPBY,1.8f), 1000);
-	MEASURE_TIME(host, apply_binary_functor(x,z, BF_XPBY,1.8f), 1000);
+	sequence(v_dev);
+	sequence(w_dev);
+	sequence(v_host);
+	sequence(w_host);
+	MEASURE_TIME(dev, apply_binary_functor(v_dev,w_dev, BF_XPBY,1.8f), 1000);
+	MEASURE_TIME(host, apply_binary_functor(v_host,w_host, BF_XPBY,1.8f), 1000);
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
 BOOST_AUTO_TEST_CASE( vec_add )
 {
-	sequence(v);
-	sequence(w);
-	sequence(x);
-	sequence(z);
-	MEASURE_TIME(dev, apply_binary_functor(v,w, BF_ADD), 1000);
-	MEASURE_TIME(host, apply_binary_functor(x,z, BF_ADD), 1000);
+	sequence(v_dev);
+	sequence(w_dev);
+	sequence(v_host);
+	sequence(w_host);
+	MEASURE_TIME(dev, apply_binary_functor(v_dev,w_dev, BF_ADD), 1000);
+	MEASURE_TIME(host, apply_binary_functor(v_host,w_host, BF_ADD), 1000);
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
