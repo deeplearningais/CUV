@@ -60,7 +60,7 @@
  * then they are better on bigcuda1.
  *
  */
-#define USE_THRUST_LAUNCHER 0 
+#define USE_THRUST_LAUNCHER 1 
 
 
 using namespace cuv;
