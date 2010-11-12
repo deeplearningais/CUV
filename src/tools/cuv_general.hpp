@@ -38,8 +38,12 @@
 #define MAX_GRID_SIZE 65535
 
 // use this macro to make sure no error occurs when cuda functions are called
-#define cuvSafeCall(X)  \
-  if(1){ X; cuv::checkCudaError(#X); } 
+#ifdef NDEBUG
+#  define cuvSafeCall(X)  \
+      if(strcmp(#X,"cudaThreadSynchronize()")!=0){ X; cuv::checkCudaError(#X); } 
+#else
+#  define cuvSafeCall(X) X; cuv::checkCudaError(#X); 
+#endif
 
 // use this macro to ensure that a condition is true.
 //  in contrast to assert(), this will throw a runtime_exception, 
