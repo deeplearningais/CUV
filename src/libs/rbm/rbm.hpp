@@ -41,7 +41,7 @@ namespace rbm{
 	 * @param maxdist_from_main_dia reset everything further than this many maps away from central diagonal
 	 */
 	template<class __matrix_type>
-	void set_local_connectivity_in_dense_matrix(__matrix_type& m, float factor, int patchsize, int vx, int vy, int maxdist_from_main_dia=1E6);
+	void set_local_connectivity_in_dense_matrix(__matrix_type& m, int patchsize, int vx, int vy, int hx, int hy, int maxdist_from_main_dia=1E6);
 
 
 
