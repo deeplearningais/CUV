@@ -15,7 +15,7 @@ def get_data(file):
     return np.array(L), D
 
 def get_files(path):
-    return glob(os.path.join(path, "bigc*.dat"))
+    return glob(os.path.join(path, "*cuda*.dat"))
 
 def plot(data, ax, off, width, color, label):
     xloc = np.arange(len(data))+off
@@ -32,17 +32,19 @@ def plot_all(reference, path):
     lc = len(color_array)
     lf = len(files)
     color_array = color_array[::lc/lf,:]
+    color_array = ["r", "g", "b"]
 
     diff=0.7/len(files)
     off = 0.0
     color = 0
     refdata, refdesc = get_data(reference)
     for f in files:
-        if os.path.samefile(f,reference): 
+        if os.path.samefile(f,reference):
             continue
         data, desc = get_data(f)
         data = refdata/data
-        plot(data,ax,off,diff,color_array[color,:],f)
+        #plot(data,ax,off,diff,color_array[color,:],f)
+        plot(data,ax,off,diff,color_array[color],f)
         off+=diff
         color+=1
     ax.set_xticks(np.arange(len(data)))
