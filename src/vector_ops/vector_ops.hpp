@@ -35,6 +35,9 @@
 #define __VECTOR_OPS_HPP__
 
 namespace cuv{
+        template<class T, class V, class I>
+        class vector;
+
 
 	/** 
 	 * @brief Scalar Functors for vectors and matrices
@@ -152,6 +155,7 @@ namespace cuv{
 	  NF_FILL,
 	  NF_SEQ
   };
+	
 
 /** @defgroup functors_vectors Pointwise functors on vectors
  *   @{
@@ -209,11 +213,10 @@ namespace cuv{
    * @param v Target vector 
    * @param sf ScalarFunctor to apply 
    * 
-   */
+   */  
   template<class __vector_type>
   void
   apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf);
-
 
 
   /** 
@@ -227,6 +230,7 @@ namespace cuv{
   template<class __vector_type, class __value_type>
   void
   apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& p);
+  
   /** 
    * @brief Apply pointwise unary functor with to scalar parameters to a vector
    * 
@@ -249,7 +253,7 @@ namespace cuv{
    */
   template<class __vector_type1, class __vector_type2>
   void
-  apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& bf);
+  apply_binary_functor(__vector_type1& v,  const __vector_type2& w, const BinaryFunctor& bf);
 
   /** 
    * @brief Apply pointwise binary functor with one scalar parameter to a pair of matrices 
@@ -257,11 +261,11 @@ namespace cuv{
    * @param v	First parameter of binary functor, destination vector 
    * @param w	Second parameter of binary functor 
    * @param bf	 BinaryFunctor to apply
-   * @param param Scalar parameter 
+   * @param param Scalar parameter and .hpp
    */
   template<class __vector_type1, class __vector_type2, class __value_type>
   void
-  apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& bf, const __value_type& param);
+  apply_binary_functor(__vector_type1& v,const  __vector_type2& w, const BinaryFunctor& bf, const __value_type& param);
 
   /** 
    * @brief Apply pointwise binary functor with two scalar parameters to a pair of matrices 
@@ -275,7 +279,7 @@ namespace cuv{
    */
   template<class __vector_type1, class __vector_type2, class __value_type>
   void
-  apply_binary_functor(__vector_type1& v, __vector_type2& w, const BinaryFunctor& bf, const __value_type& param, const __value_type& param2);
+  apply_binary_functor(__vector_type1& v, const __vector_type2& w, const BinaryFunctor& bf, const __value_type& param, const __value_type& param2);
 
   /** 
    * @brief Copy one vector into another. 
@@ -286,7 +290,7 @@ namespace cuv{
    * This is a convenience wrapper that applies the binary functor BF_COPY 
    */
   template<class __vector_type>
-  void copy(__vector_type& dst, __vector_type& src){
+  void copy(__vector_type& dst, const  __vector_type& src){
 	  apply_binary_functor(dst,src,BF_COPY);
   }
  /** @} */ //end group functors_vectors
@@ -302,7 +306,7 @@ namespace cuv{
    * 
    * @return true if v contains "Inf" or "-Inf", false otherwise 
    */
-  template<class __vector_type1> bool has_inf(__vector_type1& v);
+  template<class __vector_type1> bool has_inf(const __vector_type1& v);
   /** 
    * @brief Check whether a float vector contains "NaN"
    * 
@@ -310,7 +314,7 @@ namespace cuv{
    * 
    * @return true if v contains "NaN", false otherwise 
    */
-  template<class __vector_type1> bool has_nan(__vector_type1& v);
+  template<class __vector_type1> bool has_nan(const __vector_type1& v);
   /** 
    * @brief Return the sum of a vector 
    * 
@@ -318,7 +322,7 @@ namespace cuv{
    * 
    * @return sum of v 
    */
-  template<class __vector_type1> float sum(__vector_type1& v);
+  template<class __vector_type1> float sum(const __vector_type1& v);
   /** 
    * @brief Return the two-norm or Euclidean norm of a vector 
    * 
@@ -326,7 +330,7 @@ namespace cuv{
    * 
    * @return Two-norm of v 
    */
-  template<class __vector_type1> float norm2(__vector_type1& v);
+  template<class __vector_type1> float norm2(const __vector_type1& v);
   /** 
    * @brief Return the one-norm or sum-norm of a vector 
    * 
@@ -334,7 +338,7 @@ namespace cuv{
    * 
    * @return one-norm of v 
    */
-  template<class __vector_type1> float norm1(__vector_type1& v);
+  template<class __vector_type1> float norm1(const __vector_type1& v);
   /** 
    * @brief Return the minimum entry of a vector 
    * 
@@ -342,7 +346,7 @@ namespace cuv{
    * 
    * @return Minimum entry of v 
    */
-  template<class __vector_type1> float minimum(__vector_type1& v);
+  template<class __vector_type1> float minimum(const __vector_type1& v);
   /** 
    * @brief Return the maximum entry of a vector 
    * 
@@ -350,7 +354,7 @@ namespace cuv{
    * 
    * @return Maximum entry of v 
    */
-  template<class __vector_type1> float maximum(__vector_type1& v);
+  template<class __vector_type1> float maximum(const __vector_type1& v);
   /** 
    * @brief Return the mean of the entries of a vector 
    * 
@@ -358,7 +362,7 @@ namespace cuv{
    * 
    * @return Mean of entries of v 
    */
-  template<class __vector_type1> float mean(__vector_type1& v);
+  template<class __vector_type1> float mean(const __vector_type1& v);
   /** 
    * @brief Return the variation of the entries of a vector 
    * 
@@ -366,7 +370,7 @@ namespace cuv{
    * 
    * @return Variation of entries of v 
    */
-  template<class __vector_type1> float var(__vector_type1& v);
+  template<class __vector_type1> float var(const __vector_type1& v);
 
   /** 
    * @brief Return the index of the maximum element
@@ -377,7 +381,7 @@ namespace cuv{
    */
   template<class __vector_type1> 
 	  typename __vector_type1::index_type 
-	  arg_max(__vector_type1& v);
+	  arg_max(const __vector_type1& v);
   /** 
    * @brief Return the index of the minimum element
    * 
@@ -387,10 +391,67 @@ namespace cuv{
    */
   template<class __vector_type1> 
 	  typename __vector_type1::index_type 
-	  arg_min(__vector_type1& v);
+	  arg_min(const __vector_type1& v);
 
  /** @} */ //end group reductions_vectors
 
 } // cuv
+
+
+ /* 
+  * operator overloading for arithmatic operations on vectors
+  */
+  template<class T, class V, class I>
+    cuv::vector<T, V, I>& 
+    operator-=(cuv::vector<T, V, I>& v1, const cuv::vector<T, V, I>& v2){
+  	cuv::apply_binary_functor(v1,v2, cuv::BF_SUBTRACT);
+  	return v1;
+  }
+
+  template<class T, class V, class I>
+    cuv::vector<T, V, I>& 
+    operator*=(cuv::vector<T, V, I>& v1, const cuv::vector<T, V, I>& v2){
+  	cuv::apply_binary_functor(v1,v2, cuv::BF_MULT);
+  	return v1;
+  }
+  template<class T, class V, class I>
+    cuv::vector<T, V, I>& 
+    operator/=(cuv::vector<T, V, I>& v1, const cuv::vector<T, V, I>& v2){
+  	cuv::apply_binary_functor(v1,v2, cuv::BF_DIV);
+  	return v1;
+  }
+  template<class T, class V, class I>
+    cuv::vector<T, V, I>& 
+    operator+=(cuv::vector<T, V, I>& v1, const cuv::vector<T, V, I>& v2){
+  	cuv::apply_binary_functor(v1,v2, cuv::BF_ADD);
+  	return v1;
+  }
+ 
+  template<class T, class V, class I>
+    cuv::vector<T, V, I>& 
+    operator-=(cuv::vector<T, V, I>& v, const T& p){
+  	cuv::apply_scalar_functor(v, cuv::SF_SUBTRACT, p);
+  	return v;
+  }
+  template<class T, class V, class I>
+    cuv::vector<T, V, I>& 
+    operator*=(cuv::vector<T, V, I>& v, const T& p){
+  	cuv::apply_scalar_functor(v, cuv::SF_MULT, p);
+  	return v;
+  }
+  
+  template<class T, class V, class I>
+    cuv::vector<T, V, I>& 
+    operator/=(cuv::vector<T, V, I>& v, const T& p){
+  	cuv::apply_scalar_functor(v, cuv::SF_DIV, p);
+  	return v;
+  }
+  template<class T, class V, class I>
+    cuv::vector<T, V, I>& 
+    operator+=(cuv::vector<T, V, I>& v, const T& p){
+  	cuv::apply_scalar_functor(v, cuv::SF_ADD, p);
+  	return v;
+  }
+
 
 #endif

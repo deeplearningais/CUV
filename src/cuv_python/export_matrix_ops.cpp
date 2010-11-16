@@ -155,7 +155,7 @@ void export_scalar_functor() {
 template<class M, class N>
 void export_binary_functor_simple() {
 	def("apply_binary_functor",
-	   (void (*)(M&, N&, const BinaryFunctor&)) 
+	   (void (*)(M&, const N&, const BinaryFunctor&)) 
 	   apply_binary_functor<
 	     typename M::value_type,
 		 typename M::memory_layout,
@@ -166,7 +166,7 @@ void export_binary_functor_simple() {
 template<class M, class N>
 void export_binary_functor() {
 	def("apply_binary_functor",
-	   (void (*)(M&, N&, const BinaryFunctor&)) 
+	   (void (*)(M&, const N&, const BinaryFunctor&)) 
 	   apply_binary_functor<
 	     typename M::value_type,
 		 typename M::memory_layout,
@@ -174,7 +174,7 @@ void export_binary_functor() {
 		 typename M::index_type,
 		 typename N::value_type>);
 	def("apply_binary_functor",
-	   (void (*)(M&, N&, const BinaryFunctor&, const typename M::value_type&)) 
+	   (void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&)) 
 	   apply_binary_functor<
 	     typename M::value_type,
 		 typename M::memory_layout,
@@ -183,7 +183,7 @@ void export_binary_functor() {
 	     typename M::value_type,
 		 typename N::value_type>);
 	def("apply_binary_functor",
-	   (void (*)(M&, N&, const BinaryFunctor&, const typename M::value_type&, const typename M::value_type&)) 
+	   (void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&, const typename M::value_type&)) 
 	   apply_binary_functor<
 	     typename M::value_type,
 		 typename M::memory_layout,
@@ -194,13 +194,13 @@ void export_binary_functor() {
 	typedef typename M::vec_type V;
 	typedef typename N::vec_type W;
 	def("apply_binary_functor",
-	   (void (*)(V&, W&, const BinaryFunctor&)) 
+	   (void (*)(V&,const W&, const BinaryFunctor&)) 
 	   apply_binary_functor<V,W>);
 	def("apply_binary_functor",
-	   (void (*)(V&, W&, const BinaryFunctor&, const typename V::value_type&)) 
+	   (void (*)(V&, const W&, const BinaryFunctor&, const typename V::value_type&)) 
 	   apply_binary_functor<V,W,typename V::value_type>);
 	def("apply_binary_functor",
-	   (void (*)(V&, W&, const BinaryFunctor&, const typename V::value_type&, const typename V::value_type&)) 
+	   (void (*)(V&, const W&, const BinaryFunctor&, const typename V::value_type&, const typename V::value_type&)) 
 	   apply_binary_functor<
 	     V,
 		 W,
@@ -216,25 +216,25 @@ void export_pooling(){
 
 template <class M>
 void export_reductions(){
-	def("has_inf",(bool (*)(typename M::vec_type&)) has_inf<typename M::vec_type>);
-	def("has_inf",(bool (*)(M&)) has_inf<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("has_nan",(bool (*)(typename M::vec_type&)) has_nan<typename M::vec_type>);
-	def("has_nan",(bool (*)(M&)) has_nan<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("sum",(float (*)(typename M::vec_type&)) sum<typename M::vec_type>);
-	def("sum",(float (*)(M&)) sum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("norm1",(float (*)(typename M::vec_type&)) norm1<typename M::vec_type>);
-	def("norm1",(float (*)(M&)) norm1<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("norm2",(float (*)(typename M::vec_type&)) norm2<typename M::vec_type>);
-	def("norm2",(float (*)(M&)) norm2<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("maximum",(float (*)(typename M::vec_type&)) maximum<typename M::vec_type>);
-	def("maximum",(float (*)(M&)) maximum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("minimum",(float (*)(typename M::vec_type&)) minimum<typename M::vec_type>);
-	def("minimum",(float (*)(M&)) minimum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("mean", (float (*)(M&)) mean<typename M::value_type, typename M::memory_layout, typename M::memory_space_type, typename M::index_type>);
-	def("arg_max",  (tuple(*)(M&)) matrix_arg_max<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
-	def("arg_min",  (tuple(*)(M&)) matrix_arg_min<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
-	def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"),arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=1.f,arg("factor_old")=0.f));
-	def("reduce_to_row", reduce_to_row<M,typename M::vec_type>,(arg("vector"),arg("matrix"),arg("factor_new")=1.f,arg("factor_old")=0.f));
+	def("has_inf",(bool (*)(const typename M::vec_type&)) has_inf<typename M::vec_type>);
+	def("has_inf",(bool (*)(const M&)) has_inf<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+	def("has_nan",(bool (*)(const typename M::vec_type&)) has_nan<typename M::vec_type>);
+	def("has_nan",(bool (*)(const M&)) has_nan<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+	def("sum",(float (*)(const typename M::vec_type&)) sum<typename M::vec_type>);
+	def("sum",(float (*)(const M&)) sum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+	def("norm1",(float (*)(const typename M::vec_type&)) norm1<typename M::vec_type>);
+	def("norm1",(float (*)(const M&)) norm1<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+	def("norm2",(float (*)(const typename M::vec_type&)) norm2<typename M::vec_type>);
+	def("norm2",(float (*)(const M&)) norm2<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+	def("maximum",(float (*)(const typename M::vec_type&)) maximum<typename M::vec_type>);
+	def("maximum",(float (*)(const M&)) maximum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+	def("minimum",(float (*)(const typename M::vec_type&)) minimum<typename M::vec_type>);
+	def("minimum",(float (*)(const M&)) minimum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+	def("mean", (float (*)(const M&)) mean<typename M::value_type, typename M::memory_layout, typename M::memory_space_type, typename M::index_type>);
+	def("arg_max",  (tuple(*)( M&)) matrix_arg_max<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
+	def("arg_min",  (tuple(*)( M&)) matrix_arg_min<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
+	def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=1.f,arg("factor_old")=0.f));
+	def("reduce_to_row", reduce_to_row<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("factor_new")=1.f,arg("factor_old")=0.f));
 }
 
 template <class M>
