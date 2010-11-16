@@ -4,6 +4,14 @@ import numpy as np
 import os, sys, re
 from glob import glob
 
+def get_desc(name):
+    if name.find("bigcuda1_0")>=0: return "GTX580"
+    if name.find("bigcuda1_3")>=0: return "GTX295"
+    if name.find("cuda7_0")>=0:    return "GTX480"
+    if name.find("cuda6_1")>=0:    return "GTX285"
+    print "no name for", name
+    sys.exit()
+
 def get_data(file):
     L = []
     D = []
@@ -44,7 +52,7 @@ def plot_all(reference, path):
         data, desc = get_data(f)
         data = refdata/data
         #plot(data,ax,off,diff,color_array[color,:],f)
-        plot(data,ax,off,diff,color_array[color],f)
+        plot(data,ax,off,diff,color_array[color],get_desc(f))
         off+=diff
         color+=1
     ax.set_xticks(np.arange(len(data)))
@@ -52,7 +60,8 @@ def plot_all(reference, path):
     labels = ax.get_xticklabels()
     for label in labels:
         label.set_rotation(70) 
-    plt.title("Speed of GPU relative to "+reference)
+    print "Reference: ", reference
+    plt.title("Speed of GPU relative to "+get_desc(reference))
     plt.legend()
     plt.show()
 
