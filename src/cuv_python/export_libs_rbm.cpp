@@ -57,7 +57,7 @@ template<class V, class L, class M, class I>
 void export_set_local_conn(){
 	typedef dense_matrix<V,L,M,I> mat;
 	typedef vector<V,M,I> vec;
-	def("set_local_connectivity_in_dense_matrix", set_local_connectivity_in_dense_matrix<mat>, (arg("matrix"), arg("factor"),arg("patchsize"),arg("px"),arg("py"),arg("maxdist_from_main_dia")));
+	def("set_local_connectivity_in_dense_matrix", set_local_connectivity_in_dense_matrix<mat>, (arg("matrix"),arg("patchsize"),arg("px"),arg("py"),arg("pxh"),arg("pyh"),arg("maxdist_from_main_dia")));
 }
 
 template<class V, class L, class M, class I>
