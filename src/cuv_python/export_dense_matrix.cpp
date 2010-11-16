@@ -158,6 +158,14 @@ export_dense_matrix_common(std::string name){
 		.def("set",    (void (mat::*)(const index_type&, const index_type&, const value_type&))(&mat::set),(bp::arg ("x"),bp::arg("y"),bp::arg("value")), "set a value in the matrix")
 		.def("at",    (value_type (mat::*)(const index_type&,const index_type&))(&mat::operator()), "value at this position")
 		.def("resize", (void (mat::*)(const index_type&, const index_type&)) (&mat::resize), "resize dimensions")
+		.def(self += value_type())
+		.def(self -= value_type())
+		.def(self *= value_type())
+		.def(self /= value_type())
+		.def(self += self)
+		.def(self -= self)
+		.def(self *= self)
+		.def(self /= self)
 		.add_property("h", &mat::h)
 		.add_property("w", &mat::w)
 		.add_property("n", &mat::n)
@@ -377,6 +385,7 @@ void export_dense_matrix(){
 	export_numpy2dev_dense_mats<float>();
 	export_numpy2dev_dense_mats<signed char>();
 	export_numpy2dev_dense_mats<unsigned char>();
+	
 
 	// numpy --> host matrix
 	export_numpy2host_dense_mats<int>();

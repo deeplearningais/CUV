@@ -79,11 +79,14 @@ BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
 {
 	sequence(v);
 	sequence(w);
-	apply_scalar_functor(v,SF_ADD,1);
+	v+= (float) 1.0;
+	//apply_scalar_functor(v,SF_ADD,1);
+	
 	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v[i], i + 1);
 	}
-	apply_binary_functor(v,w, BF_ADD);
+	//apply_binary_functor(v,w, BF_ADD);
+	v+=w;
 	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v[i], i + i + 1);
 	}

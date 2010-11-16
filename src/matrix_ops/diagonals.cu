@@ -17,7 +17,7 @@ namespace cuv{
 					){
 				for( int i=0;i<dia.num_dia();i++ ){
 					std::auto_ptr<const vector<T,dev_memory_space> > diagonal ( dia.get_dia( dia.get_offset( i ) ));
-					dst.set( i , mean( *const_cast<vector<T, dev_memory_space>* >(diagonal.get()) ) );
+					dst.set( i , mean( *(diagonal.get()) ) );
 				}
 			}
 		template<class T,class I>

@@ -42,6 +42,7 @@
 #define __VECTOR_HPP__
 #include <tools/cuv_general.hpp>
 #include <iostream>
+#include <vector_ops/vector_ops.hpp>
 
 namespace cuv{
 
@@ -202,6 +203,8 @@ class vector{
 		void set(const index_type& idx, const value_type& val){
 				entry_set<value_type,index_type>(m_ptr,idx,val,memory_space_type());
 		}
+		
+		
 
 }; // vector
 
