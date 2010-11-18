@@ -64,6 +64,9 @@ namespace rbm{
 	 */
 	template<class __matrix_type,class __matrix_type2>
 	void copy_at_rowidx(__matrix_type& dst, const __matrix_type&  src, const __matrix_type2& rowidx, const unsigned int offset);
+
+	template<class __matrix_type>
+	void copy_redblack(__matrix_type& dst, const __matrix_type&  src, const unsigned int color);
 } } }
 
 #endif /* __RBM__HPP__ */
