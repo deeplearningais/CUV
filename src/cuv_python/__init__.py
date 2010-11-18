@@ -6,6 +6,7 @@ def __cpy(x):
     apply_binary_functor(x2.vec,x.vec,binary_functor.COPY)
     return x2
 
+
 def __sav_dense(x, file):
     np.save(file.replace(".npy",""),pull(x))
 
@@ -21,8 +22,13 @@ def __getitem__(x,key):
 def __setitem__(x,key,value):
     x.set(*key,value=value)
 
+def copy(dst,src):
+    apply_binary_functor(dst.vec,src.vec,binary_functor.COPY)
+
 # Combine strings to form all exported combinations of types
 # For all types add convenience functions
+
+
 
 for memory_space in ["dev","host"]:
     for value_type in ["f","sc","uc","i"]:
