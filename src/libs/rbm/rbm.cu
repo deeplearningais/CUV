@@ -163,6 +163,33 @@ namespace rbm{
 		/**********************************
 		  copy at rowidx
 		 **********************************/
+		template <class VM, class I>
+		__global__
+		void copy_redblack_kernel(VM*dst, const VM*src, const I h, const I w, const bool color){
+			unsigned int tidx = threadIdx.y + blockIdx.y*blockDim.y;
+			unsigned int tidy = threadIdx.x + blockIdx.x*blockDim.x;
+			if(tidx >= w) return;
+			if(tidy >= h) return;
+
+			bool need_update = color ^ ((tidx+tidy)%2);
+			if(need_update)
+				dst[tidx*h+tidy] = src[tidx*h+tidy];
+		}
+		template<class VM, class I>
+		void copy_redblack(cuv::dense_matrix<VM,column_major,dev_memory_space,I>& dst, const cuv::dense_matrix<VM,column_major,dev_memory_space,I>& src, const unsigned int color){
+			cuvAssert(dst.w() == src.w());
+			cuvAssert(dst.h() == src.h());
+			/*cuvAssert(rowidx.h() == src.w());*/
+			dim3 block(16,16);
+			dim3 grid(ceil(dst.h()/float(block.y)),
+					  ceil(dst.w()/float(block.x)));
+
+			copy_redblack_kernel<<<grid,block>>>(dst.ptr(), src.ptr(), dst.h(), dst.w(), (bool)color);
+			cuvSafeCall(cudaThreadSynchronize());
+		}
+		/**********************************
+		  copy at rowidx
+		 **********************************/
 		template <class VM, class VV, class I>
 		__global__
 		void copy_at_rowidx_kernel(VM*dst, const VM*src, const VV* ridx, const I h, const I w, const bool color){
@@ -215,6 +242,12 @@ template<class __matrix_type,class __matrix_type2>
 void copy_at_rowidx(__matrix_type& dst, const __matrix_type&  src, const __matrix_type2& rowidx, const unsigned int offset){
 	detail::copy_at_rowidx(dst,src,rowidx, offset);
 }
+template<class __matrix_type>
+void copy_redblack(__matrix_type& dst, const __matrix_type&  src, const unsigned int color){
+	detail::copy_redblack(dst,src, color);
+}
+template
+void copy_at_rowidx(cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const unsigned int);
 
 
 #define INST(V,L,M,I) \
@@ -227,8 +260,9 @@ INST(float,column_major,dev_memory_space,unsigned int);
 template
 void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<float,column_major,dev_memory_space>& m, int patchsize, int px, int py, int,int,int, bool);
 template
-void copy_at_rowidx(cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const unsigned int);
+void copy_redblack(cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const unsigned int);
 
 }
 }
 }
+

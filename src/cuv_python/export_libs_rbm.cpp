@@ -65,6 +65,7 @@ void export_copy_at_rowidx(){
 	typedef dense_matrix<V,L,M,I> mat;
 	typedef vector<V,M,I> vec;
 	def("copy_at_rowidx", copy_at_rowidx<mat,mat>, (arg("dst"), arg("src"),arg("rowidx"),arg("offset")));
+	def("copy_redblack", copy_at_rowidx<mat,mat>, (arg("dst"), arg("src"),arg("color")));
 }
 
 void export_libs_rbm(){
