@@ -165,26 +165,37 @@ namespace rbm{
 		 **********************************/
 		template <class VM, class VV, class I>
 		__global__
-		void copy_at_rowidx_kernel(VM*dst, const VM*src, const VV* ridx, const I h, const I w, const I b, const unsigned int offset){
-			unsigned int tidx = threadIdx.x + blockIdx.x*blockDim.x;
-			if(tidx >= w) return;
+		void copy_at_rowidx_kernel(VM*dst, const VM*src, const VV* ridx, const I h, const I w, const bool color){
+			/*unsigned int tidx = threadIdx.x + blockIdx.x*blockDim.x;*/
+			/*if(tidx >= w) return;*/
 
-			const unsigned int col_offset = tidx*h;
-			for(unsigned int i=0; i<b; i++){
-				I r   = (I) ridx[w*i+tidx];
-				const unsigned int map_offset = offset*i;
-				dst[col_offset+map_offset + r] = src[col_offset+map_offset + r];
-			}
+			/*const unsigned int col_offset = tidx*h;*/
+			/*for(unsigned int i=0; i<b; i++){*/
+				/*I r   = (I) ridx[w*i+tidx];*/
+				/*const unsigned int map_offset = offset*i;*/
+				/*dst[col_offset+map_offset + r] = src[col_offset+map_offset + r];*/
+			/*}*/
+
+			unsigned int tidx = threadIdx.y + blockIdx.y*blockDim.y;
+			unsigned int tidy = threadIdx.x + blockIdx.x*blockDim.x;
+			if(tidx >= w) return;
+			if(tidy >= h) return;
+
+			bool need_update = color ^ ((tidx+tidy)%2);
+			if(need_update)
+				dst[tidx*h+tidy] = src[tidx*h+tidy];
 		}
 		template<class VM, class VV, class I>
-		void copy_at_rowidx(cuv::dense_matrix<VM,column_major,dev_memory_space,I>& dst, const cuv::dense_matrix<VM,column_major,dev_memory_space,I>& src, const cuv::dense_matrix<VV,column_major,dev_memory_space,I>& rowidx, const unsigned int offset){
+		void copy_at_rowidx(cuv::dense_matrix<VM,column_major,dev_memory_space,I>& dst, const cuv::dense_matrix<VM,column_major,dev_memory_space,I>& src, const cuv::dense_matrix<VV,column_major,dev_memory_space,I>& rowidx, const unsigned int color){
 			cuvAssert(dst.w() == src.w());
 			cuvAssert(dst.h() == src.h());
-			cuvAssert(rowidx.h() == src.w());
-			dim3 block(512);
-			dim3 grid(ceil(dst.w()/float(block.x)));
+			/*cuvAssert(rowidx.h() == src.w());*/
+			dim3 block(16,16);
+			dim3 grid(ceil(dst.h()/float(block.y)),
+					  ceil(dst.w()/float(block.x)));
 
-			copy_at_rowidx_kernel<<<grid,block>>>(dst.ptr(), src.ptr(), rowidx.ptr(), dst.h(), dst.w(), rowidx.w(), offset);
+			copy_at_rowidx_kernel<<<grid,block>>>(dst.ptr(), src.ptr(), rowidx.ptr(), dst.h(), dst.w(), (bool)color);
+			cuvSafeCall(cudaThreadSynchronize());
 		}
 	}
 
