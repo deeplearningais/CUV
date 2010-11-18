@@ -46,5 +46,6 @@ for memory_space in ["dev","host"]:
 
     dia_type=eval(memory_space+"_dia_matrix_f")
 
+    dia_type.copy = __cpy
     dia_type.shape = property(__shape)
     dia_type.np = property(__np)
