@@ -9,6 +9,7 @@ def get_desc(name):
     if name.find("bigcuda1_3")>=0: return "GTX295"
     if name.find("cuda7_0")>=0:    return "GTX480"
     if name.find("cuda6_1")>=0:    return "GTX285"
+    if name.find("cuda4_0")>=0:    return "9800 GX2"
     print "no name for", name
     sys.exit()
 
@@ -35,14 +36,15 @@ def plot_all(reference, path):
     fig.subplots_adjust(bottom=0.2)
     ax = fig.add_subplot(111)
     #ax.set_yscale('log')
+    plt.axhline(1)
 
     color_array = np.vstack(np.array(pylab.cm.datad["gist_rainbow"].values()))
     lc = len(color_array)
     lf = len(files)
     color_array = color_array[::lc/lf,:]
-    color_array = ["r", "g", "b"]
+    color_array = ["r", "g", "b", "#AAFF77"]
 
-    diff=0.7/len(files)
+    diff=0.9/len(files)
     off = 0.0
     color = 0
     refdata, refdesc = get_data(reference)
