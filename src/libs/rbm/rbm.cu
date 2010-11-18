@@ -98,7 +98,7 @@ namespace rbm{
 		  local connectivity kernel
 		 ******************************/
 		template<class T>
-		__global__ void local_connectivity_kernel(T* mat ,int h,int w, int pix_v, int pix_h, int num_map_hid, int num_map_vis, int patchsize, int px, float ratio, int maxdist_from_main_dia) {
+		__global__ void local_connectivity_kernel_round(T* mat ,int h,int w, int pix_v, int pix_h, int num_map_hid, int num_map_vis, int patchsize, int px, float ratio, int maxdist_from_main_dia) {
 			const int i = threadIdx.x + blockIdx.x * blockDim.x; // i changes with the visible unit
 			const int j = threadIdx.y + blockIdx.y * blockDim.y; // j changes with the hidden unit
 			if ((i>=pix_v) || (j>=pix_h)) return;
@@ -109,16 +109,35 @@ namespace rbm{
 			const int  h_y      = ((j % py_hidden) + 0.5)*ratio;
 			const int  h_x      = ((j / py_hidden) + 0.5)*ratio;
 
-			const bool outpatch = (    abs(v_y-h_y)   > patchsize 
+			const int dist = (v_y-h_y)*(v_y-h_y)+(v_x-h_x)*(v_x-h_x);
+			const bool outpatch = dist > patchsize*patchsize; // we are not in the patch
+			for(int vidx = 0; vidx<num_map_vis; vidx++) // loop over visible maps
+				for(int hidx = 0; hidx<num_map_hid; hidx++)// loop over hidden maps
+					if(outpatch || abs(vidx-hidx)>maxdist_from_main_dia)
+						mat[(hidx*pix_h+j)*h + vidx*pix_v+i]=(T)0; // reset this value
+		}
+		template<class T>
+		__global__ void local_connectivity_kernel_square(T* mat ,int h,int w, int pix_v, int pix_h, int num_map_hid, int num_map_vis, int patchsize, int px, float ratio, int maxdist_from_main_dia) {
+			const int i = threadIdx.x + blockIdx.x * blockDim.x; // i changes with the visible unit
+			const int j = threadIdx.y + blockIdx.y * blockDim.y; // j changes with the hidden unit
+			if ((i>=pix_v) || (j>=pix_h)) return;
+
+			const int py_hidden = px/ratio;
+			const int  v_y      = i % px;
+			const int  v_x      = i / px;
+			const int  h_y      = ((j % py_hidden) + 0.5)*ratio;
+			const int  h_x      = ((j / py_hidden) + 0.5)*ratio;
+
+			const bool outpatch = (    abs(v_y-h_y)   > patchsize
 					||                 abs(v_x-h_x)   > patchsize); // we are not in the patch
 			for(int vidx = 0; vidx<num_map_vis; vidx++) // loop over visible maps
 				for(int hidx = 0; hidx<num_map_hid; hidx++)// loop over hidden maps
 					if(outpatch || abs(vidx-hidx)>maxdist_from_main_dia)
-						mat[(vidx*pix_h+j)*h + hidx*pix_v+i]=(T)0; // reset this value
+						mat[(hidx*pix_h+j)*h + vidx*pix_v+i]=(T)0; // reset this value
 		}
 
 		template<class V, class I>
-		void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<V,column_major,dev_memory_space,I>& m, int patchsize, int px, int py, int pxh, int pyh, int maxdist_from_main_dia){
+		void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<V,column_major,dev_memory_space,I>& m, int patchsize, int px, int py, int pxh, int pyh, int maxdist_from_main_dia, bool round){
 			cuvAssert(m.ptr());
 			cuvAssert(m.h()%(px*py) == 0);
 			cuvAssert(m.w()%(pxh*pyh) == 0);
@@ -133,7 +152,10 @@ namespace rbm{
 			float ratio  = px/(float)pxh;
 /*#define V(X) #X << "="<<(X)<<", "*/
 			/*std::cout << V(num_maps_h) << V(num_maps_v)<< V(pix_v)<<V(pix_h)<<V(patchsize)<<V(px)<<V(py)<<V(m.h())<<V(m.w())<<std::endl;*/
-			local_connectivity_kernel<<<blocks,threads>>>(m.ptr(),m.h(),m.w(),pix_v,pix_h,num_maps_h,num_maps_v,patchsize,px,ratio,maxdist_from_main_dia);
+			if(round)
+				local_connectivity_kernel_round<<<blocks,threads>>>(m.ptr(),m.h(),m.w(),pix_v,pix_h,num_maps_h,num_maps_v,patchsize,px,ratio,maxdist_from_main_dia);
+			else
+				local_connectivity_kernel_square<<<blocks,threads>>>(m.ptr(),m.h(),m.w(),pix_v,pix_h,num_maps_h,num_maps_v,patchsize,px,ratio,maxdist_from_main_dia);
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 
@@ -175,8 +197,8 @@ void sigm_temperature(__matrix_type& m, const __vector_type& temp){
 	detail::sigm_temperature(m,temp);
 }
 template<class __matrix_type>
-void set_local_connectivity_in_dense_matrix(__matrix_type& m, int patchsize, int px, int py, int pxh, int pyh, int maxdist_from_main_dia){
-	detail::set_local_connectivity_in_dense_matrix(m,patchsize, px, py, pxh, pyh, maxdist_from_main_dia);
+void set_local_connectivity_in_dense_matrix(__matrix_type& m, int patchsize, int px, int py, int pxh, int pyh, int maxdist_from_main_dia, bool round){
+	detail::set_local_connectivity_in_dense_matrix(m,patchsize, px, py, pxh, pyh, maxdist_from_main_dia, round);
 }
 template<class __matrix_type,class __matrix_type2>
 void copy_at_rowidx(__matrix_type& dst, const __matrix_type&  src, const __matrix_type2& rowidx, const unsigned int offset){
@@ -192,7 +214,7 @@ INST(float,column_major,host_memory_space,unsigned int);
 INST(float,column_major,dev_memory_space,unsigned int);
 
 template
-void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<float,column_major,dev_memory_space>& m, int patchsize, int px, int py, int,int,int);
+void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<float,column_major,dev_memory_space>& m, int patchsize, int px, int py, int,int,int, bool);
 template
 void copy_at_rowidx(cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const unsigned int);
 
