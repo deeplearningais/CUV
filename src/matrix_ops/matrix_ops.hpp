@@ -449,6 +449,71 @@ namespace cuv{
  /* 
   * operator overloading for arithmatic operations on matrices
   */
+  template<class V, class M, class T, class I>
+    cuv::dense_matrix<V, M, T, I> 
+    operator- (const cuv::dense_matrix<V, M, T, I> & v){
+  	cuv::dense_matrix<V, M, T, I> temp = v; 	
+        temp.vec()*= (V)-1.0;
+        return temp;
+  }
+  template<class V, class M, class T, class I>
+    cuv::dense_matrix<V, M, T, I> 
+    operator+ (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
+  	cuv::dense_matrix<V, M, T, I> temp = v; 	
+        temp.vec()+= p;
+        return temp;
+  }
+  
+  template<class V, class M, class T, class I>
+    cuv::dense_matrix<V, M, T, I> 
+    operator- (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
+  	cuv::dense_matrix<V, M, T, I> temp = v; 	
+        temp.vec()-= p;
+        return temp;
+  }
+  template<class V, class M, class T, class I>
+    cuv::dense_matrix<V, M, T, I> 
+    operator* (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
+  	cuv::dense_matrix<V, M, T, I> temp = v; 	
+        temp.vec()*= p;
+        return temp;
+  }
+  template<class V, class M, class T, class I>
+    cuv::dense_matrix<V, M, T, I> 
+    operator/ (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
+  	cuv::dense_matrix<V, M, T, I> temp = v; 	
+        temp.vec()/= p;
+        return temp;
+  }
+  template<class V, class M, class T, class I>
+    cuv::dense_matrix<V, M, T, I> 
+    operator+ (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
+  	cuv::dense_matrix<V, M, T, I> temp = v1; 	
+        temp.vec()+= v2.vec();
+        return temp;
+  }
+  
+  template<class V, class M, class T, class I>
+    cuv::dense_matrix<V, M, T, I> 
+    operator- (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
+  	cuv::dense_matrix<V, M, T, I> temp = v1;	
+        temp.vec()-= v2.vec();
+        return temp;
+  }
+  template<class V, class M, class T, class I>
+    cuv::dense_matrix<V, M, T, I> 
+    operator* (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
+  	cuv::dense_matrix<V, M, T, I> temp = v1; 	
+        temp.vec()*= v2.vec();
+        return temp;
+  }
+  template<class V, class M, class T, class I>
+    cuv::dense_matrix<V, M, T, I> 
+    operator/ (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
+  	cuv::dense_matrix<V, M, T, I> temp = v1; 	
+        temp.vec()/= v2.vec();
+        return temp;
+  }
   
   template<class V, class M, class T, class I>
     cuv::dense_matrix<V, M, T, I>& 

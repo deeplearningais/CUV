@@ -149,6 +149,8 @@ export_dense_matrix_common(std::string name){
 	typedef T mat;
 	typedef typename mat::value_type value_type;
 	typedef typename mat::index_type index_type;
+	typedef typename mat::memory_layout memlayout_type;
+	typedef typename mat::memory_space_type memspace_type;
 	typedef typename mat::vec_type   vec_type;
 
 	class_<mat>(name.c_str(), init<typename mat::index_type, typename mat::index_type>())
@@ -166,6 +168,15 @@ export_dense_matrix_common(std::string name){
 		.def(self -= self)
 		.def(self *= self)
 		.def(self /= self)
+		.def("__add__", ( mat (*) (const mat&,const mat&))operator+<value_type,memlayout_type,memspace_type,index_type>)
+		.def("__sub__", ( mat (*) (const mat&,const mat&))operator-<value_type,memlayout_type,memspace_type,index_type>)
+		.def("__mul__", ( mat (*) (const mat&,const mat&))operator*<value_type,memlayout_type,memspace_type,index_type>)
+		.def("__div__", ( mat (*) (const mat&,const mat&))operator/<value_type,memlayout_type,memspace_type,index_type>)
+		.def("__add__", ( mat (*) (const mat&,const value_type&))operator+<value_type,memlayout_type,memspace_type,index_type>)
+		.def("__sub__", ( mat (*) (const mat&,const value_type&))operator-<value_type,memlayout_type,memspace_type,index_type>)
+		.def("__mul__", ( mat (*) (const mat&,const value_type&))operator*<value_type,memlayout_type,memspace_type,index_type>)
+		.def("__div__", ( mat (*) (const mat&,const value_type&))operator/<value_type,memlayout_type,memspace_type,index_type>)
+		.def("__neg__", ( mat (*) (const mat&))operator-<value_type,memlayout_type,memspace_type,index_type>)
 		.add_property("h", &mat::h)
 		.add_property("w", &mat::w)
 		.add_property("n", &mat::n)
@@ -227,8 +238,8 @@ export_dense_matrix_views(){
 template<class T, class Mfrom, class Mto>
 dense_matrix<T,Mto,dev_memory_space>*
 numpy2dev_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
-	dense_matrix<T,Mto,dev_memory_space>* to = new dense_matrix<T,Mto,dev_memory_space>(1,1);
 	dense_matrix<T,Mto,host_memory_space>* from = mat_view<T,Mto,Mfrom>(m);
+	dense_matrix<T,Mto,dev_memory_space>* to = new dense_matrix<T,Mto,dev_memory_space>(from->h(),from->w());
 	convert(*to,*from);
 	delete from;
 	return to;

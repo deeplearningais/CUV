@@ -401,6 +401,74 @@ namespace cuv{
  /* 
   * operator overloading for arithmatic operations on vectors
   */
+  
+  
+/*  template<class T, class V, class I>
+   cuv::vector<T, V, I> 
+    operator- (const cuv::vector<T, V, I>& v1, const cuv::vector<T, V, I>& v2){
+        cuv::vector<T, V, I> temp= v1;
+        temp-= v2;
+        return temp;
+  }*/
+  
+  template<class T, class V, class I>
+   cuv::vector<T, V, I> 
+    operator+ (const cuv::vector<T, V, I>& v, const V p){
+        cuv::vector<T, V, I> temp = v;
+        temp+= p;
+        return temp;
+  }
+  template<class T, class V, class I>
+   cuv::vector<T, V, I> 
+    operator- (const cuv::vector<T, V, I>& v, const V p){
+        cuv::vector<T, V, I> temp = v;
+        temp-= p;
+        return temp;
+  }
+  template<class T, class V, class I>
+   cuv::vector<T, V, I> 
+    operator* (const cuv::vector<T, V, I>& v, const V p){
+        cuv::vector<T, V, I> temp = v;
+        temp*= p;
+        return temp;
+  }
+  template<class T, class V, class I>
+   cuv::vector<T, V, I> 
+    operator/ (const cuv::vector<T, V, I>& v, const V p){
+        cuv::vector<T, V, I> temp = v;
+        temp/= p;
+        return temp;
+  }
+  template<class T, class V, class I>
+   cuv::vector<T, V, I> 
+    operator+ (const cuv::vector<T, V, I>& v1, const cuv::vector<T, V, I>& v2){
+        cuv::vector<T, V, I> temp = v1;
+        temp+= v2;
+        return temp;
+  }
+  
+  template<class T, class V, class I>
+   cuv::vector<T, V, I> 
+    operator- (const cuv::vector<T, V, I>& v1, const cuv::vector<T, V, I>& v2){
+        cuv::vector<T, V, I> temp = v1;
+        temp-= v2;
+        return temp;
+  }
+  template<class T, class V, class I>
+   cuv::vector<T, V, I> 
+    operator* (const cuv::vector<T, V, I>& v1, const cuv::vector<T, V, I>& v2){
+        cuv::vector<T, V, I> temp = v1;
+        temp*= v2;
+        return temp;
+  }
+  template<class T, class V, class I>
+   cuv::vector<T, V, I> 
+    operator/ (const cuv::vector<T, V, I>& v1, const cuv::vector<T, V, I>& v2){
+        cuv::vector<T, V, I> temp = v1;
+        temp/= v2;
+        return temp;
+  }
+        
   template<class T, class V, class I>
     cuv::vector<T, V, I>& 
     operator-=(cuv::vector<T, V, I>& v1, const cuv::vector<T, V, I>& v2){

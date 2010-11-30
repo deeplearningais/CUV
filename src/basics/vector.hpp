@@ -126,6 +126,13 @@ class vector{
 		  alloc();
 	  }
 	  /** 
+	   * @brief Copy-Constructor
+	   */
+	  vector(const my_type& o):m_ptr(NULL),m_is_view(false),m_size(o.size()) {
+		  alloc();
+		  copy(*this,o);
+	  }
+	  /** 
 	   * @brief Creates vector from pointer to entries.
 	   * 
 	   * @param s Length of vector
@@ -177,16 +184,15 @@ class vector{
 		 */
 	  my_type& 
 		  operator=(const my_type& o){
-			  if(this==&o) return *this;
+			 
+			if(this->size() != o.size()){
 			  this->dealloc();
-			  this->m_ptr = o.m_ptr;
-			  this->m_is_view = o.m_is_view;
-			  this->m_size = o.m_size;
-			  if(!m_is_view){
-				  // transfer ownership of memory (!)
-				  (const_cast< my_type *>(&o))->m_ptr = NULL;
-			  }
-			  return *this;
+			  m_size = o.size();
+			  this->alloc();
+			}
+			copy(*this, o);
+			  
+			return *this;
 		  }
 
 		value_type operator[](const index_type& idx)const///< Return entry at position t

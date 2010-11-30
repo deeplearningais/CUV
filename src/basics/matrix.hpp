@@ -76,6 +76,23 @@ class matrix
 			: m_width(w), m_height(h)
 			{
 			}
+		  /** 
+		   * @brief Copy Constructor
+		   */
+		  matrix(const matrix<value_type,index_type>& m) 
+			: m_width(m.w()), m_height(m.h())
+			{
+			}
+		  /** 
+		   * @brief assignment operator
+		   */
+		  matrix<value_type,index_type>&
+		  operator=(const matrix<value_type,index_type>& m) 
+			{
+			m_width = m.w();
+			m_height = m.h();
+			return *this;
+			}
 		  virtual ~matrix(){ ///< Empty destructor
 		  }
 		  /** 
