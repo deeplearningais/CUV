@@ -132,6 +132,20 @@ namespace cuv{
 				:	base_type(h,w),m_vec(p)
 			{
 			}
+			
+			/** 
+			 * @brief Constructor for dense matrices that creates a matrix of same size as given matrix
+			 * 
+			 * @param m Matrix whose width and height are used to create new matrix.
+			 */
+		  	dense_matrix(my_type const & m)
+		  	: base_type(m),
+		  	  m_vec(NULL)
+		  	{
+				alloc();
+				copy(*m_vec,m.vec());
+		  	}
+
 
 			/** 
 			 * @brief Constructor for dense matrices that creates a matrix of same size as given matrix
@@ -145,9 +159,10 @@ namespace cuv{
 				alloc();
 		  	}
 
+		
 			void dealloc() ///< Deallocate matrix entries. This calls deallocation of the vector storing entries.
 			{
-				//std::cout << "Deallocate dense matrix" << std::endl;
+				// std::cout << "Deallocate dense matrix" << std::endl;
 				if(m_vec)
 					delete m_vec;
 				m_vec = NULL;
@@ -156,7 +171,7 @@ namespace cuv{
 			void alloc() ///< Allocate matrix entries: Create vector to store entries.
 			{
 				cuvAssert(!m_vec);
-				//std::cout << "Allocate dense matrix" << std::endl;
+				// std::cout << "Allocate dense matrix" << std::endl;
 				m_vec = new vec_type(m_width * m_height);
 			}
 
@@ -168,13 +183,20 @@ namespace cuv{
 			 * @return Matrix of same size and type of o that now owns vector of entries of o.
 			 */
 			  my_type& 
-			  operator=(my_type& o){
-				  cuvAssert(!(m_vec->is_view()));
+			  operator=(const my_type& o){
+			          cuvAssert(!(m_vec->is_view()));
 				  if(this==&o) return *this;
-				  this->dealloc();
-				  (base_type&) (*this)  = (base_type&) o; // copy width, height
+				  if(this->h() != o.h() || this->w() != o.w()){
+				    this->dealloc();
+				    m_width = o.w();
+				    m_height = o.h();
+				    this->alloc();
+				  }
+				  /*this->dealloc();
+				  (base_type&) (*this)  = (base_type&) o; // opy width, height
 				  m_vec   = o.m_vec;
-				  o.m_vec = NULL;                // transfer ownership of memory
+				  o.m_vec = NULL;   */           // transfer ownership of memory
+				  copy(*m_vec, o.vec());
 				  return *this;
 		  }
 	};

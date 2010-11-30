@@ -59,7 +59,7 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 struct Fix{
 	static const int n=128;
 	static const int N=n*n;
-	static const int big_images = 384*384*32;
+	static const int big_images = 384*384*2;
 	dense_matrix<float,column_major,dev_memory_space> a,b,u,v,w,d_reduce_big;
 	dense_matrix<float,column_major,host_memory_space> s,t,r,x,z,h_reduce_big;
 	Fix()
@@ -83,17 +83,34 @@ BOOST_AUTO_TEST_CASE( vec_ops_unary1 )
 	//apply_scalar_functor(x, SF_EXACT_EXP);
 }
 
+BOOST_AUTO_TEST_CASE( binary_operators )
+{
+  dense_matrix<float,column_major,dev_memory_space> j(32,32);
+  dense_matrix<float,column_major,dev_memory_space> k(32,32);
+  cuv::fill(j,1.f);
+  cuv::fill(k,1.f);
+  const dense_matrix<float,column_major,dev_memory_space>& j_ = j;
+  const dense_matrix<float,column_major,dev_memory_space>& k_ = k;
+  const dense_matrix<float,column_major,dev_memory_space> l = j_+k_;
+  for(int i=0;i<32*32;i++){
+	  BOOST_CHECK_EQUAL(l.vec()[i], 2.f);
+  }
+}
+
 BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
 {
-	sequence(v.vec());
-	sequence(w.vec());
+	sequence(v);
+	w=v;
+	sequence(a);
 	//apply_scalar_functor(v,SF_ADD,1);
 	v+= (float)1.0;
 	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v.vec()[i], i + 1);
 	}
 	//apply_binary_functor(v,w, BF_ADD);
-	v+=w;
+	a=v;
+	a=v+w;
+	v=a;
 	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v.vec()[i], i + i + 1);
 	}
@@ -110,7 +127,8 @@ BOOST_AUTO_TEST_CASE( vec_ops_copy )
 	sequence(w);
 
 	// copy data from v to w
-	copy(v,w);
+	// copy(v,w);
+	v=w;
 	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v.vec()[i],w.vec()[i]);
 	}
