@@ -83,7 +83,7 @@ dense_matrix<V,row_major,T,I>*
 
 template<class V, class T, class I>
 void export_rm_view(){
-	def("make_rm_view",make_rm_view<V,T,I>,(bp::arg ("matrix"),bp::arg("height")=-1,bp::arg("width")=-1),return_value_policy<manage_new_object>());
+	def("make_rm_view",make_rm_view<V,T,I>,(bp::arg ("matrix"),bp::arg("height")=-1,bp::arg("width")=-1),return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 }
 
 /*
@@ -104,7 +104,7 @@ dense_matrix<V,column_major,T,I>*
 
 template<class V, class T,class I>
 void export_cm_view(){
-	def("make_cm_view",make_cm_view<V,T,I>,(bp::arg ("matrix"),bp::arg("height")=-1,bp::arg("width")=-1),return_value_policy<manage_new_object>());
+	def("make_cm_view",make_cm_view<V,T,I>,(bp::arg ("matrix"),bp::arg("height")=-1,bp::arg("width")=-1),return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 }
 
 /*
@@ -209,14 +209,14 @@ export_dense_matrix_view(const char* str){
 	typedef typename matrix2ublas_traits<Mfrom>::storage_type Mfrom_ublas_type;   // our column/row major type (derived from ublas)
 	typedef pyublas::numpy_matrix<T,Mfrom_ublas_type>         from_type;          // source data type
 	typedef to_type* (*func_type)(from_type)                  ;
-	def(str,     (func_type) (mat_view<T,Mto,Mfrom_ublas_type>),return_value_policy<manage_new_object>());
+	def(str,     (func_type) (mat_view<T,Mto,Mfrom_ublas_type>),return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 }
 
 void export_view_simple() {
 	def("simple_view",
 			(dense_matrix<float,column_major,host_memory_space>*(*)
 			 (pyublas::numpy_matrix<float,ublas::column_major>))
-			mat_view<float,column_major,ublas::column_major>,return_value_policy<manage_new_object>());
+			mat_view<float,column_major,ublas::column_major>,return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 }
 /*
  * Export dense matrix views for various type combinations
