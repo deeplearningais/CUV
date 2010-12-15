@@ -435,6 +435,36 @@ namespace cuv{
 	  void matrix_divide_col(__matrix_type& A, const __vector_type& v);
 
   /** 
+   * @brief Add a vector to each row of a matrix A.
+   * 
+   * @param A Destination matrix 
+   * @param v Vector, v.size()=A.h() 
+   * 
+   */
+  template<class __matrix_type, class __vector_type>
+	  void matrix_plus_row(__matrix_type& A, const __vector_type& v);
+
+  /** 
+   * @brief Multiply each row of a matrix A pointwise with a vector v.
+   * 
+   * @param A Destination matrix 
+   * @param v Vector, v.size()=A.h() 
+   * 
+   */
+  template<class __matrix_type, class __vector_type>
+	  void matrix_times_row(__matrix_type& A, const __vector_type& v);
+
+  /** 
+   * @brief Devide each row of a matrix A pointwise by a vector v.
+   * 
+   * @param A Destination matrix 
+   * @param v Vector, v.size()=A.h() 
+   * 
+   */
+  template<class __matrix_type, class __vector_type>
+	  void matrix_divide_row(__matrix_type& A, const __vector_type& v);
+
+  /** 
    * @brief Transpose a matrix
    * 
    * @param dst Destination matrix 

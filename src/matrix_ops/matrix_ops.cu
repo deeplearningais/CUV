@@ -519,6 +519,7 @@ namespace matrix_plus_vector_impl {
 	}
 	template<class V, class I, class V2, class OP>
 	void matrix_plus_col(dense_matrix<V,column_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op) {
+		cuvAssert(A.h() == v.size());
 		const V2* v_ptr = v.ptr();
 		V * A_ptr = A.ptr();
 		for(int j=0;j<A.w();j++) {
@@ -529,6 +530,7 @@ namespace matrix_plus_vector_impl {
 	}
 	template<class V, class I, class V2, class OP>
 	void matrix_plus_col(dense_matrix<V,row_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op) {
+		cuvAssert(A.h() == v.size());
 		const V2* v_ptr = v.ptr();
 		V * A_ptr = A.ptr();
 		for(int i=0;i<A.h();i++, v_ptr++) {
@@ -536,8 +538,38 @@ namespace matrix_plus_vector_impl {
 			*A_ptr++ = op(*A_ptr,*v_ptr);
 		}
 	}
+	// ====================  row ======================
+	template<class V, class I, class V2, class OP>
+	void matrix_plus_row(dense_matrix<V,column_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op) {
+		cuvAssert(A.w() == v.size());
+		typedef dense_matrix<V,row_major,dev_memory_space, I> other;
+		other o(A.w(), A.h(), A.ptr(), true);
+		matrix_plus_col(o,v,op);
+	}
+	template<class V, class I, class V2, class OP>
+	void matrix_plus_row(dense_matrix<V,row_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op) {
+		cuvAssert(A.w() == v.size());
+		typedef dense_matrix<V,column_major,dev_memory_space, I> other;
+		other o(A.w(), A.h(), A.ptr(), true);
+		matrix_plus_col(o,v,op);
+	}
+	template<class V, class I, class V2, class OP>
+	void matrix_plus_row(dense_matrix<V,row_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op) {
+		cuvAssert(A.w() == v.size());
+		typedef dense_matrix<V,column_major,host_memory_space, I> other;
+		other o(A.w(), A.h(), A.ptr(), true);
+		matrix_plus_col(o,v,op);
+	}
+	template<class V, class I, class V2, class OP>
+	void matrix_plus_row(dense_matrix<V,column_major,host_memory_space,I>& A, const vector<V2,host_memory_space,I>& v, const OP& op) {
+		cuvAssert(A.w() == v.size());
+		typedef dense_matrix<V,row_major,host_memory_space, I> other;
+		other o(A.w(), A.h(), A.ptr(), true);
+		matrix_plus_col(o,v,op);
+	}
 }
 
+// ====================  col ======================
 template<class __matrix_type, class __vector_type>
 void matrix_plus_col(__matrix_type& A, const __vector_type& v) {
 	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::plus<typename __matrix_type::value_type>());
@@ -549,6 +581,19 @@ void matrix_times_col(__matrix_type& A, const __vector_type& v) {
 template<class __matrix_type, class __vector_type>
 void matrix_divide_col(__matrix_type& A, const __vector_type& v) {
 	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::divides<typename __matrix_type::value_type>());
+}
+// ====================  row ======================
+template<class __matrix_type, class __vector_type>
+void matrix_plus_row(__matrix_type& A, const __vector_type& v) {
+	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::plus<typename __matrix_type::value_type>());
+}
+template<class __matrix_type, class __vector_type>
+void matrix_times_row(__matrix_type& A, const __vector_type& v) {
+	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::multiplies<typename __matrix_type::value_type>());
+}
+template<class __matrix_type, class __vector_type>
+void matrix_divide_row(__matrix_type& A, const __vector_type& v) {
+	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::divides<typename __matrix_type::value_type>());
 }
 
 namespace reduce_to_col_impl {
@@ -925,7 +970,13 @@ void transpose(M& dst, const M& src){
   template void matrix_times_col(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);  \
   template void matrix_times_col(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
   template void matrix_divide_col(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);  \
-  template void matrix_divide_col(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&);
+  template void matrix_divide_col(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
+  template void matrix_plus_row(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);   \
+  template void matrix_plus_row(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
+  template void matrix_times_row(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);  \
+  template void matrix_times_row(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
+  template void matrix_divide_row(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);  \
+  template void matrix_divide_row(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&);
 
 #define INSTANTIATE_REDCOL(V,M) \
   template void reduce_to_row(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \

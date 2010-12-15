@@ -264,7 +264,24 @@ BOOST_AUTO_TEST_CASE( mat_op_mmdim1 )
 	}
 }
 
-BOOST_AUTO_TEST_CASE( mat_op_mat_plus_vec )
+BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row )
+{
+	sequence(v); sequence(w);
+	sequence(x); sequence(z);
+	vector<float,dev_memory_space>   v_vec(n); sequence(v_vec);
+	vector<float,host_memory_space>  x_vec(n); sequence(x_vec);
+	matrix_plus_row(v,v_vec);
+	matrix_plus_row(x,x_vec);
+	for(int i=0;i<n;i++){
+		for(int j=0;j<n;j++){
+			BOOST_CHECK_CLOSE(v(i,j), x(i,j), 0.01);
+			BOOST_CHECK_CLOSE(v(i,j), w(i,j)+v_vec[j], 0.01);
+			BOOST_CHECK_CLOSE(x(i,j), z(i,j)+x_vec[j], 0.01);
+		}
+	}
+
+}
+BOOST_AUTO_TEST_CASE( mat_op_mat_plus_col )
 {
 	sequence(v); sequence(w);
 	sequence(x); sequence(z);

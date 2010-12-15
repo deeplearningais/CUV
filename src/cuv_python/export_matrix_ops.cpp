@@ -236,6 +236,10 @@ void export_blas2(){
 	def("matrix_plus_col", matrix_plus_col<M,typename M::vec_type>);
 	def("matrix_times_col", matrix_times_col<M,typename M::vec_type>);
 	def("matrix_divide_col", matrix_divide_col<M,typename M::vec_type>);
+
+	def("matrix_plus_row", matrix_plus_row<M,typename M::vec_type>);
+	def("matrix_times_row", matrix_times_row<M,typename M::vec_type>);
+	def("matrix_divide_row", matrix_divide_row<M,typename M::vec_type>);
 }
 
 template <class M>
