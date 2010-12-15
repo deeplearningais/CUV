@@ -647,11 +647,13 @@ namespace reduce_to_col_impl {
 	void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld) {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
-		/*static const int BLOCK_SIZE = 16;*/
-		/*dim3 grid(1, m.h());                           //TODO: make reduce_to_row kernel use grids*/
-		/*dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1); // not working for m.h() > 65535*/
-		/*// yes, we abuse the reduce_to_row kernel here :)*/
-		/*reduce_to_row_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);*/
+#if 1
+		static const int BLOCK_SIZE = 16;
+		dim3 grid(1, m.h());                           //TODO: make reduce_to_row kernel use grids
+		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1); // not working for m.h() > 65535
+		// yes, we abuse the reduce_to_row kernel here :)
+		reduce_to_row_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);
+#else
 		cuvAssert(rf == RF_ADD); // what else does alex support?
 
 		vector<V2,dev_memory_space> w(v.size());
@@ -668,6 +670,7 @@ namespace reduce_to_col_impl {
 
 		if(factOld != 0.0f)
 			apply_binary_functor(v, w, BF_XPBY, factOld);
+#endif
 
 		cuvSafeCall(cudaThreadSynchronize());
 	}
