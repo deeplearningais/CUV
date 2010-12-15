@@ -245,6 +245,14 @@ namespace cuv{
 	void
 	dense_matrix<V,M,T,I>::set(const index_type& i, const index_type& j, const value_type& val) { this->set(i, j, val, memory_layout()); };
 
+	template<class Mat, class NewVT>
+		struct switch_value_type{
+			typedef dense_matrix<NewVT, typename Mat::memory_layout, typename Mat::memory_space_type, typename Mat::index_type> type;
+		};
+	template<class Mat, class NewML>
+		struct switch_memory_layout_type{
+			typedef dense_matrix<typename Mat::value_type, NewML, typename Mat::memory_space_type, typename Mat::index_type> type;
+		};
 }
 
 #include <iostream>

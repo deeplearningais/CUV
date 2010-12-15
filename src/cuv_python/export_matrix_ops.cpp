@@ -49,23 +49,6 @@ using namespace boost::python;
 using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
-//template<class MS, class V,class M, class I>
-//struct ms_type {
-//};
-//template<class V,class M, class I>
-//struct ms_type<dev_memory_space,V,M,I> {
-	//typedef dev_dense_matrix<V,M,I> type;
-//};
-//template<class V,class M, class I>
-//struct ms_type<host_memory_space,V,M,I> {
-	//typedef host_dense_matrix<V,M,I> type;
-//};
-
-template<class Mat, class NewVT>
-struct switch_value_type{
-	typedef dense_matrix<NewVT, typename Mat::memory_layout, typename Mat::memory_space_type, typename Mat::index_type> type;
-};
-
 template<class VT, class MST, class IT>
 boost::python::tuple matrix_arg_max(dense_matrix<VT, row_major, MST, IT>& mat){
 	IT idx = arg_max(mat.vec());	
