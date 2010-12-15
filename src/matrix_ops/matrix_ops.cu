@@ -209,54 +209,48 @@ void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows,
 	}
 }
 
-template<int BLOCK_SIZE, class T, class I>
+template<unsigned int BLOCK_DIM, class I, class T>
 __global__
-void argmax_row_kernel(const T* matrix, I* vector, int nCols, int nRows) {
-	__shared__ I shIdx[BLOCK_SIZE * BLOCK_SIZE]; // index of the maximum
-	__shared__
-	T shVal[BLOCK_SIZE * BLOCK_SIZE]; // value
+void argmax_row_kernel(I* vector, const T* matrix, unsigned int nCols, unsigned int nRows) {
+	__shared__ I shIdx[BLOCK_DIM]; // index of the maximum
+	__shared__ T shVal[BLOCK_DIM]; // value
 
-	int tx = threadIdx.x, bx = blockIdx.x;
-	int ty = threadIdx.y, by = blockIdx.y;
-	if (by * blockDim.y + ty > nCols)
-		return;
-	int off = blockDim.x;
+	const unsigned int tx = threadIdx.x;
+	const unsigned int by = blockIdx.x + gridDim.x*blockIdx.y;
+	if (by >= nCols)
+	   return;
+	const unsigned int off = blockDim.x;
 
-	shVal[tx] = (T) INT_MIN; // dangerous for some data types
-	shIdx[tx] = 0;
-
-	int idx = by * nRows + bx * blockDim.x + tx;
+	unsigned int idx = by * nRows + tx;
 	if (tx < nRows) {
-		shVal[tx] = matrix[idx];
-		shIdx[tx] = tx;
+	   shVal[tx] = (tx<nRows) ? matrix[idx] : (T) INT_MIN;
+	   shIdx[tx] = (tx<nRows) ? tx          : 0;
 	}
 
-	for (int my = tx + off; my < nRows; my += off) {
-		idx += off;
-		T f = matrix[idx];
+	for (unsigned int my = tx + off; my < nRows; my += off) {
+	   idx += off;
+	   T f = matrix[idx];
 
-		if (f > shVal[tx]) {
-			shVal[tx] = f;
-			shIdx[tx] = my;
-		}
+	   if (f > shVal[tx]) {
+		  shVal[tx] = f;
+		  shIdx[tx] = my;
+	   }
 	}
 	__syncthreads();
 
-	int offset = blockDim.x / 2;
-	while (offset > 0) {
-		if (tx < offset) {
-			if (shVal[tx] < shVal[tx + offset]) {
-				shVal[tx] = shVal[tx + offset];
-				shIdx[tx] = shIdx[tx + offset];
-			}
-		}
-		offset >>= 1;
-		__syncthreads();
+	for (unsigned int offset = BLOCK_DIM/2 ; offset > 0; offset/=2) {
+	   if (tx < offset) {
+		   const unsigned int v = tx+offset;
+		   if (shVal[tx] < shVal[v]) {
+			   shVal[tx] = shVal[v];
+			   shIdx[tx] = shIdx[v];
+		   }
+	   }
 	}
+	__syncthreads();
 
 	if (tx == 0)
-		vector[by * blockDim.y + ty] = shIdx[0];
-	__syncthreads();
+	   vector[by] = shIdx[0];
 }
 
 // "coalesced transpose" with no bank conflicts, example from SDK
@@ -782,20 +776,10 @@ template<class V, class V2, class I>
 void argmax_to_row(vector<V2,dev_memory_space>&v, const dense_matrix<V,column_major, dev_memory_space, I>& m) {
 	cuvAssert(m.ptr() != NULL);
 	cuvAssert(m.w() == v.size());
-	static const int BLOCK_SIZE = 16;
-	I w = m.w();
-	I u;
-	const V* m_ptr = m.ptr();
-	int* v_ptr = v.ptr();
-	do {
-		u = min(w, MAX_GRID_SIZE);
-		dim3 grid(1, u);
-		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-		argmax_row_kernel<BLOCK_SIZE><<<grid,threads>>>(m_ptr,v_ptr,u,m.h());
-		m_ptr += m.h() * MAX_GRID_SIZE;
-		v_ptr += MAX_GRID_SIZE;
-		w -= MAX_GRID_SIZE;
-	}while(u == MAX_GRID_SIZE);
+	const unsigned int u = min(m.w(), MAX_GRID_SIZE);
+	dim3 grid(u, ceil(m.w()/(float)u));
+	static const unsigned int BLOCK_DIM = 256;
+	argmax_row_kernel<BLOCK_DIM><<<grid,BLOCK_DIM>>>(v.ptr(),m.ptr(),m.w(),m.h());
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
@@ -803,20 +787,10 @@ template<class V, class V2, class I>
 void argmax_to_column(vector<V2,dev_memory_space, I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m) {
 	cuvAssert(m.ptr() != NULL);
 	cuvAssert(m.h() == v.size());
-	static const int BLOCK_SIZE = 16;
-	I h = m.h();
-	I u;
-	V* m_ptr = (V*) m.ptr();
-	V2* v_ptr = v.ptr();
-	do {
-		u = min(h, MAX_GRID_SIZE);
-		dim3 grid(1, u);
-		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-		argmax_row_kernel<BLOCK_SIZE><<<grid,threads>>>(m_ptr,v_ptr,u,m.w());
-		m_ptr += m.w() * MAX_GRID_SIZE;
-		v_ptr += MAX_GRID_SIZE;
-		h -= MAX_GRID_SIZE;
-	}while(u == MAX_GRID_SIZE);
+	const unsigned int u = min(m.h(), MAX_GRID_SIZE);
+	dim3 grid(u, ceil(m.h()/(float)u));
+	static const unsigned int BLOCK_DIM = 256;
+	argmax_row_kernel<BLOCK_DIM><<<grid,BLOCK_DIM>>>(v.ptr(),m.ptr(),m.h(),m.w());
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
@@ -971,10 +945,14 @@ void transpose(M& dst, const M& src){
 
 #define INSTANTIATE_ARGMAX_TO_ROW(V,M,I) \
   template void argmax_to_row(vector<int,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
-  template void argmax_to_row(vector<int,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);  
+  template void argmax_to_row(vector<int,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);  \
+  template void argmax_to_row(vector<float,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
+  template void argmax_to_row(vector<float,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);  
 #define INSTANTIATE_ARGMAX_TO_COL(V,M,I) \
   template void argmax_to_column(vector<int,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
-  template void argmax_to_column(vector<int,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);   
+  template void argmax_to_column(vector<int,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&); \
+  template void argmax_to_column(vector<float,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
+  template void argmax_to_column(vector<float,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);   
 
 
 INSTANTIATE_ARGMAX_TO_COL(float,row_major,unsigned int);
