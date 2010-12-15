@@ -486,16 +486,17 @@ void matrix_plus_vector_kernel_column_major2 (V *A, const V2* v, I h, I w, OP op
 template<class V, class I, class V2, class OP>
 __global__
 void matrix_plus_vector_kernel_row_major (V *A, V2* v, I h, I w, OP op) {
-	__shared__ float scalar;
-	for(int baseidx = blockIdx.x; baseidx < h; baseidx += gridDim.x) {
+	__shared__ V scalar;
+	for(unsigned int baseidx = blockIdx.x; baseidx < h; baseidx += gridDim.x) {
 		if (threadIdx.x == 0) {
-			scalar = v[baseidx];
+			scalar = (V) v[baseidx];
 		}
 		__syncthreads();
 		for (unsigned int i = threadIdx.x; i < w; i += blockDim.x) {
-			const int k = baseidx * w + i;
+			const unsigned int k = baseidx * w + i;
 			A[k] = op(A[k] , scalar);
 		}
+		__syncthreads(); // necessary, otherwise the threads use different values of scalar!
 	}
 }
 
@@ -503,16 +504,16 @@ namespace matrix_plus_vector_impl {
 	template<class V, class I, class V2, class OP>
 	void matrix_plus_col(dense_matrix<V,row_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op) {
 		cuvAssert(A.h() == v.size());
-		int num_threads = min(512,A.w());
-		int num_blocks = min(1024,A.h());
+		const unsigned int num_threads = min(512,A.w());
+		const unsigned int num_blocks  = min(1024,A.h());
 		matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class I, class V2, class OP>
 	void matrix_plus_col(dense_matrix<V,column_major,dev_memory_space,I>& A, const vector<V2,dev_memory_space,I>& v, const OP& op) {
 		cuvAssert(A.h() == v.size());
-		int num_threads = 512;
-		int num_blocks = min(512,(int)ceil((float)A.n() / num_threads));
+		const unsigned int num_threads = 512;
+		const unsigned int num_blocks  = min(512,(int)ceil((float)A.n() / num_threads));
 		matrix_plus_vector_kernel_column_major2<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.h(), A.w(), op);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
