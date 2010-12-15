@@ -214,6 +214,17 @@ void export_pooling(){
 	def("supersample",(void (*)(M&,M&,int,Mint*))supersample<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>,(arg("dst"),arg("img"),arg("factor"),arg("optional_indices")=object()));
 }
 
+template <class V, class MS>
+void export_argmax_vec(){
+	typedef dense_matrix<V,column_major,MS> Mc;
+	typedef dense_matrix<V,row_major,MS> Mr;
+	typedef vector<int,MS> Vecint;
+	def("argmax_to_row",  (void (*)(Vecint&,const Mc&)) argmax_to_row<Vecint, Mc>);
+	def("argmax_to_col",  (void (*)(Vecint&,const Mr&)) argmax_to_column<Vecint, Mr>);
+	typedef vector<float,MS> Vecf;
+	def("argmax_to_row",  (void (*)(Vecf&,const Mc&)) argmax_to_row<Vecf, Mc>);
+	def("argmax_to_col",  (void (*)(Vecf&,const Mr&)) argmax_to_column<Vecf, Mr>);
+}
 template <class M>
 void export_reductions(){
 	def("has_inf",(bool (*)(const typename M::vec_type&)) has_inf<typename M::vec_type>);
@@ -330,6 +341,8 @@ void export_matrix_ops(){
 	export_reductions<fdev>();
 	export_reductions<fhostr>();
 	export_reductions<fdevr>();
+	export_argmax_vec<float,host_memory_space>();
+	export_argmax_vec<float,dev_memory_space>();
 	export_learn_step<fhost>();
 	export_learn_step<fdev>();
 	export_learn_step<fhostr>();
