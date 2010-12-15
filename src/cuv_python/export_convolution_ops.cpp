@@ -49,11 +49,6 @@ using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
 
-//// TODO: Refactor this: its also in export_matrix_ops.cpp
-template<class Mat, class NewVT>
-struct switch_value_type{
-	typedef dense_matrix<NewVT, typename Mat::memory_layout, typename Mat::memory_space_type, typename Mat::index_type> type;
-};
 //template<class MS, class V,class M, class I>
 //struct ms_type {
 //};
