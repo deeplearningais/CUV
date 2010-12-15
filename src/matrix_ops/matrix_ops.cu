@@ -216,8 +216,12 @@ void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows,
 			if (OP == cuv::RF_MIN || OP == cuv::RF_MAX)
 				vector[by * blockDim.y + ty] = shared[0];
 			else
-				vector[by * blockDim.y + ty] = vector[by * blockDim.y + ty]
+				if(factOld != 0){
+					vector[by * blockDim.y + ty] = vector[by * blockDim.y + ty]
 						* factOld + shared[0] * factNew;
+				}else{
+					vector[by * blockDim.y + ty] = shared[0] * factNew;
+				}
 		}
 		__syncthreads();
 	}
