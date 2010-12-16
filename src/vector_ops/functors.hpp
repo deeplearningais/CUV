@@ -142,3 +142,22 @@ struct bf_axpby{
 	__device__  __host__       T operator()(const T& t, const U& u) const{ return  a*t + b*((T)u); } 
 };
 
+// for reduce functors: set initial value of shared memory
+template<class T, class FUNC>
+struct reduce_functor_traits{ 
+	static const T init_value = 0;     
+	static const bool is_simple=false;
+};
+
+template<class T>
+struct reduce_functor_traits<T,bf_max<T,T> >{
+	static const T init_value = -INT_MAX;    
+	static const bool is_simple=true;
+
+};
+
+template<class T>
+struct reduce_functor_traits<T,bf_min<T,T> >{  
+	static const T init_value = INT_MAX;     
+	static const bool is_simple=true;
+};

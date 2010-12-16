@@ -253,6 +253,7 @@ namespace cuv{
 	  RF_ADD_SQUARED,
 	  RF_MAX,
 	  RF_MIN,
+	  RF_MULT,
   };
 
   /** 
