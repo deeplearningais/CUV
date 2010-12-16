@@ -124,7 +124,7 @@ template<>
 struct uf_is_nan<signed char>{    __device__  __host__   bool operator()(const signed char& t)   const{ return false ; } };
 
 template<class T>
-struct uf_is_inf{                 __device__  __host__     bool operator()(const T& t)            const{ return (bool)!isfinite(t); } };
+struct uf_is_inf{                 __device__  __host__     bool operator()(const T& t)            const{ return (bool)isinf(t); } };
 template<>                                                                                        
 struct uf_is_inf<int>{            __device__  __host__     bool operator()(const int t)           const{ return false; } };
 template<>                                                                                        
