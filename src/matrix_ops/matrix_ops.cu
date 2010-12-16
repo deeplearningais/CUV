@@ -40,7 +40,6 @@
 #include "matrix_ops.hpp"
 #include <limits>
 #include <vector_ops/functors.hpp>
-#include "../tools/cuPrintf.cu"
 
 #ifdef __CDT_PARSER__
 #define __global__
@@ -71,167 +70,6 @@
 	 *
 	 * tx indicates the y-dimension in the matrix; ty indicates the x-dimension in the matrix
 	 */
-template<int BLOCK_SIZE, class T, class RF>
-__global__
-void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
-		T param, T factNew, T factOld, RF reduce_functor) {
-
-	__shared__ T shared[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
-	T sum;
-
-	int tx = threadIdx.x;
-	int bx = blockIdx.x;
-	int ty = threadIdx.y;
-	int by = blockIdx.y;
-
-	const int row_idx = by * gridDim.x * blockDim.x +   	// offset according to y index in grid
-						bx * blockDim.x +  					// offset according to block index
-						tx;									// offset in block
-
-	if (row_idx >= nRows)
-		return;
-	int off = blockDim.y;
-
-	sum = reduce_functor_traits<T,RF>::init_value;
-//	printf("\n\nBlockDim.x: %d, BlockDim.y: %d\n", blockDim.x, blockDim.y);
-//	printf("\n\ngridDim.x: %d, gridDim.y: %d\n", gridDim.x, gridDim.y);
-//
-//	printf("Thread.x: tx: %d, Thread.y: %d, Thread.z: %d\n", bx, tx, ty, threadIdx.z);
-//	printf("Block.x: bx: %d, Block.y: %d\n", bx, by);
-//	printf("nCols: %d, nRows: %d\n", nCols, nRows);
-	for (int my = ty; my < nCols; my += off) {
-//		if (my <100)
-//			printf("my: %d\t", my);
-		// to jump one col we proceed nRow elements in the matrix vector
-		T f = matrix[my * nRows + row_idx ];
-		sum=reduce_functor(sum,f);
-	}
-
-	shared[ty][tx] = sum;
-
-	__syncthreads();
-
-	int offset = blockDim.y / 2;
-	while (offset > 0) {
-		if (ty < offset) {
-			shared[ty][tx]=reduce_functor(shared[ty][tx],shared[ty + offset][tx]);
-		}
-		offset >>= 1;
-		__syncthreads();
-	}
-	
-	if (ty == 0) {
-		if (row_idx >= nCols){
-			cuPrintf("Value is: %d\n", row_idx);
-		}
-		if (reduce_functor_traits<T,RF>::is_simple)
-			vector[row_idx] = shared[0][tx];
-		else
-			if(factOld != 0.f){
-				if (isnan(vector[row_idx])){
-					/*cuPrintf("Value of vector[%d]: %d\n", row_idx, vector[row_idx]);*/
-				}
-				if (isnan(shared[0][tx])){
-					/*cuPrintf("Value of shared[0][%d]: %d\n", tx, shared[0][tx]);*/
-				}
-				vector[row_idx] = vector[row_idx] * factOld + shared[0][tx] * factNew;
-			}else{
-				if (isnan(shared[0][tx])){
-					/*cuPrintf("Value of shared[0][%d]: %d\n", tx, shared[0][tx]);*/
-				}
-				vector[row_idx] = shared[0][tx] * factNew;
-			}
-		//vector[row_idx] = row_idx;
-	}
-	//__syncthreads();
-}
-
-template<int BLOCK_SIZE, class T, class RF>
-__global__
-void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows,
-		T param, T factNew, T factOld,RF reduce_functor) {
-	__shared__ T shared[BLOCK_SIZE * BLOCK_SIZE];
-	const int tx = threadIdx.x, bx = blockIdx.x;
-	const int ty = threadIdx.y, by = blockIdx.y;
-	unsigned int idx = blockIdx.y * blockDim.y + threadIdx.y;
-	for (; idx < nCols; idx += blockDim.y * gridDim.y) {
-		int off = blockDim.x;
-
-		shared[tx] = reduce_functor_traits<T,RF>::init_value;
-		for (int my = tx; my < nRows; my += off) {
-			T f = matrix[by * nRows + bx * blockDim.x + my];
-
-			shared[tx]=reduce_functor(shared[tx],f);
-		}
-		__syncthreads();
-
-		int offset = blockDim.x / 2;
-		while (offset > 0) {
-			if (tx < offset) {
-				shared[tx]=reduce_functor(shared[tx],shared[tx + offset]);
-			}
-			offset >>= 1;
-			__syncthreads();
-		}
-
-		if (tx == 0) {
-			if (reduce_functor_traits<T,RF>::is_simple)
-				vector[by * blockDim.y + ty] = shared[0];
-			else
-				if(factOld != 0){
-					vector[by * blockDim.y + ty] = vector[by * blockDim.y + ty]
-						* factOld + shared[0] * factNew;
-				}else{
-					vector[by * blockDim.y + ty] = shared[0] * factNew;
-				}
-		}
-		__syncthreads();
-	}
-}
-
-template<unsigned int BLOCK_DIM, class I, class T>
-__global__
-void argmax_row_kernel(I* vector, const T* matrix, unsigned int nCols, unsigned int nRows) {
-	__shared__ I shIdx[BLOCK_DIM]; // index of the maximum
-	__shared__ T shVal[BLOCK_DIM]; // value
-
-	const unsigned int tx = threadIdx.x;
-	const unsigned int by = blockIdx.x + gridDim.x*blockIdx.y;
-	if (by >= nCols)
-	   return;
-	const unsigned int off = blockDim.x;
-
-	unsigned int idx = by * nRows + tx;
-	if (tx < nRows) {
-	   shVal[tx] = (tx<nRows) ? matrix[idx] : (T) INT_MIN;
-	   shIdx[tx] = (tx<nRows) ? tx          : 0;
-	}
-
-	for (unsigned int my = tx + off; my < nRows; my += off) {
-	   idx += off;
-	   T f = matrix[idx];
-
-	   if (f > shVal[tx]) {
-		  shVal[tx] = f;
-		  shIdx[tx] = my;
-	   }
-	}
-	__syncthreads();
-
-	for (unsigned int offset = BLOCK_DIM/2 ; offset > 0; offset/=2) {
-	   if (tx < offset) {
-		   const unsigned int v = tx+offset;
-		   if (shVal[tx] < shVal[v]) {
-			   shVal[tx] = shVal[v];
-			   shIdx[tx] = shIdx[v];
-		   }
-	   }
-	}
-	__syncthreads();
-
-	if (tx == 0)
-	   vector[by] = shIdx[0];
-}
 
 // "coalesced transpose" with no bank conflicts, example from SDK
 // potential speedup by 5 possible for "fine-grained transpose"
@@ -256,7 +94,6 @@ void transpose_kernel(T* dst, const T* src, int width, int height) {
 				= shared[threadIdx.x][threadIdx.y];
 	}
 }
-
 namespace cuv {
 template<class __value_type, class __memory_space_type, class __index_type>
 dense_matrix<__value_type , column_major, __memory_space_type, __index_type >*blockview(
@@ -576,445 +413,69 @@ void matrix_divide_row(__matrix_type& A, const __vector_type& v) {
 	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::divides<typename __matrix_type::value_type>());
 }
 
-namespace reduce_to_col_impl {
-
-	template<class V,class I, class V2, class RF>
-	void reduce_to_col(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.h() == v.size());
-		const V* A_ptr = m.ptr();
-
-		V2* v_ptr = v.ptr();
-		if (reduce_functor_traits<V,RF>::is_simple || factOld==0) 
-			for(int j=0; j<v.size(); j++) {
-				*v_ptr++ =reduce_functor_traits<V,RF>::init_value;
-			}
-		else 
-			for(int j=0; j<v.size(); j++) {
-			*v_ptr++ *= factOld;
-			}
-		for(int i=0;i<m.w();i++) {
-			v_ptr = v.ptr();
-			for(int j=0; j<m.h(); j++,v_ptr++,A_ptr++) {
-				if (reduce_functor_traits<V,RF>::is_simple)
-					*v_ptr=reduce_functor(*v_ptr,*A_ptr);
-				else {
-					*v_ptr=reduce_functor(*v_ptr,factNew * *A_ptr);
-				}
-				/*if(0);*/
-				/*else if(rf==RF_ADD) *v_ptr += factNew * *A_ptr;*/
-				/*else if(rf==RF_ADD_SQUARED) *v_ptr += factNew * (*A_ptr * *A_ptr);*/
-				/*else if(rf==RF_MIN) *v_ptr = min(*A_ptr, *v_ptr);*/
-				/*else if(rf==RF_MAX) *v_ptr = max(*A_ptr, *v_ptr);*/
-			}
-		}
-	}
-	template<class V,class I, class V2, class RF>
-	void reduce_to_col(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.h() == v.size());
-		const V* A_ptr = m.ptr();
-
-		V2* v_ptr = v.ptr();
-		if (reduce_functor_traits<V,RF>::is_simple || factOld==0) 
-			for(int j=0; j<v.size(); j++) {
-				*v_ptr++ =reduce_functor_traits<V,RF>::init_value;
-			}
-		else 
-			for(int j=0; j<v.size(); j++) {
-			*v_ptr++ *= factOld;
-			}
-		v_ptr = v.ptr();
-		for(int i=0;i<m.h(); i++) {
-			for(int j=0; j<m.w(); j++,A_ptr++) {
-				*v_ptr=reduce_functor(*v_ptr,factNew * *A_ptr);
-				/*if(0);*/
-				/*else if(rf==RF_ADD) *v_ptr += factNew * *A_ptr;*/
-				/*else if(rf==RF_ADD_SQUARED) *v_ptr += factNew * (*A_ptr * *A_ptr);*/
-				/*else if(rf==RF_MIN) *v_ptr = min(*A_ptr, *v_ptr);*/
-				/*else if(rf==RF_MAX) *v_ptr = max(*A_ptr, *v_ptr);*/
-			}
-			v_ptr++;
-		}
-	}
-	template<class V,class I, class V2, class RF>
-	void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.h() == v.size());
-		static const int BLOCK_SIZE = 16;
-		static const int BLOCK_DIM_X = BLOCK_SIZE*2;
-		static const int BLOCK_DIM_Y = BLOCK_SIZE/2;
-		const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM_X));
-		int grid_x =0, grid_y=0;
-
-		// how to handle grid dimension constraint
-		if (blocks_needed <= 65535){
-			grid_x = blocks_needed;
-			grid_y = 1;
-		}else{
-			// try to avoid large noop blocks by adjusting x and y dimension to nearly equal size
-			grid_x = ceil(sqrt(blocks_needed));
-			grid_y = ceil((float)blocks_needed/grid_x);
-		}
-		dim3 grid(grid_x, grid_y);
-		dim3 threads(BLOCK_DIM_X,BLOCK_DIM_Y);
-		cudaPrintfInit();		
-		reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,reduce_functor);
-		/*switch(rf){*/
-			/*case RF_ADD:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_plus<V,V2>());break;*/
-			/*case RF_MULT:     reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_multiplies<V,V2>());break;*/
-			/*case RF_MIN:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_min<V,V2>());break;*/
-			/*case RF_MAX:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_max<V,V2>());break;*/
-			/*default: cuvAssert(false);*/
-		/*}	*/
-		cuvSafeCall(cudaThreadSynchronize());
-		cudaPrintfDisplay(NULL, true);
-		cudaPrintfEnd();
-	}
-	template<class V,class I, class V2, class RF>
-	void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.h() == v.size());
-#if 1
-		static const int BLOCK_SIZE = 16;
-		dim3 grid(1, m.h());                           //TODO: make reduce_to_row kernel use grids
-		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1); // not working for m.h() > 65535
-		// yes, we abuse the reduce_to_row kernel here :)
-		reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,reduce_functor);
-		/*switch(rf){*/
-			/*case RF_ADD:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_plus<V,V2>());break;*/
-			/*case RF_MULT:     reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_multiplies<V,V2>());break;*/
-			/*case RF_MIN:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_min<V,V2>());break;*/
-			/*case RF_MAX:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_max<V,V2>());break;*/
-			/*default: cuvAssert(false);*/
-		/*}*/
-#else
-		cuvAssert(rf == RF_ADD); // what else does alex support?
-
-		vector<V2,dev_memory_space> w(v.size());
-
-		if(factOld != 0.0f)
-			copy(w, v);
-
-		NVMatrix tmp(const_cast<V*>(m.ptr()),(int)m.h(),(int)m.w(),false);
-		NVMatrix dst(v.ptr(),(int)v.size(),(int)1,false);
-		tmp.aggregate(1,dst,256,NVMatrix::SUM);
-
-		if(factNew != 1.0f)
-			apply_scalar_functor(v, SF_MULT, factNew);
-
-		if(factOld != 0.0f)
-			apply_binary_functor(v, w, BF_XPBY, factOld);
-#endif
-
-		cuvSafeCall(cudaThreadSynchronize());
-	}
-
-}
-template<class __matrix_type, class __vector_type>
-void reduce_to_col(__vector_type&v, const __matrix_type& m, reduce_functor rf, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld) {
-
-	switch(rf) {
-		case RF_ADD:
-		reduce_to_col_impl::reduce_to_col(v,m,factNew,factOld,bf_plus<typename __matrix_type::value_type,typename __matrix_type::value_type>());
-		break;
-		/*case RF_ADD_SQUARED:*/
-		/*reduce_to_col_impl::reduce_to_col<RF_ADD_SQUARED>(v,m,factNew,factOld);*/
-		/*break;*/
-		case RF_MIN:
-		reduce_to_col_impl::reduce_to_col(v,m,factNew,factOld,bf_min<typename __matrix_type::value_type,typename __matrix_type::value_type>());
-		break;
-		/*case RF_MIN:*/
-		/*reduce_to_col_impl::reduce_to_col<RF_MIN>(v,m,factNew,factOld);*/
-		/*break;*/
-		case RF_MAX:
-		reduce_to_col_impl::reduce_to_col(v,m,factNew,factOld,bf_max<typename __matrix_type::value_type,typename __matrix_type::value_type>());
-		break;
-		/*case RF_MAX:*/
-		/*reduce_to_col_impl::reduce_to_col<RF_MAX>(v,m,factNew,factOld);*/
-		/*break;*/
-		default:
-		throw std::runtime_error("supplied reduce_functor does not exist");
-	}
-}
-
-namespace reduce_to_row_impl {
-	template<class V,class I, class V2, class RF>
-	void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-		/*cuvAssert(rf==RF_ADD);*/
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.w() == v.size());
-		const V* A_ptr = m.ptr();
-
-		V2* v_ptr = v.ptr();
-
-		if (reduce_functor_traits<V,RF>::is_simple || factOld==0) 
-			for(int j=0; j<v.size(); j++) {
-				*v_ptr++ =reduce_functor_traits<V,RF>::init_value;
-			}
-		else 
-			for(int j=0; j<v.size(); j++) {
-			*v_ptr++ *= factOld;
-			}
-		for(int i=0;i<m.h();i++) {
-			v_ptr = v.ptr();
-			for(int j=0; j<m.w(); j++) {
-				if (reduce_functor_traits<V,RF>::is_simple)
-					*v_ptr = reduce_functor(*A_ptr,*v_ptr);
-				else
-					*v_ptr = reduce_functor(factNew * *A_ptr,*v_ptr);
-				v_ptr++;
-				A_ptr++;
-			}
-		}
-	}
-	template<class V,class I, class V2, class RF>
-	void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-		/*cuvAssert(rf==RF_ADD);*/
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.w() == v.size());
-		const V* A_ptr = m.ptr();
-
-		V2* v_ptr = v.ptr();
-
-		if (reduce_functor_traits<V,RF>::is_simple || factOld==0) 
-			for(int j=0; j<v.size(); j++) {
-				*v_ptr++ =reduce_functor_traits<V,RF>::init_value;
-			}
-		else 
-			for(int j=0; j<v.size(); j++) {
-			*v_ptr++ *= factOld;
-			}
-
-		v_ptr = v.ptr();
-
-		for(int i=0;i<m.w();i++) {
-			for(int j=0; j<m.h(); j++){
-				if (reduce_functor_traits<V,RF>::is_simple)
-					*v_ptr = reduce_functor(*A_ptr,*v_ptr);
-				else
-					*v_ptr = reduce_functor(factNew * *A_ptr,*v_ptr);
-				v_ptr++;
-				A_ptr++;
-			}
-		}
-	}
-
-	template<class V,class I, class V2, class RF>
-	void reduce_to_row(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.w() == v.size());
-		static const int BLOCK_SIZE = 16;
-		dim3 grid(1, m.w());
-		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-		reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,reduce_functor);
-		/*switch(rf){*/
-			/*case RF_ADD:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_plus<V,V2>());break;*/
-			/*case RF_MULT:     reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_multiplies<V,V2>());break;*/
-			/*case RF_MIN:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_min<V,V2>());break;*/
-			/*case RF_MAX:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_max<V,V2>());break;*/
-			/*default: cuvAssert(false);*/
-		/*}*/
-		cuvSafeCall(cudaThreadSynchronize());
-	}
-
-	template<class V,class I, class V2, class RF>
-	void reduce_to_row(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.w() == v.size());
-		static const long int BLOCK_SIZE = 16;
-		const int blocks_needed = ceil((float)m.w()/(BLOCK_SIZE*2));
-
-		int grid_x =0, grid_y=0;
-
-		// how to handle grid dimension constraint
-		if (blocks_needed <= 65535){
-			grid_x = blocks_needed;
-			grid_y = 1;
-		}else{
-			// try to avoid large noop blocks by adjusting x and y dimension to nearly equal size
-			grid_x = ceil(sqrt(blocks_needed));
-			grid_y = ceil((float)blocks_needed/grid_x);
-		}
-
-		dim3 grid(grid_x, grid_y);
-		dim3 threads(BLOCK_SIZE*2, BLOCK_SIZE/2);
-		// yes, we abuse the reduce_to_col kernel here :)
-		reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,reduce_functor);
-		/*switch(rf){*/
-			/*case RF_ADD:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_plus<V,V2>());break;*/
-			/*case RF_MULT:     reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_multiplies<V,V2>());break;*/
-			/*case RF_MIN:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_min<V,V2>());break;*/
-			/*case RF_MAX:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_max<V,V2>());break;*/
-			/*default: cuvAssert(false);*/
-		/*}*/
-		cuvSafeCall(cudaThreadSynchronize());
-	}
-
-}
-template<class __matrix_type, class __vector_type>
-void reduce_to_row(__vector_type&v, const __matrix_type& m,reduce_functor rf, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld) {
-	switch(rf) {
-		case RF_ADD:
-		reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld,bf_plus<typename __matrix_type::value_type,typename __matrix_type::value_type>());
-		/*reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld);*/
-		break;
-		/*case RF_ADD_SQUARED:*/
-		/*reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld,bf_add<typename __matrix_type::value_type,typename __matrix_type::value_type>());*/
-		/*[>reduce_to_row_impl::reduce_to_row<RF_ADD_SQUARED>(v,m,factNew,factOld);<]*/
-		/*break;*/
-		case RF_MIN:
-		reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld,bf_min<typename __matrix_type::value_type,typename __matrix_type::value_type>());
-		/*reduce_to_row_impl::reduce_to_row<RF_MIN>(v,m,factNew,factOld);*/
-		break;
-		case RF_MAX:
-		reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld,bf_max<typename __matrix_type::value_type,typename __matrix_type::value_type>());
-		/*reduce_to_row_impl::reduce_to_row<RF_MAX>(v,m,factNew,factOld);*/
-		break;
-		default:
-		throw std::runtime_error("supplied reduce_functor does not exist");
-	}
-}
-
-namespace argmax_to_XXX_impl{
-
-template<class V, class V2, class I>
-void argmax_to_row(vector<V2,dev_memory_space>&v, const dense_matrix<V,column_major, dev_memory_space, I>& m) {
-	cuvAssert(m.ptr() != NULL);
-	cuvAssert(m.w() == v.size());
-	const unsigned int u = min(m.w(), MAX_GRID_SIZE);
-	dim3 grid(u, ceil(m.w()/(float)u));
-	static const unsigned int BLOCK_DIM = 256;
-	argmax_row_kernel<BLOCK_DIM><<<grid,BLOCK_DIM>>>(v.ptr(),m.ptr(),m.w(),m.h());
-	cuvSafeCall(cudaThreadSynchronize());
-}
-
-template<class V, class V2, class I>
-void argmax_to_column(vector<V2,dev_memory_space, I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m) {
-	cuvAssert(m.ptr() != NULL);
-	cuvAssert(m.h() == v.size());
-	const unsigned int u = min(m.h(), MAX_GRID_SIZE);
-	dim3 grid(u, ceil(m.h()/(float)u));
-	static const unsigned int BLOCK_DIM = 256;
-	argmax_row_kernel<BLOCK_DIM><<<grid,BLOCK_DIM>>>(v.ptr(),m.ptr(),m.h(),m.w());
-	cuvSafeCall(cudaThreadSynchronize());
-}
-
-template<class V, class V2, class I>
-void argmax_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major, host_memory_space,I>& m) {
-	cuvAssert(m.ptr() != NULL);
-	cuvAssert(m.w() == v.size());
-	const V* ptr = m.ptr();
-	V2* res = v.ptr();
-	for(int i=0; i<m.w();i++) {
-		int idx = 0;
-		V val = *ptr;
-		for(int j=0; j<m.h();j++) {
-			if(*ptr > val) {
-				val = *ptr;
-				idx = j;
-			}
-			ptr++;
-		}
-		*res++ = idx;
-	}
-}
-
-template<class V, class V2, class I>
-void argmax_to_column(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m) {
-	cuvAssert(m.ptr() != NULL);
-	cuvAssert(m.h() == v.size());
-	const V* ptr = m.ptr();
-	V2* res = v.ptr();
-	for(int i=0; i<m.h();i++) {
-		int idx = 0;
-		V val = *ptr;
-		for(int j=0; j<m.w();j++) {
-			if(*ptr > val) {
-				val = *ptr;
-				idx = j;
-			}
-			ptr++;
-		}
-		*res++ = idx;
-	}
-}
-
-}
-
-template<class V, class M>
-void argmax_to_column(V&v, const M& m) {
-	argmax_to_XXX_impl::argmax_to_column(v,m);
-}
-template<class V, class M>
-void argmax_to_row(V&v, const M& m) {
-	argmax_to_XXX_impl::argmax_to_row(v,m);
-}
-
 namespace transpose_impl{
-
-template<class V, class I>
-void transpose(dense_matrix<V,column_major, dev_memory_space, I>& dst,
-		 const dense_matrix<V,column_major, dev_memory_space, I>& src) {
-	cuvAssert(dst.w() == src.h());
-	cuvAssert(dst.h() == src.w());
-	const I width = dst.w();
-	const I height = dst.h();
-	static const int BLOCK_SIZE = 16;
-	const int numBlocksX = ceil((float)width / BLOCK_SIZE);
-	const int numBlocksY = ceil((float)height / BLOCK_SIZE);
-	dim3 gridSize(numBlocksX, numBlocksY, 1);
-	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
-	transpose_kernel<BLOCK_SIZE><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
-	cuvSafeCall(cudaThreadSynchronize());
-}
-
-template<class V, class I>
-void transpose(dense_matrix<V,row_major,dev_memory_space, I>& dst,
-		 const dense_matrix<V,row_major,dev_memory_space, I>& src) {
-	cuvAssert(dst.w() == src.h());
-	cuvAssert(dst.h() == src.w());
-	const I width = dst.h();
-	const I height = dst.w();
-	static const int BLOCK_SIZE = 16;
-	const int numBlocksX = ceil((float)width / BLOCK_SIZE);
-	const int numBlocksY = ceil((float)height / BLOCK_SIZE);
-	dim3 gridSize(numBlocksX, numBlocksY, 1);
-	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
-	transpose_kernel<BLOCK_SIZE><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
-	cuvSafeCall(cudaThreadSynchronize());
-}
-
-template<class V, class I>
-void transpose(dense_matrix<V,column_major,host_memory_space, I>& dst,
-		 const dense_matrix<V,column_major,host_memory_space, I>& src) {
-	cuvAssert(dst.w() == src.h());
-	cuvAssert(dst.h() == src.w());
-	V* dst_ptr = dst.ptr();
-	const V* src_ptr = src.ptr();
-	for(int i=0; i<dst.w(); i++) {
-		for(int j=0; j<dst.h(); j++) {
-			*dst_ptr++ = src_ptr[j*src.h()];
-		}
-		src_ptr++;
+	template<class V, class I>
+	void transpose(dense_matrix<V,column_major, dev_memory_space, I>& dst,
+			 const dense_matrix<V,column_major, dev_memory_space, I>& src) {
+		cuvAssert(dst.w() == src.h());
+		cuvAssert(dst.h() == src.w());
+		const I width = dst.w();
+		const I height = dst.h();
+		static const int BLOCK_SIZE = 16;
+		const int numBlocksX = ceil((float)width / BLOCK_SIZE);
+		const int numBlocksY = ceil((float)height / BLOCK_SIZE);
+		dim3 gridSize(numBlocksX, numBlocksY, 1);
+		dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
+		transpose_kernel<BLOCK_SIZE><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
+		cuvSafeCall(cudaThreadSynchronize());
 	}
-}
 
-template<class V, class I>
-void transpose(dense_matrix<V,row_major,host_memory_space, I>& dst,
-		 const dense_matrix<V,row_major,host_memory_space, I>& src) {
-	cuvAssert(dst.w() == src.h());
-	cuvAssert(dst.h() == src.w());
-	V* dst_ptr = dst.ptr();
-	const V* src_ptr = src.ptr();
-	for(int i=0; i<dst.h(); i++) {
-		for(int j=0; j<dst.w(); j++) {
-			*dst_ptr++ = src_ptr[j*src.w()];
-		}
-		src_ptr++;
+	template<class V, class I>
+	void transpose(dense_matrix<V,row_major,dev_memory_space, I>& dst,
+			 const dense_matrix<V,row_major,dev_memory_space, I>& src) {
+		cuvAssert(dst.w() == src.h());
+		cuvAssert(dst.h() == src.w());
+		const I width = dst.h();
+		const I height = dst.w();
+		static const int BLOCK_SIZE = 16;
+		const int numBlocksX = ceil((float)width / BLOCK_SIZE);
+		const int numBlocksY = ceil((float)height / BLOCK_SIZE);
+		dim3 gridSize(numBlocksX, numBlocksY, 1);
+		dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
+		transpose_kernel<BLOCK_SIZE><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
+		cuvSafeCall(cudaThreadSynchronize());
 	}
-}
-}
+
+	template<class V, class I>
+	void transpose(dense_matrix<V,column_major,host_memory_space, I>& dst,
+			 const dense_matrix<V,column_major,host_memory_space, I>& src) {
+		cuvAssert(dst.w() == src.h());
+		cuvAssert(dst.h() == src.w());
+		V* dst_ptr = dst.ptr();
+		const V* src_ptr = src.ptr();
+		for(int i=0; i<dst.w(); i++) {
+			for(int j=0; j<dst.h(); j++) {
+				*dst_ptr++ = src_ptr[j*src.h()];
+			}
+			src_ptr++;
+		}
+	}
+
+	template<class V, class I>
+	void transpose(dense_matrix<V,row_major,host_memory_space, I>& dst,
+			 const dense_matrix<V,row_major,host_memory_space, I>& src) {
+		cuvAssert(dst.w() == src.h());
+		cuvAssert(dst.h() == src.w());
+		V* dst_ptr = dst.ptr();
+		const V* src_ptr = src.ptr();
+		for(int i=0; i<dst.h(); i++) {
+			for(int j=0; j<dst.w(); j++) {
+				*dst_ptr++ = src_ptr[j*src.w()];
+			}
+			src_ptr++;
+		}
+	}
+} // namespace transpose_impl
 
 template<class M>
 void transpose(M& dst, const M& src){
@@ -1035,17 +496,6 @@ void transpose(M& dst, const M& src){
   template void matrix_divide_row(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);  \
   template void matrix_divide_row(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&);
 
-#define INSTANTIATE_REDCOL(V,M) \
-  template void reduce_to_row(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&,reduce_functor,  const V&,const V&);
-
-#define INSTANTIATE_REDROW(V,M) \
-  template void reduce_to_col(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&);
 
 #define INSTANTIATE_BLOCKVIEW(V,M,I) \
   template dense_matrix<V,M,host_memory_space,I>* blockview(dense_matrix<V,M,host_memory_space,I>&,I,I,I,I); \
@@ -1055,23 +505,6 @@ void transpose(M& dst, const M& src){
   template void transpose(dense_matrix<V,M,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&); \
   template void transpose(dense_matrix<V,M,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&); 
 
-#define INSTANTIATE_ARGMAX_TO_ROW(V,M,I) \
-  template void argmax_to_row(vector<int,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
-  template void argmax_to_row(vector<int,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);  \
-  template void argmax_to_row(vector<float,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
-  template void argmax_to_row(vector<float,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);  
-#define INSTANTIATE_ARGMAX_TO_COL(V,M,I) \
-  template void argmax_to_column(vector<int,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
-  template void argmax_to_column(vector<int,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&); \
-  template void argmax_to_column(vector<float,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
-  template void argmax_to_column(vector<float,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);   
-
-
-INSTANTIATE_ARGMAX_TO_COL(float,row_major,unsigned int);
-INSTANTIATE_ARGMAX_TO_COL(int,row_major,unsigned int);
-
-INSTANTIATE_ARGMAX_TO_ROW(float,column_major,unsigned int);
-INSTANTIATE_ARGMAX_TO_ROW(int,column_major,unsigned int);
 
 INSTANTIATE_TRANSPOSE(float,column_major,unsigned int);
 INSTANTIATE_TRANSPOSE(float,row_major,unsigned int);
@@ -1080,9 +513,6 @@ INSTANTIATE_TRANSPOSE(int,row_major,unsigned int);
 
 INSTANTIATE_MV(float, column_major);
 INSTANTIATE_MV(float, row_major);
-
-INSTANTIATE_REDCOL(float,column_major);
-INSTANTIATE_REDROW(float,row_major);
 
 INSTANTIATE_BLOCKVIEW(float,column_major,unsigned int);
 INSTANTIATE_BLOCKVIEW(float,row_major,unsigned int);
