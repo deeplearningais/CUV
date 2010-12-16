@@ -74,8 +74,10 @@
  *   Restricted Boltzmann Machines (RBM), convolutional or locally connected.
  * 
  * Documentation
- * - The documentation can be generated from the code or accessed on the internet:
- *   http://www.ais.uni-bonn.de/deep_learning/doc/html/index.html
+ * - Tutorials are available on 
+ *   http://www.ais.uni-bonn.de/~schulz/tag/cuv
+ * - The API documentation can be generated from the code or accessed on the
+ *   internet: http://www.ais.uni-bonn.de/deep_learning/doc/html/index.html
  *
  * @section installation  Installation
  *
