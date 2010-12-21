@@ -83,14 +83,8 @@ void reduce_to_col_kernel(const T* matrix, V* vector, int nCols, int nRows,
 			vector[row_idx] = shared[0][tx];
 		else
 			if(factOld != 0.f){
-				if (isnan(vector[row_idx])){
-				}
-				if (isnan(shared[0][tx])){
-				}
 				vector[row_idx] = vector[row_idx] * factOld + shared[0][tx] * factNew;
 			}else{
-				if (isnan(shared[0][tx])){
-				}
 				vector[row_idx] = shared[0][tx] * factNew;
 			}
 	}
