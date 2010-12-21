@@ -179,22 +179,37 @@ template<class T, class FUNC>
 struct reduce_functor_traits{ 
 	static const T init_value = 0;     
 	static const bool is_simple=false;
-	static const bool needs_idx=false;
+	static const bool returns_index = false;
+	typedef T result_type;
 };
 
 template<class T>
 struct reduce_functor_traits<T,bf_max<T,T> >{
 	static const T init_value = -INT_MAX;    
-	static const bool is_simple=true;
-	static const bool needs_idx=false;
+	static const bool returns_index = false;
+	typedef T result_type;
 
 };
 
 template<class T>
 struct reduce_functor_traits<T,bf_min<T,T> >{  
 	static const T init_value = INT_MAX;     
-	static const bool is_simple=true;
-	static const bool needs_idx=false;
+	static const bool returns_index = false;
+	typedef T result_type;
+};
+
+template<class I, class T, class J>
+struct reduce_functor_traits<T,reduce_argmax<I,T,J> >{  
+	static const T init_value = -INT_MAX;     
+	static const bool returns_index=true;
+	typedef unsigned int result_type;	
+};
+
+template<class I, class T, class J>
+struct reduce_functor_traits<T,reduce_argmin<I,T,J> >{  
+	static const T init_value = INT_MAX;     
+	static const bool returns_index=true;
+	typedef unsigned int result_type;	
 };
 
 template<class F>
