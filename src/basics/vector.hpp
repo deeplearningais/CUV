@@ -35,7 +35,7 @@
  * @file vector.hpp
  * @brief base class for vectors
  * @ingroup basics
- * @author Hannes Schulz
+ * @author Hannes Schulz, Andreas Mueller
  * @date 2010-03-21
  */
 #ifndef __VECTOR_HPP__
@@ -46,23 +46,24 @@
 
 namespace cuv{
 
-template <class value_type, class index_type>
-void alloc( value_type** ptr, index_type memsize, dev_memory_space);
-template <class value_type>
-void dealloc( value_type** ptr, dev_memory_space);
-template <class value_type, class index_type>
-void entry_set(value_type* ptr, index_type idx, value_type val, dev_memory_space);
-template <class value_type, class index_type>
-value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space);
+//host and device	
+template <class value_type, class index_type, class memory_space_type>
+struct allocator{
+	void alloc( value_type** ptr, index_type memsize)const;
+	void dealloc( value_type** ptr)const;
+};
 
-template <class value_type, class index_type>
-void alloc( value_type** ptr, index_type memsize, host_memory_space);
-template <class value_type>
-void dealloc( value_type** ptr, host_memory_space);
+//host
 template <class value_type, class index_type>
 void entry_set(value_type* ptr, index_type idx, value_type val, host_memory_space);
 template <class value_type, class index_type>
 value_type entry_get(const value_type* ptr, index_type idx, host_memory_space);
+
+//device
+template <class value_type, class index_type>
+void entry_set(value_type* ptr, index_type idx, value_type val, dev_memory_space);
+template <class value_type, class index_type>
+value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space);
 
 
 
@@ -84,7 +85,7 @@ class vector{
 	  value_type* m_ptr; ///< Pointer to actual entries in memory
 	  bool        m_is_view; ///< Indicates whether this vector owns the memory or is just a view
 	  index_type  m_size; ///< Length of vector
-			
+	  allocator<value_type, index_type, memory_space_type> m_allocator;
 	public:
 	  /*
 	   * Member Access
@@ -159,7 +160,7 @@ class vector{
 	  void alloc(){
 		  if (! m_is_view) {
 			  cuvAssert(m_ptr == NULL)
-			  cuv::alloc<value_type, index_type>( &m_ptr,m_size,memory_space_type());	
+			  m_allocator.alloc( &m_ptr,m_size);
 		  }
 	  } 
 
@@ -168,7 +169,7 @@ class vector{
 	   */
 	  void dealloc(){
 		  if (m_ptr && ! m_is_view)
-			cuv::dealloc<value_type>(&m_ptr,memory_space_type());	
+			m_allocator.dealloc(&m_ptr);
 		  m_ptr=NULL;
 	  }
 
@@ -214,31 +215,58 @@ class vector{
 
 }; // vector
 
-/** 
- * @brief Allocate memory for host matrices 
- * 
- * @param ptr Address of pointer which will be set to allocated memory
- * @param size Size of array which should be allocated
- * 
- * This is the instance of the alloc function that is called by host vectors.
- */
 template<class value_type, class index_type>
-void alloc( value_type** ptr, index_type size, host_memory_space) {
-	*ptr = new value_type[size];
-}
+struct allocator<value_type,index_type,host_memory_space>{
+	/** 
+	 * @brief Allocate memory for host matrices 
+	 * 
+	 * @param ptr Address of pointer which will be set to allocated memory
+	 * @param size Size of array which should be allocated
+	 * 
+	 * This is the instance of the alloc function that is called by host vectors.
+	 */
+	void alloc( value_type** ptr, index_type size) const{
+		*ptr = new value_type[size];
+	}
+	/** 
+	 * @brief Deallocate memory for host matrices
+	 * 
+	 * @param ptr Address of pointer that will be freed
+	 * 
+	 * This is the instance of the dealloc function that is called by host vectors.
+	 */
+	void dealloc( value_type** ptr)const {
+		delete[] *ptr;
+		*ptr = NULL;
+	}
+};
 
-/** 
- * @brief Deallocate memory for host matrices
- * 
- * @param ptr Address of pointer that will be freed
- * 
- * This is the instance of the dealloc function that is called by host vectors.
- */
-template<class value_type>
-void dealloc( value_type** ptr, host_memory_space) {
-	delete[] *ptr;
-	*ptr = NULL;
-}
+
+template<class value_type, class index_type>
+struct allocator<const value_type,index_type,host_memory_space>{
+	/** 
+	 * @brief Allocate memory for host matrices - const allocator should never be called!
+	 * 
+	 * @param ptr Address of pointer which will be set to allocated memory
+	 * @param size Size of array which should be allocated
+	 * 
+	 * This is the instance of the alloc function that is called by const host vectors.
+	 */
+	void alloc(const value_type** ptr, index_type size) const{
+		cuvAssert(false);
+	}
+	/** 
+	 * @brief Deallocate memory for host matrices- const allocator should never be called!
+	 * 
+	 * @param ptr Address of pointer that will be freed
+	 * 
+	 * This is the instance of the dealloc function that is called by host vectors.
+	 */
+	void dealloc(const value_type** ptr)const {
+		cuvAssert(false);
+	}
+};
+
 
 /** 
  * @brief Setting entry of host vector at ptr at index idx to value val
