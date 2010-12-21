@@ -31,6 +31,7 @@
 #include <stdexcept>
 
 #include <cuv_general.hpp>
+#include <meta_programming.hpp>
 #include <vector_ops/functors.hpp>
 #include "matrix_ops.hpp"
 
