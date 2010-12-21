@@ -155,22 +155,22 @@ struct bf_axpby: binary_functor {
 	__device__  __host__       T operator()(const T& t, const U& u) const{ return  a*t + b*((T)u); } 
 };
 
-template<class T, class I>
+template< class J, class V, class I>
 struct reduce_argmax : quadrary_functor {  
-	__device__  __host__    void    operator()(T& t, I& i, T& u, I& j) {
+	__device__  __host__    void    operator()(V& t, J& i, const V& u, const I& j) const{
 	   if (t > u) {
-		  u = t;
-		  j = i;
+		  t = u;
+		  i = (I) j;
 	   }
 	} 
 };
 
-template<class T, class I>
+template< class V, class I, class J>
 struct reduce_argmin : quadrary_functor {  
-	__device__  __host__    void    operator()(T& t, I& i, T& u, I& j) {
+	__device__  __host__    void    operator()(V& t, I& i,const  V& u, const J& j) const{
 	   if (t < u) {
-		  u = t;
-		  j = i;
+		  t = u;
+		  i = (I) j;
 	   }
 	} 
 };
@@ -197,22 +197,24 @@ struct reduce_functor_traits<T,bf_min<T,T> >{
 	static const bool needs_idx=false;
 };
 
-template<class F, class T, class V, class I>
+template<class F>
 struct functor_dispatcher{
 	__device__  __host__       void operator()() { cuvAssert(false); } 
 };
 
-template<class T, class V, class I>
-struct functor_dispatcher<binary_functor_tag,T,V,I>{
-	static const bool needs_idx=true;
-	__device__  __host__   V operator()(const T& bf, const V &t, const V &u){return bf(t,u);} 
-	__device__  __host__  void operator()(const T& qf,V &t, I &i, V &u, I &j){} 
+template<>
+struct functor_dispatcher<binary_functor_tag>{
+	template<class T, class V, class I, class J>
+	__device__  __host__   void operator()(const T& bf, V &t, I &i, const V &u, const J &j )const {
+		t =  bf(t,u);
+	} 
 };
 
-template<class T, class V, class I>
-struct functor_dispatcher<quadrary_functor_tag,T,V,I>{
-	static const bool needs_idx=true;
-	__device__  __host__  void operator()(const T& qf,V &t, I &i, V &u, I &j){qf(t,i,u,j);} 
-	__device__  __host__  void operator()(const T& qf,V &t, V &i){} 
+template<>
+struct functor_dispatcher<quadrary_functor_tag>{
+	template<class T, class V, class I, class J>
+	__device__  __host__   void operator()(const T& qf, V &t, I &i, const V &u, const J &j ) const{
+		qf(t,i,u,j);
+	} 
 };
 };//namespace cuv
