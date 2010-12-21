@@ -161,10 +161,8 @@ void argmax_row_kernel(I* vector, const T* matrix, unsigned int nCols, unsigned 
 	const unsigned int off = blockDim.x;
 
 	unsigned int idx = by * nRows + tx;
-	if (tx < nRows) {
-	   shVal[tx] = (tx<nRows) ? matrix[idx] : (T) INT_MIN;
-	   shIdx[tx] = (tx<nRows) ? tx          : 0;
-	}
+	shVal[tx] = (tx<nRows) ? matrix[idx] : (T) INT_MIN;
+	shIdx[tx] = (tx<nRows) ? tx          : 0;
 
 	for (unsigned int my = tx + off; my < nRows; my += off) {
 	   idx += off;
