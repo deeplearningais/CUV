@@ -252,6 +252,8 @@ namespace cuv{
 	  RF_ADD,
 	  RF_ADD_SQUARED,
 	  RF_MAX,
+	  RF_ARGMAX,
+	  RF_ARGMIN,
 	  RF_MIN,
 	  RF_MULT,
   };
