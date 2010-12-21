@@ -42,15 +42,25 @@
 namespace cuv{
 
 template <class value_type, class index_type>
-void alloc( value_type** ptr, index_type size, dev_memory_space) {
-	cuvSafeCall(cudaMalloc(ptr, sizeof(value_type)*size));
-}
+struct allocator<value_type,index_type,dev_memory_space>{
+	void alloc( value_type** ptr, index_type size) const{
+		cuvSafeCall(cudaMalloc(ptr, sizeof(value_type)*size));
+	}
+	void dealloc( value_type** ptr) const {
+		cuvSafeCall(cudaFree((void*)*ptr));
+		*ptr = NULL;
+	}
+};
 
-template <class value_type>
-void dealloc( value_type** ptr, dev_memory_space) {
-	cuvSafeCall(cudaFree(*ptr));
-	*ptr = NULL;
-}
+template <class value_type, class index_type>
+struct allocator<const value_type,index_type,dev_memory_space>{
+	void alloc(const value_type** ptr, index_type size) const{
+		cuvAssert(false);
+	}
+	void dealloc(const value_type** ptr)const {
+		cuvAssert(false);
+	}
+};
 
 template <class value_type, class index_type>
 void entry_set(value_type* ptr, index_type idx, value_type val, dev_memory_space) {
@@ -66,9 +76,8 @@ value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space) {
 
 
 #define VECTOR_INST(T,I) \
-template class vector<T, dev_memory_space, I>; \
-template void alloc(T**, I, dev_memory_space); \
-template void dealloc(T**, dev_memory_space); \
+template struct allocator<T, I, dev_memory_space>; \
+template struct allocator<const T, I, dev_memory_space>; \
 template void entry_set(T*, I, T, dev_memory_space); \
 template T entry_get(const T*, I, dev_memory_space); \
 
