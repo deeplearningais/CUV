@@ -2,6 +2,17 @@
 #include <cuv_general.hpp>
 
 #define sgn(a) (copysign(1.f,a))
+struct binary_functor_tag{};
+struct quadrary_functor_tag{};
+
+namespace cuv {
+struct binary_functor{
+	typedef binary_functor_tag functor_type;
+};
+
+struct quadrary_functor{
+	typedef quadrary_functor_tag functor_type;
+};
 
 template<class T>
 struct uf_exp{  __host__ __device__         T operator()(const T& t)const{ return expf(t);    } };
@@ -103,58 +114,79 @@ struct uf_base_op3{
 
 // functors without parameter
 template<class T, class U>
-struct bf_plus{  __device__  __host__       T operator()(const T& t, const U& u)      const{ return  t + (T)u; } };
+struct bf_plus : binary_functor {  __device__  __host__       T operator()(const T& t, const U& u)      const{ return  t + (T)u; } };
 template<class T, class U>
-struct bf_minus{  __device__  __host__      T operator()(const T& t, const U& u)      const{ return  t - (T)u; } };
+struct bf_minus: binary_functor {  __device__  __host__      T operator()(const T& t, const U& u)      const{ return  t - (T)u; } };
 template<class T, class U>
-struct bf_multiplies{  __device__  __host__ T operator()(const T& t, const U& u)      const{ return  t * (T)u; } };
+struct bf_multiplies: binary_functor {  __device__  __host__ T operator()(const T& t, const U& u)      const{ return  t * (T)u; } };
 template<class T, class U>
-struct bf_divides{  __device__  __host__    T operator()(const T& t, const U& u)      const{ return  t / (T)u; } };
+struct bf_divides: binary_functor {  __device__  __host__    T operator()(const T& t, const U& u)      const{ return  t / (T)u; } };
 template<class T, class U>
-struct bf_squared_diff{__device__ __host__  T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
+struct bf_squared_diff: binary_functor {__device__ __host__  T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
 template<class T, class U>
-struct bf_add_square{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t + (T)(u*u);} };
+struct bf_add_square: binary_functor {__device__ __host__  T operator()(const T& t, const U& u)      const{ return t + (T)(u*u);} };
 template<class T, class U>
-struct bf_and{__device__ __host__   T operator()(const T& t, const U& u)      const{ return t && u; } };
+struct bf_and: binary_functor {__device__ __host__   T operator()(const T& t, const U& u)      const{ return t && u; } };
 template<class T, class U>
-struct bf_or{ __device__ __host__   T operator()(const T& t, const U& u)      const{ return t || u; } };
+struct bf_or: binary_functor { __device__ __host__   T operator()(const T& t, const U& u)      const{ return t || u; } };
 template<class T, class U>
-struct bf_min{ __device__ __host__  T operator()(const T& t, const U& u)      const{ return t<u ? t : u; } };
+struct bf_min: binary_functor { __device__ __host__  T operator()(const T& t, const U& u)      const{ return t<u ? t : u; } };
 template<class T, class U>
-struct bf_max{ __device__ __host__  T operator()(const T& t, const U& u)      const{ return t>u ? t : u; } };
+struct bf_max: binary_functor { __device__ __host__  T operator()(const T& t, const U& u)      const{ return t>u ? t : u; } };
 
 // functors with parameter
 template<class T, class U>
-struct bf_axpy{  
+struct bf_axpy: binary_functor {  
 	const T a;
 	bf_axpy(const T& _a):a(_a){}
 	__device__  __host__       T operator()(const T& t, const U& u) const{ return  a*t+(T)u; } 
 };
 template<class T, class U>
-struct bf_xpby{  
+struct bf_xpby: binary_functor {  
 	const T b;
 	bf_xpby(const T& _b):b(_b){}
 	__device__  __host__       T operator()(const T& t, const U& u) const{ return  t+b*(T)u; } 
 };
 template<class T, class U>
-struct bf_axpby{  
+struct bf_axpby: binary_functor {  
 	const T a;
 	const T b;
 	bf_axpby(const T& _a, const T& _b):a(_a),b(_b){}
 	__device__  __host__       T operator()(const T& t, const U& u) const{ return  a*t + b*((T)u); } 
 };
 
+template<class T, class I>
+struct reduce_argmax : quadrary_functor {  
+	__device__  __host__    void    operator()(T& t, I& i, T& u, I& j) {
+	   if (t > u) {
+		  u = t;
+		  j = i;
+	   }
+	} 
+};
+
+template<class T, class I>
+struct reduce_argmin : quadrary_functor {  
+	__device__  __host__    void    operator()(T& t, I& i, T& u, I& j) {
+	   if (t < u) {
+		  u = t;
+		  j = i;
+	   }
+	} 
+};
 // for reduce functors: set initial value of shared memory
 template<class T, class FUNC>
 struct reduce_functor_traits{ 
 	static const T init_value = 0;     
 	static const bool is_simple=false;
+	static const bool needs_idx=false;
 };
 
 template<class T>
 struct reduce_functor_traits<T,bf_max<T,T> >{
 	static const T init_value = -INT_MAX;    
 	static const bool is_simple=true;
+	static const bool needs_idx=false;
 
 };
 
@@ -162,4 +194,25 @@ template<class T>
 struct reduce_functor_traits<T,bf_min<T,T> >{  
 	static const T init_value = INT_MAX;     
 	static const bool is_simple=true;
+	static const bool needs_idx=false;
 };
+
+template<class F, class T, class V, class I>
+struct functor_dispatcher{
+	__device__  __host__       void operator()() { cuvAssert(false); } 
+};
+
+template<class T, class V, class I>
+struct functor_dispatcher<binary_functor_tag,T,V,I>{
+	static const bool needs_idx=true;
+	__device__  __host__   V operator()(const T& bf, const V &t, const V &u){return bf(t,u);} 
+	__device__  __host__  void operator()(const T& qf,V &t, I &i, V &u, I &j){} 
+};
+
+template<class T, class V, class I>
+struct functor_dispatcher<quadrary_functor_tag,T,V,I>{
+	static const bool needs_idx=true;
+	__device__  __host__  void operator()(const T& qf,V &t, I &i, V &u, I &j){qf(t,i,u,j);} 
+	__device__  __host__  void operator()(const T& qf,V &t, V &i){} 
+};
+};//namespace cuv
