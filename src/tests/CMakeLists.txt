@@ -9,7 +9,7 @@ INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src )
 
 FIND_PACKAGE( BLAS REQUIRED)
 
-SET (CUDA_TEST_DEVICE "3" CACHE STRING "Which CUDA device should the tests be run on, if multiple devices are present.")
+SET (CUDA_TEST_DEVICE "0" CACHE STRING "Which CUDA device should the tests be run on, if multiple devices are present.")
 add_definitions(-DCUDA_TEST_DEVICE=${CUDA_TEST_DEVICE})
 
 ADD_EXECUTABLE( test_basic basic.cpp )
