@@ -35,13 +35,14 @@
 #include <vector_ops/functors.hpp>
 #include "matrix_ops.hpp"
 
-template<int BLOCK_SIZE, class T, class RF>
+template<int BLOCK_SIZE, class T, class V, class RF>
 __global__
-void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
+void reduce_to_col_kernel(const T* matrix, V* vector, int nCols, int nRows,
 		T param, T factNew, T factOld, RF reduce_functor) {
 
-	__shared__ T shared[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
-	T sum;
+	__shared__ V shared[BLOCK_SIZE / 2][BLOCK_SIZE * 2]; //TODO: this is ugly. should be T.  but matrix could be const.
+
+	V sum;
 
 	int tx = threadIdx.x;
 	int bx = blockIdx.x;
@@ -58,7 +59,7 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 
 	sum = cuv::reduce_functor_traits<T,RF>::init_value;
 	for (int my = ty; my < nCols; my += off) {
-		T f = matrix[my * nRows + row_idx ];
+		V f = matrix[my * nRows + row_idx ];
 		sum=reduce_functor(sum,f);
 	}
 
