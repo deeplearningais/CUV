@@ -55,17 +55,8 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 		return;
 	int off = blockDim.y;
 
-	sum = reduce_functor_traits<T,RF>::init_value;
-//	printf("\n\nBlockDim.x: %d, BlockDim.y: %d\n", blockDim.x, blockDim.y);
-//	printf("\n\ngridDim.x: %d, gridDim.y: %d\n", gridDim.x, gridDim.y);
-//
-//	printf("Thread.x: tx: %d, Thread.y: %d, Thread.z: %d\n", bx, tx, ty, threadIdx.z);
-//	printf("Block.x: bx: %d, Block.y: %d\n", bx, by);
-//	printf("nCols: %d, nRows: %d\n", nCols, nRows);
+	sum = cuv::reduce_functor_traits<T,RF>::init_value;
 	for (int my = ty; my < nCols; my += off) {
-//		if (my <100)
-//			printf("my: %d\t", my);
-		// to jump one col we proceed nRow elements in the matrix vector
 		T f = matrix[my * nRows + row_idx ];
 		sum=reduce_functor(sum,f);
 	}
@@ -86,7 +77,7 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 	if (ty == 0) {
 		if (row_idx >= nCols){
 		}
-		if (reduce_functor_traits<T,RF>::is_simple)
+		if (cuv::reduce_functor_traits<T,RF>::is_simple)
 			vector[row_idx] = shared[0][tx];
 		else
 			if(factOld != 0.f){
@@ -100,9 +91,7 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 				}
 				vector[row_idx] = shared[0][tx] * factNew;
 			}
-		//vector[row_idx] = row_idx;
 	}
-	//__syncthreads();
 }
 
 template<int BLOCK_SIZE, class T, class RF>
@@ -110,31 +99,44 @@ __global__
 void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows,
 		T param, T factNew, T factOld,RF reduce_functor) {
 	__shared__ T shared[BLOCK_SIZE * BLOCK_SIZE];
+	__shared__ unsigned int arg_idx[BLOCK_SIZE * BLOCK_SIZE];
 	const int tx = threadIdx.x, bx = blockIdx.x;
 	const int ty = threadIdx.y, by = blockIdx.y;
 	unsigned int idx = blockIdx.y * blockDim.y + threadIdx.y;
+	typedef typename cuv::functor_dispatcher<typename RF::functor_type,RF, T, unsigned int> functor_dispatcher_type;
+	functor_dispatcher_type func_disp;
+	typedef typename cuv::reduce_functor_traits<T,RF> functor_traits;
 	for (; idx < nCols; idx += blockDim.y * gridDim.y) {
 		int off = blockDim.x;
 
-		shared[tx] = reduce_functor_traits<T,RF>::init_value;
-		for (int my = tx; my < nRows; my += off) {
+		shared[tx] = functor_traits::init_value;
+		for (unsigned int my = tx; my < nRows; my += off) {
 			T f = matrix[by * nRows + bx * blockDim.x + my];
-
-			shared[tx]=reduce_functor(shared[tx],f);
+			if (functor_traits::needs_idx) {
+				func_disp(reduce_functor,shared[tx],arg_idx[tx],f,my);
+			}
+			else
+				shared[tx]=func_disp(reduce_functor,shared[tx],f);
 		}
 		__syncthreads();
 
 		int offset = blockDim.x / 2;
 		while (offset > 0) {
 			if (tx < offset) {
-				shared[tx]=reduce_functor(shared[tx],shared[tx + offset]);
+				if (functor_traits::needs_idx) {
+					func_disp(reduce_functor,shared[tx],arg_idx[tx],shared[tx+offset],arg_idx[tx+offset]);
+				}
+				else
+					shared[tx]=func_disp(reduce_functor,shared[tx],shared[tx+offset]);
 			}
 			offset >>= 1;
 			__syncthreads();
 		}
 
 		if (tx == 0) {
-			if (reduce_functor_traits<T,RF>::is_simple)
+			if (functor_traits::needs_idx) 
+				vector[by * blockDim.y + ty] = arg_idx[0];
+			else if (functor_traits::is_simple)
 				vector[by * blockDim.y + ty] = shared[0];
 			else
 				if(factOld != 0){
