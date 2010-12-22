@@ -42,11 +42,12 @@ void reduce_to_col_kernel(const T* matrix, V* vector, int nCols, int nRows,
 
 	typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
 	typedef typename cuv::reduce_functor_traits<T,RF> functor_traits;
+	typedef typename cuv::unconst<T>::type unconst_value_type;
 	functor_dispatcher_type func_disp;
 
 	__shared__ unsigned int indices[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
-	__shared__ typename cuv::unconst<T>::type values[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
-	V sum;
+	__shared__ unconst_value_type values[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
+	unconst_value_type sum;
 	unsigned int arg_index; // for storing indeces of maxima/minima for arg functors
 	int tx = threadIdx.x;
 	int bx = blockIdx.x;
@@ -64,8 +65,8 @@ void reduce_to_col_kernel(const T* matrix, V* vector, int nCols, int nRows,
 	sum = functor_traits::init_value;
 	arg_index = 0;
 
-	for (int my = ty; my < nCols; my += off) {
-		V f = matrix[my * nRows + row_idx ];
+	for (unsigned int my = ty; my < nCols; my += off) {
+		unconst_value_type f = matrix[my * nRows + row_idx ];
 		func_disp(reduce_functor,sum,arg_index,f,my);
 		//sum=reduce_functor(sum,f);
 	}
@@ -198,35 +199,35 @@ namespace reduce_to_col_impl {
 		functor_dispatcher_type func_disp;
 		typedef typename cuv::reduce_functor_traits<V,RF> functor_traits;
 		const V* A_ptr = m.ptr();
-		vector<V2,host_memory_space,I> old(v); // copy old vector for factOld and factNew computations
-		V2* values_ptr = v.ptr();
+		vector<unconstV,host_memory_space,I> values(v.size()); // copy old vector for factOld and factNew computations
+		unconstV* values_ptr = values.ptr();
 		I* indices_ptr = indices.ptr();
 
 		for(int j=0; j<v.size(); j++) 
 			*values_ptr++ =reduce_functor_traits<V,RF>::init_value; // initialize column vector
 
 		for(int i=0;i<m.w();i++) {
-			values_ptr = v.ptr();
+			values_ptr = values.ptr();
 			for(int j=0; j<m.h(); j++,A_ptr++,values_ptr++) 
 				func_disp(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,j);
 		}
 
-		values_ptr = v.ptr();
-		V2* old_ptr = old.ptr();
+		values_ptr = values.ptr();
+		V2* v_ptr = v.ptr();
 		indices_ptr = indices.ptr();
 
 		if (!reduce_functor_traits<V,RF>::returns_index) 
 			if (factOld!=0)
-				for(int j=0; j<v.size(); j++,values_ptr++,old_ptr++) {
-					*values_ptr = factOld * *old_ptr + factNew * *values_ptr;
+				for(int j=0; j<v.size(); j++,values_ptr++,v_ptr++) {
+					*v_ptr = factOld * *v_ptr + factNew * *values_ptr;
 				}
 			else
-				for(int j=0; j<v.size(); j++,values_ptr++,old_ptr++) {
-					*values_ptr = factNew * *values_ptr;
+				for(int j=0; j<v.size(); j++,values_ptr++,v_ptr++) {
+					*v_ptr = factNew * *values_ptr;
 				}
 		else
-				for(int j=0; j<v.size(); j++,values_ptr++,indices_ptr++) {
-					*values_ptr = *indices_ptr;
+				for(int j=0; j<v.size(); j++,v_ptr++,indices_ptr++) {
+					*v_ptr = *indices_ptr;
 				}
 
 	}
@@ -277,40 +278,40 @@ namespace reduce_to_row_impl {
 		functor_dispatcher_type func_disp;
 		typedef typename cuv::reduce_functor_traits<V,RF> functor_traits;
 		const V* A_ptr = m.ptr();
-		vector<V2,host_memory_space,I> old(v); // copy old vector for factOld and factNew computations
-		V2* values_ptr = v.ptr();
+		vector<unconstV,host_memory_space,I> values(v.size()); // copy old vector for factOld and factNew computations
+		unconstV* values_ptr = values.ptr();
 		I* indices_ptr = indices.ptr();
-		V2* old_ptr = old.ptr();
+		V2* v_ptr = v.ptr();
 
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 
-		for(int j=0; j<v.size(); j++) 
+		for(unsigned int j=0; j<v.size(); j++) 
 			*values_ptr++ =functor_traits::init_value; // initialize column vector
 
-		values_ptr = v.ptr();
+		values_ptr = values.ptr();
 
-		for(int i=0;i<m.w();i++, values_ptr++) {
-			for(int j=0; j<m.h(); j++, A_ptr++){
+		for(unsigned int i=0;i<m.w();i++, values_ptr++) {
+			for(unsigned int j=0; j<m.h(); j++, A_ptr++){
 				func_disp(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,j);
 			}
 		}
-		values_ptr = v.ptr();
+		values_ptr = values.ptr();
 		indices_ptr = indices.ptr();
 
 		if (!functor_traits::returns_index){ 
 			if (factOld!=0)
-				for(int j=0; j<v.size(); j++,values_ptr++,old_ptr++) {
-					*values_ptr = factOld * *old_ptr + factNew * *values_ptr;
+				for(int j=0; j<v.size(); j++,values_ptr++,v_ptr++) {
+					*v_ptr = factOld * *v_ptr + factNew * *values_ptr;
 				}
 			else
-				for(int j=0; j<v.size(); j++,values_ptr++) {
-					*values_ptr = factNew * *values_ptr;
+				for(int j=0; j<v.size(); j++,values_ptr++,v_ptr++) {
+					*v_ptr = factNew * *values_ptr;
 				}
 		}
 		else
-			for(int j=0; j<v.size(); j++,values_ptr++,indices_ptr++)
-				*values_ptr = *indices_ptr;
+			for(int j=0; j<v.size(); j++,v_ptr++,indices_ptr++)
+				*v_ptr = *indices_ptr;
 
 	}
 
@@ -507,17 +508,17 @@ void argmax_to_row(V&v, const M& m) {
   template void argmax_to_column(vector<float,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
   template void argmax_to_column(vector<float,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);   
 
-#define INSTANTIATE_REDCOL(V,M) \
-  template void reduce_to_row(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&,reduce_functor,  const V&,const V&);
+#define INSTANTIATE_REDCOL(V,V2,M) \
+  template void reduce_to_row(vector<V2,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
+  template void reduce_to_col(vector<V2,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
+  template void reduce_to_row(vector<V2,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&); \
+  template void reduce_to_col(vector<V2,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&,reduce_functor,  const V&,const V&);
 
-#define INSTANTIATE_REDROW(V,M) \
-  template void reduce_to_col(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(vector<V,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(vector<V,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&);
+#define INSTANTIATE_REDROW(V,V2,M) \
+  template void reduce_to_col(vector<V2,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
+  template void reduce_to_row(vector<V2,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
+  template void reduce_to_col(vector<V2,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor, const V&,const V&); \
+  template void reduce_to_row(vector<V2,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&);
 
 INSTANTIATE_ARGMAX_TO_COL(float,row_major,unsigned int);
 INSTANTIATE_ARGMAX_TO_COL(int,row_major,unsigned int);
@@ -525,6 +526,10 @@ INSTANTIATE_ARGMAX_TO_COL(int,row_major,unsigned int);
 INSTANTIATE_ARGMAX_TO_ROW(float,column_major,unsigned int);
 INSTANTIATE_ARGMAX_TO_ROW(int,column_major,unsigned int);
 
-INSTANTIATE_REDCOL(float,column_major);
-INSTANTIATE_REDROW(float,row_major);
+INSTANTIATE_REDCOL(float,float,column_major);
+INSTANTIATE_REDROW(float,float,row_major);
+INSTANTIATE_REDCOL(float,int,column_major);
+INSTANTIATE_REDROW(float,int,row_major);
+INSTANTIATE_REDCOL(float,unsigned int,column_major);
+INSTANTIATE_REDROW(float,unsigned int,row_major);
 };//namespace cuv
