@@ -348,17 +348,23 @@ void reduce_to_col(__vector_type&v, const __matrix_type& m, reduce_functor rf, c
 		//matrix is column major
 		switch(rf) {
 			case RF_ADD:
-			reduce_to_col_impl::reduce_to_col<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_plus<typename __matrix_type::value_type,typename __matrix_type::value_type>());
+			reduce_to_col_impl::reduce_to_col<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_plus<mat_val,mat_val>());
 			break;
 			case RF_ADD_SQUARED:
-			reduce_to_col_impl::reduce_to_col<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_add_square<typename __matrix_type::value_type,typename __matrix_type::value_type>());
+			reduce_to_col_impl::reduce_to_col<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_add_square<mat_val,mat_val>());
 			break;
 			case RF_MIN:
-			reduce_to_col_impl::reduce_to_col<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_min<typename __matrix_type::value_type,typename __matrix_type::value_type>());
+			reduce_to_col_impl::reduce_to_col<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_min<mat_val,mat_val>());
 			break;
 			case RF_MAX:
-			reduce_to_col_impl::reduce_to_col<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_max<typename __matrix_type::value_type,typename __matrix_type::value_type>());
+			reduce_to_col_impl::reduce_to_col<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_max<mat_val,mat_val>());
 			break;
+			//case RF_ARGMAX:
+			//reduce_to_row_impl::reduce_to_col(v,m,factNew,factOld,reduce_argmax<vec_val,mat_val,mat_ind>());
+			//break;
+			//case RF_ARGMIN:
+			//reduce_to_row_impl::reduce_to_col(v,m,factNew,factOld,reduce_argmin<vec_val,mat_val,mat_ind>());
+			//break;
 			default:
 			throw std::runtime_error("supplied reduce_functor does not exist");
 		}
@@ -389,10 +395,10 @@ void reduce_to_row(__vector_type&v, const __matrix_type& m,reduce_functor rf, co
 			reduce_to_row_impl::reduce_to_row<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_add_square<mat_val,mat_val>());
 			break;
 			case RF_MIN:
-			reduce_to_row_impl::reduce_to_row<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_min<typename __matrix_type::value_type,typename __matrix_type::value_type>());
+			reduce_to_row_impl::reduce_to_row<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_min<mat_val,mat_val>());
 			break;
 			case RF_MAX:
-			reduce_to_row_impl::reduce_to_row<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_max<typename __matrix_type::value_type,typename __matrix_type::value_type>());
+			reduce_to_row_impl::reduce_to_row<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_max<mat_val,mat_val>());
 			break;
 			//case RF_ARGMAX:
 			//reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld,reduce_argmax<vec_val,mat_val,mat_ind>());
