@@ -43,10 +43,16 @@
  * @section features  Features
  *
  * Supported Platforms:
- * - This library was only tested on Ubuntu Karmic. It uses only standard
+ * - This library was only tested on Ubuntu Karmic, Lucid and Maverick. It uses only standard
  *   components and should run without major modification on any current linux
  *   system.
  *
+ * Supported GPUs:
+ * - All GT 9800 and GTX 280 and above
+ * - GT 9200 without convolutions. It might need some minor modifications to make the rest work.
+ *   If you want to use that card and have problems, just get in contact.
+ * - On 8800GTS, random numbers and convolutions wont work.
+ * 
  * Structure: 
  * - Like for example Matlab, CUV assumes that everything is a matrix or a vector.
  * - Vectors/Matrices can have an arbitrary type and can be on the host (CPU-memory) or device (GPU-memory)
