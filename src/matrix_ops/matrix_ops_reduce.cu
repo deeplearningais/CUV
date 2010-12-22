@@ -203,12 +203,15 @@ namespace reduce_to_col_impl {
 		unconstV* values_ptr = values.ptr();
 		I* indices_ptr = indices.ptr();
 
-		for(int j=0; j<v.size(); j++) 
+		for(int j=0; j<v.size(); j++) {
 			*values_ptr++ =reduce_functor_traits<RF>::init_value; // initialize column vector
+			*indices_ptr++ =0;
+		}
 
 		for(int i=0;i<m.w();i++) {
 			values_ptr = values.ptr();
-			for(int j=0; j<m.h(); j++,A_ptr++,values_ptr++) 
+			indices_ptr = indices.ptr();
+			for(int j=0; j<m.h(); j++,A_ptr++,values_ptr++,indices_ptr++) 
 				func_disp(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,j);
 		}
 
@@ -286,12 +289,14 @@ namespace reduce_to_row_impl {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 
-		for(unsigned int j=0; j<v.size(); j++) 
-			*values_ptr++ =functor_traits::init_value; // initialize column vector
+		for(unsigned int j=0; j<v.size(); j++) {
+			*values_ptr++ =functor_traits::init_value; // initialize row vector
+			*indices_ptr++=0;
+		}
 
 		values_ptr = values.ptr();
-
-		for(unsigned int i=0;i<m.w();i++, values_ptr++) {
+		indices_ptr = indices.ptr();
+		for(unsigned int i=0;i<m.w();i++, values_ptr++, indices_ptr++) {
 			for(unsigned int j=0; j<m.h(); j++, A_ptr++){
 				func_disp(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,j);
 			}
@@ -310,8 +315,9 @@ namespace reduce_to_row_impl {
 				}
 		}
 		else
-			for(int j=0; j<v.size(); j++,v_ptr++,indices_ptr++)
+			for(int j=0; j<v.size(); j++,v_ptr++,indices_ptr++){
 				*v_ptr = *indices_ptr;
+			}
 
 	}
 
