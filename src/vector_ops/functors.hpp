@@ -155,9 +155,9 @@ struct bf_axpby: binary_functor {
 	__device__  __host__       T operator()(const T& t, const U& u) const{ return  a*t + b*((T)u); } 
 };
 
-template< class J, class V, class I>
+template<class V, class I>
 struct reduce_argmax : quadrary_functor {  
-	__device__  __host__    void    operator()(V& t, J& i, const V& u, const I& j) const{
+	__device__  __host__    void    operator()(V& t, I& i, const V& u, const I& j) const{
 	   if (t > u) {
 		  t = u;
 		  i = (I) j;
@@ -165,9 +165,9 @@ struct reduce_argmax : quadrary_functor {
 	} 
 };
 
-template< class V, class I, class J>
+template< class V, class I>
 struct reduce_argmin : quadrary_functor {  
-	__device__  __host__    void    operator()(V& t, I& i,const  V& u, const J& j) const{
+	__device__  __host__    void    operator()(V& t, I& i,const  V& u, const I& j) const{
 	   if (t < u) {
 		  t = u;
 		  i = (I) j;
@@ -198,15 +198,15 @@ struct reduce_functor_traits<T,bf_min<T,T> >{
 	typedef T result_type;
 };
 
-template<class I, class T, class J>
-struct reduce_functor_traits<T,reduce_argmax<I,T,J> >{  
+template<class I, class T>
+struct reduce_functor_traits<T,reduce_argmax<T,I> >{  
 	static const T init_value = -INT_MAX;     
 	static const bool returns_index=true;
 	typedef unsigned int result_type;	
 };
 
-template<class I, class T, class J>
-struct reduce_functor_traits<T,reduce_argmin<I,T,J> >{  
+template<class I, class T>
+struct reduce_functor_traits<T,reduce_argmin<T,I> >{  
 	static const T init_value = INT_MAX;     
 	static const bool returns_index=true;
 	typedef unsigned int result_type;	

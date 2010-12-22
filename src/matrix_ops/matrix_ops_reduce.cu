@@ -40,10 +40,14 @@ __global__
 void reduce_to_col_kernel(const T* matrix, V* vector, int nCols, int nRows,
 		T param, T factNew, T factOld, RF reduce_functor) {
 
-	__shared__ typename cuv::unconst<T>::type shared[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
+	typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
+	typedef typename cuv::reduce_functor_traits<T,RF> functor_traits;
+	functor_dispatcher_type func_disp;
 
+	__shared__ unsigned int indices[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
+	__shared__ typename cuv::unconst<T>::type values[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
 	V sum;
-
+	unsigned int arg_index; // for storing indeces of maxima/minima for arg functors
 	int tx = threadIdx.x;
 	int bx = blockIdx.x;
 	int ty = threadIdx.y;
@@ -57,35 +61,38 @@ void reduce_to_col_kernel(const T* matrix, V* vector, int nCols, int nRows,
 		return;
 	int off = blockDim.y;
 
-	sum = cuv::reduce_functor_traits<T,RF>::init_value;
+	sum = functor_traits::init_value;
+	arg_index = 0;
+
 	for (int my = ty; my < nCols; my += off) {
 		V f = matrix[my * nRows + row_idx ];
-		sum=reduce_functor(sum,f);
+		func_disp(reduce_functor,sum,arg_index,f,my);
+		//sum=reduce_functor(sum,f);
 	}
 
-	shared[ty][tx] = sum;
+	values[ty][tx] = sum;
+	indices[ty][tx] = arg_index;
 
 	__syncthreads();
 
 	int offset = blockDim.y / 2;
 	while (offset > 0) {
 		if (ty < offset) {
-			shared[ty][tx]=reduce_functor(shared[ty][tx],shared[ty + offset][tx]);
+			func_disp(reduce_functor,values[ty][tx],indices[ty][tx],values[ty+offset][tx],indices[ty+offset][tx]);
+			//shared[ty][tx]=reduce_functor(shared[ty][tx],shared[ty + offset][tx]);
 		}
 		offset >>= 1;
 		__syncthreads();
 	}
 	
 	if (ty == 0) {
-		if (row_idx >= nCols){
-		}
 		if (cuv::reduce_functor_traits<T,RF>::returns_index)
-			vector[row_idx] = shared[0][tx];
+			vector[row_idx] = indices[0][tx];
 		else
 			if(factOld != 0.f){
-				vector[row_idx] = vector[row_idx] * factOld + shared[0][tx] * factNew;
+				vector[row_idx] = vector[row_idx] * factOld + values[0][tx] * factNew;
 			}else{
-				vector[row_idx] = shared[0][tx] * factNew;
+				vector[row_idx] = values[0][tx] * factNew;
 			}
 	}
 }
@@ -101,7 +108,6 @@ void reduce_to_row_kernel(const T* matrix, V* vector, int nCols, int nRows,
 	typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
 	functor_dispatcher_type func_disp;
 	typedef typename cuv::reduce_functor_traits<T,RF> functor_traits;
-	typedef typename functor_traits::result_type result_type;
 	int off = blockDim.x;
 	
 	values[tx] = functor_traits::init_value;
@@ -187,14 +193,14 @@ namespace reduce_to_col_impl {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
 		typedef typename unconst<V>::type unconstV;
-		vector<unconstV,host_memory_space,I> indices(v.size());
+		vector<I,host_memory_space,I> indices(v.size());
 		typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
 		functor_dispatcher_type func_disp;
 		typedef typename cuv::reduce_functor_traits<V,RF> functor_traits;
 		const V* A_ptr = m.ptr();
 		vector<V2,host_memory_space,I> old(v); // copy old vector for factOld and factNew computations
 		V2* values_ptr = v.ptr();
-		unconstV* indices_ptr = indices.ptr();
+		I* indices_ptr = indices.ptr();
 
 		for(int j=0; j<v.size(); j++) 
 			*values_ptr++ =reduce_functor_traits<V,RF>::init_value; // initialize column vector
@@ -266,32 +272,33 @@ namespace reduce_to_row_impl {
 	void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
 		cuvAssert(v.size()==m.w());
 		typedef typename unconst<V>::type unconstV;
-		vector<unconstV,host_memory_space,I> indices(v.size());
+		vector<I,host_memory_space,I> indices(v.size());
 		typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
+		functor_dispatcher_type func_disp;
 		typedef typename cuv::reduce_functor_traits<V,RF> functor_traits;
 		const V* A_ptr = m.ptr();
 		vector<V2,host_memory_space,I> old(v); // copy old vector for factOld and factNew computations
 		V2* values_ptr = v.ptr();
-		unconstV* indices_ptr = indices.ptr();
+		I* indices_ptr = indices.ptr();
 		V2* old_ptr = old.ptr();
 
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 
 		for(int j=0; j<v.size(); j++) 
-			*values_ptr++ =reduce_functor_traits<V,RF>::init_value; // initialize column vector
+			*values_ptr++ =functor_traits::init_value; // initialize column vector
 
 		values_ptr = v.ptr();
 
 		for(int i=0;i<m.w();i++, values_ptr++) {
 			for(int j=0; j<m.h(); j++, A_ptr++){
-					*values_ptr = reduce_functor(*A_ptr,*values_ptr);
+				func_disp(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,j);
 			}
 		}
 		values_ptr = v.ptr();
 		indices_ptr = indices.ptr();
 
-		if (!reduce_functor_traits<V,RF>::returns_index){ 
+		if (!functor_traits::returns_index){ 
 			if (factOld!=0)
 				for(int j=0; j<v.size(); j++,values_ptr++,old_ptr++) {
 					*values_ptr = factOld * *old_ptr + factNew * *values_ptr;
@@ -338,6 +345,7 @@ void reduce_to_col(__vector_type&v, const __matrix_type& m, reduce_functor rf, c
 	typedef typename __matrix_type::memory_layout mat_mem;
 	typedef typename __vector_type::value_type vec_val;
 	typedef typename __vector_type::index_type vec_ind;
+	typedef typename unconst<mat_val>::type unconst_mat_val;
 	if (IsSame<mat_mem,row_major>::Result::value){
 		//matrix is row major
 		//create column major view and call reduce_to_row for column major
@@ -359,12 +367,12 @@ void reduce_to_col(__vector_type&v, const __matrix_type& m, reduce_functor rf, c
 			case RF_MAX:
 			reduce_to_col_impl::reduce_to_col<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_max<mat_val,mat_val>());
 			break;
-			//case RF_ARGMAX:
-			//reduce_to_row_impl::reduce_to_col(v,m,factNew,factOld,reduce_argmax<vec_val,mat_val,mat_ind>());
-			//break;
-			//case RF_ARGMIN:
-			//reduce_to_row_impl::reduce_to_col(v,m,factNew,factOld,reduce_argmin<vec_val,mat_val,mat_ind>());
-			//break;
+			case RF_ARGMAX:
+			reduce_to_col_impl::reduce_to_col<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,reduce_argmax<unconst_mat_val,mat_ind>());
+			break;
+			case RF_ARGMIN:
+			reduce_to_col_impl::reduce_to_col<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,reduce_argmin<unconst_mat_val,mat_ind>());
+			break;
 			default:
 			throw std::runtime_error("supplied reduce_functor does not exist");
 		}
@@ -379,6 +387,7 @@ void reduce_to_row(__vector_type&v, const __matrix_type& m,reduce_functor rf, co
 	typedef typename __matrix_type::memory_layout mat_mem;
 	typedef typename __vector_type::value_type vec_val;
 	typedef typename __vector_type::index_type vec_ind;
+	typedef typename unconst<mat_val>::type unconst_mat_val;
 	if (IsSame<mat_mem,row_major>::Result::value){
 		//matrix is row major
 		//create column major view and call reduce_to_col for column major
@@ -400,12 +409,12 @@ void reduce_to_row(__vector_type&v, const __matrix_type& m,reduce_functor rf, co
 			case RF_MAX:
 			reduce_to_row_impl::reduce_to_row<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,bf_max<mat_val,mat_val>());
 			break;
-			//case RF_ARGMAX:
-			//reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld,reduce_argmax<vec_val,mat_val,mat_ind>());
-			//break;
-			//case RF_ARGMIN:
-			//reduce_to_row_impl::reduce_to_row(v,m,factNew,factOld,reduce_argmin<vec_val,mat_val,mat_ind>());
-			//break;
+			case RF_ARGMAX:
+			reduce_to_row_impl::reduce_to_row<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,reduce_argmax<unconst_mat_val,mat_ind>());
+			break;
+			case RF_ARGMIN:
+			reduce_to_row_impl::reduce_to_row<mat_val,mat_ind,vec_val>(v,m,factNew,factOld,reduce_argmin<unconst_mat_val,mat_ind>());
+			break;
 			default:
 			throw std::runtime_error("supplied reduce_functor does not exist");
 		}
