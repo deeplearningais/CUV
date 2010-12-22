@@ -225,40 +225,6 @@ namespace reduce_to_col_impl {
 
 	}
 	template<class V,class I, class V2, class RF>
-	void reduce_to_col(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-		cuvAssert(false);
-		//cuvAssert(m.ptr() != NULL);
-		//cuvAssert(m.h() == v.size());
-		//vector<V,host_memory_space,I> values(v.size());
-		//typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
-		//functor_dispatcher_type func_disp;
-		//typedef typename cuv::reduce_functor_traits<T,RF> functor_traits;
-		//const V* A_ptr = m.ptr();
-		//vector<V2,host_memory_space,I> old(v); // copy old vector for factOld and factNew computations
-		//V* values_ptr = values.ptr();
-		//V2* old_ptr = old.ptr();
-
-		//V2* v_ptr = v.ptr();
-		//for(int j=0; j<v.size(); j++) 
-			//*v_ptr++ =reduce_functor_traits<V,RF>::init_value; // initialize column vector
-
-		////else 
-			////for(int j=0; j<v.size(); j++) {
-			///[>v_ptr++ *= factOld;
-			////}
-		//v_ptr = v.ptr();
-		//for(int i=0;i<m.h(); i++,v_ptr++) {
-			//for(int j=0; j<m.w(); j++,A_ptr++) {
-				//func_disp(reduce_functor,*v_ptr,*values,*A_ptr,j);
-			//}
-		//}
-
-		//if (!reduce_functor_traits<V,RF>::is_simple && factOld!=0) 
-			//for(int j=0; j<v.size(); j++,v_ptr++,old_ptr++) {
-				//*v_ptr = factOld *old_ptr + factNew * v_ptr;
-			//}
-	}
-	template<class V,class I, class V2, class RF>
 	void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
@@ -282,75 +248,26 @@ namespace reduce_to_col_impl {
 		reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,reduce_functor);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
+	// Dummy functions so that everything compiles:
+	// actually only column major functions are ever used. row major cases are maped to "transposed" colum major case.
 	template<class V,class I, class V2, class RF>
 	void reduce_to_col(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.h() == v.size());
-#if 1
-		static const int BLOCK_SIZE = 16;
-		dim3 grid(1, m.h());                           //TODO: make reduce_to_row kernel use grids
-		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1); // not working for m.h() > 65535
-		// yes, we abuse the reduce_to_row kernel here :)
-		reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,reduce_functor);
-#else
-		cuvAssert(rf == RF_ADD); // what else does alex support?
-
-		vector<V2,dev_memory_space> w(v.size());
-
-		if(factOld != 0.0f)
-			copy(w, v);
-
-		NVMatrix tmp(const_cast<V*>(m.ptr()),(int)m.h(),(int)m.w(),false);
-		NVMatrix dst(v.ptr(),(int)v.size(),(int)1,false);
-		tmp.aggregate(1,dst,256,NVMatrix::SUM);
-
-		if(factNew != 1.0f)
-			apply_scalar_functor(v, SF_MULT, factNew);
-
-		if(factOld != 0.0f)
-			apply_binary_functor(v, w, BF_XPBY, factOld);
-#endif
-
-		cuvSafeCall(cudaThreadSynchronize());
+		cuvAssert(false);
+	}
+	template<class V,class I, class V2, class RF>
+	void reduce_to_col(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
+		cuvAssert(false);
 	}
 
 }//namespace reduce_to_col_imp
 
 namespace reduce_to_row_impl {
 	template<class V,class I, class V2, class RF>
-	void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-		cuvAssert(false);
-		//cuvAssert(m.ptr() != NULL);
-		//cuvAssert(m.w() == v.size());
-		//const V* A_ptr = m.ptr();
-
-		//V2* v_ptr = v.ptr();
-
-		//if (reduce_functor_traits<V,RF>::is_simple || factOld==0) 
-			//for(int j=0; j<v.size(); j++) {
-				//*v_ptr++ =reduce_functor_traits<V,RF>::init_value;
-			//}
-		//else 
-			//for(int j=0; j<v.size(); j++) {
-			//*v_ptr++ *= factOld;
-			//}
-		//for(int i=0;i<m.h();i++) {
-			//v_ptr = v.ptr();
-			//for(int j=0; j<m.w(); j++, A_ptr++, v_ptr++) {
-				//if (reduce_functor_traits<V,RF>::is_simple)
-					//*v_ptr = reduce_functor(*A_ptr,*v_ptr);
-				//else
-					//*v_ptr = reduce_functor(factNew * *A_ptr,*v_ptr);
-			//}
-		//}
-	}
-	template<class V,class I, class V2, class RF>
 	void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
 		cuvAssert(v.size()==m.w());
 		typedef typename unconst<V>::type unconstV;
 		vector<unconstV,host_memory_space,I> indices(v.size());
 		typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
-		//functor_dispatcher_type func_disp;
 		typedef typename cuv::reduce_functor_traits<V,RF> functor_traits;
 		const V* A_ptr = m.ptr();
 		vector<V2,host_memory_space,I> old(v); // copy old vector for factOld and factNew computations
@@ -401,31 +318,15 @@ namespace reduce_to_row_impl {
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
+	// Dummy functions so that everything compiles:
+	// actually only column major functions are ever used. row major cases are maped to "transposed" colum major case.
 	template<class V,class I, class V2, class RF>
 	void reduce_to_row(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
 		cuvAssert(false);
-		//cuvAssert(m.ptr() != NULL);
-		//cuvAssert(m.w() == v.size());
-		//static const long int BLOCK_SIZE = 16;
-		//const int blocks_needed = ceil((float)m.w()/(BLOCK_SIZE*2));
-
-		//int grid_x =0, grid_y=0;
-
-		//// how to handle grid dimension constraint
-		//if (blocks_needed <= 65535){
-			//grid_x = blocks_needed;
-			//grid_y = 1;
-		//}else{
-			//// try to avoid large noop blocks by adjusting x and y dimension to nearly equal size
-			//grid_x = ceil(sqrt(blocks_needed));
-			//grid_y = ceil((float)blocks_needed/grid_x);
-		//}
-
-		//dim3 grid(grid_x, grid_y);
-		//dim3 threads(BLOCK_SIZE*2, BLOCK_SIZE/2);
-		//// yes, we abuse the reduce_to_col kernel here :)
-		//reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,reduce_functor);
-		//cuvSafeCall(cudaThreadSynchronize());
+	}
+	template<class V,class I, class V2, class RF>
+	void reduce_to_row(vector<V2,host_memory_space,I>&v, const dense_matrix<V,row_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
+		cuvAssert(false);
 	}
 
 }//namespace reduce_to_row_imp
