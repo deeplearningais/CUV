@@ -41,7 +41,7 @@ void reduce_to_col_kernel(const T* matrix, V* vector, int nCols, int nRows,
 		T param, T factNew, T factOld, RF reduce_functor) {
 
 	typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
-	typedef typename cuv::reduce_functor_traits<T,RF> functor_traits;
+	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
 	typedef typename cuv::unconst<T>::type unconst_value_type;
 	functor_dispatcher_type func_disp;
 
@@ -87,7 +87,7 @@ void reduce_to_col_kernel(const T* matrix, V* vector, int nCols, int nRows,
 	}
 	
 	if (ty == 0) {
-		if (cuv::reduce_functor_traits<T,RF>::returns_index)
+		if (cuv::reduce_functor_traits<RF>::returns_index)
 			vector[row_idx] = indices[0][tx];
 		else
 			if(factOld != 0.f){
@@ -108,7 +108,7 @@ void reduce_to_row_kernel(const T* matrix, V* vector, int nCols, int nRows,
 	const int ty = threadIdx.y, by = blockIdx.y;
 	typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
 	functor_dispatcher_type func_disp;
-	typedef typename cuv::reduce_functor_traits<T,RF> functor_traits;
+	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
 	int off = blockDim.x;
 	
 	values[tx] = functor_traits::init_value;
@@ -197,14 +197,14 @@ namespace reduce_to_col_impl {
 		vector<I,host_memory_space,I> indices(v.size());
 		typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
 		functor_dispatcher_type func_disp;
-		typedef typename cuv::reduce_functor_traits<V,RF> functor_traits;
+		typedef typename cuv::reduce_functor_traits<RF> functor_traits;
 		const V* A_ptr = m.ptr();
 		vector<unconstV,host_memory_space,I> values(v.size()); // copy old vector for factOld and factNew computations
 		unconstV* values_ptr = values.ptr();
 		I* indices_ptr = indices.ptr();
 
 		for(int j=0; j<v.size(); j++) 
-			*values_ptr++ =reduce_functor_traits<V,RF>::init_value; // initialize column vector
+			*values_ptr++ =reduce_functor_traits<RF>::init_value; // initialize column vector
 
 		for(int i=0;i<m.w();i++) {
 			values_ptr = values.ptr();
@@ -216,7 +216,7 @@ namespace reduce_to_col_impl {
 		V2* v_ptr = v.ptr();
 		indices_ptr = indices.ptr();
 
-		if (!reduce_functor_traits<V,RF>::returns_index) 
+		if (!reduce_functor_traits<RF>::returns_index) 
 			if (factOld!=0)
 				for(int j=0; j<v.size(); j++,values_ptr++,v_ptr++) {
 					*v_ptr = factOld * *v_ptr + factNew * *values_ptr;
@@ -276,7 +276,7 @@ namespace reduce_to_row_impl {
 		vector<I,host_memory_space,I> indices(v.size());
 		typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
 		functor_dispatcher_type func_disp;
-		typedef typename cuv::reduce_functor_traits<V,RF> functor_traits;
+		typedef typename cuv::reduce_functor_traits<RF> functor_traits;
 		const V* A_ptr = m.ptr();
 		vector<unconstV,host_memory_space,I> values(v.size());
 		unconstV* values_ptr = values.ptr();

@@ -6,11 +6,19 @@ struct binary_functor_tag{};
 struct quadrary_functor_tag{};
 
 namespace cuv {
-struct binary_functor{
+template<class T>
+struct functor{
+
+	typedef T return_type;
+};
+
+template<class T>
+struct binary_functor: functor<T>{
 	typedef binary_functor_tag functor_type;
 };
 
-struct quadrary_functor{
+template<class T>
+struct quadrary_functor : functor<T>{
 	typedef quadrary_functor_tag functor_type;
 };
 
@@ -114,41 +122,41 @@ struct uf_base_op3{
 
 // functors without parameter
 template<class T, class U>
-struct bf_plus : binary_functor {  __device__  __host__       T operator()(const T& t, const U& u)      const{ return  t + (T)u; } };
+struct bf_plus : binary_functor<T> {  __device__  __host__       T operator()(const T& t, const U& u)      const{ return  t + (T)u; } };
 template<class T, class U>
-struct bf_minus: binary_functor {  __device__  __host__      T operator()(const T& t, const U& u)      const{ return  t - (T)u; } };
+struct bf_minus: binary_functor<T> {  __device__  __host__      T operator()(const T& t, const U& u)      const{ return  t - (T)u; } };
 template<class T, class U>
-struct bf_multiplies: binary_functor {  __device__  __host__ T operator()(const T& t, const U& u)      const{ return  t * (T)u; } };
+struct bf_multiplies: binary_functor<T> {  __device__  __host__ T operator()(const T& t, const U& u)      const{ return  t * (T)u; } };
 template<class T, class U>
-struct bf_divides: binary_functor {  __device__  __host__    T operator()(const T& t, const U& u)      const{ return  t / (T)u; } };
+struct bf_divides: binary_functor<T> {  __device__  __host__    T operator()(const T& t, const U& u)      const{ return  t / (T)u; } };
 template<class T, class U>
-struct bf_squared_diff: binary_functor {__device__ __host__  T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
+struct bf_squared_diff: binary_functor<T> {__device__ __host__  T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
 template<class T, class U>
-struct bf_add_square: binary_functor {__device__ __host__  T operator()(const T& t, const U& u)      const{ return t + (T)(u*u);} };
+struct bf_add_square: binary_functor<T> {__device__ __host__  T operator()(const T& t, const U& u)      const{ return t + (T)(u*u);} };
 template<class T, class U>
-struct bf_and: binary_functor {__device__ __host__   T operator()(const T& t, const U& u)      const{ return t && u; } };
+struct bf_and: binary_functor<T> {__device__ __host__   T operator()(const T& t, const U& u)      const{ return t && u; } };
 template<class T, class U>
-struct bf_or: binary_functor { __device__ __host__   T operator()(const T& t, const U& u)      const{ return t || u; } };
+struct bf_or: binary_functor<T> { __device__ __host__   T operator()(const T& t, const U& u)      const{ return t || u; } };
 template<class T, class U>
-struct bf_min: binary_functor { __device__ __host__  T operator()(const T& t, const U& u)      const{ return t<u ? t : u; } };
+struct bf_min: binary_functor<T> { __device__ __host__  T operator()(const T& t, const U& u)      const{ return t<u ? t : u; } };
 template<class T, class U>
-struct bf_max: binary_functor { __device__ __host__  T operator()(const T& t, const U& u)      const{ return t>u ? t : u; } };
+struct bf_max: binary_functor<T> { __device__ __host__  T operator()(const T& t, const U& u)      const{ return t>u ? t : u; } };
 
 // functors with parameter
 template<class T, class U>
-struct bf_axpy: binary_functor {  
+struct bf_axpy: binary_functor<T> {  
 	const T a;
 	bf_axpy(const T& _a):a(_a){}
 	__device__  __host__       T operator()(const T& t, const U& u) const{ return  a*t+(T)u; } 
 };
 template<class T, class U>
-struct bf_xpby: binary_functor {  
+struct bf_xpby: binary_functor<T> {  
 	const T b;
 	bf_xpby(const T& _b):b(_b){}
 	__device__  __host__       T operator()(const T& t, const U& u) const{ return  t+b*(T)u; } 
 };
 template<class T, class U>
-struct bf_axpby: binary_functor {  
+struct bf_axpby: binary_functor<T> {  
 	const T a;
 	const T b;
 	bf_axpby(const T& _a, const T& _b):a(_a),b(_b){}
@@ -156,9 +164,9 @@ struct bf_axpby: binary_functor {
 };
 
 template<class V, class I>
-struct reduce_argmax : quadrary_functor {  
+struct reduce_argmax : quadrary_functor<void> {  
 	__device__  __host__    void    operator()(V& t, I& i, const V& u, const I& j) const{
-	   if (t > u) {
+	   if (u > t) {
 		  t = u;
 		  i = (I) j;
 	   }
@@ -166,50 +174,45 @@ struct reduce_argmax : quadrary_functor {
 };
 
 template< class V, class I>
-struct reduce_argmin : quadrary_functor {  
+struct reduce_argmin : quadrary_functor<void> {  
 	__device__  __host__    void    operator()(V& t, I& i,const  V& u, const I& j) const{
-	   if (t < u) {
+	   if (u < t) {
 		  t = u;
 		  i = (I) j;
 	   }
 	} 
 };
 // for reduce functors: set initial value of shared memory
-template<class T, class FUNC>
+template<class FUNC>
 struct reduce_functor_traits{ 
-	static const T init_value = 0;     
+	static const typename FUNC::return_type init_value = 0;     
 	static const bool is_simple=false;
 	static const bool returns_index = false;
-	typedef T result_type;
 };
 
 template<class T>
-struct reduce_functor_traits<T,bf_max<T,T> >{
+struct reduce_functor_traits<bf_max<T,T> >{
 	static const T init_value = -INT_MAX;    
 	static const bool returns_index = false;
-	typedef T result_type;
 
 };
 
 template<class T>
-struct reduce_functor_traits<T,bf_min<T,T> >{  
+struct reduce_functor_traits<bf_min<T,T> >{  
 	static const T init_value = INT_MAX;     
 	static const bool returns_index = false;
-	typedef T result_type;
 };
 
 template<class I, class T>
-struct reduce_functor_traits<T,reduce_argmax<T,I> >{  
+struct reduce_functor_traits<reduce_argmax<T,I> >{  
 	static const T init_value = -INT_MAX;     
 	static const bool returns_index=true;
-	typedef unsigned int result_type;	
 };
 
 template<class I, class T>
-struct reduce_functor_traits<T,reduce_argmin<T,I> >{  
+struct reduce_functor_traits<reduce_argmin<T,I> >{  
 	static const T init_value = INT_MAX;     
 	static const bool returns_index=true;
-	typedef unsigned int result_type;	
 };
 
 template<class F>
