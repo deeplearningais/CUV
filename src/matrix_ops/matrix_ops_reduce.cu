@@ -116,7 +116,7 @@ void reduce_to_row_kernel(const T* matrix, V* vector, int nCols, int nRows,
 
 	for (unsigned int my = tx; my < nRows; my += off) {
 		T f = matrix[by * nRows + bx * blockDim.x + my];
-			func_disp(reduce_functor,values[tx],indices[tx],f,my);
+		func_disp(reduce_functor,values[tx],indices[tx],f,my);
 	}
 	__syncthreads();
 
@@ -278,7 +278,7 @@ namespace reduce_to_row_impl {
 		functor_dispatcher_type func_disp;
 		typedef typename cuv::reduce_functor_traits<V,RF> functor_traits;
 		const V* A_ptr = m.ptr();
-		vector<unconstV,host_memory_space,I> values(v.size()); // copy old vector for factOld and factNew computations
+		vector<unconstV,host_memory_space,I> values(v.size());
 		unconstV* values_ptr = values.ptr();
 		I* indices_ptr = indices.ptr();
 		V2* v_ptr = v.ptr();
