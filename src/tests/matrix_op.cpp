@@ -569,4 +569,35 @@ BOOST_AUTO_TEST_CASE( mat_op_argmax )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( mat_op_argmax_2 )
+{
+	const int n = 517;
+	const int m = 212;
+
+	dense_matrix<float,column_major,host_memory_space> hA(n, m);
+	dense_matrix<float,column_major,dev_memory_space>  dA(n, m);
+	vector<int,host_memory_space> v(m);
+	vector<int,dev_memory_space> x(m);
+
+	dense_matrix<float,row_major,host_memory_space> hB(m, n);
+	dense_matrix<float,row_major,dev_memory_space>  dB(m, n);
+	vector<int,host_memory_space> w(m);
+	vector<int,dev_memory_space> y(m);
+
+	fill_rnd_uniform(hA.vec());
+	fill_rnd_uniform(hB.vec());
+	convert(dA, hA);
+	convert(dB, hB);
+
+	reduce_to_row(v, hA,RF_ARGMAX);
+	reduce_to_row(x, dA,RF_ARGMAX);
+
+	reduce_to_col(w, hB,RF_ARGMAX);
+	reduce_to_col(y, dB,RF_ARGMAX);
+
+	for(int i=0; i<m; i++) {
+		BOOST_CHECK_EQUAL(v[i], x[i]);
+		BOOST_CHECK_EQUAL(w[i], y[i]);
+	}
+}
 BOOST_AUTO_TEST_SUITE_END()
