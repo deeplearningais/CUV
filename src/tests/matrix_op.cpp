@@ -538,19 +538,25 @@ BOOST_AUTO_TEST_CASE( mat_op_transpose )
 }
 
 BOOST_AUTO_TEST_CASE( mat_op_argmax )
-{
+{	
 	const int n = 517;
 	const int m = 212;
 
+	//const int n = 51;
+	//const int m = 21;
 	dense_matrix<float,column_major,host_memory_space> hA(n, m);
 	dense_matrix<float,column_major,dev_memory_space>  dA(n, m);
 	vector<int,host_memory_space> v(m);
 	vector<int,dev_memory_space> x(m);
+	vector<int,host_memory_space> v2(m);
+	vector<int,dev_memory_space> x2(m);
 
 	dense_matrix<float,row_major,host_memory_space> hB(m, n);
 	dense_matrix<float,row_major,dev_memory_space>  dB(m, n);
 	vector<int,host_memory_space> w(m);
 	vector<int,dev_memory_space> y(m);
+	vector<int,host_memory_space> w2(m);
+	vector<int,dev_memory_space> y2(m);
 
 	fill_rnd_uniform(hA.vec());
 	fill_rnd_uniform(hB.vec());
@@ -562,10 +568,19 @@ BOOST_AUTO_TEST_CASE( mat_op_argmax )
 
 	argmax_to_column(w, hB);
 	argmax_to_column(y, dB);
+	reduce_to_row(v2, hA,RF_ARGMAX);
+	reduce_to_row(x2, dA,RF_ARGMAX);
+
+	reduce_to_col(w2, hB,RF_ARGMAX);
+	reduce_to_col(y2, dB,RF_ARGMAX);
 
 	for(int i=0; i<m; i++) {
 		BOOST_CHECK_EQUAL(v[i], x[i]);
 		BOOST_CHECK_EQUAL(w[i], y[i]);
+		BOOST_CHECK_EQUAL(v[i], v2[i]);
+		BOOST_CHECK_EQUAL(x[i], x2[i]);
+		BOOST_CHECK_EQUAL(w[i], w2[i]);
+		BOOST_CHECK_EQUAL(y[i], y2[i]);
 	}
 }
 
