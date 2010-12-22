@@ -231,7 +231,6 @@ namespace reduce_impl {
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
-
 	template<int dim, class __matrix_type, class __vector_type, class RF>
 	//struct reduce<dim, host_memory_space, __matrix_type, __vector_type, RF>{ void operator()(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
 	struct reduce<dim, host_memory_space, __matrix_type, __vector_type, RF>{ void operator()(__vector_type&v, const __matrix_type & m, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld, RF reduce_functor) const{
@@ -243,28 +242,24 @@ namespace reduce_impl {
 		typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
 
 		cuvAssert(m.ptr() != NULL);
-		if (dim==0) {
+		// assert that vector has correct length
+		if (dim==0) 
 			cuvAssert(v.size()==m.w());
-		}
-		else if(dim==1){
-				cuvAssert(v.size()==m.h());
-		}
+		if(dim==1)
+			cuvAssert(v.size()==m.h());
 
 		functor_dispatcher_type func_disp;
 		const V* A_ptr = m.ptr();
 		vector<unconstV,host_memory_space,I> values(v.size());
 		unconstV* values_ptr = values.ptr();
-
 		vector<I,host_memory_space,I>* indices=NULL;
 		I* indices_ptr = NULL;
+		// if we want to return indices, get the memory
 		if (functor_traits::returns_index){
 			indices=new vector<I,host_memory_space,I>(v.size());
 			indices_ptr= indices->ptr();
 		}
-
 		V2* v_ptr = v.ptr();
-
-
 		// initiallize vectors - maybe not strictly necessary?
 		for(unsigned int j=0; j<v.size(); j++) {
 			*values_ptr++ =functor_traits::init_value; 
@@ -307,13 +302,12 @@ namespace reduce_impl {
 					*v_ptr = factNew * *values_ptr;
 				}
 		}
-		else
-			for(int j=0; j<v.size(); j++,v_ptr++,indices_ptr++){
+		else{
+			for(int j=0; j<v.size(); j++,v_ptr++,indices_ptr++)
 				*v_ptr = *indices_ptr;
-			}
-
-		if (functor_traits::returns_index)
 			delete indices;
+		}
+
 
 	}};
 
@@ -384,7 +378,6 @@ void reduce_to_row(__vector_type&v, const __matrix_type& m,reduce_functor rf, co
 }
 
 namespace argmax_to_XXX_impl{
-
 	template<class V, class V2, class I>
 	void argmax_to_row(vector<V2,dev_memory_space>&v, const dense_matrix<V,column_major, dev_memory_space, I>& m) {
 		cuvAssert(m.ptr() != NULL);
