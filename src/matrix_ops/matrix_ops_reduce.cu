@@ -40,8 +40,8 @@ __global__
 void reduce_to_col_kernel(const T* matrix, V* vector, int nCols, int nRows,
 		T param, T factNew, T factOld, RF reduce_functor) {
 
-	typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
 	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
+	typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
 	typedef typename cuv::unconst<T>::type unconst_value_type;
 	functor_dispatcher_type func_disp;
 
@@ -106,9 +106,9 @@ void reduce_to_row_kernel(const T* matrix, V* vector, int nCols, int nRows,
 	__shared__ typename cuv::unconst<T>::type values[BLOCK_SIZE * BLOCK_SIZE];
 	const int tx = threadIdx.x, bx = blockIdx.x;
 	const int ty = threadIdx.y, by = blockIdx.y;
-	typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
-	functor_dispatcher_type func_disp;
 	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
+	typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
+	functor_dispatcher_type func_disp;
 	int off = blockDim.x;
 	
 	values[tx] = functor_traits::init_value;
@@ -195,9 +195,9 @@ namespace reduce_to_col_impl {
 		cuvAssert(m.h() == v.size());
 		typedef typename unconst<V>::type unconstV;
 		vector<I,host_memory_space,I> indices(v.size());
-		typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
-		functor_dispatcher_type func_disp;
 		typedef typename cuv::reduce_functor_traits<RF> functor_traits;
+		typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
+		functor_dispatcher_type func_disp;
 		const V* A_ptr = m.ptr();
 		vector<unconstV,host_memory_space,I> values(v.size()); // copy old vector for factOld and factNew computations
 		unconstV* values_ptr = values.ptr();
@@ -277,9 +277,9 @@ namespace reduce_to_row_impl {
 		cuvAssert(v.size()==m.w());
 		typedef typename unconst<V>::type unconstV;
 		vector<I,host_memory_space,I> indices(v.size());
-		typedef typename cuv::functor_dispatcher<typename RF::functor_type> functor_dispatcher_type;
-		functor_dispatcher_type func_disp;
 		typedef typename cuv::reduce_functor_traits<RF> functor_traits;
+		typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
+		functor_dispatcher_type func_disp;
 		const V* A_ptr = m.ptr();
 		vector<unconstV,host_memory_space,I> values(v.size());
 		unconstV* values_ptr = values.ptr();
