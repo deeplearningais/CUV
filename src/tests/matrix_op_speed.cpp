@@ -122,6 +122,32 @@ BOOST_AUTO_TEST_CASE( mat_plus_vec_row_maj )
 	printf("Speedup: %3.4f\n", host/dev);
 }
 
+BOOST_AUTO_TEST_CASE( mat_op_argmax )
+{	
+	dense_matrix<float,row_major,dev_memory_space> V_dev(v_dev.h(),v_dev.w()); sequence(V_dev);
+	dense_matrix<float,row_major,host_memory_space> X_host(v_host.h(),v_host.w()); sequence(X_host);
+	vector<float,dev_memory_space>   v_vec(n); sequence(v_vec);
+	vector<float,host_memory_space>  x_vec(n); sequence(x_vec);
+	MEASURE_TIME(dev,  argmax_to_column(v_vec,V_dev), 10);
+	MEASURE_TIME(host, argmax_to_column(x_vec,X_host), 10);
+
+	printf("Speedup: %3.4f\n", host/dev);
+
+}
+
+BOOST_AUTO_TEST_CASE( mat_op_argmax_new )
+{	
+	dense_matrix<float,row_major,dev_memory_space> V_dev(v_dev.h(),v_dev.w()); sequence(V_dev);
+	dense_matrix<float,row_major,host_memory_space> X_host(v_host.h(),v_host.w()); sequence(X_host);
+	vector<float,dev_memory_space>   v_vec(n); sequence(v_vec);
+	vector<float,host_memory_space>  x_vec(n); sequence(x_vec);
+	MEASURE_TIME(dev,  reduce_to_col(v_vec,V_dev,RF_ARGMAX), 10);
+	MEASURE_TIME(host, reduce_to_col(x_vec,X_host,RF_ARGMAX), 10);
+
+	printf("Speedup: %3.4f\n", host/dev);
+
+}
+
 BOOST_AUTO_TEST_CASE( mat_transpose )
 {
 	const int n = 256;
