@@ -53,6 +53,7 @@ struct MyConfig {
 	MyConfig()   { 
 		printf("Testing on device=%d\n",dev);
 		initCUDA(dev); 
+		initialize_mersenne_twister_seeds();
 	}
 	~MyConfig()  { exitCUDA();  }
 };
@@ -78,7 +79,7 @@ template<class VT2, class VT, class ML, class I>
 std::pair<vector<VT2,host_memory_space,I>*,    // host result
 	 vector<VT2,host_memory_space,I>*>   // dev  result
 test_reduce(
-	bool dim,
+	int dim,
 	dense_matrix<VT,ML,dev_memory_space,I>&   d_mat,
 	cuv::reduce_functor rf
 ){
@@ -622,17 +623,19 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 	std::list<reduce_functor> rf_arg;
 	std::list<reduce_functor> rf_val;
 	rf_arg += RF_ARGMAX, RF_ARGMIN;
-	rf_val += RF_ADD, RF_MAX, RF_MIN, RF_ADD_SQUARED;
+	rf_val += RF_ADD, RF_MAX, RF_MIN;
 
+	for(int dim=0;dim<2;dim++){
 	if(1){ // column-major
 		std::cout << "Column Major"<<std::endl;
 		dense_matrix<float,column_major,dev_memory_space>  dA(n, m);
-		sequence(dA);
+		fill_rnd_uniform(dA.vec());
+		dA.vec() *= 1E-5f;
 
 		for(std::list<reduce_functor>::iterator it=rf_arg.begin(); it!=rf_arg.end(); it++)
 		{   std::cout << "Functor: "<<(*it)<<std::endl;
 			std::pair<vector<unsigned int,host_memory_space>*,
-				vector<unsigned int,host_memory_space>*> p = test_reduce<unsigned int>(0,dA,*it);
+				vector<unsigned int,host_memory_space>*> p = test_reduce<unsigned int>(dim,dA,*it);
 			for(unsigned int i=0; i<m; i++) {
 				BOOST_CHECK_EQUAL((*p.first)[i], (*p.second)[i]);
 			}
@@ -640,10 +643,10 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 		}
 		for(std::list<reduce_functor>::iterator it=rf_val.begin(); it!=rf_val.end(); it++)
 		{   std::cout << "Functor: "<<(*it)<<std::endl;
-		    std::pair<vector<unsigned int,host_memory_space>*,
-				vector<unsigned int,host_memory_space>*> p = test_reduce<unsigned int>(0,dA,*it);
+		    std::pair<vector<float,host_memory_space>*,
+				vector<float,host_memory_space>*> p = test_reduce<float>(dim,dA,*it);
 			for(unsigned int i=0; i<m; i++) {
-				BOOST_CHECK_EQUAL((*p.first)[i], (*p.second)[i]);
+				BOOST_CHECK_CLOSE((*p.first)[i], (*p.second)[i],0.01f);
 			}
 			delete p.first; delete p.second;
 		}
@@ -651,12 +654,13 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 	if(1){ // row-major
 		std::cout << "Row Major"<<std::endl;
 		dense_matrix<float,row_major,dev_memory_space>  dA(n, m);
-		sequence(dA);
+		fill_rnd_uniform(dA.vec());
+		dA.vec() *= 1E-5f;
 
 		for(std::list<reduce_functor>::iterator it=rf_arg.begin(); it!=rf_arg.end(); it++)
 		{   std::cout << "Functor: "<<(*it)<<std::endl;
 		    std::pair<vector<unsigned int,host_memory_space>*,
-				vector<unsigned int,host_memory_space>*> p = test_reduce<unsigned int>(0,dA,*it);
+				vector<unsigned int,host_memory_space>*> p = test_reduce<unsigned int>(dim,dA,*it);
 			for(unsigned int i=0; i<m; i++) {
 				BOOST_CHECK_EQUAL((*p.first)[i], (*p.second)[i]);
 			}
@@ -664,44 +668,14 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 		}
 		for(std::list<reduce_functor>::iterator it=rf_val.begin(); it!=rf_val.end(); it++)
 		{   std::cout << "Functor: "<<(*it)<<std::endl;
-		    std::pair<vector<unsigned int,host_memory_space>*,
-				vector<unsigned int,host_memory_space>*> p = test_reduce<unsigned int>(0,dA,*it);
+		    std::pair<vector<float,host_memory_space>*,
+				vector<float,host_memory_space>*> p = test_reduce<float>(dim,dA,*it);
 			for(unsigned int i=0; i<m; i++) {
-				BOOST_CHECK_EQUAL((*p.first)[i], (*p.second)[i]);
+				BOOST_CHECK_CLOSE((*p.first)[i], (*p.second)[i], 0.01f);
 			}
 			delete p.first; delete p.second;
 		}
 	}
+	}
 }
-//BOOST_AUTO_TEST_CASE( mat_op_argmax_2 )
-//{
-//    const int n = 517;
-//    const int m = 212;
-
-//    dense_matrix<float,column_major,host_memory_space> hA(n, m);
-//    dense_matrix<float,column_major,dev_memory_space>  dA(n, m);
-//    vector<int,host_memory_space> v(m);
-//    vector<int,dev_memory_space> x(m);
-
-//    dense_matrix<float,row_major,host_memory_space> hB(m, n);
-//    dense_matrix<float,row_major,dev_memory_space>  dB(m, n);
-//    vector<int,host_memory_space> w(m);
-//    vector<int,dev_memory_space> y(m);
-
-//    fill_rnd_uniform(hA.vec());
-//    fill_rnd_uniform(hB.vec());
-//    convert(dA, hA);
-//    convert(dB, hB);
-
-//    reduce_to_row(v, hA,RF_ARGMAX);
-//    reduce_to_row(x, dA,RF_ARGMAX);
-
-//    reduce_to_col(w, hB,RF_ARGMAX);
-//    reduce_to_col(y, dB,RF_ARGMAX);
-
-//    for(int i=0; i<m; i++) {
-//        BOOST_CHECK_EQUAL(v[i], x[i]);
-//        BOOST_CHECK_EQUAL(w[i], y[i]);
-//    }
-//}
 BOOST_AUTO_TEST_SUITE_END()
