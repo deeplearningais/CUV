@@ -159,6 +159,12 @@ struct bf_axpby: functor<T> {
 	__device__  __host__       T operator()(const T& t, const U& u) const{ return  a*t + b*((T)u); } 
 };
 
+template<class T>
+struct bf_addexp : functor<float> {  
+	__device__  __host__    float    operator()(const T& t, const T& u) const{
+		return t + exp(u); // TODO: do sth. tricky here?
+	} 
+};
 template<class V, class I>
 struct reduce_argmax : functor<void> {  
 	__device__  __host__    void    operator()(V& t, I& i, const V& u, const I& j) const{
@@ -182,7 +188,6 @@ struct reduce_argmin : functor<void> {
 template<class FUNC>
 struct reduce_functor_traits{ 
 	static const typename FUNC::return_type init_value = 0;     
-	static const bool is_simple=false;
 	static const bool returns_index = false;
 };
 

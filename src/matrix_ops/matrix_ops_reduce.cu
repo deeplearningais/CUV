@@ -351,8 +351,12 @@ namespace reduce_impl {
 			case RF_ARGMIN:
 			reduce_impl::reduce<dimension,mat_mem,__matrix_type,__vector_type,reduce_argmin<unconst_mat_val,mat_ind> >()(v,m,factNew,factOld,reduce_argmin<unconst_mat_val,mat_ind>());
 			break;
+			case RF_MULT:
+			reduce_impl::reduce<dimension,mat_mem,__matrix_type,__vector_type,bf_addexp<unconst_mat_val> >()(v,m,factNew,factOld,bf_addexp<unconst_mat_val>());
+			apply_scalar_functor(v,SF_LOG);
+			break;
 			default:
-			throw std::runtime_error("supplied reduce_functor does not exist");
+			throw std::runtime_error("supplied reduce_functor is not implemented");
 		}
 	}
 
