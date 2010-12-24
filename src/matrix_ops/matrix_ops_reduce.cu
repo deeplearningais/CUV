@@ -37,22 +37,21 @@
 
 template<int BLOCK_SIZE, class T, class V, class RF>
 __global__
-void reduce_to_col_kernel(const T* matrix, V* vector, int nCols, int nRows,
-		T param, T factNew, T factOld, RF reduce_functor) {
+void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, const unsigned int nRows,
+		const T factNew, const T factOld, RF reduce_functor) {
 
 	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
 	typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
 	typedef typename cuv::unconst<T>::type unconst_value_type;
 	functor_dispatcher_type func_disp;
 
-	__shared__ unsigned int indices[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
-	__shared__ unconst_value_type values[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
-	unconst_value_type sum;
-	unsigned int arg_index; // for storing indeces of maxima/minima for arg functors
-	int tx = threadIdx.x;
-	int bx = blockIdx.x;
-	int ty = threadIdx.y;
-	int by = blockIdx.y;
+	extern __shared__ unsigned char ptr[]; // need this intermediate variable for nvcc :-(
+	unconst_value_type* values = (unconst_value_type*) ptr;
+	unsigned int* indices = (unsigned int*)(values + BLOCK_SIZE*BLOCK_SIZE);
+	const unsigned int tx = threadIdx.x;
+	const unsigned int bx = blockIdx.x;
+	const unsigned int ty = threadIdx.y;
+	const unsigned int by = blockIdx.y;
 
 	const int row_idx = by * gridDim.x * blockDim.x +   	// offset according to y index in grid
 						bx * blockDim.x +  					// offset according to block index
@@ -60,72 +59,78 @@ void reduce_to_col_kernel(const T* matrix, V* vector, int nCols, int nRows,
 
 	if (row_idx >= nRows)
 		return;
-	int off = blockDim.y;
+	const unsigned int off = blockDim.y;
 
-	sum = functor_traits::init_value;
-	arg_index = 0;
+	unconst_value_type sum = functor_traits::init_value;
+	unsigned int arg_index = 0; // for storing indeces of maxima/minima for arg functors
 
 	for (unsigned int my = ty; my < nCols; my += off) {
-		unconst_value_type f = matrix[my * nRows + row_idx ];
+		const T f = matrix[my * nRows + row_idx ];
 		func_disp(reduce_functor,sum,arg_index,f,my);
 		//sum=reduce_functor(sum,f);
 	}
 
-	values[ty][tx] = sum;
-	indices[ty][tx] = arg_index;
+	values[ty*BLOCK_SIZE+tx] = sum;
+	if(functor_traits::returns_index)
+		indices[ty*BLOCK_SIZE+tx] = arg_index;
 
 	__syncthreads();
 
-	int offset = blockDim.y / 2;
-	while (offset > 0) {
+	for (unsigned int offset = blockDim.y / 2; offset > 0; offset >>=1) {
 		if (ty < offset) {
-			func_disp(reduce_functor,values[ty][tx],indices[ty][tx],values[ty+offset][tx],indices[ty+offset][tx]);
-			//shared[ty][tx]=reduce_functor(shared[ty][tx],shared[ty + offset][tx]);
+			const unsigned int v = ty+offset;
+			func_disp(reduce_functor,
+					  values [ty*BLOCK_SIZE+tx],
+					  indices[ty*BLOCK_SIZE+tx],
+					  values [v *BLOCK_SIZE+tx],
+					  indices[v *BLOCK_SIZE+tx]);
 		}
-		offset >>= 1;
 		__syncthreads();
 	}
 	
 	if (ty == 0) {
 		if (cuv::reduce_functor_traits<RF>::returns_index)
-			vector[row_idx] = indices[0][tx];
+			vector[row_idx] = indices[tx];
 		else
 			if(factOld != 0.f){
-				vector[row_idx] = vector[row_idx] * factOld + values[0][tx] * factNew;
+				vector[row_idx] = vector[row_idx] * factOld + values[tx] * factNew;
 			}else{
-				vector[row_idx] = values[0][tx] * factNew;
+				vector[row_idx] = values[tx] * factNew;
 			}
 	}
 }
 
 template<int BLOCK_SIZE, class T, class V, class RF>
 __global__
-void reduce_to_row_kernel(const T* matrix, V* vector, int nCols, int nRows,
-		const T param, const T factNew, const T factOld, const RF reduce_functor) {
-	__shared__ unsigned int indices[BLOCK_SIZE * BLOCK_SIZE];
-	__shared__ typename cuv::unconst<T>::type values[BLOCK_SIZE * BLOCK_SIZE];
-	const int tx = threadIdx.x, bx = blockIdx.x;
-	const int ty = threadIdx.y, by = blockIdx.y;
+void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, const unsigned int nRows,
+		const T factNew, const T factOld, const RF reduce_functor) {
+
 	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
 	typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
+	typedef typename cuv::unconst<T>::type unconst_value_type;
 	functor_dispatcher_type func_disp;
-	int off = blockDim.x;
+
+	extern __shared__ float sptr[]; // need this intermediate variable for nvcc :-(
+	unconst_value_type* values = (unconst_value_type*) sptr;
+	unsigned int* indices                  = (unsigned int*)(values + BLOCK_SIZE*BLOCK_SIZE);
+	const unsigned int tx = threadIdx.x, bx = blockIdx.x;
+	const unsigned int ty = threadIdx.y, by = blockIdx.y;
+	const unsigned int off = blockDim.x;
 	
 	values[tx] = functor_traits::init_value;
-	indices[tx] = 0;
+	if(functor_traits::returns_index)
+		indices[tx] = 0;
 
 	for (unsigned int my = tx; my < nRows; my += off) {
-		T f = matrix[by * nRows + bx * blockDim.x + my];
+		const T f = matrix[by * nRows + bx * blockDim.x + my];
 		func_disp(reduce_functor,values[tx],indices[tx],f,my);
 	}
 	__syncthreads();
 
-	int offset = blockDim.x / 2;
-	while (offset > 0) {
-		if (tx < offset) {
-			func_disp(reduce_functor,values[tx],indices[tx],values[tx+offset],indices[tx+offset]);
-		}
-		offset >>= 1;
+	for (unsigned int offset = blockDim.x / 2; offset > 0; offset>>=1) {
+		const unsigned int v = tx+offset;
+		if (tx < offset)
+			func_disp(reduce_functor,values[tx],indices[tx],values[v],indices[v]);
 		__syncthreads();
 	}
 	if (tx == 0) {
@@ -140,7 +145,6 @@ void reduce_to_row_kernel(const T* matrix, V* vector, int nCols, int nRows,
 			}
 		}
 	}
-	__syncthreads();
 }
 
 template<unsigned int BLOCK_DIM, class I, class T>
@@ -199,8 +203,8 @@ namespace reduce_impl {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
 		static const int BLOCK_SIZE = 16;
-		static const int BLOCK_DIM_X = BLOCK_SIZE*2;
-		static const int BLOCK_DIM_Y = BLOCK_SIZE/2;
+		static const int BLOCK_DIM_X = BLOCK_SIZE;
+		static const int BLOCK_DIM_Y = BLOCK_SIZE;
 		const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM_X));
 		int grid_x =0, grid_y=0;
 
@@ -215,7 +219,12 @@ namespace reduce_impl {
 		}
 		dim3 grid(grid_x, grid_y);
 		dim3 threads(BLOCK_DIM_X,BLOCK_DIM_Y);
-		reduce_to_col_kernel<BLOCK_SIZE,typename __matrix_type::value_type><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,reduce_functor);
+		typedef typename __matrix_type::value_type matval_t;
+		typedef typename __vector_type::value_type vecval_t;
+		unsigned int mem = sizeof(matval_t) * BLOCK_DIM_X*BLOCK_DIM_Y ;
+		if(reduce_functor_traits<RF>::returns_index)
+			mem += sizeof(vecval_t)*BLOCK_DIM_X*BLOCK_DIM_Y;
+		reduce_to_col_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,reduce_functor);
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
@@ -227,7 +236,14 @@ namespace reduce_impl {
 		static const int BLOCK_SIZE = 16;
 		dim3 grid(1, m.w());
 		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-		reduce_to_row_kernel<BLOCK_SIZE,typename __matrix_type::value_type><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,reduce_functor);
+
+		typedef typename __matrix_type::value_type matval_t;
+		typedef typename __vector_type::value_type vecval_t;
+		unsigned int mem = sizeof(matval_t) * threads.x*threads.y;
+		if(reduce_functor_traits<RF>::returns_index)
+			mem += sizeof(vecval_t)*threads.x*threads.y;
+
+		reduce_to_row_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,reduce_functor);
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
@@ -243,72 +259,70 @@ namespace reduce_impl {
 
 		cuvAssert(m.ptr() != NULL);
 		// assert that vector has correct length
-		if (dim==0) 
-			cuvAssert(v.size()==m.w());
-		if(dim==1)
-			cuvAssert(v.size()==m.h());
+		if (dim==0) cuvAssert(v.size()==m.w());
+		if (dim==1) cuvAssert(v.size()==m.h());
 
 		functor_dispatcher_type func_disp;
-		const V* A_ptr = m.ptr();
+		const V* A_ptr                         = m.ptr();
+
+		// indices: only needed when arg-max/arg-min etc used
+		vector<I,host_memory_space,I>* indices = NULL;
+		I* indices_ptr                         = NULL;
+		if(functor_traits::returns_index){
+			indices         =  new vector<I,host_memory_space,I>(v.size());
+			indices_ptr     =  indices->ptr();
+			memset(indices_ptr,indices->memsize(), 0);
+		}
+		I*const indices_begin = indices_ptr;
+		I*const indices_end   = indices_ptr + v.size();
+
+		// values: the new values that are to be combined with v using factNew/factOld
 		vector<unconstV,host_memory_space,I> values(v.size());
-		unconstV* values_ptr = values.ptr();
-		vector<I,host_memory_space,I>* indices=NULL;
-		I* indices_ptr = NULL;
-		// if we want to return indices, get the memory
-		if (functor_traits::returns_index){
-			indices=new vector<I,host_memory_space,I>(v.size());
-			indices_ptr= indices->ptr();
-		}
-		V2* v_ptr = v.ptr();
-		// initiallize vectors - maybe not strictly necessary?
-		for(unsigned int j=0; j<v.size(); j++) {
+		unconstV* values_ptr                   = values.ptr();
+		V*const values_end                     = values_ptr + values.size();
+		while(values_ptr != values_end) 
 			*values_ptr++ =functor_traits::init_value; 
-			if (functor_traits::returns_index)
-				*indices_ptr++=0;
-		}
-		// reset pointers to begining of vectors
-		values_ptr = values.ptr();
-		// only reset indices_ptr if indices is allocated
-		indices && (indices_ptr = indices->ptr());
+		values_ptr = values.ptr();      // reset pointers to begining of vector
 
 		if (dim==0){
 			// apply reduce functor along columns
-			for(unsigned int i=0;i<m.w();i++, values_ptr++, indices_ptr++) 
+			for(;values_ptr!=values_end; values_ptr++, indices_ptr++) {
 				for(unsigned int j=0; j<m.h(); j++, A_ptr++)
 					func_disp(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,j);
-		}
-		else if(dim==1)
-			// apply reduce functor along rows
-			for(int i=0;i<m.w();i++) {
-				values_ptr = values.ptr();
-				indices && (indices_ptr = indices->ptr());
-				for(int j=0; j<m.h(); j++,A_ptr++,values_ptr++,indices_ptr++) 
-					func_disp(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,j);
 			}
+		}
+		else if(dim==1){
+			// apply reduce functor along rows
+			const V*const A_end = m.ptr()+m.n();
+			while(A_ptr!=A_end) { // loops m.w() times
+				values_ptr  = values.ptr();
+				indices_ptr = indices_begin;
+				for(unsigned int j=0; j<m.h(); j++) 
+					func_disp(reduce_functor,*values_ptr++,*indices_ptr++,*A_ptr++,j);
+			}
+		}else{
+			cuvAssert(false);
+		}
 
 		// reset pointers to begining of vectors
-		values_ptr = values.ptr();
-		// only reset indices_ptr if indices is allocated
-		indices && (indices_ptr = indices->ptr());
+		values_ptr  = values.ptr();
+		indices_ptr = indices_begin;
 
 		// put result into v via v_ptr.
+		V2* v_ptr   = v.ptr();
 		if (!functor_traits::returns_index){ 
-			if (factOld!=0)
-				for(int j=0; j<v.size(); j++,values_ptr++,v_ptr++) {
-					*v_ptr = factOld * *v_ptr + factNew * *values_ptr;
-				}
-			else
-				for(int j=0; j<v.size(); j++,values_ptr++,v_ptr++) {
-					*v_ptr = factNew * *values_ptr;
-				}
+			if (factOld!=0){
+				while(values_ptr!=values_end) 
+					*v_ptr   = factOld * *v_ptr++  + factNew * *values_ptr++;
+			}else
+				while(values_ptr!=values_end) 
+					*v_ptr++ = factNew * *values_ptr++;
 		}
 		else{
-			for(int j=0; j<v.size(); j++,v_ptr++,indices_ptr++)
-				*v_ptr = *indices_ptr;
+			while(indices_ptr!=indices_end) 
+				*v_ptr++ = *indices_ptr++;
 			delete indices;
 		}
-
-
 	}};
 
 	template<int dimension, class __matrix_type, class __vector_type>
@@ -358,7 +372,7 @@ void reduce_to_col(__vector_type&v, const __matrix_type& m, reduce_functor rf, c
 		reduce_impl::reduce_switch<0>(v,cm_view,rf,factNew,factOld); // 0 means zeroth dimension is summed out - meaning summing over the columns in a column major matrix.
 	}
 	else {
-	reduce_impl::reduce_switch<1>(v,m,rf,factNew,factOld); // 1 means first dimension (we start counting at zero) is summed out - meaning summing over the rows in a column major matrix.
+		reduce_impl::reduce_switch<1>(v,m,rf,factNew,factOld); // 1 means first dimension (we start counting at zero) is summed out - meaning summing over the rows in a column major matrix.
 	}
 }
 
@@ -487,3 +501,4 @@ INSTANTIATE_REDROW(float,int,row_major);
 INSTANTIATE_REDCOL(float,unsigned int,column_major);
 INSTANTIATE_REDROW(float,unsigned int,row_major);
 };//namespace cuv
+
