@@ -24,6 +24,8 @@ template<class T>
 struct uf_abs{  __device__ __host__        T operator()(const T& t)      const{ return t<0 ? -t : t;    } };
 template<>
 struct uf_abs<unsigned char>{  __device__ __host__        unsigned char operator()(const unsigned char& t)      const{ return t;    } };
+template<>
+struct uf_abs<unsigned int>{  __device__ __host__         unsigned int operator()(const unsigned int& t)      const{ return t;    } };
 template<class T>
 struct uf_exact_sigm{  __device__  __host__ T operator()(const T& t)      const{ return ((T)1)/(((T)1)+expf(-t));    } };
 template<class T>
@@ -50,6 +52,8 @@ struct uf_is_nan{                 __device__  __host__   bool operator()(const T
 template<>
 struct uf_is_nan<int>{            __device__  __host__   bool operator()(const int& t)           const{ return false ; } };
 template<>
+struct uf_is_nan<unsigned int>{  __device__  __host__   bool operator()(const unsigned int& t) const{ return false ; } };
+template<>
 struct uf_is_nan<unsigned char>{  __device__  __host__   bool operator()(const unsigned char& t) const{ return false ; } };
 template<>
 struct uf_is_nan<signed char>{    __device__  __host__   bool operator()(const signed char& t)   const{ return false ; } };
@@ -60,6 +64,8 @@ template<>
 struct uf_is_inf<int>{            __device__  __host__     bool operator()(const int t)           const{ return false; } };
 template<>                                                                                        
 struct uf_is_inf<signed char>{    __device__  __host__     bool operator()(const signed char t)   const{ return false; } };
+template<>
+struct uf_is_inf<unsigned int>{  __device__  __host__     bool operator()(const unsigned int t) const{ return false; } };
 template<>
 struct uf_is_inf<unsigned char>{  __device__  __host__     bool operator()(const unsigned char t) const{ return false; } };
 
