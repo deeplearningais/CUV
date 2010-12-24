@@ -570,6 +570,8 @@ arg_min(const __vector_type& v){
 
 SIMPLE_INSTANTIATOR( int );
 SIMPLE_INSTANTIATOR1( int, int );
+SIMPLE_INSTANTIATOR( unsigned int );
+SIMPLE_INSTANTIATOR1( unsigned int, unsigned int );
 SIMPLE_INSTANTIATOR( float );
 SIMPLE_INSTANTIATOR1( float, float );
 SIMPLE_INSTANTIATOR1( float, int );
