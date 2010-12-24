@@ -253,6 +253,10 @@ namespace cuv{
 		struct switch_memory_layout_type{
 			typedef dense_matrix<typename Mat::value_type, NewML, typename Mat::memory_space_type, typename Mat::index_type> type;
 		};
+	template<class Mat, class NewMS>
+		struct switch_memory_space_type{
+			typedef dense_matrix<typename Mat::value_type, typename Mat::memory_layout, NewMS, typename Mat::index_type> type;
+		};
 }
 
 #include <iostream>
