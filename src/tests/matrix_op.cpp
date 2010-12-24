@@ -465,15 +465,15 @@ BOOST_AUTO_TEST_CASE( mat_op_transpose )
 
 BOOST_AUTO_TEST_CASE( all_reduce )
 {
-	const int n = 517;
-	const int m = 212;
+	const int n = 270;
+	const int m = 270;
 
 	std::list<reduce_functor> rf_arg;
 	std::list<reduce_functor> rf_val;
 	std::list<reduce_functor> rf_rp; // reduced precision
 	rf_arg += RF_ARGMAX, RF_ARGMIN;
-	rf_val += RF_ADD, RF_MAX, RF_MIN, RF_ADDEXP;
-	rf_rp += RF_ADDEXP, RF_LOGADDEXP;
+	rf_val += RF_ADD, RF_MAX, RF_MIN, RF_LOGADDEXP;
+	rf_rp  += RF_LOGADDEXP, RF_MULT;
 
 	for(int dim=0;dim<2;dim++){ 
 	if(1){ // column-major
@@ -495,7 +495,7 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 		{   std::cout << "Functor: "<<(*it)<<std::endl;
 		    std::pair<vector<float,host_memory_space>*,
 				vector<float,host_memory_space>*> p = test_reduce<float>(dim,dA,*it);
-			const float prec = find(rf_rp.begin(), rf_rp.end(), *it)==rf_rp.end() ? 0.1f : 3.f;
+			const float prec = find(rf_rp.begin(), rf_rp.end(), *it)==rf_rp.end() ? 0.1f : 4.5f;
 			for(unsigned int i=0; i<m; i++) {
 				BOOST_CHECK_CLOSE((*p.first)[i], (*p.second)[i],prec);
 			}
@@ -521,7 +521,7 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 		{   std::cout << "Functor: "<<(*it)<<std::endl;
 		    std::pair<vector<float,host_memory_space>*,
 				vector<float,host_memory_space>*> p = test_reduce<float>(dim,dA,*it);
-			const float prec = find(rf_rp.begin(), rf_rp.end(), *it)==rf_rp.end() ? 0.1f : 3.f;
+			const float prec = find(rf_rp.begin(), rf_rp.end(), *it)==rf_rp.end() ? 0.1f : 4.5f;
 			for(unsigned int i=0; i<m; i++) {
 				BOOST_CHECK_CLOSE((*p.first)[i], (*p.second)[i], prec);
 			}
