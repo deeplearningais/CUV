@@ -85,6 +85,7 @@ VECTOR_INST(float, unsigned int);
 VECTOR_INST(unsigned char, unsigned int);
 VECTOR_INST(signed char, unsigned int);
 VECTOR_INST(int, unsigned int);
+VECTOR_INST(unsigned int, unsigned int);
 
 
 }; // cuv
