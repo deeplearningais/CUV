@@ -349,23 +349,6 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_vec_row_major )
 
 }
 
-BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col )
-{
-	sequence(v);
-	sequence(x);
-	vector<float,dev_memory_space>  v_col(n); sequence(v_col);
-	vector<float,host_memory_space> x_col(n); sequence(x_col);
-	reduce_to_col(v_col,v,RF_ADD,1.f,0.5f);
-	reduce_to_col(x_col,x,RF_ADD,1.f,0.5f);
-	for(int i=0;i<n;i++){
-		float v_correct = 0;
-		for(int j=0;j<n;j++)
-			v_correct += v(i,j);
-		BOOST_CHECK_CLOSE(v_correct,v_col[i],0.01);
-		BOOST_CHECK_CLOSE(v_col[i],x_col[i],0.01);
-	}
-}
-
 /*
 BOOST_AUTO_TEST_CASE( mat_op_big_reduce_to_col )
 {
@@ -385,22 +368,6 @@ BOOST_AUTO_TEST_CASE( mat_op_big_reduce_to_col )
 }
 */
 
-BOOST_AUTO_TEST_CASE( mat_op_reduce_to_col_min )
-{
-	sequence(v);
-	sequence(x);
-	vector<float,dev_memory_space>  v_col(n); sequence(v_col);
-	vector<float,host_memory_space> x_col(n); sequence(x_col);
-	reduce_to_col(v_col,v,RF_MAX);
-	reduce_to_col(x_col,x,RF_MAX);
-	for(int i=0;i<n;i++){
-		float v_correct = -INT_MAX;
-		for(int j=0;j<n;j++)
-			v_correct = std::max(v_correct,v(i,j));
-		BOOST_CHECK_CLOSE(v_correct,v_col[i],0.01);
-		BOOST_CHECK_CLOSE(v_col[i],x_col[i],0.01);
-	}
-}
 
 BOOST_AUTO_TEST_CASE( mat_op_divide_col )
 {
@@ -420,77 +387,6 @@ BOOST_AUTO_TEST_CASE( mat_op_divide_col )
 		}
 }
 
-BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_col )
-{
-	const int m = 400;
-	const int n = 300;
-
-	float factOld = 1.33f;
-	float factNew = 0.2f;
-
-	dense_matrix<float,row_major,dev_memory_space> dA(m, n);
-	vector<float,dev_memory_space> dV(m);
-	dense_matrix<float,row_major,host_memory_space> hA(m, n);
-	vector<float,host_memory_space> hV(m);
-
-	sequence(dA); apply_scalar_functor(dA, SF_MULT, 0.01f);
-	sequence(dV);
-	sequence(hA); apply_scalar_functor(hA, SF_MULT, 0.01f);
-	sequence(hV);
-
-	reduce_to_col(dV,dA,RF_ADD,factNew,factOld);
-	reduce_to_col(hV,hA,RF_ADD,factNew,factOld);
-
-	vector<float,host_memory_space> hV2(dV.size());
-	convert(hV2, dV);
-
-	for(int i=0; i<m; i++)
-		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.1);
-}
-
-BOOST_AUTO_TEST_CASE( mat_op_reduce_to_row )
-{
-	dense_matrix<float,column_major,dev_memory_space> dA(40, 30);
-	vector<float,dev_memory_space> dV(30);
-	dense_matrix<float,column_major,host_memory_space> hA(40, 30);
-	vector<float,host_memory_space> hV(30);
-
-	sequence(dA);
-	sequence(dV);
-	sequence(hA);
-	sequence(hV);
-
-	reduce_to_row(dV,dA,RF_ADD,1.f,0.5f);
-	reduce_to_row(hV,hA,RF_ADD,1.f,0.5f);
-
-	vector<float,host_memory_space> hV2(dV.size());
-	convert(hV2, dV);
-
-	for(int i=0;i<30;i++)
-		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.1);
-}
-
-BOOST_AUTO_TEST_CASE( mat_op_reduce_rm_to_row )
-{
-	dense_matrix<float,row_major,dev_memory_space> dA(40, 30);
-	vector<float,dev_memory_space> dV(30);
-	dense_matrix<float,row_major,host_memory_space> hA(40, 30);
-	vector<float,host_memory_space> hV(30);
-
-	sequence(dA);
-	sequence(dV);
-	sequence(hA);
-	sequence(hV);
-
-	reduce_to_row(dV,dA,RF_ADD,1.f,0.5f);
-	reduce_to_row(hV,hA,RF_ADD,1.f,0.5f);
-
-	vector<float,host_memory_space> hV2(dV.size());
-	convert(hV2, dV);
-
-	for(int i=0;i<30;i++)
-		BOOST_CHECK_CLOSE(hV2[i],hV[i],0.01);
-}
 
 /*
 BOOST_AUTO_TEST_CASE( mat_op_reduce_big_rm_to_row )
@@ -565,53 +461,6 @@ BOOST_AUTO_TEST_CASE( mat_op_transpose )
 
 	MAT_CMP(hA, h2A, 0.1);
 	MAT_CMP(hC, h2C, 0.1);
-}
-
-BOOST_AUTO_TEST_CASE( mat_op_argmax )
-{	
-	const int n = 517;
-	const int m = 212;
-
-	//const int n = 51;
-	//const int m = 21;
-	dense_matrix<float,column_major,host_memory_space> hA(n, m);
-	dense_matrix<float,column_major,dev_memory_space>  dA(n, m);
-	vector<int,host_memory_space> v(m);
-	vector<int,dev_memory_space> x(m);
-	vector<int,host_memory_space> v2(m);
-	vector<int,dev_memory_space> x2(m);
-
-	dense_matrix<float,row_major,host_memory_space> hB(m, n);
-	dense_matrix<float,row_major,dev_memory_space>  dB(m, n);
-	vector<int,host_memory_space> w(m);
-	vector<int,dev_memory_space> y(m);
-	vector<int,host_memory_space> w2(m);
-	vector<int,dev_memory_space> y2(m);
-
-	fill_rnd_uniform(hA.vec());
-	fill_rnd_uniform(hB.vec());
-	convert(dA, hA);
-	convert(dB, hB);
-
-	argmax_to_row(v, hA);
-	argmax_to_row(x, dA);
-
-	argmax_to_column(w, hB);
-	argmax_to_column(y, dB);
-	reduce_to_row(v2, hA,RF_ARGMAX);
-	reduce_to_row(x2, dA,RF_ARGMAX);
-
-	reduce_to_col(w2, hB,RF_ARGMAX);
-	reduce_to_col(y2, dB,RF_ARGMAX);
-
-	for(int i=0; i<m; i++) {
-		BOOST_CHECK_EQUAL(v[i], x[i]);
-		BOOST_CHECK_EQUAL(w[i], y[i]);
-		BOOST_CHECK_EQUAL(v[i], v2[i]);
-		BOOST_CHECK_EQUAL(x[i], x2[i]);
-		BOOST_CHECK_EQUAL(w[i], w2[i]);
-		BOOST_CHECK_EQUAL(y[i], y2[i]);
-	}
 }
 
 BOOST_AUTO_TEST_CASE( all_reduce )
