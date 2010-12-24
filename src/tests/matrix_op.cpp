@@ -34,6 +34,9 @@
 #define BOOST_TEST_MODULE example
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>
+#include <boost/assign.hpp>
+#include <list>
+using namespace boost::assign;
 
 #include <cuv_general.hpp>
 #include <dense_matrix.hpp>
@@ -70,6 +73,33 @@ struct Fix{
 	~Fix(){
 	}
 };
+
+template<class VT2, class VT, class ML, class I>
+std::pair<vector<VT2,host_memory_space,I>*,    // host result
+	 vector<VT2,host_memory_space,I>*>   // dev  result
+test_reduce(
+	bool dim,
+	dense_matrix<VT,ML,dev_memory_space,I>&   d_mat,
+	cuv::reduce_functor rf
+){
+	dense_matrix<VT,ML,host_memory_space> h_mat(d_mat.h(), d_mat.w());
+	convert(h_mat,d_mat);
+
+	unsigned int len = d_mat.h();
+	if(dim==0) len = d_mat.w();
+	vector<VT2,host_memory_space>* v_host1= new vector<VT2,host_memory_space> (len);
+	vector<VT2,host_memory_space>* v_host2= new vector<VT2,host_memory_space> (len);
+	vector<VT2,dev_memory_space>   v_dev(len);
+	if(dim==0){
+		reduce_to_row(*v_host1, h_mat,rf);
+		reduce_to_row( v_dev,   d_mat,rf);
+	}else if(dim==1){
+		reduce_to_col(*v_host1, h_mat,rf);
+		reduce_to_col( v_dev,   d_mat,rf);
+	}
+	convert(*v_host2,v_dev);
+	return std::make_pair(v_host1, v_host2);
+}
 
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
@@ -584,35 +614,94 @@ BOOST_AUTO_TEST_CASE( mat_op_argmax )
 	}
 }
 
-BOOST_AUTO_TEST_CASE( mat_op_argmax_2 )
+BOOST_AUTO_TEST_CASE( all_reduce )
 {
 	const int n = 517;
 	const int m = 212;
 
-	dense_matrix<float,column_major,host_memory_space> hA(n, m);
-	dense_matrix<float,column_major,dev_memory_space>  dA(n, m);
-	vector<int,host_memory_space> v(m);
-	vector<int,dev_memory_space> x(m);
+	std::list<reduce_functor> rf_arg;
+	std::list<reduce_functor> rf_val;
+	rf_arg += RF_ARGMAX, RF_ARGMIN;
+	rf_val += RF_ADD, RF_MAX, RF_MIN, RF_ADD_SQUARED;
 
-	dense_matrix<float,row_major,host_memory_space> hB(m, n);
-	dense_matrix<float,row_major,dev_memory_space>  dB(m, n);
-	vector<int,host_memory_space> w(m);
-	vector<int,dev_memory_space> y(m);
+	if(1){ // column-major
+		std::cout << "Column Major"<<std::endl;
+		dense_matrix<float,column_major,dev_memory_space>  dA(n, m);
+		sequence(dA);
 
-	fill_rnd_uniform(hA.vec());
-	fill_rnd_uniform(hB.vec());
-	convert(dA, hA);
-	convert(dB, hB);
+		for(std::list<reduce_functor>::iterator it=rf_arg.begin(); it!=rf_arg.end(); it++)
+		{   std::cout << "Functor: "<<(*it)<<std::endl;
+			std::pair<vector<unsigned int,host_memory_space>*,
+				vector<unsigned int,host_memory_space>*> p = test_reduce<unsigned int>(0,dA,*it);
+			for(unsigned int i=0; i<m; i++) {
+				BOOST_CHECK_EQUAL((*p.first)[i], (*p.second)[i]);
+			}
+			delete p.first; delete p.second;
+		}
+		for(std::list<reduce_functor>::iterator it=rf_val.begin(); it!=rf_val.end(); it++)
+		{   std::cout << "Functor: "<<(*it)<<std::endl;
+		    std::pair<vector<unsigned int,host_memory_space>*,
+				vector<unsigned int,host_memory_space>*> p = test_reduce<unsigned int>(0,dA,*it);
+			for(unsigned int i=0; i<m; i++) {
+				BOOST_CHECK_EQUAL((*p.first)[i], (*p.second)[i]);
+			}
+			delete p.first; delete p.second;
+		}
+	}
+	if(1){ // row-major
+		std::cout << "Row Major"<<std::endl;
+		dense_matrix<float,row_major,dev_memory_space>  dA(n, m);
+		sequence(dA);
 
-	reduce_to_row(v, hA,RF_ARGMAX);
-	reduce_to_row(x, dA,RF_ARGMAX);
-
-	reduce_to_col(w, hB,RF_ARGMAX);
-	reduce_to_col(y, dB,RF_ARGMAX);
-
-	for(int i=0; i<m; i++) {
-		BOOST_CHECK_EQUAL(v[i], x[i]);
-		BOOST_CHECK_EQUAL(w[i], y[i]);
+		for(std::list<reduce_functor>::iterator it=rf_arg.begin(); it!=rf_arg.end(); it++)
+		{   std::cout << "Functor: "<<(*it)<<std::endl;
+		    std::pair<vector<unsigned int,host_memory_space>*,
+				vector<unsigned int,host_memory_space>*> p = test_reduce<unsigned int>(0,dA,*it);
+			for(unsigned int i=0; i<m; i++) {
+				BOOST_CHECK_EQUAL((*p.first)[i], (*p.second)[i]);
+			}
+			delete p.first; delete p.second;
+		}
+		for(std::list<reduce_functor>::iterator it=rf_val.begin(); it!=rf_val.end(); it++)
+		{   std::cout << "Functor: "<<(*it)<<std::endl;
+		    std::pair<vector<unsigned int,host_memory_space>*,
+				vector<unsigned int,host_memory_space>*> p = test_reduce<unsigned int>(0,dA,*it);
+			for(unsigned int i=0; i<m; i++) {
+				BOOST_CHECK_EQUAL((*p.first)[i], (*p.second)[i]);
+			}
+			delete p.first; delete p.second;
+		}
 	}
 }
+//BOOST_AUTO_TEST_CASE( mat_op_argmax_2 )
+//{
+//    const int n = 517;
+//    const int m = 212;
+
+//    dense_matrix<float,column_major,host_memory_space> hA(n, m);
+//    dense_matrix<float,column_major,dev_memory_space>  dA(n, m);
+//    vector<int,host_memory_space> v(m);
+//    vector<int,dev_memory_space> x(m);
+
+//    dense_matrix<float,row_major,host_memory_space> hB(m, n);
+//    dense_matrix<float,row_major,dev_memory_space>  dB(m, n);
+//    vector<int,host_memory_space> w(m);
+//    vector<int,dev_memory_space> y(m);
+
+//    fill_rnd_uniform(hA.vec());
+//    fill_rnd_uniform(hB.vec());
+//    convert(dA, hA);
+//    convert(dB, hB);
+
+//    reduce_to_row(v, hA,RF_ARGMAX);
+//    reduce_to_row(x, dA,RF_ARGMAX);
+
+//    reduce_to_col(w, hB,RF_ARGMAX);
+//    reduce_to_col(y, dB,RF_ARGMAX);
+
+//    for(int i=0; i<m; i++) {
+//        BOOST_CHECK_EQUAL(v[i], x[i]);
+//        BOOST_CHECK_EQUAL(w[i], y[i]);
+//    }
+//}
 BOOST_AUTO_TEST_SUITE_END()
