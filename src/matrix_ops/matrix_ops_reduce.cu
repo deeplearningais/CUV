@@ -293,12 +293,11 @@ namespace reduce_impl {
 		}
 		else if(dim==1){
 			// apply reduce functor along rows
-			const V*const A_end = m.ptr()+m.n();
-			while(A_ptr!=A_end) { // loops m.w() times
+			for(int i=0;i<m.w();i++) {
 				values_ptr  = values.ptr();
 				indices_ptr = indices_begin;
-				for(unsigned int j=0; j<m.h(); j++) 
-					func_disp(reduce_functor,*values_ptr++,*indices_ptr++,*A_ptr++,j);
+				for(; values_ptr!=values_end;A_ptr++,values_ptr++,indices_ptr++) 
+					func_disp(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,i);
 			}
 		}else{
 			cuvAssert(false);
