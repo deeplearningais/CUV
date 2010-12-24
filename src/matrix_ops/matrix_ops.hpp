@@ -256,6 +256,8 @@ namespace cuv{
 	  RF_ARGMIN,
 	  RF_MIN,
 	  RF_MULT,
+	  RF_LOGADDEXP,
+	  RF_ADDEXP,
   };
 
   /** 
@@ -480,7 +482,7 @@ namespace cuv{
 } // cuv
 
  /* 
-  * operator overloading for arithmatic operations on matrices
+  * operator overloading for arithmetic operations on matrices
   */
   template<class V, class M, class T, class I>
     cuv::dense_matrix<V, M, T, I> 

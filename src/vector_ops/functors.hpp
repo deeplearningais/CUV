@@ -19,6 +19,12 @@ struct uf_exact_exp{  __device__ __host__   T operator()(const T& t)const{ retur
 template<class T>
 struct uf_log{  __device__ __host__         T operator()(const T& t)      const{ return logf(t);    } };
 template<class T>
+struct uf_log1p{  __device__ __host__       T operator()(const T& t)      const{
+	volatile float y;
+	y = 1.f + t;
+	return logf(y) - ((y-1.f)-t)/y;
+} };
+template<class T>
 struct uf_sign{  __device__ __host__        T operator()(const T& t)      const{ return sgn((float)t);    } };
 template<class T>
 struct uf_abs{  __device__ __host__        T operator()(const T& t)      const{ return t<0 ? -t : t;    } };
@@ -128,6 +134,8 @@ struct bf_divides: functor<T> {  __device__  __host__    T operator()(const T& t
 template<class T, class U>
 struct bf_squared_diff: functor<T> {__device__ __host__  T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
 template<class T, class U>
+struct bf_add_log: functor<T> {__device__ __host__  T operator()(const T& t, const U& u)      const{ return t + (T)logf(u);} };
+template<class T, class U>
 struct bf_add_square: functor<T> {__device__ __host__  T operator()(const T& t, const U& u)      const{ return t + (T)(u*u);} };
 template<class T, class U>
 struct bf_and: functor<T> {__device__ __host__   T operator()(const T& t, const U& u)      const{ return t && u; } };
@@ -160,9 +168,13 @@ struct bf_axpby: functor<T> {
 };
 
 template<class T>
-struct bf_addexp : functor<float> {  
+struct bf_logaddexp : functor<float> {  
 	__device__  __host__    float    operator()(const T& t, const T& u) const{
-		return t + exp(u); // TODO: do sth. tricky here?
+		const float diff = (float)t - (float) u;
+		uf_log1p<float> log1p;
+		if(diff > 0)
+			return t + log1p(expf(-diff));
+		return u + log1p(expf(diff));
 	} 
 };
 template<class V, class I>
