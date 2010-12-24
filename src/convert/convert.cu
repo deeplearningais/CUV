@@ -367,6 +367,7 @@ CONV_SIMPLE_INST(signed char,row_major);
 
 CONV_VEC(float);
 CONV_VEC(int);
+CONV_VEC(unsigned int);
 CONV_VEC(unsigned char);
 CONV_VEC(signed char);
 
