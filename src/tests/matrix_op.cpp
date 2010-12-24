@@ -470,15 +470,17 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 
 	std::list<reduce_functor> rf_arg;
 	std::list<reduce_functor> rf_val;
+	std::list<reduce_functor> rf_rp; // reduced precision
 	rf_arg += RF_ARGMAX, RF_ARGMIN;
-	rf_val += RF_ADD, RF_MAX, RF_MIN;
+	rf_val += RF_ADD, RF_MAX, RF_MIN, RF_ADDEXP;
+	rf_rp += RF_ADDEXP, RF_LOGADDEXP;
 
-	for(int dim=0;dim<2;dim++){
+	for(int dim=0;dim<2;dim++){ 
 	if(1){ // column-major
 		std::cout << "Column Major"<<std::endl;
 		dense_matrix<float,column_major,dev_memory_space>  dA(n, m);
 		fill_rnd_uniform(dA.vec());
-		dA.vec() *= 1E-5f;
+		dA *= 2.f;
 
 		for(std::list<reduce_functor>::iterator it=rf_arg.begin(); it!=rf_arg.end(); it++)
 		{   std::cout << "Functor: "<<(*it)<<std::endl;
@@ -493,8 +495,9 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 		{   std::cout << "Functor: "<<(*it)<<std::endl;
 		    std::pair<vector<float,host_memory_space>*,
 				vector<float,host_memory_space>*> p = test_reduce<float>(dim,dA,*it);
+			const float prec = find(rf_rp.begin(), rf_rp.end(), *it)==rf_rp.end() ? 0.1f : 3.f;
 			for(unsigned int i=0; i<m; i++) {
-				BOOST_CHECK_CLOSE((*p.first)[i], (*p.second)[i],0.01f);
+				BOOST_CHECK_CLOSE((*p.first)[i], (*p.second)[i],prec);
 			}
 			delete p.first; delete p.second;
 		}
@@ -503,7 +506,7 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 		std::cout << "Row Major"<<std::endl;
 		dense_matrix<float,row_major,dev_memory_space>  dA(n, m);
 		fill_rnd_uniform(dA.vec());
-		dA.vec() *= 1E-5f;
+		dA *= 2.f;
 
 		for(std::list<reduce_functor>::iterator it=rf_arg.begin(); it!=rf_arg.end(); it++)
 		{   std::cout << "Functor: "<<(*it)<<std::endl;
@@ -518,8 +521,9 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 		{   std::cout << "Functor: "<<(*it)<<std::endl;
 		    std::pair<vector<float,host_memory_space>*,
 				vector<float,host_memory_space>*> p = test_reduce<float>(dim,dA,*it);
+			const float prec = find(rf_rp.begin(), rf_rp.end(), *it)==rf_rp.end() ? 0.1f : 3.f;
 			for(unsigned int i=0; i<m; i++) {
-				BOOST_CHECK_CLOSE((*p.first)[i], (*p.second)[i], 0.01f);
+				BOOST_CHECK_CLOSE((*p.first)[i], (*p.second)[i], prec);
 			}
 			delete p.first; delete p.second;
 		}
