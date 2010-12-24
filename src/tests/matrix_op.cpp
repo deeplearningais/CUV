@@ -118,8 +118,7 @@ BOOST_AUTO_TEST_CASE( binary_operators )
 {
   dense_matrix<float,column_major,dev_memory_space> j(32,32);
   dense_matrix<float,column_major,dev_memory_space> k(32,32);
-  cuv::fill(j,1.f);
-  cuv::fill(k,1.f);
+  j = k = 1.f;
   const dense_matrix<float,column_major,dev_memory_space>& j_ = j;
   const dense_matrix<float,column_major,dev_memory_space>& k_ = k;
   const dense_matrix<float,column_major,dev_memory_space> l = j_+k_;
@@ -199,7 +198,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_0ary1 )
 	}
 
 	// test fill
-	fill(w.vec(),1);
+	w.vec() = 1.f;
 	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(w.vec()[i], 1);
 	}

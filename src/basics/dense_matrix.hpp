@@ -176,26 +176,34 @@ namespace cuv{
 			}
 
 			/** 
-			 * @brief Assignment operator. Assigns vector belonging to source to destination and sets source vector to NULL
+			 * @brief Assign value to all elements in matrix
+			 * 
+			 * @param scalar    the scalar value to assign
+			 * 
+			 * @return reference to *this
+			 */
+			  my_type& 
+			  operator=(const value_type& scalar){
+				  *m_vec = scalar;
+				  return *this;
+		  }
+			/** 
+			 * @brief Copy a matrix
 			 * 
 			 * @param o Source matrix
 			 * 
-			 * @return Matrix of same size and type of o that now owns vector of entries of o.
+			 * @return reference to *this
 			 */
 			  my_type& 
 			  operator=(const my_type& o){
-			          cuvAssert(!(m_vec->is_view()));
 				  if(this==&o) return *this;
 				  if(this->h() != o.h() || this->w() != o.w()){
+					cuvAssert(!(m_vec->is_view())); // cannot delete view -- I do not own it!
 				    this->dealloc();
 				    m_width = o.w();
 				    m_height = o.h();
 				    this->alloc();
 				  }
-				  /*this->dealloc();
-				  (base_type&) (*this)  = (base_type&) o; // opy width, height
-				  m_vec   = o.m_vec;
-				  o.m_vec = NULL;   */           // transfer ownership of memory
 				  copy(*m_vec, o.vec());
 				  return *this;
 		  }

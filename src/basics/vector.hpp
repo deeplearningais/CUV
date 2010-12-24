@@ -65,7 +65,8 @@ void entry_set(value_type* ptr, index_type idx, value_type val, dev_memory_space
 template <class value_type, class index_type>
 value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space);
 
-
+template<class __vector_type, class __value_type>
+void fill(__vector_type& v, const __value_type& p);
 
 /**
  * @brief Basic vector class
@@ -175,13 +176,26 @@ class vector{
 
 
 		/** 
-		 * @brief Assignment operator. Assigns memory belonging to source to destination and sets source memory pointer to NULL (if source is not a view)
+		 * @brief Assign a scalar to a vector.
 		 * 
-		 * @param o Source matrix
+		 * @param scalar   the scalar to assign to all positions in *this
 		 * 
-		 * @return Matrix of same size and type of o that now owns vector of entries of o.
+		 * @return Reference to *this
 		 *
-		 * If source vector is a view, the returned vector is a view, too.
+		 */
+	  my_type& 
+		  operator=(const value_type& scalar){
+			 
+			fill(*this, scalar);
+			return *this;
+		  }
+		/** 
+		 * @brief Copy vector.
+		 * 
+		 * @param o Source vector
+		 * 
+		 * @return copy to *this
+		 *
 		 */
 	  my_type& 
 		  operator=(const my_type& o){
