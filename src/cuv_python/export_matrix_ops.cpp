@@ -295,6 +295,11 @@ void export_matrix_ops(){
         .value("ADD_SQUARED", RF_ADD_SQUARED)
         .value("MIN", RF_MIN)
         .value("MAX", RF_MAX)
+        .value("ARGMAX", RF_ARGMAX)
+        .value("ARGMIN", RF_ARGMIN)
+        .value("LOGADDEXP", RF_LOGADDEXP)
+        .value("ADDEXP", RF_ADDEXP)
+        .value("MULT", RF_MULT)
         ;
 	typedef dense_matrix<float,column_major,dev_memory_space> fdev;
 	typedef dense_matrix<float,column_major,host_memory_space> fhost;
