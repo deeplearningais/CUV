@@ -38,7 +38,7 @@
 template<int BLOCK_SIZE, class T, class V, class RF>
 __global__
 void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, const unsigned int nRows,
-		const T factNew, const T factOld, RF reduce_functor) {
+		const T factNew, const T factOld, RF reduce_functor, const T init_value) {
 
 	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
 	typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
@@ -61,7 +61,7 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 		return;
 	const unsigned int off = blockDim.y;
 
-	unconst_value_type sum = functor_traits::init_value;
+	unconst_value_type sum = init_value;
 	unsigned int arg_index = 0; // for storing indeces of maxima/minima for arg functors
 
 	for (unsigned int my = ty; my < nCols; my += off) {
@@ -103,7 +103,7 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 template<int BLOCK_SIZE, class T, class V, class RF>
 __global__
 void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, const unsigned int nRows,
-		const T factNew, const T factOld, const RF reduce_functor) {
+		const T factNew, const T factOld, const RF reduce_functor, const T init_value) {
 
 	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
 	typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
@@ -117,7 +117,7 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	const unsigned int ty = threadIdx.y, by = blockIdx.y;
 	const unsigned int off = blockDim.x;
 	
-	values[tx] = functor_traits::init_value;
+	values[tx] = init_value;
 	if(functor_traits::returns_index)
 		indices[tx] = 0;
 
@@ -127,12 +127,13 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	}
 	__syncthreads();
 
-	for (unsigned int offset = blockDim.x / 2; offset > 0; offset>>=1) {
+	for (unsigned int offset = BLOCK_SIZE*BLOCK_SIZE/2; offset > 0; offset>>=1) {
 		const unsigned int v = tx+offset;
 		if (tx < offset)
 			func_disp(reduce_functor,values[tx],indices[tx],values[v],indices[v]);
 		__syncthreads();
 	}
+	__syncthreads();
 	if (tx == 0) {
 		if (functor_traits::returns_index)
 			vector[by * blockDim.y + ty] = indices[0];
@@ -224,7 +225,7 @@ namespace reduce_impl {
 		unsigned int mem = sizeof(matval_t) * BLOCK_DIM_X*BLOCK_DIM_Y ;
 		if(reduce_functor_traits<RF>::returns_index)
 			mem += sizeof(vecval_t)*BLOCK_DIM_X*BLOCK_DIM_Y;
-		reduce_to_col_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,reduce_functor);
+		reduce_to_col_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,reduce_functor,reduce_functor_traits<RF>::init_value());
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
@@ -243,7 +244,7 @@ namespace reduce_impl {
 		if(reduce_functor_traits<RF>::returns_index)
 			mem += sizeof(vecval_t)*threads.x*threads.y;
 
-		reduce_to_row_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,reduce_functor);
+		reduce_to_row_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,reduce_functor,reduce_functor_traits<RF>::init_value());
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
@@ -281,7 +282,7 @@ namespace reduce_impl {
 		unconstV* values_ptr                   = values.ptr();
 		V*const values_end                     = values_ptr + values.size();
 		while(values_ptr != values_end) 
-			*values_ptr++ =functor_traits::init_value; 
+			*values_ptr++ =functor_traits::init_value(); 
 		values_ptr = values.ptr();      // reset pointers to begining of vector
 
 		if (dim==0){
@@ -396,7 +397,7 @@ void reduce_to_row(__vector_type&v, const __matrix_type& m,reduce_functor rf, co
 		reduce_impl::reduce_switch<1>(v,cm_view,rf,factNew,factOld); // 1 means first (we start counting at zero) dimension is summed out - meaning summing over the rows in a column major matrix.
 	}
 	else {
-	reduce_impl::reduce_switch<0>(v,m,rf,factNew,factOld); // 0 means zeroth dimension is summed out - meaning summing over the columns in a column major matrix.
+		reduce_impl::reduce_switch<0>(v,m,rf,factNew,factOld); // 0 means zeroth dimension is summed out - meaning summing over the columns in a column major matrix.
 	}
 	
 }
