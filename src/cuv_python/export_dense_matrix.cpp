@@ -385,17 +385,22 @@ void export_dense_matrix(){
 	export_dense_matrix<int,column_major,column_major>("cmi");
 	export_dense_matrix<int,row_major,row_major>("rmi");
 
+	export_dense_matrix<unsigned int,column_major,column_major>("cmui");
+	export_dense_matrix<unsigned int,row_major,row_major>("rmui");
+
 	// numpy --> host matrix view
 	export_dense_matrix_views<int>();
 	export_dense_matrix_views<float>();
 	export_dense_matrix_views<signed char>();
 	export_dense_matrix_views<unsigned char>();
+	export_dense_matrix_views<unsigned int>();
 
 	// numpy --> dev matrix
 	export_numpy2dev_dense_mats<int>();
 	export_numpy2dev_dense_mats<float>();
 	export_numpy2dev_dense_mats<signed char>();
 	export_numpy2dev_dense_mats<unsigned char>();
+	export_numpy2dev_dense_mats<unsigned int>();
 	
 
 	// numpy --> host matrix
@@ -403,22 +408,35 @@ void export_dense_matrix(){
 	export_numpy2host_dense_mats<float>();
 	export_numpy2host_dense_mats<signed char>();
 	export_numpy2host_dense_mats<unsigned char>();
+	export_numpy2host_dense_mats<unsigned int>();
 
 	// dev matrix --> numpy matrix
 	export_dev_dense_mat2numpys<int>();
 	export_dev_dense_mat2numpys<float>();
 	export_dev_dense_mat2numpys<signed char>();
 	export_dev_dense_mat2numpys<unsigned char>();
+	export_dev_dense_mat2numpys<unsigned int>();
 	
 	// host matrix --> numpy matrix
 	export_host_dense_mat2numpys<int>();
 	export_host_dense_mat2numpys<float>();
+	export_host_dense_mat2numpys<signed char>();
+	export_host_dense_mat2numpys<unsigned char>();
+	export_host_dense_mat2numpys<unsigned int>();
 
 	// dev cm -> dev rm
+	export_rm_view<int,dev_memory_space,unsigned int>();
 	export_rm_view<float,dev_memory_space,unsigned int>();
+	export_rm_view<signed char,dev_memory_space,unsigned int>();
+	export_rm_view<unsigned char,dev_memory_space,unsigned int>();
+	export_rm_view<unsigned int,dev_memory_space,unsigned int>();
 
 	// dev rm -> dev cm
+	export_cm_view<int,dev_memory_space,unsigned int>();
 	export_cm_view<float,dev_memory_space,unsigned int>();
+	export_cm_view<signed char,dev_memory_space,unsigned int>();
+	export_cm_view<unsigned char,dev_memory_space,unsigned int>();
+	export_cm_view<unsigned int,dev_memory_space,unsigned int>();
 	export_view_simple();
 }
 

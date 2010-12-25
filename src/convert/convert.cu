@@ -358,18 +358,28 @@ CONV_INST(int,column_major,row_major);
 CONV_INST(int,row_major,   column_major);
 CONV_INST(int,row_major,   row_major);
 
-CONV_SIMPLE_INST(float,column_major);
-CONV_SIMPLE_INST(unsigned char,column_major);
-CONV_SIMPLE_INST(signed char,column_major);
-CONV_SIMPLE_INST(float,row_major);
-CONV_SIMPLE_INST(unsigned char,row_major);
-CONV_SIMPLE_INST(signed char,row_major);
+CONV_INST(unsigned int,column_major,column_major);
+CONV_INST(unsigned int,column_major,row_major);
+CONV_INST(unsigned int,row_major,   column_major);
+CONV_INST(unsigned int,row_major,   row_major);
 
-CONV_VEC(float);
+CONV_SIMPLE_INST(int,column_major);
+CONV_SIMPLE_INST(float,column_major);
+CONV_SIMPLE_INST(signed char,column_major);
+CONV_SIMPLE_INST(unsigned char,column_major);
+CONV_SIMPLE_INST(unsigned int,column_major);
+
+CONV_SIMPLE_INST(int,row_major);
+CONV_SIMPLE_INST(float,row_major);
+CONV_SIMPLE_INST(signed char,row_major);
+CONV_SIMPLE_INST(unsigned char,row_major);
+CONV_SIMPLE_INST(unsigned int,row_major);
+
 CONV_VEC(int);
-CONV_VEC(unsigned int);
-CONV_VEC(unsigned char);
+CONV_VEC(float);
 CONV_VEC(signed char);
+CONV_VEC(unsigned char);
+CONV_VEC(unsigned int);
 
 #define DIA_DENSE_CONV(X,Y,Z) \
 	template <>                           \

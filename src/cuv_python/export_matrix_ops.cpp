@@ -301,6 +301,8 @@ void export_matrix_ops(){
 	typedef dense_matrix<unsigned char,column_major,host_memory_space> uhost;
 	typedef dense_matrix<int,column_major,dev_memory_space> idev;
 	typedef dense_matrix<int,column_major,host_memory_space> ihost;
+	typedef dense_matrix<unsigned int,column_major,dev_memory_space> uidev;
+	typedef dense_matrix<unsigned int,column_major,host_memory_space> uihost;
 
 	export_blas3<fdev,fdev,fdev>();
 	export_blas3<fhost,fhost,fhost>();
@@ -312,6 +314,8 @@ void export_matrix_ops(){
 	export_nullary_functor<udev>();
 	export_nullary_functor<ihost>();
 	export_nullary_functor<idev>();
+	export_nullary_functor<uihost>();
+	export_nullary_functor<uidev>();
 	export_scalar_functor<fhost>();
 	export_scalar_functor<fdev>();
 	export_binary_functor<fdev,fdev>();
