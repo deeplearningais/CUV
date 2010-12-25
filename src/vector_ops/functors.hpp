@@ -233,12 +233,30 @@ struct reduce_functor_traits<bf_min<T,T> >{
 	static const bool returns_index = false;
 	typedef bf_min<T,T> result_result_functor_type;
 };
+
+
+// the following binary functors are used for reductions, but they behave
+// differently when operating on their own results. 
+// For example ADD_SQUARED: 
+//     x = a+b*b
+//     y = c+d*d
+//     z = x + y // NOT x + y*y
 template<class T>
 struct reduce_functor_traits<bf_add_square<T,T> >{  
 	static const T init_value(){return 0;}
 	static const bool returns_index = false;
 	typedef bf_plus<T,T> result_result_functor_type; // !!!
 };
+template<class T>
+struct reduce_functor_traits<bf_add_log<T,T> >{  
+	static const T init_value(){return 0;}
+	static const bool returns_index = false;
+	typedef bf_plus<T,T> result_result_functor_type; // !!!
+};
+//template<class T>
+//struct reduce_functor_traits<bf_logaddexp<T> >{  // this one is symmetric!!!
+// ...
+//};
 
 template<class I, class T>
 struct reduce_functor_traits<reduce_argmax<T,I> >{  
@@ -256,8 +274,7 @@ struct reduce_functor_traits<reduce_argmin<T,I> >{
 
 template<bool functor_on_value_and_index, class phase>
 struct rf_dispatcher{
-	//BOOST_STATIC_ASSERT(sizeof(char)==0);
-	void run(){ cuvAssert(false);} 
+	BOOST_STATIC_ASSERT(sizeof(phase)!=0);
 };
 
 template<>
