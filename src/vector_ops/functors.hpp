@@ -1,4 +1,6 @@
 #include <boost/numeric/conversion/bounds.hpp>
+#include <boost/static_assert.hpp>
+
 #include <cmath>
 #include <cuv_general.hpp>
 
@@ -178,6 +180,19 @@ struct bf_logaddexp : functor<float> {
 		return u + log1p(expf(diff));
 	} 
 };
+
+struct rf_result_value_tag{};
+struct rf_result_result_tag{};
+
+template<class V, class I>
+struct reduce_add : functor<void> {  
+	__device__  __host__    void    operator()(V& t, I& i, const V& u, const I& j) const{
+	   if (u > t) {
+		  t = u;
+		  i = (I) j;
+	   }
+	} 
+};
 template<class V, class I>
 struct reduce_argmax : functor<void> {  
 	__device__  __host__    void    operator()(V& t, I& i, const V& u, const I& j) const{
@@ -202,51 +217,82 @@ template<class FUNC>
 struct reduce_functor_traits{ 
 	static const typename FUNC::return_type init_value(){return 0;}
 	static const bool returns_index = false;
+	typedef FUNC result_result_functor_type;
 };
 
 template<class T>
 struct reduce_functor_traits<bf_max<T,T> >{
 	static const T init_value(){return boost::numeric::bounds<T>::lowest();}
 	static const bool returns_index = false;
-
+	typedef bf_max<T,T> result_result_functor_type;
 };
 
 template<class T>
 struct reduce_functor_traits<bf_min<T,T> >{  
 	static const T init_value(){return boost::numeric::bounds<T>::highest();}
 	static const bool returns_index = false;
+	typedef bf_min<T,T> result_result_functor_type;
+};
+template<class T>
+struct reduce_functor_traits<bf_add_square<T,T> >{  
+	static const T init_value(){return 0;}
+	static const bool returns_index = false;
+	typedef bf_plus<T,T> result_result_functor_type; // !!!
 };
 
 template<class I, class T>
 struct reduce_functor_traits<reduce_argmax<T,I> >{  
 	static const T init_value(){return boost::numeric::bounds<T>::lowest();}
 	static const bool returns_index=true;
+	typedef reduce_argmax<T,I> result_result_functor_type;
 };
 
 template<class I, class T>
 struct reduce_functor_traits<reduce_argmin<T,I> >{  
 	static const T init_value(){return boost::numeric::bounds<T>::highest();}
 	static const bool returns_index=true;
+	typedef reduce_argmin<T,I> result_result_functor_type;
 };
 
-template<bool F>
-struct functor_dispatcher{
-	__device__  __host__       void operator()() { cuvAssert(false); } 
+template<bool functor_on_value_and_index, class phase>
+struct rf_dispatcher{
+	//BOOST_STATIC_ASSERT(sizeof(char)==0);
+	void run(){ cuvAssert(false);} 
 };
 
 template<>
-struct functor_dispatcher<false>{
+struct rf_dispatcher<false,rf_result_value_tag>{
 	template<class T, class V, class I, class J>
-	__device__  __host__   void operator()(const T& bf, V &t, I &i, const V &u, const J &j )const {
+	static 
+	__device__  __host__   void run(const T& bf, V &t, I &i, const V &u, const J &j ){
 		t =  bf(t,u);
+	} 
+};
+template<>
+struct rf_dispatcher<false,rf_result_result_tag>{
+	template<class T, class V, class I, class J>
+	static 
+	__device__  __host__   void run(const T& bf, V &t, I &i, const V &u, const J &j ){
+		typename reduce_functor_traits<T>::result_result_functor_type func;
+		t = func(t,u);
 	} 
 };
 
 template<>
-struct functor_dispatcher<true>{
+struct rf_dispatcher<true,rf_result_value_tag>{
 	template<class T, class V, class I, class J>
-	__device__  __host__   void operator()(const T& qf, V &t, I &i, const V &u, const J &j ) const{
+	static
+	__device__  __host__   void run(const T& qf, V &t, I &i, const V &u, const J &j ) {
 		qf(t,i,u,j);
+	} 
+};
+template<>
+struct rf_dispatcher<true,rf_result_result_tag>{
+	template<class T, class V, class I, class J>
+	static
+	__device__  __host__   void run(const T& qf, V &t, I &i, const V &u, const J &j ) {
+		typename reduce_functor_traits<T>::result_result_functor_type func;
+		func(t,i,u,j);
 	} 
 };
 };//namespace cuv

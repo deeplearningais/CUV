@@ -41,9 +41,9 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 		const T factNew, const T factOld, RF reduce_functor, const T init_value) {
 
 	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
-	typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
+	typedef typename cuv::rf_dispatcher<functor_traits::returns_index,cuv::rf_result_value_tag> rf_phase1;
+	typedef typename cuv::rf_dispatcher<functor_traits::returns_index,cuv::rf_result_result_tag> rf_phase2;
 	typedef typename cuv::unconst<T>::type unconst_value_type;
-	functor_dispatcher_type func_disp;
 
 	extern __shared__ unsigned char ptr[]; // need this intermediate variable for nvcc :-(
 	unconst_value_type* values = (unconst_value_type*) ptr;
@@ -66,7 +66,7 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 
 	for (unsigned int my = ty; my < nCols; my += off) {
 		const T f = matrix[my * nRows + row_idx ];
-		func_disp(reduce_functor,sum,arg_index,f,my);
+		rf_phase1::run(reduce_functor,sum,arg_index,f,my);
 		//sum=reduce_functor(sum,f);
 	}
 
@@ -79,7 +79,7 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	for (unsigned int offset = blockDim.y / 2; offset > 0; offset >>=1) {
 		if (ty < offset) {
 			const unsigned int v = ty+offset;
-			func_disp(reduce_functor,
+			rf_phase2::run(reduce_functor,
 					  values [ty*BLOCK_SIZE+tx],
 					  indices[ty*BLOCK_SIZE+tx],
 					  values [v *BLOCK_SIZE+tx],
@@ -106,9 +106,9 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 		const T factNew, const T factOld, const RF reduce_functor, const T init_value) {
 
 	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
-	typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
+	typedef typename cuv::rf_dispatcher<functor_traits::returns_index,cuv::rf_result_value_tag> rf_phase1;
+	typedef typename cuv::rf_dispatcher<functor_traits::returns_index,cuv::rf_result_result_tag> rf_phase2;
 	typedef typename cuv::unconst<T>::type unconst_value_type;
-	functor_dispatcher_type func_disp;
 
 	extern __shared__ float sptr[]; // need this intermediate variable for nvcc :-(
 	unconst_value_type* values = (unconst_value_type*) sptr;
@@ -123,14 +123,14 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 
 	for (unsigned int my = tx; my < nRows; my += off) {
 		const T f = matrix[by * nRows + bx * blockDim.x + my];
-		func_disp(reduce_functor,values[tx],indices[tx],f,my);
+		rf_phase1::run(reduce_functor,values[tx],indices[tx],f,my);
 	}
 	__syncthreads();
 
 	for (unsigned int offset = BLOCK_SIZE*BLOCK_SIZE/2; offset > 0; offset>>=1) {
 		const unsigned int v = tx+offset;
 		if (tx < offset)
-			func_disp(reduce_functor,values[tx],indices[tx],values[v],indices[v]);
+			rf_phase2::run(reduce_functor,values[tx],indices[tx],values[v],indices[v]);
 		__syncthreads();
 	}
 	__syncthreads();
@@ -256,14 +256,13 @@ namespace reduce_impl {
 		typedef typename __matrix_type::index_type I;
 		typedef typename unconst<V>::type unconstV;
 		typedef typename cuv::reduce_functor_traits<RF> functor_traits;
-		typedef typename cuv::functor_dispatcher<functor_traits::returns_index> functor_dispatcher_type;
+		typedef typename cuv::rf_dispatcher<functor_traits::returns_index,cuv::rf_result_value_tag> rf_phase1;
 
 		cuvAssert(m.ptr() != NULL);
 		// assert that vector has correct length
 		if (dim==0) cuvAssert(v.size()==m.w());
 		if (dim==1) cuvAssert(v.size()==m.h());
 
-		functor_dispatcher_type func_disp;
 		const V* A_ptr                         = m.ptr();
 
 		// indices: only needed when arg-max/arg-min etc used
@@ -289,7 +288,7 @@ namespace reduce_impl {
 			// apply reduce functor along columns
 			for(;values_ptr!=values_end; values_ptr++, indices_ptr++) {
 				for(unsigned int j=0; j<m.h(); j++, A_ptr++)
-					func_disp(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,j);
+					rf_phase1::run(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,j);
 			}
 		}
 		else if(dim==1){
@@ -298,7 +297,7 @@ namespace reduce_impl {
 				values_ptr  = values.ptr();
 				indices_ptr = indices_begin;
 				for(; values_ptr!=values_end;A_ptr++,values_ptr++,indices_ptr++) 
-					func_disp(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,i);
+					rf_phase1::run(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,i);
 			}
 		}else{
 			cuvAssert(false);
