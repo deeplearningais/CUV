@@ -1,3 +1,4 @@
+#include <boost/numeric/conversion/bounds.hpp>
 #include <cmath>
 #include <cuv_general.hpp>
 
@@ -199,32 +200,32 @@ struct reduce_argmin : functor<void> {
 // for reduce functors: set initial value of shared memory
 template<class FUNC>
 struct reduce_functor_traits{ 
-	static const typename FUNC::return_type init_value = 0;     
+	static const typename FUNC::return_type init_value(){return 0;}
 	static const bool returns_index = false;
 };
 
 template<class T>
 struct reduce_functor_traits<bf_max<T,T> >{
-	static const T init_value = -INT_MAX;    
+	static const T init_value(){return boost::numeric::bounds<T>::lowest();}
 	static const bool returns_index = false;
 
 };
 
 template<class T>
 struct reduce_functor_traits<bf_min<T,T> >{  
-	static const T init_value = INT_MAX;     
+	static const T init_value(){return boost::numeric::bounds<T>::highest();}
 	static const bool returns_index = false;
 };
 
 template<class I, class T>
 struct reduce_functor_traits<reduce_argmax<T,I> >{  
-	static const T init_value = -INT_MAX;     
+	static const T init_value(){return boost::numeric::bounds<T>::lowest();}
 	static const bool returns_index=true;
 };
 
 template<class I, class T>
 struct reduce_functor_traits<reduce_argmin<T,I> >{  
-	static const T init_value = INT_MAX;     
+	static const T init_value(){return boost::numeric::bounds<T>::highest();}
 	static const bool returns_index=true;
 };
 
