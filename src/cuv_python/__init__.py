@@ -31,7 +31,7 @@ def copy(dst,src):
 
 
 for memory_space in ["dev","host"]:
-    for value_type in ["f","sc","uc","i"]:
+    for value_type in ["f","sc","uc","i", "ui"]:
         for memory_layout in ["rm","cm"]:
             dense_type=eval(memory_space+"_matrix_"+memory_layout+value_type)
 

@@ -90,8 +90,12 @@ void export_vector(){
 	export_vector_common<vector<int,dev_memory_space> >("dev_vector_int");
 	export_vector_common<vector<int,host_memory_space> >("host_vector_int");
 
+	export_vector_common<vector<unsigned int,dev_memory_space> >("dev_vector_uint");
+	export_vector_common<vector<unsigned int,host_memory_space> >("host_vector_uint");
+
 	export_vector_conversion<float>();
 	export_vector_conversion<unsigned char>();
 	export_vector_conversion<int>();
+	export_vector_conversion<unsigned int>();
 	}
 
