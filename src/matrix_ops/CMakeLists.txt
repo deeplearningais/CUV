@@ -21,7 +21,6 @@ CUDA_ADD_LIBRARY(cuv_matrix_ops STATIC
 	densedense_to_sparse.cu
 	matrix_ops.cu
 	matrix_ops_reduce.cu
-	diagonals.cu
 	spmv.cu
   )
 ADD_DEPENDENCIES(cuv_matrix_ops generateheader)
