@@ -36,7 +36,7 @@ struct uf_abs<unsigned char>{  __device__ __host__        unsigned char operator
 template<>
 struct uf_abs<unsigned int>{  __device__ __host__         unsigned int operator()(const unsigned int& t)      const{ return t;    } };
 template<class T>
-struct uf_exact_sigm{  __device__  __host__ T operator()(const T& t)      const{ return ((T)1)/(((T)1)+expf(-t));    } };
+struct uf_sigm{  __device__  __host__ T operator()(const T& t)      const{ return ((T)1)/(((T)1)+expf(-t));    } };
 template<class T>
 struct uf_dsigm{  __device__ __host__       T operator()(const T& t)      const{ return t * (((T)1)-t); } };
 template<class T>

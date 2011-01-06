@@ -73,16 +73,6 @@ struct memspace_cuv2thrustptr<T,cuv::host_memory_space>{ typedef T* ptr_type; };
 template<class T>
 struct memspace_cuv2thrustptr<T,cuv::dev_memory_space> { typedef thrust::device_ptr<T> ptr_type; };
 
-template<class T>
-
-#ifdef __DEVICE_EMULATION__
-	struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+expf(-t));    } };
-#else
-	struct uf_sigm{  __device__  __host__       T operator()(const T& t)      const{ return ((T)1)/(((T)1)+expf(-t));    } };
-#endif
-
-
-
 /*
  * launchers for functors
  */
