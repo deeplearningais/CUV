@@ -52,7 +52,6 @@
 
 #include "vector_ops.hpp"
 
-#define sgn(a) (copysign(1.f,a))
 
 /*
  * USE_THRUST_LAUNCHER:

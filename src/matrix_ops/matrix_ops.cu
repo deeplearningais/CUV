@@ -38,6 +38,8 @@
 #include <float.h>
 #include "matrix_ops.hpp"
 #include <limits>
+#include <vector_ops/functors.hpp>
+#include "../tools/cuPrintf.cu"
 
 #ifdef __CDT_PARSER__
 #define __global__
@@ -68,10 +70,10 @@
 	 *
 	 * tx indicates the y-dimension in the matrix; ty indicates the x-dimension in the matrix
 	 */
-template<int BLOCK_SIZE, class T, int OP>
+template<int BLOCK_SIZE, class T, class RF>
 __global__
 void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
-		T param, T factNew, T factOld) {
+		T param, T factNew, T factOld, RF reduce_functor) {
 
 	__shared__ T shared[BLOCK_SIZE / 2][BLOCK_SIZE * 2];
 	T sum;
@@ -89,12 +91,13 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 		return;
 	int off = blockDim.y;
 
-	if (OP==cuv::RF_MIN)
-		sum = INT_MAX;
-	else if(OP==cuv::RF_MAX)
-		sum = -INT_MAX;
-	else
-		sum = 0.f;
+	sum = reduce_functor_traits<T,RF>::init_value;
+	/*if (OP==cuv::RF_MIN)*/
+		/*sum = INT_MAX;*/
+	/*else if(OP==cuv::RF_MAX)*/
+		/*sum = -INT_MAX;*/
+	/*else*/
+		/*sum = 0.f;*/
 //	printf("\n\nBlockDim.x: %d, BlockDim.y: %d\n", blockDim.x, blockDim.y);
 //	printf("\n\ngridDim.x: %d, gridDim.y: %d\n", gridDim.x, gridDim.y);
 //
@@ -106,15 +109,15 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 //			printf("my: %d\t", my);
 		// to jump one col we proceed nRow elements in the matrix vector
 		T f = matrix[my * nRows + row_idx ];
-
-		if (OP == cuv::RF_ADD)
-			sum += f;
-		if (OP == cuv::RF_ADD_SQUARED)
-			sum += f * f;
-		if (OP == cuv::RF_MIN)
-			sum = min(sum, f);
-		if (OP == cuv::RF_MAX)
-			sum = max(sum, f);
+		sum=reduce_functor(sum,f);
+		/*if (OP == cuv::RF_ADD)*/
+			/*sum += f;*/
+		/*if (OP == cuv::RF_ADD_SQUARED)*/
+			/*sum += f * f;*/
+		/*if (OP == cuv::RF_MIN)*/
+			/*sum = min(sum, f);*/
+		/*if (OP == cuv::RF_MAX)*/
+			/*sum = max(sum, f);*/
 	}
 
 	shared[ty][tx] = sum;
@@ -124,21 +127,25 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 	int offset = blockDim.y / 2;
 	while (offset > 0) {
 		if (ty < offset) {
-			if (OP == cuv::RF_ADD)
-				shared[ty][tx] += shared[ty + offset][tx];
-			if (OP == cuv::RF_ADD_SQUARED)
-				shared[ty][tx] += shared[ty + offset][tx];
-			if (OP == cuv::RF_MIN)
-				shared[ty][tx] = min(shared[ty][tx], shared[ty + offset][tx]);
-			if (OP == cuv::RF_MAX)
-				shared[ty][tx] = max(shared[ty][tx], shared[ty + offset][tx]);
+			shared[ty][tx]=reduce_functor(shared[ty][tx],shared[ty + offset][tx]);
+			/*if (OP == cuv::RF_ADD)*/
+				/*shared[ty][tx] += shared[ty + offset][tx];*/
+			/*if (OP == cuv::RF_ADD_SQUARED)*/
+				/*shared[ty][tx] += shared[ty + offset][tx];*/
+			/*if (OP == cuv::RF_MIN)*/
+				/*shared[ty][tx] = min(shared[ty][tx], shared[ty + offset][tx]);*/
+			/*if (OP == cuv::RF_MAX)*/
+				/*shared[ty][tx] = max(shared[ty][tx], shared[ty + offset][tx]);*/
 		}
 		offset >>= 1;
 		__syncthreads();
 	}
 
 	if (ty == 0) {
-		if (OP == cuv::RF_MIN || OP == cuv::RF_MAX)
+		if (row_idx >= nCols){
+			cuPrintf("Value is: %d\n", row_idx);
+		}
+		if (reduce_functor_traits<T,RF>::is_simple)
 			vector[row_idx] = shared[0][tx];
 		else
 			if(factOld != 0.f){
@@ -151,10 +158,10 @@ void reduce_to_col_kernel(const T* matrix, T* vector, int nCols, int nRows,
 	//__syncthreads();
 }
 
-template<int BLOCK_SIZE, class T, int OP>
+template<int BLOCK_SIZE, class T, class RF>
 __global__
 void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows,
-		T param, T factNew, T factOld) {
+		T param, T factNew, T factOld,RF reduce_functor) {
 	__shared__ T shared[BLOCK_SIZE * BLOCK_SIZE];
 	const int tx = threadIdx.x, bx = blockIdx.x;
 	const int ty = threadIdx.y, by = blockIdx.y;
@@ -162,44 +169,41 @@ void reduce_to_row_kernel(const T* matrix, T* vector, int nCols, int nRows,
 	for (; idx < nCols; idx += blockDim.y * gridDim.y) {
 		int off = blockDim.x;
 
-		if (OP == cuv::RF_MIN)
-			shared[tx] = INT_MAX;
-		else if (OP == cuv::RF_MAX)
-			shared[tx] = -INT_MAX;
-		else
-			shared[tx] = 0;
+		shared[tx] = reduce_functor_traits<T,RF>::init_value;
 		for (int my = tx; my < nRows; my += off) {
 			T f = matrix[by * nRows + bx * blockDim.x + my];
 
-			if (OP == cuv::RF_ADD)
-				shared[tx] += f;
-			if (OP == cuv::RF_ADD_SQUARED)
-				shared[tx] += f * f;
-			if (OP == cuv::RF_MAX)
-				shared[tx] = max(shared[tx], f);
-			if (OP == cuv::RF_MIN)
-				shared[tx] = min(shared[tx], f);
+			shared[tx]=reduce_functor(shared[tx],f);
+			/*if (OP == cuv::RF_ADD)*/
+				/*shared[tx] += f;*/
+			/*if (OP == cuv::RF_ADD_SQUARED)*/
+				/*shared[tx] += f * f;*/
+			/*if (OP == cuv::RF_MAX)*/
+				/*shared[tx] = max(shared[tx], f);*/
+			/*if (OP == cuv::RF_MIN)*/
+				/*shared[tx] = min(shared[tx], f);*/
 		}
 		__syncthreads();
 
 		int offset = blockDim.x / 2;
 		while (offset > 0) {
 			if (tx < offset) {
-				if (OP == cuv::RF_ADD)
-					shared[tx] += shared[tx + offset];
-				if (OP == cuv::RF_ADD_SQUARED)
-					shared[tx] += shared[tx + offset];
-				if (OP == cuv::RF_MAX)
-					shared[tx] = max(shared[tx], shared[tx + offset]);
-				if (OP == cuv::RF_MIN)
-					shared[tx] = min(shared[tx], shared[tx + offset]);
+				shared[tx]=reduce_functor(shared[tx],shared[tx + offset]);
+				/*if (OP == cuv::RF_ADD)*/
+					/*shared[tx] += shared[tx + offset];*/
+				/*if (OP == cuv::RF_ADD_SQUARED)*/
+					/*shared[tx] += shared[tx + offset];*/
+				/*if (OP == cuv::RF_MAX)*/
+					/*shared[tx] = max(shared[tx], shared[tx + offset]);*/
+				/*if (OP == cuv::RF_MIN)*/
+					/*shared[tx] = min(shared[tx], shared[tx + offset]);*/
 			}
 			offset >>= 1;
 			__syncthreads();
 		}
 
 		if (tx == 0) {
-			if (OP == cuv::RF_MIN || OP == cuv::RF_MAX)
+			if (reduce_functor_traits<T,RF>::is_simple)
 				vector[by * blockDim.y + ty] = shared[0];
 			else
 				if(factOld != 0){
@@ -671,7 +675,14 @@ namespace reduce_to_col_impl {
 		}
 		dim3 grid(grid_x, grid_y);
 		dim3 threads(BLOCK_DIM_X,BLOCK_DIM_Y);
-		reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
+		cudaPrintfInit();		
+		switch(rf){
+			case RF_ADD:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_plus<V,V2>());break;
+			case RF_MULT:     reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_multiplies<V,V2>());break;
+			case RF_MIN:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_min<V,V2>());break;
+			case RF_MAX:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_max<V,V2>());break;
+			default: cuvAssert(false);
+		}	
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<int rf,class V,class I, class V2>
@@ -683,7 +694,13 @@ namespace reduce_to_col_impl {
 		dim3 grid(1, m.h());                           //TODO: make reduce_to_row kernel use grids
 		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1); // not working for m.h() > 65535
 		// yes, we abuse the reduce_to_row kernel here :)
-		reduce_to_row_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);
+		switch(rf){
+			case RF_ADD:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_plus<V,V2>());break;
+			case RF_MULT:     reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_multiplies<V,V2>());break;
+			case RF_MIN:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_min<V,V2>());break;
+			case RF_MAX:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_max<V,V2>());break;
+			default: cuvAssert(false);
+		}
 #else
 		cuvAssert(rf == RF_ADD); // what else does alex support?
 
@@ -709,6 +726,7 @@ namespace reduce_to_col_impl {
 }
 template<class __matrix_type, class __vector_type>
 void reduce_to_col(__vector_type&v, const __matrix_type& m, reduce_functor rf, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld) {
+
 	switch(rf) {
 		case RF_ADD:
 		reduce_to_col_impl::reduce_to_col<RF_ADD>(v,m,factNew,factOld);
@@ -772,7 +790,13 @@ namespace reduce_to_row_impl {
 		static const int BLOCK_SIZE = 16;
 		dim3 grid(1, m.w());
 		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
-		reduce_to_row_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld);
+		switch(rf){
+			case RF_ADD:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_plus<V,V2>());break;
+			case RF_MULT:     reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_multiplies<V,V2>());break;
+			case RF_MIN:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_min<V,V2>());break;
+			case RF_MAX:      reduce_to_row_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.w(),m.h(),0,factNew,factOld,bf_max<V,V2>());break;
+			default: cuvAssert(false);
+		}
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
@@ -798,7 +822,13 @@ namespace reduce_to_row_impl {
 		dim3 grid(grid_x, grid_y);
 		dim3 threads(BLOCK_SIZE*2, BLOCK_SIZE/2);
 		// yes, we abuse the reduce_to_col kernel here :)
-		reduce_to_col_kernel<BLOCK_SIZE,V,rf><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld);
+		switch(rf){
+			case RF_ADD:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_plus<V,V2>());break;
+			case RF_MULT:     reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_multiplies<V,V2>());break;
+			case RF_MIN:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_min<V,V2>());break;
+			case RF_MAX:      reduce_to_col_kernel<BLOCK_SIZE,V><<<grid,threads>>>(m.ptr(),v.ptr(),m.h(),m.w(),0,factNew,factOld,bf_max<V,V2>());break;
+			default: cuvAssert(false);
+		}
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
