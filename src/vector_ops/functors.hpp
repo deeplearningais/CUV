@@ -113,6 +113,8 @@ struct bf_divides{  __device__  __host__    T operator()(const T& t, const U& u)
 template<class T, class U>
 struct bf_squared_diff{__device__ __host__  T operator()(const T& t, const U& u)      const{ T ret =  t - (T)u; return ret*ret; } };
 template<class T, class U>
+struct bf_add_square{__device__ __host__  T operator()(const T& t, const U& u)      const{ return t + (T)(u*u);} };
+template<class T, class U>
 struct bf_and{__device__ __host__   T operator()(const T& t, const U& u)      const{ return t && u; } };
 template<class T, class U>
 struct bf_or{ __device__ __host__   T operator()(const T& t, const U& u)      const{ return t || u; } };
