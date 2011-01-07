@@ -81,6 +81,8 @@ namespace cuv{
 		  // do not return a reference, this will not work for device memory
 		  inline const value_type operator()(const index_type& i, const index_type& j) const;	///< Read entry at position (i,j)
 		  inline       value_type operator()(const index_type& i, const index_type& j);			///< Read entry at position (i,j)
+		  inline const value_type operator()(const index_type& i) const;	///< Read entry at position (i) (vector)
+		  inline       value_type operator()(const index_type& i);			///< Read entry at position (i) (vector)
 		  inline size_t memsize()       const { cuvAssert(m_vec); return m_vec->memsize(); }	///< Return matrix size in memory
 		  inline const value_type* ptr()const { cuvAssert(m_vec); return m_vec->ptr(); }		///< Return device pointer to matrix entries
 		  inline       value_type* ptr()      { cuvAssert(m_vec); return m_vec->ptr(); }		///< Return device pointer to matrix entries
@@ -237,6 +239,13 @@ namespace cuv{
 	typename dense_matrix<V,M,T,I>::value_type
 	dense_matrix<V,M,T,I>::operator()(const index_type& i, const index_type& j)    { return (*this)(i,j,memory_layout()); }
 
+	template<class V, class M, class T, class I>
+	typename dense_matrix<V,M,T,I>::value_type
+	dense_matrix<V,M,T,I>::operator()(const index_type& i)    { return (this->vec)(i); }
+
+	template<class V, class M, class T, class I>
+	const typename dense_matrix<V,M,T,I>::value_type
+	dense_matrix<V,M,T,I>::operator()(const index_type& i)const    { return (this->vec)(i); }
 	/*
 	 * Change values in dense matrix
 	 *
