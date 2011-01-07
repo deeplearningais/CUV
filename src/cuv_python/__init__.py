@@ -21,7 +21,10 @@ def __np(x):
     return pull(x)
 
 def __getitem__(x,key):
-    return x.at(*key)
+    if key.__class__==int:
+        return x.vec.at(key)
+    else:
+        return x.at(*key)
 
 def __setitem__(x,key,value):
     x.set(*key,value=value)
@@ -31,8 +34,6 @@ def copy(dst,src):
 
 # Combine strings to form all exported combinations of types
 # For all types add convenience functions
-
-
 
 for memory_space in ["dev","host"]:
     for value_type in ["f","sc","uc","i", "ui"]:
