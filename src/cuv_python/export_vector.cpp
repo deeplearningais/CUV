@@ -63,7 +63,7 @@ export_vector_common(const char* name){
 		.def("alloc",&vec::alloc, "allocate memory")
 		.def("dealloc",&vec::dealloc, "deallocate memory")
 		.def("set",    &vec::set, "set index to value")
-		.def("__call__",  (value_type  (vec::*)(const typename vec::index_type&)const)(&vec::operator[]))
+		.def("at",  (value_type  (vec::*)(const typename vec::index_type&)const)(&vec::operator[]))
 		.add_property("size", &vec::size)
 		.add_property("memsize",&vec::memsize, "size of vector in memory (bytes)")
 		;
