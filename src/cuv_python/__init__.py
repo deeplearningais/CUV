@@ -1,6 +1,9 @@
 import numpy as np
 from _cuv_python import *
 
+def _matstr(x,typestr):
+    return "%s: (%d,%d)[%2.1f Mb]"%(typestr,x.h,x.w,x.memsize/1024./1024.)
+
 def __cpy(x):
     x2 = x.__class__(x.h,x.w)
     apply_binary_functor(x2.vec,x.vec,binary_functor.COPY)
@@ -44,8 +47,10 @@ for memory_space in ["dev","host"]:
             dense_type.has_inf = property(lambda x:has_inf(x))
             dense_type.__getitem__=__getitem__
             dense_type.__setitem__=__setitem__
+            dense_type.__str__=lambda x:(_matstr(x,memory_space+"_matrix_"+memory_layout+value_type))
 
     dia_type=eval(memory_space+"_dia_matrix_f")
+    #dia_type.__str__=lambda x:(_matstr(x,memory_space+"_matrix_"+memory_layout+value_type))
 
     dia_type.shape = property(__shape)
     dia_type.np = property(__np)
