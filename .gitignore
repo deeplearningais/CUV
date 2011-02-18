@@ -1,1 +1,5 @@
 build/*
+src/tags
+src/call_tags
+src/cscope.files
+src/cscope.out
