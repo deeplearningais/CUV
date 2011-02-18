@@ -1,4 +1,4 @@
-all: filelist tags cs bob
+all: filelist tags cs bob ctags_hilite
 filelist:
 	find . -name '*.cpp' -or -name '*.cu' -or -name '*.h' -or -name '*.hpp'  | grep -v ConvNetwork | grep -v Mlp |grep -v build > cscope.files
 tags: Makefile
@@ -8,3 +8,5 @@ cs:
 bob: cs
 	#bob -L cscope.files --make-ctags
 	bob -L cscope.files --call-tags
+ctags_hilite:
+	vim '+UpdateTypesFile!' '+quit'
