@@ -80,10 +80,14 @@
  *   Restricted Boltzmann Machines (RBM), convolutional or locally connected.
  * 
  * Documentation
- * - Tutorials are available on 
+ * - Tutorials are available on
  *   http://www.ais.uni-bonn.de/~schulz/tag/cuv
- * - The API documentation can be generated from the code or accessed on the
- *   internet: http://www.ais.uni-bonn.de/deep_learning/doc/html/index.html
+ * - The documentation can be generated from the code or accessed on the internet:
+ *   http://www.ais.uni-bonn.de/deep_learning/doc/html/index.html
+ *
+ * Contact
+ * - We are eager to help you getting started with CUV and improve the library continuously!
+ *   http://www.ais.uni-bonn.de/deep_learning/index.html
  *
  * @section installation  Installation
  *
@@ -93,7 +97,7 @@
  * - libboost-dev >= 1.37
  * - libblas-dev
  * - libtemplate-perl -- (we might get rid of this dependency soon)
- * - NVIDIA CUDA (tm), including SDK. We support versions 2.X and 3.0.
+ * - NVIDIA CUDA (tm), including SDK. We support versions 3.X.
  * - thrust library (from http://code.google.com/p/thrust/)
  * - doxygen (if you want to build the documentation yourself)
  *
@@ -212,6 +216,7 @@
  * sequence(B);
  *
  * apply_binary_functor(A,B,BF_MULT);  // elementwise multiplication
+ * A *= B;                             // operators also work (elementwise)
  * prod(C,A,B, 'n','t');               // matrix multiplication
  *
  * @endcode
@@ -228,6 +233,7 @@
  * cp.sequence(A,0)
  * cp.sequence(B,0)
  * cp.apply_binary_functor(B,A,cp.binary_functor.MULT) # elementwise multiplication
+ * B *= A                                              # operators also work (elementwise)
  * cp.prod(C,A,B,'n','t')                              # matrix multiplication
  * @endcode
  *
