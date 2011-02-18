@@ -11,14 +11,16 @@ Features
 
 Supported Platforms:
 
-  • This library was only tested on Ubuntu Karmic, Lucid and Maverick. It uses only standard
-    components and should run without major modification on any current linux
-    system.
+  • This library was only tested on Ubuntu Karmic, Lucid and Maverick. It uses
+    only standard components and should run without major modification on any
+    current linux system.
 
 Supported GPUs:
+
   • All GT 9800 and GTX 280 and above
-  • GT 9200 without convolutions. It might need some minor modifications to make the rest work.
-   If you want to use that card and have problems, just get in contact.
+  • GT 9200 without convolutions. It might need some minor modifications to
+    make the rest work. If you want to use that card and have problems, just
+    get in contact.
   • On 8800GTS, random numbers and convolutions wont work.
 
 Structure:
@@ -55,15 +57,14 @@ Implemented Functionality
 
 Documentation
 
-  • Tutorials are available on 
-    http://www.ais.uni-bonn.de/~schulz/tag/cuv
+  • Tutorials are available on http://www.ais.uni-bonn.de/~schulz/tag/cuv
   • The documentation can be generated from the code or accessed on the
     internet: http://www.ais.uni-bonn.de/deep_learning/doc/html/index.html
 
 Contact
 
-  • We are eager to help you get going with CUV and improve it continuously!
-    http://www.ais.uni-bonn.de/deep_learning/index.html
+  • We are eager to help you getting started with CUV and improve the library
+    continuously! http://www.ais.uni-bonn.de/deep_learning/index.html
 
 Installation
 
@@ -74,7 +75,7 @@ For C++ libs, you will need:
   • libboost-dev >= 1.37
   • libblas-dev
   • libtemplate-perl -- (we might get rid of this dependency soon)
-  • NVIDIA CUDA (tm), including SDK. We support versions 2.X and 3.0.
+  • NVIDIA CUDA (tm), including SDK. We support versions 3.X.
   • thrust library (from http://code.google.com/p/thrust/)
   • doxygen (if you want to build the documentation yourself)
 
@@ -185,6 +186,7 @@ C++-Code
  sequence(B);
 
  apply_binary_functor(A,B,BF_MULT);  // elementwise multiplication
+ A *= B;                             // operators also work (elementwise)
  prod(C,A,B, 'n','t');               // matrix multiplication
 
 Python Code
@@ -199,4 +201,5 @@ Python Code
  cp.sequence(A,0)
  cp.sequence(B,0)
  cp.apply_binary_functor(B,A,cp.binary_functor.MULT) # elementwise multiplication
+ B *= A                                              # operators also work (elementwise)
  cp.prod(C,A,B,'n','t')                              # matrix multiplication
