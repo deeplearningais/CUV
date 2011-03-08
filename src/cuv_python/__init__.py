@@ -62,7 +62,17 @@ def __getitem__(x,key):
             
 
 def __setitem__(x,key,value):
-    x.set(*key,value=value)
+    if isinstance(key,int):
+        return x.vec.set(key,value=value)
+    elif isinstance(key,tuple): # slicing!
+        if isinstance(key[0],int) and isinstance(key[1],int):
+            return x.set(key[0],key[1],value=value) # single element
+        else:
+            view=x.__getitem__(key)
+            if view.__class__ != x.__class__:
+                raise NotImplementedError("Can only assign matrix of same type")
+            copy(view,value)
+
 
 def copy(dst,src):
     apply_binary_functor(dst.vec,src.vec,binary_functor.COPY)
