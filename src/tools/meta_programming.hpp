@@ -8,6 +8,9 @@ struct FalseType { enum { value = false }; };
 struct TrueType { enum { value = true }; };
 
 
+/** 
+ * @brief Checks whether two types are equal
+ */
 template <typename T1, typename T2>
 struct IsSame
 {
@@ -21,7 +24,9 @@ struct IsSame<T,T>
 	typedef TrueType Result;
 };
 
-// gets rid of "const" before a type
+/** 
+ * @brief Remove "const" from a type
+ */
 template <typename T>
 struct unconst{
 	typedef T type;
