@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //*LB*
 // Copyright (c) 2010, University of Bonn, Institute for Computer Science VI
 // All rights reserved.

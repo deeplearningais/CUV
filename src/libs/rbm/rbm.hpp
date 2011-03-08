@@ -5,6 +5,12 @@
 namespace cuv{
 namespace libs{
 namespace rbm{
+
+	/** 
+	 * @namespace cuv::libs::rbm
+	 * Utility functions for restricted Boltzmann machine
+	 */
+
 	/**
 	 * set a matrix to consecutive binary numbers in the columns, starting with the number `start'
 	 *
@@ -67,6 +73,8 @@ namespace rbm{
 
 	template<class __matrix_type>
 	void copy_redblack(__matrix_type& dst, const __matrix_type&  src, const unsigned int num_maps, const unsigned int color);
+
 } } }
+
 
 #endif /* __RBM__HPP__ */
