@@ -40,11 +40,13 @@ namespace rbm{
 	 * has hm maps.
 	 *
 	 * @param m       the matrix, should have dimension vx*vy*vm times hx*hy*hm
-	 * @param factor  equivalent to (hx*hv) / (vx*vy). So if the above image
-	 *                size is half of the lower, factor is 0.25.
+	 * @param patchsize  size of local receptive field
 	 * @param vx      as explained above
 	 * @param vy      as explained above
+	 * @param hx
+	 * @param hy
 	 * @param maxdist_from_main_dia reset everything further than this many maps away from central diagonal
+	 * @param round
 	 */
 	template<class __matrix_type>
 	void set_local_connectivity_in_dense_matrix(__matrix_type& m, int patchsize, int vx, int vy, int hx, int hy, int maxdist_from_main_dia=1E6, bool round=false);
