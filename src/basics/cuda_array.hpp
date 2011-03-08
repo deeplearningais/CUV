@@ -33,13 +33,16 @@
  * @ingroup basics
  * @author Hannes Schulz
  * @date 2010-10-22
+ *
  */
 #ifndef __CUDA_ARRAY_HPP__
 #define __CUDA_ARRAY_HPP__
 
 #include <basics/dense_matrix.hpp>
 
-class cudaArray; ///< forward declaration of cudaArray so we do not need to include cuda headers here
+class cudaArray; // forward declaration of cudaArray so we do not need to include cuda headers here
+
+
 namespace cuv
 {
 	/** 
