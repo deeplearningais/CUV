@@ -24,10 +24,46 @@ def __np(x):
     return pull(x)
 
 def __getitem__(x,key):
-    if key.__class__==int:
+    if isinstance(key,int):
         return x.vec.at(key)
+    elif isinstance(key,tuple): # slicing!
+        if isinstance(key[0],int) and isinstance(key[1],int):
+            return x.at(key[0],key[1]) # single element
+        else:
+            if isinstance(key[0],slice): # see what first element ist..
+                if key[0].start==None:
+                    startx=0
+                else:
+                    startx=key[0].start
+                if key[0].stop==None:
+                    stopx=x.h
+                else:
+                    stopx=key[0].stop
+            elif isinstance(key[0],int):
+                startx=key[0]
+                stopx=key[0]+1
+            else:
+                raise NotImplementedError
+
+            if isinstance(key[1],slice): # see what second element ist..
+                if key[1].start==None:
+                    starty=0
+                else:
+                    starty=key[1].start
+                if key[1].stop==None:
+                    stopy=x.w
+                else:
+                    stopy=key[1].stop
+            elif isinstance(key[1],int):
+                starty=key[1]
+                stopy=key[1]+1
+            else:
+                raise NotImplementedError
+            return blockview(x,startx,stopx-startx,starty,stopy-starty)
     else:
-        return x.at(*key)
+        print("This slicing is not supported")
+        raise NotImplementedError
+            
 
 def __setitem__(x,key,value):
     x.set(*key,value=value)
