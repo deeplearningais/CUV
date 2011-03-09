@@ -46,12 +46,13 @@ namespace cuv{
 	 *
 	 *  Without scalar parameters:
 	 *
-	 *	@li SF_EXP computes exp(x)
-	 *	@li SF_LOG computes log(x)
-	 * 	@li SF_SIGN computes sign(x)
-	 * 	@li SF_SIGM computes 1/(1+exp(-x))
-	 * 	@li SF_DSIGM computes x * (1-x)
-	 * 	@li SF_TANH computes tanh(x)
+	 *  @li SF_COPY computes x (the identity)
+	 *  @li SF_EXP computes exp(x)
+	 *  @li SF_LOG computes log(x)
+	 *  @li SF_SIGN computes sign(x)
+	 *  @li SF_SIGM computes 1/(1+exp(-x))
+	 *  @li SF_DSIGM computes x * (1-x)
+	 *  @li SF_TANH computes tanh(x)
 	 *  @li SF_SQUARE computes x*x
 	 *  @li SF_SUBLIN computes 1-x
 	 *  @li SF_ENERG computes -log(x) 
@@ -61,17 +62,22 @@ namespace cuv{
 	 *  @li SF_ABS computes absolute value of x
 	 *  @li SF_SMAX computes (1/x -1) * x
 	 *
-	 * 	With one scalar parameter a:
+	 * With one scalar parameter a:
 	 *  @li SF_ADD computes x + a
 	 *  @li SF_SUBTRACT computes x - a
 	 *  @li SF_MULT computes x * a
-	 *	@li SF_DIV computes x / a
-	 *	@li SF_MIN computes min(x,a)
-	 *	@li SF_MAX computes max(x,a)
+	 *  @li SF_DIV computes x / a
+	 *  @li SF_MIN computes min(x,a)
+	 *  @li SF_MAX computes max(x,a)
+	 *  @li SF_EQ computes x == a
+	 *  @li SF_LT computes x < a
+	 *  @li SF_GT computes x > a
+	 *  @li SF_LEQ computes x <= a
+	 *  @li SF_GEQ computes x >= a
 	 *
-	 * 	With two scalar parameters a and b:
+	 * With two scalar parameters a and b:
 	 *
-	 * 	@li SF_DTANH computes a/b * (a+x) + (a-x) 
+	 *  @li SF_DTANH computes a/b * (a+x) + (a-x) 
 	 */
 	 
 	enum ScalarFunctor{
@@ -97,6 +103,7 @@ namespace cuv{
 		// rectifying transfer function
 		SF_RECT,
 		SF_DRECT,
+		SF_COPY,
 
 		// with param
 		SF_ADD,
@@ -104,7 +111,12 @@ namespace cuv{
 		SF_MULT,
 		SF_DIV,
 		SF_MIN,
-		SF_MAX
+		SF_MAX,
+		SF_EQ,
+		SF_LT,
+		SF_GT,
+		SF_LEQ,
+		SF_GEQ
 	};
 
 	/** 
@@ -118,7 +130,6 @@ namespace cuv{
 	 * 	@li BF_SUBTRACT computes x -= y
 	 * 	@li BF_MULT computes x *= y
 	 * 	@li BF_DIV computes x /= y
-	 * 	@li BF_COPY computes x = y
 	 * 	@li BF_MIN computes x = min(x,y)
 	 * 	@li BF_MAX computes x = max(x,y)
 	 *
@@ -136,7 +147,6 @@ namespace cuv{
 	  BF_SUBTRACT,
 	  BF_MULT,
 	  BF_DIV,
-	  BF_COPY,
 	  BF_MIN,
 	  BF_MAX,
 
@@ -180,9 +190,9 @@ namespace cuv{
    * @param param	scalar parameter 
    * 
    */
-  template<class __vector_type, class __value_type>
+  template<class __vector_type>
   void
-  apply_0ary_functor(__vector_type& v, const NullaryFunctor& sf, const __value_type& param);
+  apply_0ary_functor(__vector_type& v, const NullaryFunctor& sf, const typename __vector_type::value_type& param);
 
   // convenience wrappers
   /** 
@@ -203,83 +213,115 @@ namespace cuv{
    * 
    * This is a convenience wrapper that applies the nullary functor NF_FILL to v.
    */
-  template<class __vector_type, class __value_type>
-  void fill(__vector_type& v, const __value_type& p){ apply_0ary_functor(v,NF_FILL,p); }
-
-
-  /** 
-   * @brief Apply a pointwise unary functor to a vector
-   * 
-   * @param v Target vector 
-   * @param sf ScalarFunctor to apply 
-   * 
-   */  
   template<class __vector_type>
-  void
-  apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf);
+  void fill(__vector_type& v, const typename __vector_type::value_type& p){ apply_0ary_functor(v,NF_FILL,p); }
 
 
-  /** 
-   * @brief Apply pointwise unary functor with one scalar parameter to a vector
-   * 
-   * @param v Target vector
-   * @param sf ScalarFunctor to apply
-   * @param p scalar parameter
-   * 
-   */
-  template<class __vector_type, class __value_type>
-  void
-  apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& p);
-  
-  /** 
-   * @brief Apply pointwise unary functor with to scalar parameters to a vector
-   * 
-   * @param v Target vector
-   * @param sf ScalarFunctor to apply 
-   * @param p first scalar parameter 
-   * @param p2 second scalar parameter
-   */
-  template<class __vector_type, class __value_type>
-  void
-  apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& p, const __value_type& p2);
-
-  /** 
-   * @brief Apply pointwise binary functor to a pair of matrices
-   * 
-   * @param v First parameter of binary functor,  destination vector
-   * @param w Second parameter of binary functor 
-   * @param bf BinaryFunctor to apply
-   * 
-   */
-  template<class __vector_type1, class __vector_type2>
-  void
-  apply_binary_functor(__vector_type1& v,  const __vector_type2& w, const BinaryFunctor& bf);
-
-  /** 
-   * @brief Apply pointwise binary functor with one scalar parameter to a pair of matrices 
-   * 
-   * @param v	First parameter of binary functor, destination vector 
-   * @param w	Second parameter of binary functor 
-   * @param bf	 BinaryFunctor to apply
-   * @param param Scalar parameter and .hpp
-   */
-  template<class __vector_type1, class __vector_type2, class __value_type>
-  void
-  apply_binary_functor(__vector_type1& v,const  __vector_type2& w, const BinaryFunctor& bf, const __value_type& param);
-
-  /** 
-   * @brief Apply pointwise binary functor with two scalar parameters to a pair of matrices 
-   * 
-   * @param v	First parameter of binary functor, destination vector 
-   * @param w	Second parameter of binary functor 
-   * @param bf	 BinaryFunctor to apply
-   * @param param First scalar parameter 
-   * @param param2 Secont scalar parameter 
+  /**
+   * @defgroup scalar_functors Pointwise scalar functors
    *
+   * @{
    */
-  template<class __vector_type1, class __vector_type2, class __value_type>
+  namespace detail{
+	  template<class D, class S, class V>
+	  void
+	  apply_scalar_functor(D&,const S&, const ScalarFunctor& sf, const int& numparams=0, const V& p=V(), const V& p2=V());
+  }
+
+  /// @brief in-place, no parameters
+  template<class D>
   void
-  apply_binary_functor(__vector_type1& v, const __vector_type2& w, const BinaryFunctor& bf, const __value_type& param, const __value_type& param2);
+  apply_scalar_functor(D& v, const ScalarFunctor& sf){
+	  typedef typename D::value_type V;
+	  detail::apply_scalar_functor<D,D,V>(v,v,sf);
+  }
+  /// @brief no parameters
+  template<class D, class S>
+  void
+  apply_scalar_functor(D& dst, const S& src, const ScalarFunctor& sf){
+	  typedef typename S::value_type V;
+	  detail::apply_scalar_functor<D,S,V>(dst,src,sf);
+  }
+
+  /// @brief in-place, one parameter
+  template<class D>
+  void
+  apply_scalar_functor(D& dst,const ScalarFunctor& sf, const typename D::value_type& p){
+	  detail::apply_scalar_functor(dst,dst,sf,1,p);
+  }
+  /// @brief one parameter
+  template<class D, class S>
+  void
+  apply_scalar_functor(D& dst,const S& src, const ScalarFunctor& sf, const typename S::value_type& p){
+	  detail::apply_scalar_functor(dst,src,sf,1,p);
+  }
+  
+  /// @brief in-place, two parameters
+  template<class D>
+  void
+  apply_scalar_functor(D& dst, const ScalarFunctor& sf, const typename D::value_type& p, const typename D::value_type& p2){
+	  detail::apply_scalar_functor(dst,dst,sf,2,p,p2);
+  }
+  /// @brief two parameters
+  template<class D, class S>
+  void
+  apply_scalar_functor(D& dst, const S& src, const ScalarFunctor& sf, const typename S::value_type& p, const typename S::value_type& p2){
+	  detail::apply_scalar_functor(dst,src,sf,2,p,p2);
+  }
+
+  /// @}
+
+  /**
+   * @defgroup binary_functors Pointwise binary functors
+   *
+   * @{
+   */
+  namespace detail{
+	  template<class D, class S, class S2, class V>
+	  void
+	  apply_binary_functor(D&,const S&, const S2&, const BinaryFunctor& bf, const int& numparams=0, const V& p=V(), const V& p2=V());
+  }
+  /// @brief in-place, no parameters
+  template<class D, class S>
+  void
+  apply_binary_functor(D& v,  const S& w, const BinaryFunctor& bf){
+	  typedef typename S::value_type V;
+	  detail::apply_binary_functor<D,D,S,V>(v,v,w,bf);
+  }
+  /// @brief no parameters
+  template<class D, class S, class S2>
+  void
+  apply_binary_functor(D& v,  const S& w, const S2& w2, const BinaryFunctor& bf){
+	  typedef typename S::value_type V;
+	  detail::apply_binary_functor<D,S,S2,V>(v,w,w2,bf);
+  }
+
+  /// @brief in-place, one parameter
+  template<class D, class S>
+  void
+  apply_binary_functor(D& v,const  S& w, const BinaryFunctor& bf, const typename S::value_type& param){
+	  detail::apply_binary_functor(v,v,w,bf,1,param);
+  }
+  /// @brief one parameter
+  template<class D, class S, class S2>
+  void
+  apply_binary_functor(D& v,const  S& w, const S2& w2, const BinaryFunctor& bf, const typename S::value_type& param){
+	  detail::apply_binary_functor(v,w,w2,bf,1,param);
+  }
+
+  /// @brief in-place, two parameters
+  template<class D, class S>
+  void
+  apply_binary_functor(D& v, const S& w, const BinaryFunctor& bf, const typename S::value_type& param, const typename S::value_type& param2){
+	  detail::apply_binary_functor(v,v,w,bf,2,param,param2);
+  }
+  /// @brief two parameters
+  template<class D, class S, class S2>
+  void
+  apply_binary_functor(D& v, const S& w, const S2& w2, const BinaryFunctor& bf, const typename S::value_type& param, const typename S::value_type& param2){
+	  detail::apply_binary_functor(v,w,w2,bf,2,param,param2);
+  }
+  /// @}
 
   /** 
    * @brief Copy one vector into another. 
@@ -287,11 +329,11 @@ namespace cuv{
    * @param dst Destination vector
    * @param src	Source vector 
    * 
-   * This is a convenience wrapper that applies the binary functor BF_COPY 
+   * This is a convenience wrapper that applies the binary functor SF_COPY 
    */
   template<class __vector_type>
   void copy(__vector_type& dst, const  __vector_type& src){
-	  apply_binary_functor(dst,src,BF_COPY);
+	  apply_scalar_functor(dst,src,SF_COPY);
   }
  /** @} */ //end group functors_vectors
 

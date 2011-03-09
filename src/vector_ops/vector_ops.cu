@@ -103,10 +103,10 @@ void setLinearGridAndThreads(dim3& blocks, dim3& threads, size_t len, int thread
 }
 #endif
 
-template<class unary_functor, class value_type, class index_type>
+template<class unary_functor, class V1, class V2, class index_type>
 void launch_unary_kernel(
-   cuv::vector<value_type,dev_memory_space,index_type>& dst,
-   cuv::vector<value_type,dev_memory_space,index_type>& src, 
+   cuv::vector<V1,dev_memory_space,index_type>& dst,
+   const cuv::vector<V2,dev_memory_space,index_type>& src, 
 	 unary_functor uf){
 	 cuvAssert(dst.ptr());
 	 cuvAssert(src.ptr());
@@ -117,24 +117,24 @@ void launch_unary_kernel(
 	 setLinearGridAndThreads(blocks,threads,dst.size());
 	 unary_functor_kernel<<<blocks,threads>>>(dst.ptr(),src.ptr(),dst.size(),uf); //     180 ms
 #else
-	 thrust::device_ptr<value_type> dst_ptr(dst.ptr());
-	 thrust::device_ptr<value_type> src_ptr(src.ptr());
+	 thrust::device_ptr<V1> dst_ptr(dst.ptr());
+	 thrust::device_ptr<V2> src_ptr(const_cast<V2*>(src.ptr()));
 	 thrust::transform(src_ptr,src_ptr+src.size(),dst_ptr,uf);
 #endif
 
 	 cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<class unary_functor, class value_type, class index_type>
+template<class unary_functor, class V1, class V2, class index_type>
 void launch_unary_kernel(
-   cuv::vector<value_type,host_memory_space,index_type>& dst,
-   cuv::vector<value_type,host_memory_space,index_type>& src, 
+   cuv::vector<V1,host_memory_space,index_type>& dst,
+   const cuv::vector<V2,host_memory_space,index_type>& src, 
 	 unary_functor uf){
 	 cuvAssert(src.ptr());
 	 cuvAssert(dst.ptr());
 	 cuvAssert(dst.size() == src.size());
-	 value_type* dst_ptr = dst.ptr();
-	 value_type* src_ptr = src.ptr();
+	 V1* dst_ptr = dst.ptr();
+	 const V2* src_ptr = src.ptr();
 	 for(size_t i=0;i<dst.size();i++)
 	   *dst_ptr++ = uf( *src_ptr++ );
 }
@@ -198,9 +198,9 @@ apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf){
 	 cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<class __vector_type, class __value_type>
+template<class __vector_type>
 void
-apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf, const __value_type& param){
+apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf, const typename __vector_type::value_type& param){
 	 cuvAssert(v.ptr());
 
 	 typedef typename __vector_type::value_type value_type;
@@ -216,191 +216,157 @@ apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf, const __value_typ
 }
 
 
-/*
- * Unary Functor
- *
- */
-template<class __vector_type>
-struct apply_scalar_functor_impl;
+namespace detail{
+	// **********************************
+	//       Scalar Functor
+	// **********************************
+	template<class D, class S, class V>
+	void
+	apply_scalar_functor(D&dst,const S&src, const ScalarFunctor& sf, const int& numparams, const V& p, const V& p2){
+		cuvAssert(dst.size()==src.size());
+		typedef typename S::value_type SV;
+		typedef typename D::value_type DV;
+
+		typedef typename memspace_cuv2thrustptr<DV, typename D::memory_space_type>::ptr_type ptr_type1;
+		typedef typename memspace_cuv2thrustptr<SV, typename S::memory_space_type>::ptr_type ptr_type2;
+		ptr_type1 d_ptr(dst.ptr());
+		ptr_type2 s_ptr(const_cast<SV*>(src.ptr()));
+		if(numparams==2){
+			switch(sf){
+				case SF_TANH:      launch_unary_kernel(dst,src,make_bind2nd3rd(tf_tanh <DV>(),p,p2)); break;
+				case SF_DTANH:     launch_unary_kernel(dst,src,make_bind2nd3rd(tf_dtanh<DV>(),p,p2)); break;
+				default:
+						   cout << "No suitable two-parameter scalar functor was found." << endl;
+						   cuvAssert(false);
+			}
+		}
+		else if(numparams==1){
+			switch(sf){
+				case SF_SIGM:      launch_unary_kernel(dst,src,make_bind2nd(bf_sigm_temp<DV,SV>(),p)); break;
+				case SF_ADD:       launch_unary_kernel(dst,src,make_bind2nd(thrust::plus<DV>(),p)); break;
+				case SF_MULT:      launch_unary_kernel(dst,src,make_bind2nd(thrust::multiplies<DV>(),p)); break;
+				case SF_DIV:       launch_unary_kernel(dst,src,make_bind2nd(thrust::divides<DV>(),p)); break;
+				case SF_SUBTRACT:  launch_unary_kernel(dst,src,make_bind2nd(thrust::minus<DV>(),p)); break;
+				case SF_MIN:       launch_unary_kernel(dst,src,make_bind2nd(bf_min<DV,SV,V>(),p)); break;
+				case SF_MAX:       launch_unary_kernel(dst,src,make_bind2nd(bf_max<DV,SV,V>(),p)); break;
+				case SF_RECT:      launch_unary_kernel(dst,src,make_bind2nd(bf_rect<DV,SV,V>(),p)); break;
+				case SF_DRECT:     launch_unary_kernel(dst,src,make_bind2nd(bf_drect<DV,SV,V>(),p)); break;
+				case SF_EQ:        launch_unary_kernel(dst,src,make_bind2nd(thrust::equal_to<SV>(),p)); break;
+				case SF_LT:        launch_unary_kernel(dst,src,make_bind2nd(thrust::less<SV>(),p)); break;
+				case SF_GT:        launch_unary_kernel(dst,src,make_bind2nd(thrust::greater<SV>(),p)); break;
+				case SF_LEQ:       launch_unary_kernel(dst,src,make_bind2nd(thrust::less_equal<SV>(),p)); break;
+				case SF_GEQ:       launch_unary_kernel(dst,src,make_bind2nd(thrust::greater_equal<SV>(),p)); break;
+				default:
+						   cout << "No suitable one-parameter scalar functor was found." << endl;
+						   cuvAssert(false);
+			}
+		}
+		else if(numparams==0){
+			switch(sf){
+				case SF_EXP:        launch_unary_kernel(dst,src, uf_exp<DV,SV>()); break;
+				case SF_LOG:        launch_unary_kernel(dst,src, uf_log<DV,SV>()); break;
+				case SF_SIGN:       launch_unary_kernel(dst,src, uf_sign<DV,SV>()); break;
+				case SF_SIGM:       launch_unary_kernel(dst,src, uf_sigm<DV,SV>()); break;
+				case SF_DSIGM:      launch_unary_kernel(dst,src, uf_dsigm<DV,SV>()); break;
+				case SF_TANH:       launch_unary_kernel(dst,src, uf_tanh<DV,SV>()); break;
+				case SF_DTANH:      launch_unary_kernel(dst,src, uf_dtanh<DV,SV>()); break;
+				case SF_SQUARE:     launch_unary_kernel(dst,src, uf_square<DV,SV>()); break;
+				case SF_SUBLIN:     launch_unary_kernel(dst,src, uf_sublin<DV,SV>()); break;
+				case SF_ENERG:      launch_unary_kernel(dst,src, uf_energ<DV,SV>()); break;
+				case SF_INV:        launch_unary_kernel(dst,src, uf_inv<DV,SV>()); break;
+				case SF_SQRT:       launch_unary_kernel(dst,src, uf_sqrt<DV,SV>()); break;
+				case SF_SMAX:       launch_unary_kernel(dst,src, uf_smax<DV,SV>()); break;
+				case SF_NEGATE:     launch_unary_kernel(dst,src, thrust::negate<DV>()); break;
+				case SF_ABS:        launch_unary_kernel(dst,src, uf_abs<DV,SV>()); break;
+				case SF_POSLIN:     launch_unary_kernel(dst,src, uf_poslin<DV,SV>()); break;
+				case SF_COPY:       thrust::copy(s_ptr, s_ptr+src.size(), d_ptr); break;
+				default:
+						    cout << "No suitable no-parameter scalar functor was found." << endl;
+						    cuvAssert(false);
+			}
+		}
+		cuvSafeCall(cudaThreadSynchronize());
+	}
 
 
-template<class __vector_type>
-void
-apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf){
-  apply_scalar_functor_impl<__vector_type>::apply(v,sf);
-}
-template<class __vector_type, class __value_type>
-void
-apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& param){
-  apply_scalar_functor_impl<__vector_type>::apply(v,sf,param);
-}
-template<class __vector_type, class __value_type>
-void
-apply_scalar_functor(__vector_type& v, const ScalarFunctor& sf, const __value_type& param, const __value_type& param2){
-  apply_scalar_functor_impl<__vector_type>::apply(v,sf,param,param2);
-}
-
-/*
- * Binary Functor
- *
- */
-template<class __vector_type1, class __vector_type2>
-void
-apply_binary_functor(__vector_type1& v, const __vector_type2& w, const BinaryFunctor& sf){
-	cuvAssert(v.size() == w.size());
-	typedef typename __vector_type1::value_type V1;
-	typedef typename __vector_type2::value_type V2;
-	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memory_space_type>::ptr_type ptr_type1;
-	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memory_space_type>::ptr_type ptr_type2;
-	ptr_type1 v_ptr(v.ptr());
-	ptr_type2 w_ptr(const_cast<V2*>(w.ptr()));
+	// **********************************
+	//       Binary Functor
+	// **********************************
+	template<class D, class S1, class S2, class V>
+	void
+	apply_binary_functor(D& dst,const S1&src1, const S2&src2, const BinaryFunctor& bf, const int& numparams, const V& p, const V& p2){
+		cuvAssert(dst.size() == src1.size());
+		cuvAssert(dst.size() == src2.size());
+		typedef typename D::value_type  DV;
+		typedef typename S1::value_type S1V;
+		typedef typename S2::value_type S2V;
+		typedef typename memspace_cuv2thrustptr<DV, typename  D::memory_space_type>::ptr_type ptr_type1;
+		typedef typename memspace_cuv2thrustptr<S1V,typename S1::memory_space_type>::ptr_type ptr_type2;
+		typedef typename memspace_cuv2thrustptr<S2V,typename S2::memory_space_type>::ptr_type ptr_type3;
+		ptr_type1 d_ptr(dst.ptr());
+		ptr_type2 s1_ptr(const_cast<S1V*>(src1.ptr()));
+		ptr_type2 s2_ptr(const_cast<S2V*>(src2.ptr()));
+		if(numparams==0){
 #if USE_THRUST_LAUNCHER 
-	switch(sf){
-		case BF_ADD:      thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_plus<V1,V2>()); break;
-		case BF_SUBTRACT: thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_minus<V1,V2>()); break;
-		case BF_MULT:     thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_multiplies<V1,V2>()); break;
-		case BF_DIV:      thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_divides<V1,V2>()); break;
-		case BF_MIN:      thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_min<V1,V2>()); break;
-		case BF_MAX:      thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_max<V1,V2>()); break;
-		case BF_COPY:     thrust::copy(w_ptr, w_ptr+v.size(), v_ptr); break;
-		default: cuvAssert(false);
-	}
+			switch(bf){
+				case BF_ADD:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_plus<DV,S1V,S2V>()); break;
+				case BF_SUBTRACT: thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_minus<DV,S1V,S2V>()); break;
+				case BF_MULT:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_multiplies<DV,S1V,S2V>()); break;
+				case BF_DIV:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_divides<DV,S1V,S2V>()); break;
+				case BF_MIN:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_min<DV,S1V,S2V>()); break;
+				case BF_MAX:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_max<DV,S1V,S2V>()); break;
+				default: cuvAssert(false);
+			}
 #else
-	dim3 blocks, threads;
-	setLinearGridAndThreads(blocks,threads,v.size());
-	switch(sf){
-		case BF_ADD:      launch_binary_kernel(v,w,bf_plus<V1,V2>()); break;
-		case BF_SUBTRACT: launch_binary_kernel(v,w,bf_minus<V1,V2>()); break;
-		case BF_MULT:     launch_binary_kernel(v,w,bf_multiplies<V1,V2>()); break;
-		case BF_DIV:      launch_binary_kernel(v,w,bf_divides<V1,V2>()); break;
-		case BF_MIN:      launch_binary_kernel(v,w,bf_min<V1,V2>()); break;
-		case BF_MAX:      launch_binary_kernel(v,w,bf_max<V1,V2>()); break;
-		case BF_COPY:     thrust::copy(w_ptr, w_ptr+v.size(), v_ptr); break;
-		default: cuvAssert(false);
-	}
+			dim3 blocks, threads;
+			setLinearGridAndThreads(blocks,threads,v.size());
+			switch(bf){
+				case BF_ADD:      launch_binary_kernel(v,w,bf_plus<DV,S1V,S2V>()); break;
+				case BF_SUBTRACT: launch_binary_kernel(v,w,bf_minus<DV,S1V,S2V>()); break;
+				case BF_MULT:     launch_binary_kernel(v,w,bf_multiplies<DV,S1V,S2V>()); break;
+				case BF_DIV:      launch_binary_kernel(v,w,bf_divides<DV,S1V,S2V>()); break;
+				case BF_MIN:      launch_binary_kernel(v,w,bf_min<DV,S1V,S2V>()); break;
+				case BF_MAX:      launch_binary_kernel(v,w,bf_max<DV,S1V,S2V>()); break;
+				default: cuvAssert(false);
+			}
 #endif
-	cuvSafeCall(cudaThreadSynchronize());
-}
-
-template<class __vector_type1, class __vector_type2, class __value_type>
-void
-apply_binary_functor(__vector_type1& v, const __vector_type2& w, const BinaryFunctor& sf, const __value_type& param){
-	cuvAssert(v.size() == w.size());
-	typedef typename __vector_type1::value_type V1;
-	typedef typename __vector_type2::value_type V2;
-	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memory_space_type>::ptr_type ptr_type1;
-	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memory_space_type>::ptr_type ptr_type2;
-	ptr_type1 v_ptr(v.ptr());
-	ptr_type2 w_ptr(const_cast<V2*>(w.ptr()));
+		}else if(numparams==1){
 #if USE_THRUST_LAUNCHER
-	switch(sf){
-		case BF_AXPY:     thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_axpy<V1,V2>(param)); break;
-		case BF_XPBY:     thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_xpby<V1,V2>(param)); break;
-		/*case BF_XPBY:     cublasSaxpy(v.size(), param, (float*)w.ptr(), 1, (float*)v.ptr(), 1) ; break;*/
-		default: cuvAssert(false);
-	}
+			switch(bf){
+				case BF_AXPY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_axpy<DV,S1V,S2V>(p)); break;
+				case BF_XPBY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_xpby<DV,S1V,S2V>(p)); break;
+						  /*case BF_XPBY:     cublasSaxpy(v.size(), param, (float*)w.ptr(), 1, (float*)v.ptr(), 1) ; break;*/
+				default: cuvAssert(false);
+			}
 #else
-	dim3 blocks, threads;
-	setLinearGridAndThreads(blocks,threads,v.size());
-	switch(sf){
-		case BF_AXPY:     launch_binary_kernel(v,w,bf_axpy<V1,V2>(param)); break;
-		case BF_XPBY:     launch_binary_kernel(v,w,bf_xpby<V1,V2>(param)); break;
-		default: cuvAssert(false);
-	}
+			dim3 blocks, threads;
+			setLinearGridAndThreads(blocks,threads,v.size());
+			switch(bf){
+				case BF_AXPY:     launch_binary_kernel(dst,src1,src2,bf_axpy<DV,S1V,S2V>(p)); break;
+				case BF_XPBY:     launch_binary_kernel(dst,src1,src2,bf_xpby<DV,S1V,S2V>(p)); break;
+				default: cuvAssert(false);
+			}
 #endif
-	cuvSafeCall(cudaThreadSynchronize());
-}
-
-template<class __vector_type1, class __vector_type2, class __value_type>
-void
-apply_binary_functor(__vector_type1& v, const __vector_type2& w, const BinaryFunctor& sf, const __value_type& param, const __value_type& param2){
-	cuvAssert(v.size() == w.size());
-	typedef typename __vector_type1::value_type V1;
-	typedef typename __vector_type2::value_type V2;
-	typedef typename memspace_cuv2thrustptr<V1,typename __vector_type1::memory_space_type>::ptr_type ptr_type1;
-	typedef typename memspace_cuv2thrustptr<V2,typename __vector_type2::memory_space_type>::ptr_type ptr_type2;
-	ptr_type1 v_ptr(v.ptr());
-	ptr_type2 w_ptr(const_cast<V2*>(w.ptr()));
+		}else if(numparams==2){
 #if USE_THRUST_LAUNCHER
-	switch(sf){
-		case BF_AXPBY:     thrust::transform(v_ptr, v_ptr+v.size(), w_ptr,  v_ptr, bf_axpby<V1,V2>(param,param2)); break;
-		default: cuvAssert(false);
-	}
+			switch(bf){
+				case BF_AXPBY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_axpby<DV,S1V,S2V>(p,p2)); break;
+				default: cuvAssert(false);
+			}
 #else
-	dim3 blocks, threads;
-	setLinearGridAndThreads(blocks,threads,v.size());
-	switch(sf){
-		case BF_AXPBY:     launch_binary_kernel(v,w,bf_axpby<V1,V2>(param,param2)); break;
-		default: cuvAssert(false);
-	}
+			dim3 blocks, threads;
+			setLinearGridAndThreads(blocks,threads,v.size());
+			switch(bf){
+				case BF_AXPBY:     launch_binary_kernel(dst,src1,src2,bf_axpby<DV,S1V,S2V>(p,p2)); break;
+				default: cuvAssert(false);
+			}
 #endif
-	cuvSafeCall(cudaThreadSynchronize());
-}
-
-template<class __vector_type>
-struct apply_scalar_functor_impl{
-
-
-	template<class __arg_value_type>
-	static void
-	apply(__vector_type& v, const ScalarFunctor& sf, const __arg_value_type& param, const __arg_value_type& param2){
-		typedef typename __vector_type::value_type value_type;
-		switch(sf){
-			case SF_TANH:      launch_unary_kernel(v,v,uf_base_op3<value_type, tf_tanh<value_type> >(param,param2)); break;
-			case SF_DTANH:     launch_unary_kernel(v,v,uf_base_op3<value_type, tf_dtanh<value_type> >(param,param2)); break;
-			default:
-				cout << "No suitable two-parameter scalar functor was found." << endl;
-				cuvAssert(false);
 		}
-	}
-
-	template<class __arg_value_type>
-	static void
-	apply(__vector_type& v, const ScalarFunctor& sf, const __arg_value_type& param){
-		typedef typename __vector_type::value_type value_type;
-		switch(sf){
-			case SF_SIGM:      launch_unary_kernel(v,v,uf_base_op<value_type, bf_sigm_temp<value_type> >(param)); break;
-			case SF_ADD:       launch_unary_kernel(v,v,uf_base_op<value_type, thrust::plus<value_type> >(param)); break;
-			case SF_MULT:      launch_unary_kernel(v,v,uf_base_op<value_type, thrust::multiplies<value_type> >(param)); break;
-			case SF_DIV:       launch_unary_kernel(v,v,uf_base_op<value_type, thrust::divides<value_type> >(param)); break;
-			case SF_SUBTRACT:  launch_unary_kernel(v,v,uf_base_op<value_type, thrust::minus<value_type> >(param)); break;
-			case SF_MIN:       launch_unary_kernel(v,v,uf_base_op<value_type, bf_min<value_type,__arg_value_type> >(param)); break;
-			case SF_MAX:       launch_unary_kernel(v,v,uf_base_op<value_type, bf_max<value_type,__arg_value_type> >(param)); break;
-			case SF_RECT:      launch_unary_kernel(v,v,uf_base_op<value_type, bf_rect<value_type,__arg_value_type> >(param)); break;
-			case SF_DRECT:     launch_unary_kernel(v,v,uf_base_op<value_type, bf_drect<value_type,__arg_value_type> >(param)); break;
-			default:
-				cout << "No suitable one-parameter scalar functor was found." << endl;
-				cuvAssert(false);
-		}
-	}
-
-	static void
-	apply(__vector_type& v, const ScalarFunctor& sf){
-		typedef typename __vector_type::value_type value_type;
-	  switch(sf){
-			case SF_EXP:        launch_unary_kernel(v,v, uf_exp<value_type>()); break;
-			/*case SF_EXACT_EXP:  launch_unary_kernel(v,v, uf_exact_exp<value_type>()); break;*/
-			case SF_LOG:        launch_unary_kernel(v,v, uf_log<value_type>()); break;
-			case SF_SIGN:       launch_unary_kernel(v,v, uf_sign<value_type>()); break;
-			case SF_SIGM:       launch_unary_kernel(v,v, uf_sigm<value_type>()); break;
-			case SF_DSIGM:      launch_unary_kernel(v,v, uf_dsigm<value_type>()); break;
-			case SF_TANH:       launch_unary_kernel(v,v, uf_tanh<value_type>()); break;
-			case SF_DTANH:      launch_unary_kernel(v,v, uf_dtanh<value_type>()); break;
-			case SF_SQUARE:     launch_unary_kernel(v,v, uf_square<value_type>()); break;
-			case SF_SUBLIN:     launch_unary_kernel(v,v, uf_sublin<value_type>()); break;
-			case SF_ENERG:      launch_unary_kernel(v,v, uf_energ<value_type>()); break;
-			case SF_INV:        launch_unary_kernel(v,v, uf_inv<value_type>()); break;
-			case SF_SQRT:       launch_unary_kernel(v,v, uf_sqrt<value_type>()); break;
-			case SF_SMAX:       launch_unary_kernel(v,v, uf_smax<value_type>()); break;
-			case SF_NEGATE:     launch_unary_kernel(v,v, thrust::negate<value_type>()); break;
-			case SF_ABS:        launch_unary_kernel(v,v, uf_abs<value_type>()); break;
-			case SF_POSLIN:     launch_unary_kernel(v,v, uf_poslin<value_type>()); break;
-			default:
-				cout << "No suitable no-parameter scalar functor was found." << endl;
-			 	cuvAssert(false);
-		}
+		cuvSafeCall(cudaThreadSynchronize());
 	}
 };
+
+
 
 /*
  * Reductions
@@ -430,7 +396,7 @@ norm2(const __vector_type& v){
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=0;
-	return  std::sqrt( thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_square<float>(), init, bf_plus<float,value_type>()) );
+	return  std::sqrt( thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_square<float,value_type>(), init, bf_plus<float,float,value_type>()) );
 }
 template<class __vector_type>
 float
@@ -439,8 +405,8 @@ norm1(const __vector_type& v){
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=0;
-	uf_abs<float> unary_op;
-	bf_plus<float,value_type> binary_op;
+	uf_abs<float,value_type> unary_op;
+	bf_plus<float,float,value_type> binary_op;
 	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), unary_op, init, binary_op);
 }
 template<class __vector_type>
@@ -450,7 +416,7 @@ sum(const __vector_type& v){
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=0.0;
-	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,value_type>());
+	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,float,value_type>());
 }
 template<class __vector_type>
 float
@@ -459,7 +425,7 @@ maximum(const __vector_type& v){
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=-INT_MAX;
-	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_max<float,value_type>());
+	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_max<float,float,value_type>());
 }
 template<class __vector_type>
 float
@@ -468,7 +434,7 @@ minimum(const __vector_type& v){
 	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=INT_MAX;
-	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_min<float,value_type>());
+	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_min<float,float,value_type>());
 }
 template<class __vector_type>
 float
@@ -483,7 +449,9 @@ var(const __vector_type& v){
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=0;
 	float m = mean(v);
-	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_base_op<float, bf_squared_diff<float,value_type> >(m), init, bf_plus<float,value_type>()) / (float)v.size();
+	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), 
+			make_bind2nd(bf_squared_diff<float,value_type,float>(),m),  // result, vector-type, mean-type
+			init, bf_plus<float,float,float>()) / (float)v.size();
 }
 template<class __vector_type>
 typename __vector_type::index_type
@@ -508,69 +476,7 @@ arg_min(const __vector_type& v){
  * Template instantiations
  */
 
-#define SIMPLE_0(X,Y) \
-	template void apply_0ary_functor< vector<X,Y> >( vector<X,Y>&, const NullaryFunctor&);
+#include "vector_ops_inst.hxx"
 
-#define SIMPLE_01(X,P,Z) \
-	template void apply_0ary_functor< vector<X,Z>, P>(vector<X,Z>&, const NullaryFunctor&, const P& param);
-
-#define SIMPLE_1(X,Y) \
-	template void apply_scalar_functor< vector<X,Y> >(vector<X,Y>&, const ScalarFunctor&);
-#define SIMPLE_11(X,P,Z) \
-	template void apply_scalar_functor< vector<X,Z>, P>(vector<X,Z>&, const ScalarFunctor&,const P&); \
-	template void apply_scalar_functor< vector<X,Z>, P>(vector<X,Z>&, const ScalarFunctor&,const P&, const P&);
-
-#define SIMPLE_2(X,Y,Z) \
-	template void apply_binary_functor<vector<X,Z>, vector<Y,Z> >( vector<X,Z> &, const vector<Y,Z> &, const BinaryFunctor&);
-#define SIMPLE_21(X,Y,P,Z) \
-	template void apply_binary_functor<vector<X,Z>, vector<Y,Z>,P>(vector<X,Z>&, const vector<Y,Z>&, const BinaryFunctor&,  const P&); \
-	template void apply_binary_functor<vector<X,Z>, vector<Y,Z>,P>(vector<X,Z>&, const vector<Y,Z>&, const BinaryFunctor&,  const P&, const P&);
-
-#define SIMPLE_NORM(X, Y) \
-	template bool has_inf<vector<X,Y> >(const vector<X,Y>&); \
-	template bool has_nan<vector<X,Y> >(const vector<X,Y>&); \
-	template float minimum<vector<X,Y> >(const vector<X,Y>&); \
-	template float maximum<vector<X,Y> >(const vector<X,Y>&); \
-	template float sum<vector<X,Y> >(const vector<X,Y>&); \
-	template float norm1<vector<X,Y> >(const vector<X,Y>&); \
-	template float norm2<vector<X,Y> >(const vector<X,Y>&); \
-	template float mean<vector<X,Y> >(const vector<X,Y>&);  \
-	template float var<vector<X,Y> >(const vector<X,Y>&); \
-	template typename vector<X,Y>::index_type     arg_max<vector<X,Y> >(const vector<X,Y>&); \
-	template typename vector<X,Y>::index_type     arg_min<vector<X,Y> >(const vector<X,Y>&);
-
-
-#define SIMPLE_INSTANTIATOR(X) \
-	SIMPLE_0( X , dev_memory_space);             \
-	SIMPLE_1( X , dev_memory_space);             \
-	SIMPLE_2( X, X , dev_memory_space);          \
-    SIMPLE_NORM( X , dev_memory_space);			\
-	SIMPLE_0( X , host_memory_space);             \
-	SIMPLE_1( X , host_memory_space);             \
-	SIMPLE_2( X, X , host_memory_space);          \
-    SIMPLE_NORM( X , host_memory_space);
-
-#define SIMPLE_INSTANTIATOR1(X, P) \
-	SIMPLE_01( X, P , dev_memory_space);             \
-	SIMPLE_11( X, P , dev_memory_space);             \
-	SIMPLE_21( X, X, P , dev_memory_space);          \
-	SIMPLE_01( X, P , host_memory_space);             \
-	SIMPLE_11( X, P , host_memory_space);             \
-	SIMPLE_21( X, X, P , host_memory_space);          
-
-SIMPLE_INSTANTIATOR( int );
-SIMPLE_INSTANTIATOR1( int, int );
-SIMPLE_INSTANTIATOR( unsigned int );
-SIMPLE_INSTANTIATOR1( unsigned int, unsigned int );
-SIMPLE_INSTANTIATOR( float );
-SIMPLE_INSTANTIATOR1( float, float );
-SIMPLE_INSTANTIATOR1( float, int );
-SIMPLE_INSTANTIATOR( unsigned char );
-SIMPLE_INSTANTIATOR1( unsigned char, unsigned char );
-SIMPLE_INSTANTIATOR( signed char );
-SIMPLE_INSTANTIATOR1( signed char, unsigned char );
-SIMPLE_INSTANTIATOR1( signed char, signed char );
-SIMPLE_2(float,unsigned char, dev_memory_space);
-SIMPLE_2(float,unsigned char, host_memory_space);
 } // cuv
 

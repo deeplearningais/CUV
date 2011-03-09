@@ -65,8 +65,8 @@ void entry_set(value_type* ptr, index_type idx, value_type val, dev_memory_space
 template <class value_type, class index_type>
 value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space);
 
-template<class __vector_type, class __value_type>
-void fill(__vector_type& v, const __value_type& p);
+template<class __vector_type>
+void fill(__vector_type& v, const typename __vector_type::value_type& p);
 
 /**
  * @brief Basic vector class
