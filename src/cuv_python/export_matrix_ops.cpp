@@ -234,15 +234,14 @@ void export_reductions(){
 	def("reduce_to_row", reduce_to_row<M,idx_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=1.f,arg("factor_old")=0.f));
 }
 
-template <class M>
+template <class M, class V2>
 void export_blas2(){
-	def("matrix_plus_col", matrix_plus_col<M,typename M::vec_type>);
-	def("matrix_times_col", matrix_times_col<M,typename M::vec_type>);
-	def("matrix_divide_col", matrix_divide_col<M,typename M::vec_type>);
-
-	def("matrix_plus_row", matrix_plus_row<M,typename M::vec_type>);
-	def("matrix_times_row", matrix_times_row<M,typename M::vec_type>);
-	def("matrix_divide_row", matrix_divide_row<M,typename M::vec_type>);
+	def("matrix_plus_col", matrix_plus_col<M,typename switch_value_type<M,V2>::type::vec_type>);
+	def("matrix_times_col", matrix_times_col<M,typename switch_value_type<M,V2>::type::vec_type>);
+	def("matrix_divide_col", matrix_divide_col<M,typename switch_value_type<M,V2>::type::vec_type>);
+	def("matrix_plus_row", matrix_plus_row<M,typename switch_value_type<M,V2>::type::vec_type>);
+	def("matrix_times_row", matrix_times_row<M,typename switch_value_type<M,V2>::type::vec_type>);
+	def("matrix_divide_row", matrix_divide_row<M,typename switch_value_type<M,V2>::type::vec_type>);
 }
 
 template <class M>
@@ -363,10 +362,14 @@ void export_matrix_ops(){
 	export_learn_step<fdev>();
 	export_learn_step<fhostr>();
 	export_learn_step<fdevr>();
-	export_blas2<fdev>();
-	export_blas2<fhost>();
-	export_blas2<fhostr>();
-	export_blas2<fdevr>();
+	export_blas2<fdev,float>();
+	export_blas2<fhost,float>();
+	export_blas2<fhostr,float>();
+	export_blas2<fdevr,float>();
+	export_blas2<fdev,unsigned char>();
+	export_blas2<fhost,unsigned char>();
+	export_blas2<fhostr,unsigned char>();
+	export_blas2<fdevr,unsigned char>();
 
 	export_bitflip<fdev>();
 	export_bitflip<fhost>();
