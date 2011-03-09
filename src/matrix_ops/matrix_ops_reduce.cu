@@ -486,17 +486,12 @@ void argmax_to_row(V&v, const M& m) {
   template void argmax_to_column(vector<float,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&);   \
   template void argmax_to_column(vector<float,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&);   
 
-#define INSTANTIATE_REDCOL(V,V2,M) \
+#define INSTANTIATE_RED(V,V2,M) \
   template void reduce_to_row(vector<V2,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
   template void reduce_to_col(vector<V2,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
   template void reduce_to_row(vector<V2,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&); \
   template void reduce_to_col(vector<V2,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&,reduce_functor,  const V&,const V&);
 
-#define INSTANTIATE_REDROW(V,V2,M) \
-  template void reduce_to_col(vector<V2,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(vector<V2,dev_memory_space>&, const dense_matrix<V,M,dev_memory_space>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(vector<V2,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(vector<V2,host_memory_space>&, const dense_matrix<V,M,host_memory_space>&, reduce_functor,  const V&,const V&);
 
 INSTANTIATE_ARGMAX_TO_COL(float,row_major,unsigned int);
 INSTANTIATE_ARGMAX_TO_COL(int,row_major,unsigned int);
@@ -504,11 +499,20 @@ INSTANTIATE_ARGMAX_TO_COL(int,row_major,unsigned int);
 INSTANTIATE_ARGMAX_TO_ROW(float,column_major,unsigned int);
 INSTANTIATE_ARGMAX_TO_ROW(int,column_major,unsigned int);
 
-INSTANTIATE_REDCOL(float,float,column_major);
-INSTANTIATE_REDROW(float,float,row_major);
-INSTANTIATE_REDCOL(float,int,column_major);
-INSTANTIATE_REDROW(float,int,row_major);
-INSTANTIATE_REDCOL(float,unsigned int,column_major);
-INSTANTIATE_REDROW(float,unsigned int,row_major);
+INSTANTIATE_RED(float,float,column_major);
+INSTANTIATE_RED(int,float,column_major);
+INSTANTIATE_RED(unsigned int,float,column_major);
+INSTANTIATE_RED(unsigned char,float,column_major);
+INSTANTIATE_RED(float,int,column_major);
+INSTANTIATE_RED(float,unsigned int,column_major);
+INSTANTIATE_RED(float,unsigned char,column_major);
+
+INSTANTIATE_RED(float,float,row_major);
+INSTANTIATE_RED(int,float,row_major);
+INSTANTIATE_RED(unsigned int,float,row_major);
+INSTANTIATE_RED(unsigned char,float,row_major);
+INSTANTIATE_RED(float,int,row_major);
+INSTANTIATE_RED(float,unsigned int,row_major);
+INSTANTIATE_RED(float,unsigned char,row_major);
 };//namespace cuv
 
