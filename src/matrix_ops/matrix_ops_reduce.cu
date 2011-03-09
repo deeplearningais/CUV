@@ -38,11 +38,9 @@
 template<int BLOCK_SIZE, class T, class V, class RF>
 __global__
 void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, const unsigned int nRows,
-		const T factNew, const T factOld, RF reduce_functor, const T init_value) {
+		const T factNew, const T factOld, RF rf, const T init_value) {
 
-	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
-	typedef typename cuv::rf_dispatcher<functor_traits::returns_index,cuv::rf_result_value_tag> rf_phase1;
-	typedef typename cuv::rf_dispatcher<functor_traits::returns_index,cuv::rf_result_result_tag> rf_phase2;
+	typedef cuv::reduce_functor_traits<typename RF::result_value_functor_type> functor_traits;
 	typedef typename cuv::unconst<T>::type unconst_value_type;
 
 	extern __shared__ unsigned char ptr[]; // need this intermediate variable for nvcc :-(
@@ -65,9 +63,9 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	unsigned int arg_index = 0; // for storing indeces of maxima/minima for arg functors
 
 	for (unsigned int my = ty; my < nCols; my += off) {
-		const T f = matrix[my * nRows + row_idx ];
-		rf_phase1::run(reduce_functor,sum,arg_index,f,my);
-		//sum=reduce_functor(sum,f);
+		T f = matrix[my * nRows + row_idx ];
+		rf.rv(sum,arg_index,f,my);
+		//sum=rf(sum,f);
 	}
 
 	values[ty*BLOCK_SIZE+tx] = sum;
@@ -79,7 +77,7 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	for (unsigned int offset = blockDim.y / 2; offset > 0; offset >>=1) {
 		if (ty < offset) {
 			const unsigned int v = ty+offset;
-			rf_phase2::run(reduce_functor,
+			rf.rr(
 					  values [ty*BLOCK_SIZE+tx],
 					  indices[ty*BLOCK_SIZE+tx],
 					  values [v *BLOCK_SIZE+tx],
@@ -89,7 +87,7 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	}
 	
 	if (ty == 0) {
-		if (cuv::reduce_functor_traits<RF>::returns_index)
+		if (functor_traits::returns_index)
 			vector[row_idx] = indices[tx];
 		else
 			if(factOld != 0.f){
@@ -103,11 +101,9 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 template<int BLOCK_SIZE, class T, class V, class RF>
 __global__
 void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, const unsigned int nRows,
-		const T factNew, const T factOld, const RF reduce_functor, const T init_value) {
+		const T factNew, const T factOld, RF rf, const T init_value) {
 
-	typedef typename cuv::reduce_functor_traits<RF> functor_traits;
-	typedef typename cuv::rf_dispatcher<functor_traits::returns_index,cuv::rf_result_value_tag> rf_phase1;
-	typedef typename cuv::rf_dispatcher<functor_traits::returns_index,cuv::rf_result_result_tag> rf_phase2;
+	typedef cuv::reduce_functor_traits<typename RF::result_value_functor_type> functor_traits;
 	typedef typename cuv::unconst<T>::type unconst_value_type;
 
 	extern __shared__ float sptr[]; // need this intermediate variable for nvcc :-(
@@ -123,14 +119,14 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 
 	for (unsigned int my = tx; my < nRows; my += off) {
 		const T f = matrix[by * nRows + bx * blockDim.x + my];
-		rf_phase1::run(reduce_functor,values[tx],indices[tx],f,my);
+		rf.rv(values[tx],indices[tx],f,my);
 	}
 	__syncthreads();
 
 	for (unsigned int offset = BLOCK_SIZE*BLOCK_SIZE/2; offset > 0; offset>>=1) {
 		const unsigned int v = tx+offset;
 		if (tx < offset)
-			rf_phase2::run(reduce_functor,values[tx],indices[tx],values[v],indices[v]);
+			rf.rr(values[tx],indices[tx],values[v],indices[v]);
 		__syncthreads();
 	}
 	__syncthreads();
@@ -193,14 +189,13 @@ void argmax_row_kernel(I* vector, const T* matrix, unsigned int nCols, unsigned 
 namespace cuv {
 
 namespace reduce_impl {
-	template<int dim, class __memory_space_type, class __matrix_type, class __vector_type, class RF>
-		struct reduce{ void operator()(__vector_type &v, const __matrix_type &m, const typename __matrix_type::value_type & factNew, const typename __matrix_type::value_type & factOld, RF reduce_functor)const{
-			cuvAssert(false);
-		}};
+	template<int dim, class __memory_space_type>
+	       struct reduce{};
 
-	template<class __matrix_type, class __vector_type, class RF>
-	struct reduce<1, dev_memory_space, __matrix_type, __vector_type, RF>{ void operator()(__vector_type &v,const  __matrix_type &m,const  typename __matrix_type::value_type & factNew,const  typename __matrix_type::value_type & factOld, RF reduce_functor)const{
-	//void reduce<1>(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
+	template<>
+	struct reduce<1, dev_memory_space>{
+		template<class __matrix_type, class __vector_type, class RF>
+	       	void operator()(__vector_type &v,const  __matrix_type &m,const  typename __matrix_type::value_type & factNew,const  typename __matrix_type::value_type & factOld, RF rf)const{
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
 		static const int BLOCK_SIZE = 16;
@@ -223,15 +218,19 @@ namespace reduce_impl {
 		typedef typename __matrix_type::value_type matval_t;
 		typedef typename __vector_type::value_type vecval_t;
 		unsigned int mem = sizeof(matval_t) * BLOCK_DIM_X*BLOCK_DIM_Y ;
-		if(reduce_functor_traits<RF>::returns_index)
+
+		typedef reduce_functor_traits<typename RF::result_value_functor_type> traits_type;
+		if(traits_type::returns_index)
 			mem += sizeof(vecval_t)*BLOCK_DIM_X*BLOCK_DIM_Y;
-		reduce_to_col_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,reduce_functor,reduce_functor_traits<RF>::init_value());
+		reduce_to_col_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,rf,traits_type::init_value());
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
-	template<class __matrix_type, class __vector_type, class RF>
-	struct reduce<0, dev_memory_space, __matrix_type, __vector_type, RF>{ void operator()(__vector_type &v,const  __matrix_type &m,const  typename __matrix_type::value_type & factNew,const  typename __matrix_type::value_type & factOld, RF reduce_functor)const{
-	//void reduce<0>(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
+	template<>
+	struct reduce<0, dev_memory_space>{
+		template<class __matrix_type, class __vector_type, class RF>
+	       	void operator()(__vector_type &v,const  __matrix_type &m,const  typename __matrix_type::value_type & factNew,const  typename __matrix_type::value_type & factOld, RF rf)const{
+	//void reduce<0>(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF rf) {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 		static const int BLOCK_SIZE = 16;
@@ -241,22 +240,23 @@ namespace reduce_impl {
 		typedef typename __matrix_type::value_type matval_t;
 		typedef typename __vector_type::value_type vecval_t;
 		unsigned int mem = sizeof(matval_t) * threads.x*threads.y;
-		if(reduce_functor_traits<RF>::returns_index)
+		typedef reduce_functor_traits<typename RF::result_value_functor_type> traits_type;
+		if(traits_type::returns_index)
 			mem += sizeof(vecval_t)*threads.x*threads.y;
 
-		reduce_to_row_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,reduce_functor,reduce_functor_traits<RF>::init_value());
+		reduce_to_row_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,rf,traits_type::init_value());
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
-	template<int dim, class __matrix_type, class __vector_type, class RF>
-	//struct reduce<dim, host_memory_space, __matrix_type, __vector_type, RF>{ void operator()(vector<V2,host_memory_space,I>&v, const dense_matrix<V,column_major,host_memory_space,I>& m, const V& factNew, const V& factOld, RF reduce_functor) {
-	struct reduce<dim, host_memory_space, __matrix_type, __vector_type, RF>{ void operator()(__vector_type&v, const __matrix_type & m, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld, RF reduce_functor) const{
+	template<int dim>
+	struct reduce<dim, host_memory_space>{
+		template <class __matrix_type, class __vector_type, class RF>
+	       	void operator()(__vector_type&v, const __matrix_type & m, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld, RF rf) const{
 		typedef typename __matrix_type::value_type V;
 		typedef typename __vector_type::value_type V2;
 		typedef typename __matrix_type::index_type I;
 		typedef typename unconst<V>::type unconstV;
-		typedef typename cuv::reduce_functor_traits<RF> functor_traits;
-		typedef typename cuv::rf_dispatcher<functor_traits::returns_index,cuv::rf_result_value_tag> rf_phase1;
+		typedef cuv::reduce_functor_traits<typename RF::result_value_functor_type> functor_traits;
 
 		cuvAssert(m.ptr() != NULL);
 		// assert that vector has correct length
@@ -288,16 +288,16 @@ namespace reduce_impl {
 			// apply reduce functor along columns
 			for(;values_ptr!=values_end; values_ptr++, indices_ptr++) {
 				for(unsigned int j=0; j<m.h(); j++, A_ptr++)
-					rf_phase1::run(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,j);
+					rf.rv(*values_ptr,*indices_ptr,*A_ptr,j);
 			}
 		}
 		else if(dim==1){
 			// apply reduce functor along rows
-			for(int i=0;i<m.w();i++) {
+			for(I i=0;i<m.w();i++) {
 				values_ptr  = values.ptr();
 				indices_ptr = indices_begin;
 				for(; values_ptr!=values_end;A_ptr++,values_ptr++,indices_ptr++) 
-					rf_phase1::run(reduce_functor,*values_ptr,*indices_ptr,*A_ptr,i);
+					rf.rv(*values_ptr,*indices_ptr,*A_ptr,i);
 			}
 		}else{
 			cuvAssert(false);
@@ -326,40 +326,40 @@ namespace reduce_impl {
 
 	template<int dimension, class __matrix_type, class __vector_type>
 	void reduce_switch(__vector_type&v, const __matrix_type& m, reduce_functor rf, const typename __matrix_type::value_type& factNew, const typename __matrix_type::value_type& factOld) {
-		typedef typename __matrix_type::value_type mat_val;
+		typedef typename __matrix_type::value_type const_mat_val;
 		typedef typename __matrix_type::index_type mat_ind;
 		typedef typename __matrix_type::memory_space_type mat_mem;
 		typedef typename __vector_type::value_type vec_val;
 		typedef typename __vector_type::index_type vec_ind;
-		typedef typename unconst<mat_val>::type unconst_mat_val;
+		typedef typename unconst<const_mat_val>::type mat_val;
 		switch(rf) {
 			case RF_ADD:
-			reduce_impl::reduce<dimension,mat_mem,__matrix_type,__vector_type,bf_plus<mat_val,mat_val> >() (v,m,factNew,factOld,bf_plus<mat_val,mat_val>());
+			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_plus<vec_val,vec_val,mat_val>(),bf_plus<vec_val,vec_val,vec_val>()));
 			break;
 			case RF_ADD_SQUARED:
-			reduce_impl::reduce<dimension,mat_mem,__matrix_type,__vector_type,bf_add_square<mat_val,mat_val> >()(v,m,factNew,factOld,bf_add_square<mat_val,mat_val>());
+			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_add_square<vec_val,vec_val,mat_val>(),bf_plus<vec_val,vec_val,vec_val>()));
 			break;
 			case RF_MIN:
-			reduce_impl::reduce<dimension,mat_mem,__matrix_type,__vector_type,bf_min<mat_val,mat_val> >()(v,m,factNew,factOld,bf_min<mat_val,mat_val>());
+			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_min<mat_val,mat_val,mat_val>()));
 			break;
 			case RF_MAX:
-			reduce_impl::reduce<dimension,mat_mem,__matrix_type,__vector_type,bf_max<mat_val,mat_val> >()(v,m,factNew,factOld,bf_max<mat_val,mat_val>());
+			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_max<mat_val,mat_val,mat_val>()));
 			break;
 			case RF_ARGMAX:
-			reduce_impl::reduce<dimension,mat_mem,__matrix_type,__vector_type,reduce_argmax<unconst_mat_val,mat_ind> >()(v,m,factNew,factOld,reduce_argmax<unconst_mat_val,mat_ind>());
+			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_arg_reduce_functor(reduce_argmax<mat_val,mat_ind>()));
 			break;
 			case RF_ARGMIN:
-			reduce_impl::reduce<dimension,mat_mem,__matrix_type,__vector_type,reduce_argmin<unconst_mat_val,mat_ind> >()(v,m,factNew,factOld,reduce_argmin<unconst_mat_val,mat_ind>());
+			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_arg_reduce_functor(reduce_argmin<mat_val,mat_ind>()));
 			break;
 			case RF_MULT:
-			reduce_impl::reduce<dimension,mat_mem,__matrix_type,__vector_type,bf_add_log<mat_val,mat_val> >()(v,m,factNew,factOld,bf_add_log<mat_val,mat_val>());
+			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_add_log<mat_val,mat_val,mat_val>(), bf_plus<vec_val,vec_val,mat_val>()));
 			apply_scalar_functor(v,SF_EXP);
 			break;
 			case RF_LOGADDEXP:
-			reduce_impl::reduce<dimension,mat_mem,__matrix_type,__vector_type,bf_logaddexp<unconst_mat_val> >()(v,m,factNew,factOld,bf_logaddexp<unconst_mat_val>());
+			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_logaddexp<mat_val>()));
 			break;
 			case RF_ADDEXP:
-			reduce_impl::reduce<dimension,mat_mem,__matrix_type,__vector_type,bf_logaddexp<unconst_mat_val> >()(v,m,factNew,factOld,bf_logaddexp<unconst_mat_val>());
+			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_logaddexp<mat_val>()));
 			apply_scalar_functor(v,SF_EXP);
 			break;
 			default:

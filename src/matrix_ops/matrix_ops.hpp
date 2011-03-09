@@ -148,7 +148,7 @@ namespace cuv{
    * This is a convenience wrapper that applies the binary functor BF_COPY 
    */
   template<class V, class M, class T, class I>
-	  void copy(dense_matrix<V,M,T,I>& dst, const dense_matrix<V,M,T,I>& src){ apply_binary_functor(dst.vec(),src.vec(),BF_COPY); }
+	  void copy(dense_matrix<V,M,T,I>& dst, const dense_matrix<V,M,T,I>& src){ copy(dst.vec(),src.vec()); }
 
  /** @} */ // end of group functors_matrices
 
