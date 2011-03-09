@@ -94,13 +94,13 @@ BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
 
 BOOST_AUTO_TEST_CASE( vec_ops_binary2 )
 {
-	apply_binary_functor(v,w, BF_AXPY, 2);
+	apply_binary_functor(v,w, BF_AXPY, 2.f);
 }
 
 BOOST_AUTO_TEST_CASE( vec_ops_scalar_2param )
 {
 	sequence(v);
-	apply_scalar_functor(v, SF_TANH, 3, 5);
+	apply_scalar_functor(v, SF_TANH, 3.f, 5.f);
 	for(int i=0;i<N;i++){
 		BOOST_CHECK_CLOSE(v[i], (float)(3*tanh(5*i)), 0.1);
 	}
@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_0ary1 )
 	}
 
 	// test fill
-	fill(w,1);
+	fill(w,1.f);
 	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(w[i], 1);
 	}
@@ -176,8 +176,8 @@ BOOST_AUTO_TEST_CASE( vec_ops_lswd )
 }
 BOOST_AUTO_TEST_CASE( vec_ops_has_inf )
 {
-	vector<float,host_memory_space> v2(N); fill(v2,0);
-	fill(v,0);
+	vector<float,host_memory_space> v2(N); fill(v2,0.f);
+	fill(v,0.f);
 	bool no  = has_inf(v);
 	bool no2 = has_inf(v2);
 	BOOST_CHECK_EQUAL(no,false);
@@ -195,8 +195,8 @@ BOOST_AUTO_TEST_CASE( vec_ops_has_inf )
 }
 BOOST_AUTO_TEST_CASE( vec_ops_is_nan )
 {
-	vector<float,host_memory_space> v2(N); fill(v2,0);
-	fill(v,0);
+	vector<float,host_memory_space> v2(N); fill(v2,0.f);
+	fill(v,0.f);
 	bool no  = has_nan(v);
 	bool no2 = has_nan(v2);
 	BOOST_CHECK_EQUAL(no,false);
