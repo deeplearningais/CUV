@@ -19,6 +19,9 @@ def __shape(x):
 def __np(x):
     return pull(x)
 
+def __T(x):
+    return transposed_view(x)
+
 def __getitem__(x,key):
     if isinstance(key,int):
         return x.vec.at(key)
@@ -89,6 +92,7 @@ for memory_space in ["dev","host"]:
             dense_type.copy = __cpy
             dense_type.shape = property(__shape)
             dense_type.np = property(__np)
+            dense_type.T = property(__T)
             dense_type.has_nan = property(lambda x:has_nan(x))
             dense_type.has_inf = property(lambda x:has_inf(x))
             dense_type.__getitem__=__getitem__
