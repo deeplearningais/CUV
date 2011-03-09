@@ -356,14 +356,6 @@ void export_matrix_ops(){
 	export_reductions<fdev>();
 	export_reductions<fhostr>();
 	export_reductions<fdevr>();
-	export_reductions_to_vec<fhost,fhost>();
-	export_reductions_to_vec<fdev,fdev>();
-	export_reductions_to_vec<fhostr,fhostr>();
-	export_reductions_to_vec<fdevr,fdevr>();
-	export_reductions_to_vec<uchost,fhost>();
-	export_reductions_to_vec<ucdev,fdev>();
-	export_reductions_to_vec<uchostr,fhostr>();
-	export_reductions_to_vec<ucdevr,fdevr>();
 
 	export_argmax_vec<float,host_memory_space>();
 	export_argmax_vec<float,dev_memory_space>();
