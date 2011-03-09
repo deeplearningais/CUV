@@ -100,7 +100,7 @@ void export_nullary_functor() {
 	   apply_0ary_functor<V>);
 	def("apply_nullary_functor",
 	   (void (*)(V&,const NullaryFunctor&, const typename V::value_type&)) 
-	   apply_0ary_functor<V,typename V::value_type>);
+	   apply_0ary_functor<V>);
 
 	// convenience wrappers
 	def("sequence", (void (*)(V&)) sequence);
@@ -132,7 +132,7 @@ void export_scalar_functor() {
 	   apply_scalar_functor<V>);
 	def("apply_scalar_functor",
 	   (void (*)(V&,const ScalarFunctor&, const typename V::value_type&)) 
-	   apply_scalar_functor<V,typename V::value_type>);
+	   apply_scalar_functor<V>);
 }
 
 template<class M, class N>
@@ -181,13 +181,10 @@ void export_binary_functor() {
 	   apply_binary_functor<V,W>);
 	def("apply_binary_functor",
 	   (void (*)(V&, const W&, const BinaryFunctor&, const typename V::value_type&)) 
-	   apply_binary_functor<V,W,typename V::value_type>);
+	   apply_binary_functor<V,W>);
 	def("apply_binary_functor",
 	   (void (*)(V&, const W&, const BinaryFunctor&, const typename V::value_type&, const typename V::value_type&)) 
-	   apply_binary_functor<
-	     V,
-		 W,
-	     typename M::value_type>);
+	   apply_binary_functor< V, W>);
 }
 
 template <class M>

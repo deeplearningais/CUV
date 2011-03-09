@@ -56,6 +56,7 @@ void export_0ary_functors(){
 void export_scalar_functors() {
     enum_<cuv::ScalarFunctor>("scalar_functor")
         //.value("EXACT_EXP", SF_EXACT_EXP)
+        .value("COPY", SF_COPY)
         .value("EXP", SF_EXP)
         .value("LOG", SF_LOG)
         .value("SIGN", SF_SIGN)
@@ -92,7 +93,6 @@ void export_binary_functors(){
         .value("SUBTRACT", BF_SUBTRACT)
         .value("MULT", BF_MULT)
         .value("DIV", BF_DIV)
-        .value("COPY", BF_COPY)
         .value("MIN", BF_MIN)
         .value("MAX", BF_MAX)
 
