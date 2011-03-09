@@ -276,6 +276,15 @@ export_transpose(){
 	def("transpose", (void (*)(T&,const T&))transpose);
 }
 
+template<class V, class T, class I>
+void
+export_transposed_view(){
+	typedef dense_matrix<V,row_major,T,I> M;
+	typedef dense_matrix<V,column_major,T,I> N;
+	def("transposed_view", (M*(*)(N&))transposed_view<V,T,I>,return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
+	def("transposed_view", (N*(*)(M&))transposed_view<V,T,I>,return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
+}
+
 template<class M>
 void
 export_multinomial_sampling(){
@@ -366,6 +375,8 @@ void export_matrix_ops(){
 	export_transpose<fdev>();
 	export_transpose<fhostr>();
 	export_transpose<fdevr>();
+	export_transposed_view<float,host_memory_space,unsigned int>();
+	export_transposed_view<float,dev_memory_space,unsigned int>();
 
 	export_multinomial_sampling<dense_matrix<float,row_major,dev_memory_space> >();
 
