@@ -478,6 +478,21 @@ namespace cuv{
    */
   template<class __matrix_type> void transpose(__matrix_type&  dst, const __matrix_type&  src);
 
+  /** 
+   * @brief Transpose a matrix by creating a view with different storage
+   * 
+   * @param dst Destination matrix 
+   * @param src Source matrix 
+   *
+   * Creates a row major view of a column major matrix or a column major view of a row major matrix.
+   * Does not actually modify the content of the memory.
+   * 
+   */
+  template<class V, class T, class I>
+  cuv::dense_matrix<V,row_major,T,I>* transposed_view(cuv::dense_matrix<V,column_major,T,I>&  src);
+  template<class V, class T, class I>
+  cuv::dense_matrix<V,column_major,T,I>* transposed_view(cuv::dense_matrix<V,row_major,T,I>&  src);
+
   /** @} */ // end group blas2
 } // cuv
 

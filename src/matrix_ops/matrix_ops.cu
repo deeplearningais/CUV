@@ -482,6 +482,16 @@ void transpose(M& dst, const M& src){
 	transpose_impl::transpose(dst,src);
 }
 
+template<class V, class T, class I>
+cuv::dense_matrix<V,row_major,T,I>* transposed_view(cuv::dense_matrix<V,column_major,T,I>&  src){
+	return new dense_matrix<V,row_major,T,I>(src.h(),src.w(),src.ptr(),true);
+}
+
+template<class V, class T, class I>
+cuv::dense_matrix<V,column_major,T,I>* transposed_view(cuv::dense_matrix<V,row_major,T,I>&  src){
+	return new dense_matrix<V,column_major,T,I>(src.h(),src.w(),src.ptr(),true);
+}
+
 #define INSTANTIATE_MV(V,M) \
   template void matrix_plus_col(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);   \
   template void matrix_plus_col(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
@@ -505,11 +515,22 @@ void transpose(M& dst, const M& src){
   template void transpose(dense_matrix<V,M,host_memory_space,I>&,const dense_matrix<V,M,host_memory_space,I>&); \
   template void transpose(dense_matrix<V,M,dev_memory_space,I>&,const dense_matrix<V,M,dev_memory_space,I>&); 
 
+#define INSTANTIATE_TRANSPOSED_VIEW(V,I) \
+  template dense_matrix<V,row_major,host_memory_space,I>* transposed_view(dense_matrix<V,column_major,host_memory_space,I>&);\
+  template dense_matrix<V,column_major,host_memory_space,I>* transposed_view(dense_matrix<V,row_major,host_memory_space,I>&);\
+  template dense_matrix<V,row_major,dev_memory_space,I>* transposed_view(dense_matrix<V,column_major,dev_memory_space,I>&);\
+  template dense_matrix<V,column_major,dev_memory_space,I>* transposed_view(dense_matrix<V,row_major,dev_memory_space,I>&);
 
 INSTANTIATE_TRANSPOSE(float,column_major,unsigned int);
 INSTANTIATE_TRANSPOSE(float,row_major,unsigned int);
 INSTANTIATE_TRANSPOSE(int,column_major,unsigned int);
 INSTANTIATE_TRANSPOSE(int,row_major,unsigned int);
+
+INSTANTIATE_TRANSPOSED_VIEW(float,unsigned int);
+/*INSTANTIATE_TRANSPOSED_VIEW(int,unsigned int);*/
+/*INSTANTIATE_TRANSPOSED_VIEW(unsigned int,unsigned int);*/
+/*INSTANTIATE_TRANSPOSED_VIEW(char,unsigned int);*/
+/*INSTANTIATE_TRANSPOSED_VIEW(unsigned char,unsigned int);*/
 
 INSTANTIATE_MV(float, column_major);
 INSTANTIATE_MV(float, row_major);
