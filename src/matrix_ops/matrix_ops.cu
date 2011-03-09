@@ -492,19 +492,19 @@ cuv::dense_matrix<V,column_major,T,I>* transposed_view(cuv::dense_matrix<V,row_m
 	return new dense_matrix<V,column_major,T,I>(src.w(),src.h(),src.ptr(),true);
 }
 
-#define INSTANTIATE_MV(V,M) \
-  template void matrix_plus_col(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);   \
-  template void matrix_plus_col(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
-  template void matrix_times_col(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);  \
-  template void matrix_times_col(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
-  template void matrix_divide_col(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);  \
-  template void matrix_divide_col(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
-  template void matrix_plus_row(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);   \
-  template void matrix_plus_row(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
-  template void matrix_times_row(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);  \
-  template void matrix_times_row(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&); \
-  template void matrix_divide_row(dense_matrix<V,M,dev_memory_space>&, const vector<V,dev_memory_space>&);  \
-  template void matrix_divide_row(dense_matrix<V,M,host_memory_space>&, const vector<V,host_memory_space>&);
+#define INSTANTIATE_MV(V1,V2,M) \
+  template void matrix_plus_col(dense_matrix<V1,M,dev_memory_space>&, const vector<V2,dev_memory_space>&);   \
+  template void matrix_plus_col(dense_matrix<V1,M,host_memory_space>&, const vector<V2,host_memory_space>&); \
+  template void matrix_times_col(dense_matrix<V1,M,dev_memory_space>&, const vector<V2,dev_memory_space>&);  \
+  template void matrix_times_col(dense_matrix<V1,M,host_memory_space>&, const vector<V2,host_memory_space>&); \
+  template void matrix_divide_col(dense_matrix<V1,M,dev_memory_space>&, const vector<V2,dev_memory_space>&);  \
+  template void matrix_divide_col(dense_matrix<V1,M,host_memory_space>&, const vector<V2,host_memory_space>&); \
+  template void matrix_plus_row(dense_matrix<V1,M,dev_memory_space>&, const vector<V2,dev_memory_space>&);   \
+  template void matrix_plus_row(dense_matrix<V1,M,host_memory_space>&, const vector<V2,host_memory_space>&); \
+  template void matrix_times_row(dense_matrix<V1,M,dev_memory_space>&, const vector<V2,dev_memory_space>&);  \
+  template void matrix_times_row(dense_matrix<V1,M,host_memory_space>&, const vector<V2,host_memory_space>&); \
+  template void matrix_divide_row(dense_matrix<V1,M,dev_memory_space>&, const vector<V2,dev_memory_space>&);  \
+  template void matrix_divide_row(dense_matrix<V1,M,host_memory_space>&, const vector<V2,host_memory_space>&);
 
 
 #define INSTANTIATE_BLOCKVIEW(V,M,I) \
@@ -532,8 +532,10 @@ INSTANTIATE_TRANSPOSED_VIEW(float,unsigned int);
 /*INSTANTIATE_TRANSPOSED_VIEW(char,unsigned int);*/
 /*INSTANTIATE_TRANSPOSED_VIEW(unsigned char,unsigned int);*/
 
-INSTANTIATE_MV(float, column_major);
-INSTANTIATE_MV(float, row_major);
+INSTANTIATE_MV(float, float, column_major);
+INSTANTIATE_MV(float, float, row_major);
+INSTANTIATE_MV(float, unsigned char, column_major);
+INSTANTIATE_MV(float, unsigned char, row_major);
 
 INSTANTIATE_BLOCKVIEW(float,column_major,unsigned int);
 INSTANTIATE_BLOCKVIEW(float,row_major,unsigned int);
