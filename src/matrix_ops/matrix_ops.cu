@@ -484,12 +484,12 @@ void transpose(M& dst, const M& src){
 
 template<class V, class T, class I>
 cuv::dense_matrix<V,row_major,T,I>* transposed_view(cuv::dense_matrix<V,column_major,T,I>&  src){
-	return new dense_matrix<V,row_major,T,I>(src.h(),src.w(),src.ptr(),true);
+	return new dense_matrix<V,row_major,T,I>(src.w(),src.h(),src.ptr(),true);
 }
 
 template<class V, class T, class I>
 cuv::dense_matrix<V,column_major,T,I>* transposed_view(cuv::dense_matrix<V,row_major,T,I>&  src){
-	return new dense_matrix<V,column_major,T,I>(src.h(),src.w(),src.ptr(),true);
+	return new dense_matrix<V,column_major,T,I>(src.w(),src.h(),src.ptr(),true);
 }
 
 #define INSTANTIATE_MV(V,M) \
