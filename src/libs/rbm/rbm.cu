@@ -161,7 +161,7 @@ namespace rbm{
 
 
 		/**********************************
-		  copy at rowidx
+		  copy redblack
 		 **********************************/
 		template <class VM, class I>
 		__global__

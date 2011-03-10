@@ -25,6 +25,7 @@ ADD_LIBRARY(cuv_python SHARED
 	export_image_ops.cpp
 	export_tools.cpp
 	export_libs_rbm.cpp
+	export_libs_kmeans.cpp
     )
 
 CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
@@ -42,6 +43,7 @@ TARGET_LINK_LIBRARIES(cuv_python
 		cuv_convolution_ops
 		cuv_image_ops
 		cuv_rbm
+		cuv_kmeans
         #${Boost_LIBRARIES}
 		${Boost_DATE_TIME_LIBRARY_RELEASE}
 		${Boost_PYTHON_LIBRARY_RELEASE}
