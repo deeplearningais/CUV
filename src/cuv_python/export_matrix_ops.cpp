@@ -345,8 +345,8 @@ void export_matrix_ops(){
 	export_scalar_functor<fdevr>();
 	export_binary_functor<fdevr,fdevr>();
 	export_binary_functor<fhostr,fhostr>();
-	export_binary_functor_simple<fhost,uhost>();
-	export_binary_functor_simple<fdev,udev>();
+	//export_binary_functor_simple<fhost,uhost>();
+	//export_binary_functor_simple<fdev,udev>();
 
 	export_reductions<fhost>();
 	export_reductions<fdev>();
