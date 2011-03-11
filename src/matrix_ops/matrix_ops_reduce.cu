@@ -35,7 +35,7 @@
 #include <vector_ops/functors.hpp>
 #include "matrix_ops.hpp"
 
-template<int BLOCK_SIZE, class T, class V, class RF>
+template<int BLOCK_DIM, class T, class V, class RF>
 __global__
 void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, const unsigned int nRows,
 		const T factNew, const T factOld, RF rf, const T init_value) {
@@ -45,7 +45,7 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 
 	extern __shared__ unsigned char ptr[]; // need this intermediate variable for nvcc :-(
 	unconst_value_type* values = (unconst_value_type*) ptr;
-	unsigned int* indices = (unsigned int*)(values + BLOCK_SIZE*BLOCK_SIZE);
+	unsigned int* indices = (unsigned int*)(values + BLOCK_DIM*BLOCK_DIM);
 	const unsigned int tx = threadIdx.x;
 	const unsigned int bx = blockIdx.x;
 	const unsigned int ty = threadIdx.y;
@@ -68,9 +68,9 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 		//sum=rf(sum,f);
 	}
 
-	values[ty*BLOCK_SIZE+tx] = sum;
+	values[ty*BLOCK_DIM+tx] = sum;
 	if(functor_traits::returns_index)
-		indices[ty*BLOCK_SIZE+tx] = arg_index;
+		indices[ty*BLOCK_DIM+tx] = arg_index;
 
 	__syncthreads();
 
@@ -78,10 +78,10 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 		if (ty < offset) {
 			const unsigned int v = ty+offset;
 			rf.rr(
-					  values [ty*BLOCK_SIZE+tx],
-					  indices[ty*BLOCK_SIZE+tx],
-					  values [v *BLOCK_SIZE+tx],
-					  indices[v *BLOCK_SIZE+tx]);
+					  values [ty*BLOCK_DIM+tx],
+					  indices[ty*BLOCK_DIM+tx],
+					  values [v *BLOCK_DIM+tx],
+					  indices[v *BLOCK_DIM+tx]);
 		}
 		__syncthreads();
 	}
@@ -98,7 +98,7 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	}
 }
 
-template<int BLOCK_SIZE, class T, class V, class RF>
+template<int BLOCK_DIM, class T, class V, class RF>
 __global__
 void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, const unsigned int nRows,
 		const T factNew, const T factOld, RF rf, const T init_value) {
@@ -108,7 +108,7 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 
 	extern __shared__ float sptr[]; // need this intermediate variable for nvcc :-(
 	unconst_value_type* values = (unconst_value_type*) sptr;
-	unsigned int* indices                  = (unsigned int*)(values + BLOCK_SIZE*BLOCK_SIZE);
+	unsigned int* indices                  = (unsigned int*)(values + BLOCK_DIM*BLOCK_DIM);
 	const unsigned int tx = threadIdx.x, bx = blockIdx.x;
 	const unsigned int ty = threadIdx.y, by = blockIdx.y;
 	const unsigned int off = blockDim.x;
@@ -123,7 +123,7 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	}
 	__syncthreads();
 
-	for (unsigned int offset = BLOCK_SIZE*BLOCK_SIZE/2; offset > 0; offset>>=1) {
+	for (unsigned int offset = BLOCK_DIM*BLOCK_DIM/2; offset > 0; offset>>=1) {
 		const unsigned int v = tx+offset;
 		if (tx < offset)
 			rf.rr(values[tx],indices[tx],values[v],indices[v]);
@@ -198,10 +198,8 @@ namespace reduce_impl {
 	       	void operator()(__vector_type &v,const  __matrix_type &m,const  typename __matrix_type::value_type & factNew,const  typename __matrix_type::value_type & factOld, RF rf)const{
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.h() == v.size());
-		static const int BLOCK_SIZE = 16;
-		static const int BLOCK_DIM_X = BLOCK_SIZE;
-		static const int BLOCK_DIM_Y = BLOCK_SIZE;
-		const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM_X));
+		static const int BLOCK_DIM = 16;
+		const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM));
 		int grid_x =0, grid_y=0;
 
 		// how to handle grid dimension constraint
@@ -214,15 +212,15 @@ namespace reduce_impl {
 			grid_y = ceil((float)blocks_needed/grid_x);
 		}
 		dim3 grid(grid_x, grid_y);
-		dim3 threads(BLOCK_DIM_X,BLOCK_DIM_Y);
+		dim3 threads(BLOCK_DIM,BLOCK_DIM);
 		typedef typename __matrix_type::value_type matval_t;
 		typedef typename __vector_type::value_type vecval_t;
-		unsigned int mem = sizeof(matval_t) * BLOCK_DIM_X*BLOCK_DIM_Y ;
+		unsigned int mem = sizeof(matval_t) * BLOCK_DIM*BLOCK_DIM ;
 
 		typedef reduce_functor_traits<typename RF::result_value_functor_type> traits_type;
 		if(traits_type::returns_index)
-			mem += sizeof(vecval_t)*BLOCK_DIM_X*BLOCK_DIM_Y;
-		reduce_to_col_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,rf,traits_type::init_value());
+			mem += sizeof(vecval_t)*BLOCK_DIM*BLOCK_DIM;
+		reduce_to_col_kernel<BLOCK_DIM,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,rf,traits_type::init_value());
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
@@ -233,9 +231,9 @@ namespace reduce_impl {
 	//void reduce<0>(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF rf) {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
-		static const int BLOCK_SIZE = 16;
+		static const int BLOCK_DIM = 16;
 		dim3 grid(1, m.w());
-		dim3 threads(BLOCK_SIZE*BLOCK_SIZE,1);
+		dim3 threads(BLOCK_DIM*BLOCK_DIM,1);
 
 		typedef typename __matrix_type::value_type matval_t;
 		typedef typename __vector_type::value_type vecval_t;
@@ -244,7 +242,7 @@ namespace reduce_impl {
 		if(traits_type::returns_index)
 			mem += sizeof(vecval_t)*threads.x*threads.y;
 
-		reduce_to_row_kernel<BLOCK_SIZE,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,rf,traits_type::init_value());
+		reduce_to_row_kernel<BLOCK_DIM,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,rf,traits_type::init_value());
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
