@@ -111,6 +111,7 @@ void export_nullary_functor() {
 
 template<class M>
 void export_scalar_functor() {
+	// in place
 	def("apply_scalar_functor",
 	   (void (*)(M&,const ScalarFunctor&)) 
 	   apply_scalar_functor<
@@ -132,6 +133,13 @@ void export_scalar_functor() {
 	   apply_scalar_functor<V>);
 	def("apply_scalar_functor",
 	   (void (*)(V&,const ScalarFunctor&, const typename V::value_type&)) 
+	   apply_scalar_functor<V>);
+	// not in place
+	def("apply_scalar_functor",
+	   (void (*)(V&, const V&, const ScalarFunctor&)) 
+	   apply_scalar_functor<V>);
+	def("apply_scalar_functor",
+	   (void (*)(V&,const V&,const ScalarFunctor&, const typename V::value_type&)) 
 	   apply_scalar_functor<V>);
 }
 

@@ -6,12 +6,12 @@ def _matstr(x,typestr):
 
 def __cpy(x):
     x2 = x.__class__(x.h,x.w)
-    apply_binary_functor(x2.vec,x.vec,binary_functor.COPY)
+    apply_scalar_functor(x2.vec,x.vec,scalar_functor.COPY)
     return x2
 
 def __cpy_dia(x):
     x2 = x.__class__(x)
-    apply_binary_functor(x2.vec,x.vec,binary_functor.COPY)
+    apply_scalar_functor(x2.vec,x.vec,scalar_functor.COPY)
     return x2
 
 def __sav_dense(x, file):
@@ -25,6 +25,9 @@ def __np(x):
 
 def __T(x):
     return transposed_view(x)
+
+def copy(dst,src):
+    apply_scalar_functor(dst.vec,src.vec,scalar_functor.COPY)
 
 def __getitem__(x,key):
     if isinstance(key,int):
@@ -81,8 +84,6 @@ def __setitem__(x,key,value):
             copy(view,value)
 
 
-def copy(dst,src):
-    apply_binary_functor(dst.vec,src.vec,binary_functor.COPY)
 
 # Combine strings to form all exported combinations of types
 # For all types add convenience functions
