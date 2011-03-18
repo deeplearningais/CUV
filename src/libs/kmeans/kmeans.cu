@@ -9,24 +9,17 @@ using cuv::host_memory_space;
 using cuv::dense_matrix;
 using cuv::vector;
 
-/*template<class V1, class V2>*/
-/*__global__*/
-/*void compute_clusters_kernel(V1* clusters, const int clusters_h, const int clusters_w, const V1* data, const int data_w, const int data_h, const V2* indices){*/
-	/*// threadIdx.x is entry in data vector*/
-	/*// blockIdx.x */
-	/*__shared__ int cluster_index;*/
 
-/*}*/
-
-template<int BLOCK_SIZE, class T, class V>
+template<int BLOCK_DIM, class T, class V>
 __global__
-void compute_clusters_kernel(const T* matrix, T* vector, V* indices, const unsigned int nCols, const unsigned int nRows,
+void compute_clusters_kernel(const T* matrix, T* centers, const V* indices, const unsigned int nCols, const unsigned int nRows,
 		const unsigned int num_clusters) {
-
+	// should be called with column major matrix
 	typedef typename cuv::unconst<T>::type unconst_value_type;
 
 	extern __shared__ unsigned char ptr[]; // need this intermediate variable for nvcc :-(
-	unconst_value_type* values = (unconst_value_type*) ptr;
+	unconst_value_type* centers_shared = (unconst_value_type*) ptr;
+	unconst_value_type* clustercount = (unconst_value_type*) ptr + num_clusters*blockDim.x*blockDim.y;
 	const unsigned int tx = threadIdx.x;
 	const unsigned int bx = blockIdx.x;
 	const unsigned int ty = threadIdx.y;
@@ -39,52 +32,54 @@ void compute_clusters_kernel(const T* matrix, T* vector, V* indices, const unsig
 	if (row_idx >= nRows)
 		return;
 	const unsigned int off = blockDim.y;
-
-	unconst_value_type sum = 0;
-
-	for (unsigned int my = ty; my < nCols; my += off) {
-		T f = matrix[my * nRows + row_idx ];
-		/*rf.rv(sum,arg_index,f,my);*/
-		//sum=rf(sum,f);
+	//init cluster-center shared memory
+	for (int i=0; i < num_clusters; i++){
+		centers_shared[i*blockDim.x*blockDim.y+ty*blockDim.x + tx ]=0;
 	}
 
-	values[ty*BLOCK_SIZE+tx] = sum;
-	/*if(functor_traits::returns_index)*/
-		/*indices[ty*BLOCK_SIZE+tx] = arg_index;*/
+	if (tx==0)
+		for (int i=0; i < num_clusters; i++){
+			clustercount[i*blockDim.y+ty]=0;
+		}
+	__syncthreads();
+
+	for (unsigned int my = ty; my < nCols; my += off) {
+		V index=indices[my];
+		if (tx==0)
+			clustercount[index*blockDim.y+ty]++;
+
+		centers_shared[index*blockDim.x*blockDim.y + ty*blockDim.x + tx] += matrix[my * nRows + row_idx ];
+	}
 
 	__syncthreads();
 
 	for (unsigned int offset = blockDim.y / 2; offset > 0; offset >>=1) {
 		if (ty < offset) {
-			const unsigned int v = ty+offset;
-			/*rf.rr(*/
-					  /*values [ty*BLOCK_SIZE+tx],*/
-					  /*indices[ty*BLOCK_SIZE+tx],*/
-					  /*values [v *BLOCK_SIZE+tx],*/
-					  /*indices[v *BLOCK_SIZE+tx]);*/
+			for(int i=0; i<num_clusters; i++){	// loop over all clusters for final reduce
+				const unsigned int v = ty+offset;
+				centers_shared[i*blockDim.x*blockDim.y+ty*BLOCK_DIM+tx]+=centers_shared[i*blockDim.x*blockDim.y + v *BLOCK_DIM+tx];
+				if(tx==0){
+					clustercount[i*blockDim.y+ty]+=clustercount[i*blockDim.y + v];
+				}
+			}
 		}
 		__syncthreads();
 	}
 	
 	if (ty == 0) {
-		/*if (functor_traits::returns_index)*/
-			/*vector[row_idx] = indices[tx];*/
-		/*else*/
-				vector[row_idx] = values[tx];
+			for(int i=0; i<num_clusters; i++){
+				centers[row_idx + i*nRows] = centers_shared[i*blockDim.x*blockDim.y + tx] / clustercount[i*blockDim.y];
+			}
 	}
 }
 
 template<class V, class I>
-void compute_clusters_impl(dense_matrix<V,column_major,dev_memory_space,I>& v,
+void compute_clusters_impl(dense_matrix<V,column_major,dev_memory_space,I>& centers,
 		const dense_matrix<V,column_major,dev_memory_space,I>& m,
 		const cuv::vector<I,dev_memory_space,I>& indices){
 
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.h() == v.size());
-		static const int BLOCK_SIZE = 16;
-		static const int BLOCK_DIM_X = BLOCK_SIZE;
-		static const int BLOCK_DIM_Y = BLOCK_SIZE;
-		const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM_X));
+		static const int BLOCK_DIM = 16;
+		const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM));
 		int grid_x =0, grid_y=0;
 
 		// how to handle grid dimension constraint
@@ -97,13 +92,12 @@ void compute_clusters_impl(dense_matrix<V,column_major,dev_memory_space,I>& v,
 			grid_y = ceil((float)blocks_needed/grid_x);
 		}
 		dim3 grid(grid_x, grid_y);
-		dim3 threads(BLOCK_DIM_X,BLOCK_DIM_Y);
+		dim3 threads(BLOCK_DIM,BLOCK_DIM);
+		int num_clusters=cuv::maximum(indices) +1;
+		std::cout <<" num clusters: " << num_clusters << " num datapoints:" << m.w() << " size datapoints " << m.h() << std::endl;
+		unsigned int mem = sizeof(V) * BLOCK_DIM*(BLOCK_DIM+1) *num_clusters;//+1 to count clusters!
 
-		const int num_clusters=v.w();
-		std::cout <<" num clusters: " << num_clusters << std::endl;
-		unsigned int mem = sizeof(V) * BLOCK_DIM_X*BLOCK_DIM_Y *num_clusters;
-
-		compute_clusters_kernel<BLOCK_SIZE,V,I><<<grid,threads,mem>>>(m.ptr(),v.ptr(),indices.ptr(), m.w(),m.h(), num_clusters);
+		compute_clusters_kernel<BLOCK_DIM,V,I><<<grid,threads,mem>>>(m.ptr(),centers.ptr(),indices.ptr(), m.w(),m.h(), num_clusters);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
@@ -143,10 +137,11 @@ namespace kmeans{
 template<class __data_matrix_type, class __index_vector_type>
 void compute_clusters(__data_matrix_type& clusters, const __data_matrix_type& data, const __index_vector_type& indices){
 	cuvAssert(data.w()==indices.size());
-	cuvAssert(cuv::maximum(indices)<=clusters.w());
+	cuvAssert(cuv::maximum(indices)<clusters.w()); // indices start with 0.
 	compute_clusters_impl(clusters,data,indices);
 	}
 
 template void compute_clusters<dense_matrix<float, column_major, host_memory_space, unsigned int>, vector<unsigned int, host_memory_space, unsigned int> >(dense_matrix<float, column_major, host_memory_space, unsigned int>&, const dense_matrix<float, column_major, host_memory_space, unsigned int>&,const vector<unsigned int, host_memory_space, unsigned int>&);
+template void compute_clusters<dense_matrix<float, column_major, dev_memory_space, unsigned int>, vector<unsigned int, dev_memory_space, unsigned int> >(dense_matrix<float, column_major, dev_memory_space, unsigned int>&, const dense_matrix<float, column_major, dev_memory_space, unsigned int>&,const vector<unsigned int, dev_memory_space, unsigned int>&);
 
 } } }
