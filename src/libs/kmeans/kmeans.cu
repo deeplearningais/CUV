@@ -94,7 +94,6 @@ void compute_clusters_impl(dense_matrix<V,column_major,dev_memory_space,I>& cent
 		dim3 grid(grid_x, grid_y);
 		dim3 threads(BLOCK_DIM,BLOCK_DIM);
 		int num_clusters=cuv::maximum(indices) +1;
-		std::cout <<" num clusters: " << num_clusters << " num datapoints:" << m.w() << " size datapoints " << m.h() << std::endl;
 		unsigned int mem = sizeof(V) * BLOCK_DIM*(BLOCK_DIM+1) *num_clusters;//+1 to count clusters!
 
 		compute_clusters_kernel<BLOCK_DIM,V,I><<<grid,threads,mem>>>(m.ptr(),centers.ptr(),indices.ptr(), m.w(),m.h(), num_clusters);
@@ -106,7 +105,6 @@ template<class V, class I>
 void compute_clusters_impl(dense_matrix<V,column_major,host_memory_space,I>& clusters,
 		const dense_matrix<V,column_major,host_memory_space,I>& data,
 		const vector<I,host_memory_space,I>& indices){
-	std::cout << "host implementation" <<std::endl;
 	const int data_length=data.h();
 	int* points_in_cluster=new int[clusters.w()];
 	for (int i=0; i <clusters.w(); i++)

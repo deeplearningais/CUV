@@ -39,6 +39,7 @@ template<int BLOCK_DIM, class T, class V, class RF>
 __global__
 void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, const unsigned int nRows,
 		const T factNew, const T factOld, RF rf, const T init_value) {
+	// reduce to column for column major matrices, reduce to row for row major matrices
 
 	typedef cuv::reduce_functor_traits<typename RF::result_value_functor_type> functor_traits;
 	typedef typename cuv::unconst<T>::type unconst_value_type;
@@ -102,14 +103,14 @@ template<int BLOCK_DIM, class T, class V, class RF>
 __global__
 void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, const unsigned int nRows,
 		const T factNew, const T factOld, RF rf, const T init_value) {
-
+	// reduce to row for column major matrices, reduce to column for row major matrices
 	typedef cuv::reduce_functor_traits<typename RF::result_value_functor_type> functor_traits;
 	typedef typename cuv::unconst<T>::type unconst_value_type;
 
 	extern __shared__ float sptr[]; // need this intermediate variable for nvcc :-(
 	unconst_value_type* values = (unconst_value_type*) sptr;
 	unsigned int* indices                  = (unsigned int*)(values + BLOCK_DIM*BLOCK_DIM);
-	const unsigned int tx = threadIdx.x, // blockIdx.x is always 0
+	const unsigned int tx = threadIdx.x; // blockIdx.x is always 0
 	const unsigned int by = blockIdx.y; //threadIdx.y is always 0, blockDim.y is always 1!
 	const unsigned int off = blockDim.x;
 	
