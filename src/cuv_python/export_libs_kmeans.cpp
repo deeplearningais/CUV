@@ -34,44 +34,25 @@
 #include <string>
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
+#include <pyublas/numpy.hpp>
 
+#include <dense_matrix.hpp>
+#include <libs/kmeans/kmeans.hpp>
 
-#include <cuv_general.hpp>
-#include <random/random.hpp>
-
+//using namespace std;
 using namespace boost::python;
 using namespace cuv;
+using namespace cuv::libs::kmeans;
+namespace ublas = boost::numeric::ublas;
 
-void export_vector();
-void export_vector_ops();
-void export_dense_matrix();
-void export_cuda_array();
-void export_matrix_ops();
-void export_random();
-void export_dia_matrix();
-void export_convolution_ops();
-void export_image_ops();
-void export_tools();
-void export_libs_rbm();
-void export_libs_kmeans();
-
-BOOST_PYTHON_MODULE(_cuv_python){
-	def("initCUDA", initCUDA);
-	def("exitCUDA", exitCUDA);
-	def("safeThreadSync", safeThreadSync);
-	def("initialize_mersenne_twister_seeds", initialize_mersenne_twister_seeds);
-	export_vector();
-	export_vector_ops();
-	export_dense_matrix();
-	export_cuda_array();
-	export_matrix_ops();
-	export_random();
-	export_dia_matrix();
-	export_convolution_ops();
-	export_image_ops();
-	export_tools();
-	export_libs_rbm();
-	export_libs_kmeans();
+template<class V, class L, class M, class I>
+void export_kmeans(){
+	typedef dense_matrix<V,L,M,I> mat;
+	typedef vector<I,M,I> vec;
+	def("compute_clusters",compute_clusters<mat,vec>, (arg("clusters"),arg("data"),arg("indices")));
 }
 
 
+void export_libs_kmeans(){
+	export_kmeans<float,column_major,host_memory_space,unsigned int>();
+}
