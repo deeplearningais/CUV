@@ -109,8 +109,8 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	extern __shared__ float sptr[]; // need this intermediate variable for nvcc :-(
 	unconst_value_type* values = (unconst_value_type*) sptr;
 	unsigned int* indices                  = (unsigned int*)(values + BLOCK_DIM*BLOCK_DIM);
-	const unsigned int tx = threadIdx.x, bx = blockIdx.x;
-	const unsigned int ty = threadIdx.y, by = blockIdx.y;
+	const unsigned int tx = threadIdx.x, // blockIdx.x is always 0
+	const unsigned int by = blockIdx.y; //threadIdx.y is always 0, blockDim.y is always 1!
 	const unsigned int off = blockDim.x;
 	
 	values[tx] = init_value;
@@ -118,7 +118,7 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 		indices[tx] = 0;
 
 	for (unsigned int my = tx; my < nRows; my += off) {
-		const T f = matrix[by * nRows + bx * blockDim.x + my];
+		const T f = matrix[by * nRows + my];
 		rf.rv(values[tx],indices[tx],f,my);
 	}
 	__syncthreads();
@@ -132,13 +132,13 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	__syncthreads();
 	if (tx == 0) {
 		if (functor_traits::returns_index)
-			vector[by * blockDim.y + ty] = indices[0];
+			vector[by] = indices[0];
 		else{
 			if(factOld != 0){
-				vector[by * blockDim.y + ty] = vector[by * blockDim.y + ty]
+				vector[by] = vector[by]
 					* factOld + values[0] * factNew;
 			}else{
-				vector[by * blockDim.y + ty] = values[0] * factNew;
+				vector[by] = values[0] * factNew;
 			}
 		}
 	}
@@ -228,7 +228,6 @@ namespace reduce_impl {
 	struct reduce<0, dev_memory_space>{
 		template<class __matrix_type, class __vector_type, class RF>
 	       	void operator()(__vector_type &v,const  __matrix_type &m,const  typename __matrix_type::value_type & factNew,const  typename __matrix_type::value_type & factOld, RF rf)const{
-	//void reduce<0>(vector<V2,dev_memory_space,I>&v, const dense_matrix<V,column_major,dev_memory_space,I>& m, const V& factNew, const V& factOld, RF rf) {
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 		static const int BLOCK_DIM = 16;
