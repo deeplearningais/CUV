@@ -55,4 +55,5 @@ void export_kmeans(){
 
 void export_libs_kmeans(){
 	export_kmeans<float,column_major,host_memory_space,unsigned int>();
+	export_kmeans<float,column_major,dev_memory_space,unsigned int>();
 }
