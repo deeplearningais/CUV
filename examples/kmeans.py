@@ -58,9 +58,6 @@ for i in xrange(10):
         cp.reduce_to_col(mean_dev.vec,tmp)
         mean_dev*=1./indices.sum()
         clusters_dev[:,j]=mean_dev
-    bla=cp.push(nearest_host.astype(np.uint32))
-    test_clusters=clusters_dev.copy()
-    cp.compute_clusters(test_clusters,mnist_dev,bla.vec)
 cp.pull(clusters_dev)
 print("CUV naive time: %f"%(time.time()-start_time))
 
