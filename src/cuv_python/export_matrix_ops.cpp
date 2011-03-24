@@ -216,6 +216,8 @@ void export_argmax_vec(){
 template <class M>
 void export_reductions(){
 	typedef typename switch_value_type<M, typename M::index_type>::type::vec_type idx_vec;
+	typedef typename switch_value_type<M, float>::type::vec_type float_vec;
+	typedef typename M::value_type value_type;
 	def("has_inf",(bool (*)(const typename M::vec_type&)) has_inf<typename M::vec_type>);
 	def("has_inf",(bool (*)(const M&)) has_inf<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
 	def("has_nan",(bool (*)(const typename M::vec_type&)) has_nan<typename M::vec_type>);
@@ -233,10 +235,13 @@ void export_reductions(){
 	def("mean", (float (*)(const M&)) mean<typename M::value_type, typename M::memory_layout, typename M::memory_space_type, typename M::index_type>);
 	def("arg_max",  (tuple(*)( M&)) matrix_arg_max<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
 	def("arg_min",  (tuple(*)( M&)) matrix_arg_min<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
-	def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=1.f,arg("factor_old")=0.f));
-	def("reduce_to_row", reduce_to_row<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=1.f,arg("factor_old")=0.f));
-	def("reduce_to_col", reduce_to_col<M,idx_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=1.f,arg("factor_old")=0.f));
-	def("reduce_to_row", reduce_to_row<M,idx_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=1.f,arg("factor_old")=0.f));
+	def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	def("reduce_to_row", reduce_to_row<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	def("reduce_to_col", reduce_to_col<M,idx_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	def("reduce_to_row", reduce_to_row<M,idx_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+
+	def("reduce_to_col", reduce_to_col<M,float_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	def("reduce_to_row", reduce_to_row<M,float_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
 }
 
 template <class M, class V2>
@@ -360,6 +365,11 @@ void export_matrix_ops(){
 	export_reductions<fdev>();
 	export_reductions<fhostr>();
 	export_reductions<fdevr>();
+
+	export_reductions<uchost>();
+	export_reductions<ucdev>();
+	export_reductions<uchostr>();
+	export_reductions<ucdevr>();
 
 	export_argmax_vec<float,host_memory_space>();
 	export_argmax_vec<float,dev_memory_space>();

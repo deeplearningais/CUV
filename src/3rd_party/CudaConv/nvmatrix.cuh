@@ -48,7 +48,7 @@
 #endif
 
 #include <cublas.h>
-#include <cutil_inline.h>
+//#include <cutil_inline.h>
 
 #include "matrix.h"
 #include "nvmatrix_kernel.cuh"

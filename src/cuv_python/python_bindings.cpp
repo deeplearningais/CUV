@@ -54,6 +54,7 @@ void export_image_ops();
 void export_tools();
 void export_libs_rbm();
 void export_libs_kmeans();
+void export_libs_kernels();
 
 BOOST_PYTHON_MODULE(_cuv_python){
 	def("initCUDA", initCUDA);
@@ -72,6 +73,7 @@ BOOST_PYTHON_MODULE(_cuv_python){
 	export_tools();
 	export_libs_rbm();
 	export_libs_kmeans();
+	export_libs_kernels();
 }
 
 

@@ -40,6 +40,7 @@
 #include <math.h>
 #include <nvmatrix.cuh>
 #include "conv3.cuh"
+#include "../../tools/cuv_general.hpp"
 
 void _convolve3_bw(float* images, float* filters, float* targets, int numImgsPerGroup,
                   int numFiltersPerGroup, int numGroups, int imgSize, int filterSize, int stride, bool useDynamics = false) {
@@ -608,7 +609,8 @@ void _convolve3_bw(float* images, float* filters, float* targets, int numImgsPer
             }
         }
     }
-    cutilCheckMsg("kernel execution failed");
+	cuvSafeCall(cudaThreadSynchronize());
+    /*cutilCheckMsg("kernel execution failed");*/
 }
 
 /*

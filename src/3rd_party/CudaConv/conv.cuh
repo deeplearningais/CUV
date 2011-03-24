@@ -40,7 +40,7 @@
 #ifndef CONV_CUH_
 #define CONV_CUH_
 
-#include <cutil_inline.h>
+//#include <cutil_inline.h>
 #include <assert.h>
 #include <matrix.h>
 #include <nvmatrix.cuh>

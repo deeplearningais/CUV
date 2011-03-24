@@ -35,7 +35,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <cuda.h>
-#include <cutil_inline.h>
+/*#include <cutil_inline.h>*/
 
 #include "cuv_general.hpp"
 #include "exception_helper.hpp"
@@ -60,12 +60,12 @@ namespace cuv{
 		}                         
 	}
 	void initCUDA(int dev){
-		cutilSafeCall(cudaSetDevice(dev));
+		cuvSafeCall(cudaSetDevice(dev));
 		cudaDeviceProp prop;
 		cudaGetDeviceProperties(&prop, 0);
 		bool canHostmap = prop.canMapHostMemory;
 		if(canHostmap){
-			cutilSafeCall(cudaSetDeviceFlags(cudaDeviceMapHost));
+			cuvSafeCall(cudaSetDeviceFlags(cudaDeviceMapHost));
 		}
 	}
 	void exitCUDA(){
@@ -73,7 +73,8 @@ namespace cuv{
 	}
 
 	void safeThreadSync(){
-		cuvSafeCall(cudaThreadSynchronize());
+		cudaThreadSynchronize();
+		checkCudaError("Save Thread Sync");
 	}
 
 }

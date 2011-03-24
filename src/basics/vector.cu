@@ -34,7 +34,6 @@
 #include <iostream>
 #include <stdexcept>
 #include <cuda.h>
-#include <cutil_inline.h>
 #include <thrust/device_ptr.h>
 #include <cuv_general.hpp>
 #include "vector.hpp"

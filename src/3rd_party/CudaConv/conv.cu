@@ -41,6 +41,7 @@
 #include <math.h>
 #include <nvmatrix.cuh>
 #include "conv.cuh"
+#include "../../tools/cuv_general.hpp"
 
 void _convolve_bw(float* images, float* filters, float* targets, int numImgsPerGroup,
                   int numFiltersPerGroup, int numGroups, int imgSize, int filterSize, int stride, bool useDynamics = false) {
@@ -512,7 +513,8 @@ void _convolve_bw(float* images, float* filters, float* targets, int numImgsPerG
             }
         }
     }
-    cutilCheckMsg("kernel execution failed");
+	cuvSafeCall(cudaThreadSynchronize());
+    /*cutilCheckMsg("kernel execution failed");*/
 }
 
 void convolve(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int numGroups, bool color) {

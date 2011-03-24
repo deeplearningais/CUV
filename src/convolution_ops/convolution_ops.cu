@@ -602,7 +602,7 @@ void super_to_max(dense_matrix<float,row_major,dev_memory_space>& dst,
 		cuvAssert(filter->w() == poolSize);
 		cuvAssert(filter->h() == poolSize);
 		cuvAssert(sizeof(float) * filter->n() <= CONST_SIZE);
-		CUDA_SAFE_CALL( cudaMemcpyToSymbol(c_filter, filter->ptr(), sizeof(float) * filter->n(), 0, cudaMemcpyDeviceToDevice) );
+		cuvSafeCall( cudaMemcpyToSymbol(c_filter, filter->ptr(), sizeof(float) * filter->n(), 0, cudaMemcpyDeviceToDevice) );
 	}
 
 	fill(dst, 0.0f);

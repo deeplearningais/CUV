@@ -50,7 +50,7 @@ namespace cuv{
 		the_iterator = container.begin();
 		//printf("releasing memory....\n");
 		while( the_iterator != container.end() ) {
-			CUDA_SAFE_CALL(cudaFree(*the_iterator));
+			cuvSafeCall(cudaFree(*the_iterator));
 			++the_iterator;
 		}
 
@@ -79,12 +79,12 @@ namespace cuv{
 	}
 
 	void useDevice(int dev_idx){
-		CUDA_SAFE_CALL(cudaSetDevice(dev_idx));
+		cuvSafeCall(cudaSetDevice(dev_idx));
 	}
 
 	int countDevices(){
 		int nDevCount = 0;
-		CUDA_SAFE_CALL(cudaGetDeviceCount( &nDevCount ));
+		cuvSafeCall(cudaGetDeviceCount( &nDevCount ));
 		return nDevCount;
 	}
 

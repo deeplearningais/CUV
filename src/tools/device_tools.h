@@ -11,8 +11,10 @@
 #include <string>
 #include <stdexcept>
 #include <iostream>
+#include <cstring>
 #include <cuda.h>
-#include <cutil_inline.h>
+#include <cuda_runtime.h>
+//#include <cutil_inline.h>
 #include <vector>
 #include "cuv_general.hpp"
 

@@ -45,7 +45,7 @@
 #include <thrust/logical.h>
 
 #include <cuv_general.hpp>
-#include <cutil_inline.h>
+/*#include <cutil_inline.h>*/
 
 #include <vector.hpp>
 #include <functors.hpp>

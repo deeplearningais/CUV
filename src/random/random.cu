@@ -40,7 +40,6 @@
 #include <boost/random.hpp>
 
 #include <cuda.h>
-#include <cutil_inline.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <thrust/device_ptr.h>

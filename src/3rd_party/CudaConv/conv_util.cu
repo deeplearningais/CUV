@@ -40,10 +40,11 @@
  *  These are routines that are useful for convolutional neural nets/RBMs.
  */
 
-#include <cutil_inline.h>
+/*#include <cutil_inline.h>*/
 #include <assert.h>
 #include "conv_util.cuh"
 #include "conv_common.cuh"
+#include "../../tools/cuv_general.hpp"
 
 /*
  * Block size 16x16
@@ -101,7 +102,8 @@ void rotate180(NVMatrix* filters, NVMatrix* targets, bool color=false) {
     dim3 threads(16, 16, 1);
     dim3 blocks(numFilters, 1, 1);
     kRotate180<<<blocks, threads>>>(filters->getDevData(), targets->getDevData(), filterSize);
-    cutilCheckMsg("kernel execution failed");
+    /*cutilCheckMsg("kernel execution failed");*/
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 /*
@@ -148,7 +150,8 @@ void copyInto(NVMatrix* images, NVMatrix* targets, int paddingSize, bool color=f
         blocks.y *= 2;
     }
     kCopyInto<<<blocks, threads>>>(images->getDevData(), targets->getDevData(), imgSize, paddingSize, numImages);
-    cutilCheckMsg("kernel execution failed");
+    /*cutilCheckMsg("kernel execution failed");*/
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 /*
@@ -297,7 +300,8 @@ void subsample(NVMatrix* images, NVMatrix* targets, int factor, bool avoidBankCo
             kSubsample_noreduc<16, false><<<grid, threads,shmem>>>(images->getDevData(), targets->getDevData(), imgSize, numRegionsY, shmemX);
         }
     }
-    cutilCheckMsg("kernel execution failed");
+    /*cutilCheckMsg("kernel execution failed");*/
+	cuvSafeCall(cudaThreadSynchronize());
 
 //    if(factor == 4) {
 ////        kSubsample_reduc<4><<<grid, threads,4*numThreadsX*numThreadsY>>>(images->getDevData(), targets->getDevData(), imgSize, numRegionsY);
@@ -521,7 +525,8 @@ void supersample(NVMatrix* images, NVMatrix* targets, int factor) {
             }
         }
     }
-    cutilCheckMsg("kernel execution failed");
+    /*cutilCheckMsg("kernel execution failed");*/
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 void _gtm(NVMatrix* images, NVMatrix* targets, int squareSize, bool avoidBankConflicts, bool reverse) {
@@ -709,7 +714,8 @@ void _gtm(NVMatrix* images, NVMatrix* targets, int squareSize, bool avoidBankCon
             }
         }
     }
-    cutilCheckMsg("kernel execution failed");
+    /*cutilCheckMsg("kernel execution failed");*/
+	cuvSafeCall(cudaThreadSynchronize());
 }
 
 void gridToMatrix(NVMatrix* images, NVMatrix* targets, int squareSize, bool avoidBankConflicts) {
@@ -818,5 +824,6 @@ void sampleMultinomial(NVMatrix* multi, NVMatrix* randoms, NVMatrix* targets) {
             kSampleSmallMultinomial<16, SSM_THREADS_X><<<grid, threads>>>(multi->getDevData(), randoms->getDevData(), targets->getDevData(),nomials, multinomials);
         }
     }
-    cutilCheckMsg("kernel execution failed");
+    /*cutilCheckMsg("kernel execution failed");*/
+	cuvSafeCall(cudaThreadSynchronize());
 }
