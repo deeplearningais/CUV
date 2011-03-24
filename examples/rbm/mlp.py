@@ -262,8 +262,8 @@ class MLP:
             cp.apply_binary_functor(  dB, dBo, cp.binary_functor.XPBY, self.cfg.finetune_momentum)
             cp.learn_step_weight_decay(W, dW,    self.cfg.finetune_learnrate/batchSize, self.cfg.finetune_cost)
             cp.learn_step_weight_decay(B, dB,    self.cfg.finetune_learnrate/batchSize, self.cfg.finetune_cost)
-            cp.apply_binary_functor(dWo,dW,cp.binary_functor.COPY)
-            cp.apply_binary_functor(dBo,dB,cp.binary_functor.COPY)
+            cp.copy(dWo,dW)
+            cp.copy(dBo,dB)
             if updateOnlyLast: break
 #Backward-Pass with Outputs, Teacherlabel, pictures/batch
   def backward(self, output, teacher, indices, batchSize, updateOnlyLast, batch_idx):
@@ -317,10 +317,10 @@ class MLP:
     derivative = cp.dev_matrix_cmf(calculated.h, correct.w)
     h = cp.dev_matrix_cmf(calculated.h,  correct.w)
 
-    cp.apply_binary_functor(derivative, calculated, cp.binary_functor.COPY)
+    cp.copy(derivative, calculated)
     cp.apply_scalar_functor(derivative, cp.scalar_functor.DSIGM)
 
-    cp.apply_binary_functor(h,  correct,  cp.binary_functor.COPY)
+    cp.copy(h,  correct)
     cp.apply_binary_functor(h,  calculated,  cp.binary_functor.SUBTRACT)
 
     cp.apply_binary_functor(derivative, h, cp.binary_functor.MULT)
