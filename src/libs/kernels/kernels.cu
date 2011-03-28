@@ -1,6 +1,7 @@
 #include <iostream>
 #include "../../basics/dense_matrix.hpp"
-#include "kernels.h"
+#include "kernels.hpp"
+#define V(X) #X <<": "<<(X) <<"   "
 
 using namespace std;
 
@@ -12,7 +13,7 @@ using namespace std;
 template <int BLOCK_DIM, class __value_type, class __distance_type>
 __global__ 
 void
-pairwise_distance_kernel( __distance_type* C,const  __value_type* A, const __value_type* B, int wA, int wB)
+pairwise_distance_kernel( __distance_type* C,const  __value_type* A, const __value_type* B, int wA, int hB)
 {
     int bx = blockIdx.x;
     int by = blockIdx.y;
@@ -64,63 +65,36 @@ pairwise_distance_kernel( __distance_type* C,const  __value_type* A, const __val
 
     // Write the block sub-matrix to device memory;
     // each thread writes one element
-    int c = __mul24(__mul24(wB , BLOCK_DIM) , by) + __mul24(BLOCK_DIM , bx);
-    C[c + __mul24(wB , ty) + tx] = Csub;
+    int c = __mul24(__mul24(hB , BLOCK_DIM) , by) + __mul24(BLOCK_DIM , bx);
+    C[c + __mul24(hB , ty) + tx] = Csub;
 }
 
 namespace cuv{
 namespace libs{	
 	namespace kernels{
-	/*template <class _value_type, class _label_type>*/
-	/*void */
-	/*cu_sqdist<_value_type, _label_type>::run(distance_type* xC, const value_type* xA, const value_type* xB, int ah, int aw, int bw, long ri){*/
-		/*int sA = sizeof(_value_type)    * ah * aw;*/
-		/*int sB = sizeof(_value_type)    * aw * bw;*/
-		/*int sC = sizeof(distance_type) * ah * bw;*/
-		/*distance_type *dC;*/
-		/*value_type *dA, *dB;*/
-		/*bool handleA = ! (ri & RI_AisOnDev);*/
-		/*bool handleB = ! (ri & RI_BisOnDev);*/
-		/*bool handleC = ! (ri & RI_CisOnDev);*/
-		/*if(handleA){ // alloc/copy A to dev*/
-			/*cutilSafeCall(cudaMalloc((void**)&dA, sA));*/
-			/*cutilSafeCall(cudaMemcpy(dA, xA, sA, cudaMemcpyHostToDevice));*/
-		/*}else*/
-			/*dA = const_cast<value_type*>(xA);*/
-		/*if(handleB){ // alloc/copy B to dev*/
-			/*cutilSafeCall(cudaMalloc((void**)&dB, sB));*/
-			/*cutilSafeCall(cudaMemcpy(dB, xB, sB, cudaMemcpyHostToDevice));*/
-		/*}else*/
-			/*dB = const_cast<value_type*>(xB);*/
-
-		/*if(handleC){ // alloc C on dev*/
-			/*cutilSafeCall(cudaMalloc((void**)&dC, sC));*/
-		/*}else*/
-			/*dC = xC;*/
-		/*run_gg2g(dC,dA,dB,ah,aw,bw); // kernel call!*/
-		/*if(handleC){ // copy C to host*/
-			/*cutilSafeCall(cudaMemcpy(xC, dC, sizeof(distance_type) * ah*bw, cudaMemcpyDeviceToHost));*/
-			/*cutilSafeCall(cudaFree(dC));*/
-		/*}*/
-		/*if(handleA) {cutilSafeCall(cudaFree(dA));}*/
-		/*if(handleB) {cutilSafeCall(cudaFree(dB));}*/
-	/*}*/
-
 	template <class __matrix_type>
 	void 
 	pairwise_distance(__matrix_type& result, const __matrix_type& A, const __matrix_type& B){
-		const int BLOCK_DIM = 16;
+		/*cuvAssert(A.w() == B.w());*/
+		/*cuvAssert(A.h() == result.h());*/
+		/*cuvAssert(B.h() == result.w());*/
+
+		const int BLOCK_DIM = 32;
 		dim3 threads(BLOCK_DIM, BLOCK_DIM);
-		dim3 grid(B.w() / threads.x, A.h() / threads.y);
-		cuvAssert(B.w()%threads.x == 0);
-		cuvAssert(A.h()%threads.y == 0);
+		dim3 grid(B.h() / threads.x, A.h() / threads.y);
+
+		/*cuvAssert(B.w()%threads.x == 0);*/
+		/*cuvAssert(A.h()%threads.y == 0);*/
+		/*cuvAssert(B.h()%threads.x == 0);*/
+		/*cuvAssert(A.w()%threads.y == 0);*/
+
 		cuvAssert(grid.x > 0);
 		cuvAssert(grid.y > 0);
-		pairwise_distance_kernel<BLOCK_DIM><<< grid,threads >>>(result.ptr(),A.ptr(),B.ptr(),A.w(),B.w());
+		pairwise_distance_kernel<BLOCK_DIM><<< grid,threads >>>(result.ptr(),A.ptr(),B.ptr(),A.w(),B.h());
 		cudaThreadSynchronize();
 		checkCudaError("kernel sqDiff invocation");
 	}
-typedef dense_matrix<float, column_major, dev_memory_space, unsigned int> dm_cmf;
-template void pairwise_distance<dm_cmf>(dm_cmf&, const dm_cmf &, const dm_cmf&);
+typedef dense_matrix<float, row_major, dev_memory_space, unsigned int> dm_rmf;
+template void pairwise_distance<dm_rmf>(dm_rmf&, const dm_rmf &, const dm_rmf&);
 
 }}}

@@ -504,6 +504,8 @@ INSTANTIATE_RED(unsigned char,float,column_major);
 INSTANTIATE_RED(float,int,column_major);
 INSTANTIATE_RED(float,unsigned int,column_major);
 INSTANTIATE_RED(float,unsigned char,column_major);
+INSTANTIATE_RED(unsigned char,unsigned char,column_major);
+INSTANTIATE_RED(unsigned char,unsigned int,column_major);
 
 INSTANTIATE_RED(float,float,row_major);
 INSTANTIATE_RED(int,float,row_major);
@@ -512,5 +514,7 @@ INSTANTIATE_RED(unsigned char,float,row_major);
 INSTANTIATE_RED(float,int,row_major);
 INSTANTIATE_RED(float,unsigned int,row_major);
 INSTANTIATE_RED(float,unsigned char,row_major);
+INSTANTIATE_RED(unsigned char,unsigned char,row_major);
+INSTANTIATE_RED(unsigned char,unsigned int,row_major);
 };//namespace cuv
 

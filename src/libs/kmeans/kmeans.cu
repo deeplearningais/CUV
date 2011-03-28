@@ -92,9 +92,11 @@ void compute_clusters_impl(dense_matrix<V,column_major,dev_memory_space,I>& cent
 			grid_y = ceil((float)blocks_needed/grid_x);
 		}
 		dim3 grid(grid_x, grid_y);
-		dim3 threads(BLOCK_DIM,BLOCK_DIM);
+		/*dim3 threads(BLOCK_DIM,BLOCK_DIM);*/
+		dim3 threads(BLOCK_DIM,1);
 		int num_clusters=cuv::maximum(indices) +1;
-		unsigned int mem = sizeof(V) * BLOCK_DIM*(BLOCK_DIM+1) *num_clusters;//+1 to count clusters!
+		/*unsigned int mem = sizeof(V) * BLOCK_DIM*(BLOCK_DIM+1) *num_clusters;//+1 to count clusters!*/
+		unsigned int mem = sizeof(V) * (BLOCK_DIM+1) *num_clusters;//+1 to count clusters!
 
 		compute_clusters_kernel<BLOCK_DIM,V,I><<<grid,threads,mem>>>(m.ptr(),centers.ptr(),indices.ptr(), m.w(),m.h(), num_clusters);
 		cuvSafeCall(cudaThreadSynchronize());
