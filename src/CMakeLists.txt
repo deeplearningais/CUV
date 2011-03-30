@@ -1,6 +1,7 @@
 cmake_minimum_required( VERSION 2.6 FATAL_ERROR )
 
 OPTION(CUV_PYTHON_BINDINGS "Whether shared version of CUDA is to be used, must be true for python bindings!" ON)
+OPTION(CUV_CIMG_BINDINGS "Whether to compile with CImg" ON)
 IF(CUV_PYTHON_BINDINGS)
 #	use this for python bindings. However, We need to recompile CUDA for this on every computer!
 	SET(CMAKE_CXX_FLAGS "-fPIC") # for FindCUDA, needed for python shared lib

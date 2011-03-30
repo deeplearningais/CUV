@@ -63,6 +63,14 @@ TARGET_LINK_LIBRARIES( test_memory cuv_basics cuv_tools cuv_convert cuv_vector_o
 ADD_EXECUTABLE( test_lib_rbm lib_rbm.cpp )
 TARGET_LINK_LIBRARIES( test_lib_rbm cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_rbm ${CUDA_CUBLAS_LIBRARIES} )
 
+
+IF(CUV_CIMG_BINDINGS)
+	FIND_PACKAGE( PNG REQUIRED)
+	ADD_EXECUTABLE( test_lib_cimg cimg.cpp )
+	TARGET_LINK_LIBRARIES( test_lib_cimg cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_cimg X11 pthread ${PNG_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} )
+
+ENDIF(CUV_CIMG_BINDINGS)
+
 ADD_TEST( basics  "${CMAKE_BINARY_DIR}/src/tests/test_basic" )
 ADD_TEST( convert "${CMAKE_BINARY_DIR}/src/tests/test_convert" )
 ADD_TEST( vec_op "${CMAKE_BINARY_DIR}/src/tests/test_vec_op" )
