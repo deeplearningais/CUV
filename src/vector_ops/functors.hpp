@@ -126,6 +126,13 @@ struct bf_rect:binary_functor<R,T,A>{  __device__  __host__       R operator()(c
 template<class R, class T, class A>
 struct bf_drect:binary_functor<R,T,A>{  __device__  __host__      R operator()(const T& x, const A& a)      const{ return 1-1/(x*expf(a)); } };
 
+template<class R, class T, class A>
+struct bf_atan2:binary_functor<R,T,A>{  __device__  __host__      R operator()(const T& y, const A& x)      const{ return atan2((float)y,(float)x); } };
+//struct bf_atan2:binary_functor<R,T,A>{  __device__  __host__      R operator()(const T& y, const A& x)      const{ return 2.f*atan(y/(sqrt(x*x+y*y)+x)); } };
+
+template<class R, class T, class A>
+struct bf_norm:binary_functor<R,T,A>{  __device__  __host__      R operator()(const T& x, const A& y)      const{ return sqrtf(y*y+x*x); } };
+
 
 // binds the 2nd argument of a binary functor, yielding a unary functor
 template<class __binary_functor>

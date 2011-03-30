@@ -149,6 +149,8 @@ namespace cuv{
 	  BF_DIV,
 	  BF_MIN,
 	  BF_MAX,
+	  BF_ATAN2,
+	  BF_NORM,
 
 	  // w/ param
 	  BF_AXPY,

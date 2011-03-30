@@ -315,6 +315,8 @@ namespace detail{
 				case BF_DIV:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_divides<DV,S1V,S2V>()); break;
 				case BF_MIN:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_min<DV,S1V,S2V>()); break;
 				case BF_MAX:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_max<DV,S1V,S2V>()); break;
+				case BF_ATAN2:    thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_atan2<DV,S1V,S2V>()); break;
+				case BF_NORM:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_norm<DV,S1V,S2V>()); break;
 				default: cuvAssert(false);
 			}
 #else
@@ -327,6 +329,8 @@ namespace detail{
 				case BF_DIV:      launch_binary_kernel(v,w,bf_divides<DV,S1V,S2V>()); break;
 				case BF_MIN:      launch_binary_kernel(v,w,bf_min<DV,S1V,S2V>()); break;
 				case BF_MAX:      launch_binary_kernel(v,w,bf_max<DV,S1V,S2V>()); break;
+				case BF_ATAN2:    launch_binary_kernel(v,w,bf_atan2<DV,S1V,S2V>()); break;
+				case BF_NORM:    launch_binary_kernel(v,w,bf_norm<DV,S1V,S2V>()); break;
 				default: cuvAssert(false);
 			}
 #endif
