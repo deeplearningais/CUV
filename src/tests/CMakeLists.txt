@@ -69,6 +69,8 @@ IF(CUV_CIMG_BINDINGS)
 	ADD_EXECUTABLE( test_lib_cimg cimg.cpp )
 	TARGET_LINK_LIBRARIES( test_lib_cimg cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_cimg X11 pthread ${PNG_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} )
 
+	ADD_EXECUTABLE( test_lib_sep_conv lib_sep_conv.cpp )
+	TARGET_LINK_LIBRARIES( test_lib_sep_conv cuv_basics cuv_tools cuv_convert cuv_vector_ops cuv_matrix_ops cuv_separable_conv cuv_cimg X11 pthread ${PNG_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} )
 ENDIF(CUV_CIMG_BINDINGS)
 
 ADD_TEST( basics  "${CMAKE_BINARY_DIR}/src/tests/test_basic" )
