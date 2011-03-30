@@ -35,13 +35,13 @@
 #include <cstdio>
 #include <boost/test/included/unit_test.hpp>
 
-#include <cuv_general.hpp>
-#include <dense_matrix.hpp>
-#include <vector_ops.hpp>
-#include <matrix_ops.hpp>
-#include <timing.hpp>
-#include <random.hpp>
-#include <matrix_ops/rprop.hpp>
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/matrix_ops/matrix_ops.hpp>
+#include <cuv/tools/timing.hpp>
+#include <cuv/random/random.hpp>
+#include <cuv/matrix_ops/rprop.hpp>
 
 using namespace cuv;
 

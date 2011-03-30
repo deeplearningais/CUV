@@ -36,11 +36,11 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 
-#include <basics/dense_matrix.hpp>
-#include <basics/cuda_array.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/cuda_array.hpp>
 
-#include <image_ops/move.hpp>
-#include <image_ops/image_pyramid.hpp>
+#include <cuv/image_ops/move.hpp>
+#include <cuv/image_ops/image_pyramid.hpp>
 
 //using namespace std;
 using namespace boost::python;

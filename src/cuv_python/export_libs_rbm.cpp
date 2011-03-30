@@ -36,8 +36,8 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 
-#include <dense_matrix.hpp>
-#include <libs/rbm/rbm.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/libs/rbm/rbm.hpp>
 
 //using namespace std;
 using namespace boost::python;

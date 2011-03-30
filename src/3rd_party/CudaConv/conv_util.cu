@@ -44,7 +44,7 @@
 #include <assert.h>
 #include "conv_util.cuh"
 #include "conv_common.cuh"
-#include "../../tools/cuv_general.hpp"
+#include "cuv/tools/cuv_general.hpp"
 
 /*
  * Block size 16x16

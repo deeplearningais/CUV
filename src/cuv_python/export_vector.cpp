@@ -37,8 +37,8 @@
 #include  <boost/type_traits/is_same.hpp>
 
 
-#include <vector.hpp>
-#include <convert.hpp>
+#include <cuv/basics/vector.hpp>
+#include <cuv/convert/convert.hpp>
 
 using namespace boost::python;
 using namespace cuv;

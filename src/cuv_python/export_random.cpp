@@ -37,10 +37,10 @@
 #include <pyublas/numpy.hpp>
 #include  <boost/type_traits/is_base_of.hpp>
 
-#include <dense_matrix.hpp>
-#include <matrix_ops/matrix_ops.hpp>
-#include <convert.hpp>
-#include <random/random.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/matrix_ops/matrix_ops.hpp>
+#include <cuv/convert/convert.hpp>
+#include <cuv/random/random.hpp>
 
 //using namespace std;
 using namespace boost::python;

@@ -36,8 +36,8 @@
 #include <boost/python/extract.hpp>
 
 
-#include <cuv_general.hpp>
-#include <random/random.hpp>
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/random/random.hpp>
 
 using namespace boost::python;
 using namespace cuv;

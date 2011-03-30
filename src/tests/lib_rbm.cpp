@@ -31,14 +31,14 @@
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include <iostream>
-#include <cuv_test.hpp>
+#include <cuv/tools/cuv_test.hpp>
 
-#include <cuv_general.hpp>
-#include <dense_matrix.hpp>
-#include <convert.hpp>
-#include <vector_ops.hpp>
-#include <matrix_ops.hpp>
-#include <libs/rbm/rbm.hpp>
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/convert/convert.hpp>
+#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/matrix_ops/matrix_ops.hpp>
+#include <cuv/libs/rbm/rbm.hpp>
 
 using namespace cuv;
 using namespace cuv::libs::rbm;

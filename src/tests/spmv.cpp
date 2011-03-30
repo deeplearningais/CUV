@@ -34,14 +34,14 @@
 #define BOOST_TEST_MODULE example
 #include <iostream>
 #include <cstdio>
-#include <cuv_test.hpp>
+#include <cuv/tools/cuv_test.hpp>
 
-#include <cuv_general.hpp>
-#include <dense_matrix.hpp>
-#include <dia_matrix.hpp>
-#include <convert.hpp>
-#include <matrix_ops/matrix_ops.hpp>
-#include <timing.hpp>
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/dia_matrix.hpp>
+#include <cuv/convert/convert.hpp>
+#include <cuv/matrix_ops/matrix_ops.hpp>
+#include <cuv/tools/timing.hpp>
 
 using namespace std;
 using namespace cuv;

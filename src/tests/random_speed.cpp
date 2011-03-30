@@ -36,11 +36,11 @@
 #include <boost/test/floating_point_comparison.hpp>
 
 
-#include <timing.hpp>
-#include <cuv_general.hpp>
-#include <vector.hpp>
-#include <vector_ops.hpp>
-#include <../random/random.hpp>
+#include <cuv/tools/timing.hpp>
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/basics/vector.hpp>
+#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/random/random.hpp>
 
 #define MEASURE_TIME(MSG, OPERATION, ITERS)     \
 	float MSG;                                  \

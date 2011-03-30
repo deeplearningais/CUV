@@ -33,8 +33,8 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 
-#include <dense_matrix.hpp>
-#include <libs/kmeans/kmeans.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/libs/kmeans/kmeans.hpp>
 
 //using namespace std;
 using namespace boost::python;

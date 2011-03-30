@@ -36,10 +36,10 @@
 #include <boost/test/floating_point_comparison.hpp>
 #include <limits>
 
-#include <cuv_general.hpp>
-#include <dense_matrix.hpp>
-#include <vector_ops.hpp>
-#include <vector_ops/rprop.hpp>
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/vector_ops/rprop.hpp>
 
 using namespace cuv;
 

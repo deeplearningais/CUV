@@ -42,12 +42,12 @@
 
 #include <pyublas/numpy.hpp>
 
-#include <dia_matrix.hpp>
-#include <sparse_matrix_io.hpp>
-#include <basics/filter_factory.hpp>
-#include <matrix_ops/matrix_ops.hpp>
-#include <matrix_ops/densedense_to_sparse.hpp>
-#include <convert.hpp>
+#include <cuv/basics/dia_matrix.hpp>
+#include <cuv/basics/sparse_matrix_io.hpp>
+#include <cuv/basics/filter_factory.hpp>
+#include <cuv/matrix_ops/matrix_ops.hpp>
+#include <cuv/matrix_ops/densedense_to_sparse.hpp>
+#include <cuv/convert/convert.hpp>
 
 namespace ublas = boost::numeric::ublas;
 using namespace boost::python;

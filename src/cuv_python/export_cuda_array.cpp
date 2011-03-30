@@ -36,7 +36,7 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 #include  <boost/type_traits/is_base_of.hpp>
-#include <cuda_array.hpp>
+#include <cuv/basics/cuda_array.hpp>
 
 using namespace std;
 using namespace boost::python;

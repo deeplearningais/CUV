@@ -3,8 +3,8 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 
-#include <dense_matrix.hpp>
-#include <libs/kernels/kernels.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/libs/kernels/kernels.hpp>
 
 //using namespace std;
 using namespace boost::python;

@@ -40,9 +40,9 @@
 
 
 #include <math.h>
-#include <nvmatrix.cuh>
+#include <3rd_party/CudaConv/nvmatrix.cuh>
 #include "conv.cuh"
-#include "../../tools/cuv_general.hpp"
+#include <cuv/tools/cuv_general.hpp>
 
 void _convolve2_bw(float* images, float* filters, float* targets, int numImgsPerGroup,
                   int numFiltersPerGroup, int imgSize, int filterSize, int imagesPerFilter, int numGroups, bool useDynamics = false) {

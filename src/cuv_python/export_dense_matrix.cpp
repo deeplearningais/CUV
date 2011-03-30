@@ -36,10 +36,10 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 #include  <boost/type_traits/is_base_of.hpp>
-#include <vector.hpp>
-#include <dense_matrix.hpp>
-#include <matrix_ops/matrix_ops.hpp>
-#include <convert.hpp>
+#include <cuv/basics/vector.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/matrix_ops/matrix_ops.hpp>
+#include <cuv/convert/convert.hpp>
 
 using namespace std;
 using namespace boost::python;

@@ -30,10 +30,10 @@
 #define BOOST_TEST_MODULE example
 #include <boost/test/included/unit_test.hpp>
 
-#include <cuv_general.hpp>
-#include <convert/convert.hpp>
-#include <libs/separable_conv/separable_convolution.hpp>
-#include <libs/cimg/cuv_cimg.hpp>
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/convert/convert.hpp>
+#include <cuv/libs/separable_conv/separable_convolution.hpp>
+#include <cuv/libs/cimg/cuv_cimg.hpp>
 
 using namespace cuv;
 

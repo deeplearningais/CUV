@@ -37,10 +37,10 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 #include <boost/type_traits/is_base_of.hpp>
-#include <vector.hpp>
-#include <vector_ops/vector_ops.hpp>
-#include <convert.hpp>
-#include <convolution_ops/convolution_ops.hpp>
+#include <cuv/basics/vector.hpp>
+#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/convert/convert.hpp>
+#include <cuv/convolution_ops/convolution_ops.hpp>
 
 
 //using namespace std;

@@ -35,13 +35,13 @@
 #include <iostream>
 #include <fstream>
 
-#include <cuv_test.hpp>
-#include <cuv_general.hpp>
-#include <vector_ops.hpp>
-#include <dia_matrix.hpp>
-#include <matrix_ops/diagonals.hpp>
-#include <convert.hpp>
-#include <sparse_matrix_io.hpp>
+#include <cuv/tools/cuv_test.hpp>
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/basics/dia_matrix.hpp>
+#include <cuv/matrix_ops/diagonals.hpp>
+#include <cuv/convert/convert.hpp>
+#include <cuv/basics/sparse_matrix_io.hpp>
 
 using namespace std;
 using namespace cuv;

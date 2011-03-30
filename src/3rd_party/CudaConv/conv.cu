@@ -41,7 +41,7 @@
 #include <math.h>
 #include <nvmatrix.cuh>
 #include "conv.cuh"
-#include "../../tools/cuv_general.hpp"
+#include "cuv/tools/cuv_general.hpp"
 
 void _convolve_bw(float* images, float* filters, float* targets, int numImgsPerGroup,
                   int numFiltersPerGroup, int numGroups, int imgSize, int filterSize, int stride, bool useDynamics = false) {

@@ -38,11 +38,11 @@
 #include <pyublas/numpy.hpp>
 #include  <boost/type_traits/is_base_of.hpp>
 
-#include <dense_matrix.hpp>
-#include <matrix_ops/matrix_ops.hpp>
-#include <matrix_ops/rprop.hpp>
-#include <convert.hpp>
-#include <convolution_ops/convolution_ops.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/matrix_ops/matrix_ops.hpp>
+#include <cuv/matrix_ops/rprop.hpp>
+#include <cuv/convert/convert.hpp>
+#include <cuv/convolution_ops/convolution_ops.hpp>
 #include <float.h>
 //using namespace std;
 using namespace boost::python;

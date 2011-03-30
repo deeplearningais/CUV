@@ -38,9 +38,9 @@
 #include <pyublas/numpy.hpp>
 #include  <boost/type_traits/is_base_of.hpp>
 
-#include <vector.hpp>
-#include <vector_ops/vector_ops.hpp>
-#include <convert.hpp>
+#include <cuv/basics/vector.hpp>
+#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/convert/convert.hpp>
 
 using namespace std;
 using namespace boost::python;

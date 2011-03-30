@@ -40,7 +40,7 @@
 #include <assert.h>
 #include <cublas.h>
 /*#include <cutil_inline.h>*/
-#include "../../tools/cuv_general.hpp"
+#include "cuv/tools/cuv_general.hpp"
 #include <stdlib.h>
 #include <stdio.h>
 #include <fstream>

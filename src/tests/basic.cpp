@@ -40,10 +40,10 @@
 #define BOOST_TEST_MODULE example
 #include <boost/test/included/unit_test.hpp>
 
-#include <cuv_general.hpp>
-#include <dense_matrix.hpp>
-#include <cuda_array.hpp>
-#include <convert.hpp>
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/cuda_array.hpp>
+#include <cuv/convert/convert.hpp>
 
 using namespace cuv;
 

@@ -37,13 +37,13 @@
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 
-#include <cuv_general.hpp>
-#include <dense_matrix.hpp>
-#include <dia_matrix.hpp>
-#include <convert.hpp>
-#include <matrix_ops/matrix_ops.hpp>
-#include <matrix_ops/densedense_to_sparse.hpp>
-#include <timing.hpp>
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/dia_matrix.hpp>
+#include <cuv/convert/convert.hpp>
+#include <cuv/matrix_ops/matrix_ops.hpp>
+#include <cuv/matrix_ops/densedense_to_sparse.hpp>
+#include <cuv/tools/timing.hpp>
 
 #define MEASURE_TIME(MSG, OPERATION, ITERS)     \
 	float MSG;                                  \

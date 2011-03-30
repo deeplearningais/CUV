@@ -37,10 +37,10 @@
 #include <boost/test/floating_point_comparison.hpp>
 
 
-#include <cuv_general.hpp>
-#include <vector.hpp>
-#include <vector_ops.hpp>
-#include <../random/random.hpp>
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/basics/vector.hpp>
+#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/random/random.hpp>
 
 using namespace cuv;
 

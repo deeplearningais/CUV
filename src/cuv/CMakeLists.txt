@@ -1,0 +1,10 @@
+add_subdirectory(tools)
+add_subdirectory(basics)
+add_subdirectory(vector_ops)
+add_subdirectory(matrix_ops)
+add_subdirectory(image_ops)
+add_subdirectory(convolution_ops)
+add_subdirectory(convert)
+add_subdirectory(random)
+add_subdirectory(libs)
+
