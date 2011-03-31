@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE( convolution )
 
 	for(int i=0;i<d_dst.h();i++){
 		for(int j=0;j<d_dst.w();j++){
-			BOOST_CHECK_CLOSE( dst2(i,j), h_dst(i,j), 0.001 );
+			BOOST_CHECK_CLOSE( (float)dst2(i,j), (float)h_dst(i,j), 0.001 );
 		}
 	}
 }
@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE( local_maxima )
 
 	for(int i=0;i<d_pooled.h();i++){
 		for(int j=0;j<d_pooled.w();j++){
-			BOOST_CHECK_CLOSE( pooled2(i,j), h_pooled(i,j), 0.001 );
+			BOOST_CHECK_CLOSE( (float)pooled2(i,j), (float)h_pooled(i,j), 0.001 );
 		}
 	}
 }
@@ -303,9 +303,9 @@ BOOST_AUTO_TEST_CASE( row_ncopy )
 
 	for(int i=0;i<erg_h.h();i++){
 		for(int j=0;j<erg_h.w();j++){
-			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
+			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
 			if (i>1){
-				BOOST_CHECK_CLOSE( erg_d(i,j), erg_d(i-1,j), 0.001 );
+				BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_d(i-1,j), 0.001 );
 			}
 		}
 	}
@@ -349,7 +349,7 @@ BOOST_AUTO_TEST_CASE( strip_padding )
 
 	for(int i=0;i<erg_h.h();i++){
 		for(int j=0;j<erg_h.w();j++){
-			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
+			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
 		}
 	}
 }
@@ -375,7 +375,7 @@ BOOST_AUTO_TEST_CASE( check_exitatory_inhibitory )
 
 	for(int i=0;i<filter_h.h();i++){
 		for(int j=0;j<filter_h.w();j++){
-			BOOST_CHECK_CLOSE( filter_d(i,j), filter_h(i,j), 0.001 );
+			BOOST_CHECK_CLOSE( (float)filter_d(i,j), (float)filter_h(i,j), 0.001 );
 		}
 	}
 }
@@ -410,7 +410,7 @@ BOOST_AUTO_TEST_CASE( reverse_filters )
 
 	for(int i=0;i<erg_h.h();i++){
 		for(int j=0;j<erg_h.w();j++){
-			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
+			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
 		}
 	}
 }

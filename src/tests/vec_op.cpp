@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_scalar_2param )
 	sequence(v);
 	apply_scalar_functor(v, SF_TANH, 3.f, 5.f);
 	for(int i=0;i<N;i++){
-		BOOST_CHECK_CLOSE(v[i], (float)(3*tanh(5*i)), 0.1);
+		BOOST_CHECK_CLOSE((float)v[i], (float)(3*tanh(5*i)), 0.1f);
 	}
 }
 
@@ -132,13 +132,13 @@ BOOST_AUTO_TEST_CASE( vec_ops_axpby )
 	sequence(w);
 	sequence(v);
 	apply_scalar_functor(v,SF_ADD, 1.f);
-	BOOST_CHECK_CLOSE(w[0],0.f,0.1f);
-	BOOST_CHECK_CLOSE(v[0],1.f,0.1f);
+	BOOST_CHECK_CLOSE((float)w[0],0.f,0.1f);
+	BOOST_CHECK_CLOSE((float)v[0],1.f,0.1f);
 
 	// copy data from v to w
 	apply_binary_functor(v,w,BF_AXPBY, 2.f,3.f);
 	for(int i=0;i<N;i++){
-		BOOST_CHECK_CLOSE(v[i], 2.f*(i+1.f) + 3.f*i, 0.1f );
+		BOOST_CHECK_CLOSE((float)v[i], 2.f*(i+1.f) + 3.f*i, 0.1f );
 	}
 }
 
@@ -169,8 +169,8 @@ BOOST_AUTO_TEST_CASE( vec_ops_lswd )
 	learn_step_weight_decay(v,w,0.1f,0.05f);
 	learn_step_weight_decay(v2,w2,0.1f,0.05f);
 	for(int i=0;i<N;i++){
-		BOOST_CHECK_CLOSE(v[i],v2[i],0.01);
-		BOOST_CHECK_CLOSE(v[i],v_old[i] + 0.1f *(w[i] - 0.05f *v_old[i]),0.01);
+		BOOST_CHECK_CLOSE((float)v[i],(float)v2[i],0.01f);
+		BOOST_CHECK_CLOSE((float)v[i],v_old[i] + 0.1f *(w[i] - 0.05f *v_old[i]),0.01f);
 	}
 
 }
@@ -249,8 +249,8 @@ BOOST_AUTO_TEST_CASE( vec_rprop )
 	rprop(h_W,h_dW,h_dW_old,h_rate);
 
 	for(int i=0;i<N;i++){
-		BOOST_CHECK_CLOSE(rate[i],h_rate[i],0.01f);
-		BOOST_CHECK_CLOSE(W[i],h_W[i],0.01f);
+		BOOST_CHECK_CLOSE((float)rate[i],(float)h_rate[i],0.01f);
+		BOOST_CHECK_CLOSE((float)W[i],(float)h_W[i],0.01f);
 	}
 }
 

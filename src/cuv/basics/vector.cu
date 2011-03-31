@@ -49,16 +49,12 @@ struct allocator<value_type,index_type,dev_memory_space>{
 		cuvSafeCall(cudaFree((void*)*ptr));
 		*ptr = NULL;
 	}
-};
-
-template <class value_type, class index_type>
-struct allocator<const value_type,index_type,dev_memory_space>{
-	void alloc(const value_type** ptr, index_type size) const{
-		cuvAssert(false);
-	}
-	void dealloc(const value_type** ptr)const {
-		cuvAssert(false);
-	}
+	/*void alloc(const value_type** ptr, index_type size) const{*/
+	/*        cuvAssert(false);*/
+	/*}*/
+	/*void dealloc(const value_type** ptr)const {*/
+	/*        cuvAssert(false);*/
+	/*}*/
 };
 
 template <class value_type, class index_type>

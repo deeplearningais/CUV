@@ -38,7 +38,7 @@
 #ifndef __CUDA_ARRAY_HPP__
 #define __CUDA_ARRAY_HPP__
 
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/matrix.hpp>
 
 class cudaArray; // forward declaration of cudaArray so we do not need to include cuda headers here
 

@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE( dd2s_correctness_dev )
 	for(int i=0;i<C.h();i++){
 		for(int j=0;j<C.w();j++){
 			if(C(i,j) != 0){
-				BOOST_CHECK_CLOSE( C(i,j), C_(i,j), 0.01 );
+				BOOST_CHECK_CLOSE( (float)C(i,j), (float)C_(i,j), 0.01 );
 			}
 		}
 	}
@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE( dd2s_correctness_host )
 	for(int i=0;i<C.h();i++){
 		for(int j=0;j<C.w();j++){
 			if(Chdia(i,j) != 0){
-				BOOST_CHECK_CLOSE( Chdia(i,j), Chdense(i,j), 0.01 );
+				BOOST_CHECK_CLOSE( (float)Chdia(i,j), (float)Chdense(i,j), 0.01 );
 			}
 		}
 	}

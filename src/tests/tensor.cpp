@@ -27,23 +27,11 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
 
-
-
-
-
 #define BOOST_TEST_MODULE example
-#include <iostream>
 #include <boost/test/included/unit_test.hpp>
-#include <boost/test/floating_point_comparison.hpp>
-
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/dense_matrix.hpp>
-#include <cuv/basics/dia_matrix.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
-#include <cuv/convert/convert.hpp>
-
+#include <cuv/basics/tensor.hpp>
 using namespace cuv;
-using namespace std;
 
 struct MyConfig {
 	static const int dev = CUDA_TEST_DEVICE;
@@ -57,73 +45,71 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	Fix(){
+	Fix()
+	{
 	}
 	~Fix(){
 	}
 };
 
-
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
-
-BOOST_AUTO_TEST_CASE( convert_pushpull )
+/** 
+ * @test
+ * @brief create tensor
+ */
+BOOST_AUTO_TEST_CASE( create_tensor )
 {
-	dense_matrix<float,column_major,dev_memory_space> dfc(32,16);
-	dense_matrix<float,row_major,host_memory_space>  hfr(16,32);
-	dense_matrix<float,row_major,dev_memory_space> dfr(32,16);
-	dense_matrix<float,column_major,host_memory_space>  hfc(16,32);
+	// column_major
+	tensor<float,column_major,host_memory_space> m(extents[2][3][4]);
+	BOOST_CHECK_EQUAL(24,m.size());
+	BOOST_CHECK_EQUAL(2ul,m.shape()[0]);
+	BOOST_CHECK_EQUAL(3ul,m.shape()[1]);
+	BOOST_CHECK_EQUAL(4ul,m.shape()[2]);
 
-	// dfc <--> hfr
-	convert(dfc, hfr);
-	convert(hfr, dfc);
+	BOOST_CHECK_EQUAL(0ul,m.index_of(extents[0][0][0]));  // column major test
+	BOOST_CHECK_EQUAL(1ul,m.index_of(extents[1][0][0]));
+	BOOST_CHECK_EQUAL(2ul,m.index_of(extents[0][1][0]));
 
-	// dfr <--> hfc
-	convert(dfr, hfc);
-	convert(hfc, dfr);
+
+	// row_major
+	tensor<float,row_major,host_memory_space> n(extents[2][3][4]);
+	BOOST_CHECK_EQUAL(24,m.size());
+	BOOST_CHECK_EQUAL(2ul,n.shape()[0]);
+	BOOST_CHECK_EQUAL(3ul,n.shape()[1]);
+	BOOST_CHECK_EQUAL(4ul,n.shape()[2]);
+
+	BOOST_CHECK_EQUAL(0ul,n.index_of(extents[0][0][0]));  // row major test
+	BOOST_CHECK_EQUAL(1ul,n.index_of(extents[0][0][1]));
+	BOOST_CHECK_EQUAL(2ul,n.index_of(extents[0][0][2]));
+	BOOST_CHECK_EQUAL(4ul,n.index_of(extents[0][1][0]));
 }
 
-BOOST_AUTO_TEST_CASE( create_dev_plain2 )
+BOOST_AUTO_TEST_CASE( tensor_data_access )
 {
-	dense_matrix<float,column_major,dev_memory_space> dfc(16,16); // "wrong" size
-	dense_matrix<float,row_major,host_memory_space>  hfr(16,32);
-	convert(dfc, hfr);                               // should make dfc correct size
-	convert(hfr, dfc);
-	BOOST_CHECK( hfr.w() == dfc.h());
-	BOOST_CHECK( hfr.h() == dfc.w());
-}
+	tensor<float,column_major,host_memory_space> m(extents[2][3][4]);
+	tensor<float,row_major,host_memory_space>    n(extents[2][3][4]);
 
-BOOST_AUTO_TEST_CASE( create_dev_plain3 )
-{
-	dense_matrix<float,column_major,dev_memory_space> dfc(32,16); 
-	dense_matrix<float,row_major,host_memory_space>  hfr(16,16);  // "wrong" size
-	convert(hfr, dfc);
-	convert(dfc, hfr);                               // should make dfc correct size
-	BOOST_CHECK( hfr.w() == dfc.h());
-	BOOST_CHECK( hfr.h() == dfc.w());
-}
+	tensor<float,column_major,host_memory_space> o(extents[2][3][4]);
+	tensor<float,row_major,host_memory_space>    p(extents[2][3][4]);
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < 3; ++j) {
+			for (int k = 0; k < 4; ++k) {
+				m(i,j,k)=i*j+k;
+				n(i,j,k)=i*j+k;
 
-BOOST_AUTO_TEST_CASE( dia2host )
-{
-	dia_matrix<float,host_memory_space>                 hdia(32,32,3,32);
-	dense_matrix<float,column_major,host_memory_space>  hdns(32,32);
-	std::vector<int> off;
-	off.push_back(0);
-	off.push_back(1);
-	off.push_back(-1);
-	sequence(hdia.vec());
-	hdia.set_offsets(off);
-	//hdia.transpose(); // works, too
-	convert(hdns,hdia);
-	for(int i=0;i<hdns.h();i++){
-		for(int j=0; j<hdns.w();j++){
-			cout << hdns(i,j) << " ";
-			BOOST_CHECK_CLOSE((float)hdns(i,j),(float)hdia(i,j),0.01);
+				o(i,j,k)=i*j+k;
+				p(i,j,k)=i*j+k;
+			}
 		}
-		cout <<endl;
 	}
+	BOOST_CHECK_EQUAL(1*2+3,m(1,2,3));
+	BOOST_CHECK_EQUAL(1*2+3,n(1,2,3));
+	BOOST_CHECK_EQUAL(1*2+3,o(1,2,3));
+	BOOST_CHECK_EQUAL(1*2+3,p(1,2,3));
+
+	BOOST_CHECK_EQUAL(1*2+3-1,--p(1,2,3));
+	BOOST_CHECK_EQUAL(1*2+3,  p(1,2,3)+=1);
 }
-
-
 
 BOOST_AUTO_TEST_SUITE_END()

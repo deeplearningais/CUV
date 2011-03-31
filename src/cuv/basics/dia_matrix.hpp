@@ -57,10 +57,12 @@ namespace cuv{
 	class dia_matrix 
 	:        public matrix<__value_type, __index_type>{
 	  public:
+		  typedef __value_type           value_type;	///< Type of the entries of matrix
+		  typedef const value_type const_value_type;	///< Type of the entries of matrix
 		  typedef matrix<__value_type, __index_type> 					   base_type; 			///< Basic matrix type
 		  typedef __memory_space_type 									   memory_space_type;	///< Whether this is a host or device matrix
-		  typedef typename base_type::value_type 						   value_type;			///< Type of matrix entries
 		  typedef typename base_type::index_type 						   index_type;			///< Type of indices
+		  typedef const vector<value_type,memory_space_type,index_type> const_vec_type; 		///< Basic vector type used
 		  typedef vector<value_type,memory_space_type,index_type>  		   vec_type; 			///< Basic vector type used
 		  typedef vector<int,memory_space_type,index_type> 				   intvec_type; 		///< Type of offsets for diagonals
 		  typedef dia_matrix<value_type,memory_space_type,index_type> 	   my_type;				///< Type of this matix
@@ -177,7 +179,7 @@ namespace cuv{
 			}
 			/** Return vector (view) containing specified diagonal.
 			 */
-			inline const vec_type* get_dia(const int& k)const{ 
+			inline const_vec_type* get_dia(const int& k)const{ 
 				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(k);
 				int off = it->second;
 				const index_type i_start = std::max((int)0,-k);

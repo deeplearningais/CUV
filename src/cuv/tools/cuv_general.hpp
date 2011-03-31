@@ -56,6 +56,8 @@
 #define cuvAssert(X)  \
   if(!(X)){ cuv::cuvAssertFailed(#X); } 
 
+#define DBG(X) #X <<":"<<(X)<<"  "
+
 namespace cuv{
 	/// Parent struct for host and device memory tags
 	struct memory_space{};

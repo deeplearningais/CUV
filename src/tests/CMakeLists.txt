@@ -12,6 +12,9 @@ FIND_PACKAGE( BLAS REQUIRED)
 SET (CUDA_TEST_DEVICE "0" CACHE STRING "Which CUDA device should the tests be run on, if multiple devices are present.")
 add_definitions(-DCUDA_TEST_DEVICE=${CUDA_TEST_DEVICE})
 
+ADD_EXECUTABLE( test_tensor tensor.cpp )
+TARGET_LINK_LIBRARIES( test_tensor cuv_basics cuv_tools cuv_matrix_ops cuv_convert)
+
 ADD_EXECUTABLE( test_basic basic.cpp )
 TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools cuv_matrix_ops cuv_convert)
 

@@ -31,58 +31,61 @@
 
 
 
-/** 
- * @file vector.hpp
- * @brief base class for vectors
- * @ingroup basics
- * @author Hannes Schulz, Andreas Mueller
- * @date 2010-03-21
- */
-#ifndef __VECTOR_HPP__
-#define __VECTOR_HPP__
 #include <iostream>
-#include <cuv/basics/tensor.hpp>
+#include <stdexcept>
+#include <cuda.h>
+#include <thrust/device_ptr.h>
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
-#include <cuv/basics/accessors.hpp>
+#include <cuv/basics/linear_memory.hpp>
 
 namespace cuv{
 
-
-/**
- * @brief Basic vector class
- *
- * This vector class is the parent of all other vector classes and has all the basic attributes that all matrices share.
- * This class is never actually instanciated.
- */
-template<class __value_type, class __memory_space_type, class __index_type=unsigned int>
-class vector
-:public tensor<__value_type,column_major,__memory_space_type>{
-	public:
-		typedef tensor<__value_type,column_major,__memory_space_type> tensor_type;
-		typedef typename tensor_type::value_type         value_type;
-		typedef typename tensor_type::memory_space_type  memory_space_type;
-		typedef typename tensor_type::memory_layout_type memory_layout_type;
-		typedef typename tensor_type::index_type         index_type;
-		typedef typename tensor_type::pointer_type       pointer_type;
-	
-        /// default constructor does nothing (especially no memory allocation).
-	vector(){ }
-
-        /// we simply add a convenience constructor here.
-	vector(index_type l)
-		:tensor_type(extents[l]){
-		}
-        /// we simply add a convenience constructor here.
-	vector(const index_type& l, pointer_type ptr, bool b=true)
-		:tensor_type(extents[l], ptr){
-		}
-	/// deprecated! use the reference returned by []
-	void set(const index_type& idx, const value_type& val){
-		(*this)[idx] = val;
+template <class value_type, class index_type>
+struct allocator<value_type,index_type,dev_memory_space>{
+	void alloc( value_type** ptr, index_type size) const{
+		cuvSafeCall(cudaMalloc(ptr, sizeof(value_type)*size));
+	}
+	void dealloc( value_type** ptr) const {
+		cuvSafeCall(cudaFree((void*)*ptr));
+		*ptr = NULL;
 	}
 };
 
-}; // cuv
+template <class value_type, class index_type>
+struct allocator<const value_type,index_type,dev_memory_space>{
+	void alloc(const value_type** ptr, index_type size) const{
+		cuvAssert(false);
+	}
+	void dealloc(const value_type** ptr)const {
+		cuvAssert(false);
+	}
+};
 
-#endif
+template <class value_type, class index_type>
+void entry_set(value_type* ptr, index_type idx, value_type val, dev_memory_space) {
+	thrust::device_ptr<value_type> dev_ptr(ptr);
+	dev_ptr[idx]=val;
+}
+
+template <class value_type, class index_type>
+value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space) {
+	const thrust::device_ptr<const value_type> dev_ptr(ptr);
+	return (value_type) *(dev_ptr+idx);
+}
+
+
+#define VECTOR_INST(T,I) \
+template struct allocator<T, I, dev_memory_space>; \
+template struct allocator<const T, I, dev_memory_space>; \
+template void entry_set(T*, I, T, dev_memory_space); \
+template T entry_get(const T*, I, dev_memory_space); \
+
+VECTOR_INST(float, unsigned int);
+VECTOR_INST(unsigned char, unsigned int);
+VECTOR_INST(signed char, unsigned int);
+VECTOR_INST(int, unsigned int);
+VECTOR_INST(unsigned int, unsigned int);
+VECTOR_INST(bool, unsigned int);
+
+
+}; // cuv

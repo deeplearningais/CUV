@@ -1,4 +1,5 @@
-
+#ifndef __META_PROGRAMMING_HPP__
+#define __META_PROGRAMMING_HPP__
 namespace cuv{
 // is same template metaprogramming
 // checks whether two types are the same
@@ -36,4 +37,17 @@ template <typename T>
 struct unconst<const T>{
 	typedef T type;
 };
+
+/**
+ * @brief Switch result depending on Condition
+ */
+template <bool Condition, class Then, class Else>
+struct If{
+	typedef Then result;
 };
+template<class Then, class Else>
+struct If<false,Then,Else>{
+	typedef Else result;
+};
+};
+#endif /* __META_PROGRAMMING_HPP__ */

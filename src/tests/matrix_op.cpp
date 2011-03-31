@@ -214,8 +214,8 @@ BOOST_AUTO_TEST_CASE( vec_ops_norms )
 		f1_ += fabs(v.vec()[i]);
 	}
 	f2_ = sqrt(f2_);
-	BOOST_CHECK_CLOSE(f1,f1_,0.01f);
-	BOOST_CHECK_CLOSE(f2,f2_,0.01f);
+	BOOST_CHECK_CLOSE((float)f1,(float)f1_,0.01f);
+	BOOST_CHECK_CLOSE((float)f2,(float)f2_,0.01f);
 }
 
 
@@ -232,7 +232,7 @@ BOOST_AUTO_TEST_CASE( mat_op_mm )
 	convert(u2,u);
 	for(int i=0;i<u2.h();i++){
 		for(int j=0;j<u2.h();j++){
-			BOOST_CHECK_CLOSE( u2(i,j), r(i,j), 0.01 );
+			BOOST_CHECK_CLOSE( (float)u2(i,j), (float)r(i,j), 0.01 );
 		}
 	}
 }
@@ -267,7 +267,7 @@ BOOST_AUTO_TEST_CASE( mat_op_rm_prod )
 
 	for(int i=0;i<m;i++){
 		for(int j=0;j<n;j++){
-			BOOST_CHECK_CLOSE( hC(i,j), c2(i,j), 0.01 );
+			BOOST_CHECK_CLOSE( (float)hC(i,j), (float)c2(i,j), 0.01 );
 		}
 	}
 }
@@ -289,8 +289,8 @@ BOOST_AUTO_TEST_CASE( mat_op_mmdim1 )
 		for(int j=0;j<z.w();j++) {
 			val += s(0,j) * z(i,j);
 		}
-		BOOST_CHECK_CLOSE( b2(0,i), val, 0.01 );
-		BOOST_CHECK_CLOSE( t(0,i), val, 0.01 );
+		BOOST_CHECK_CLOSE( (float)b2(0,i), (float)val, 0.01 );
+		BOOST_CHECK_CLOSE( (float)t(0,i), (float)val, 0.01 );
 	}
 }
 
@@ -304,9 +304,9 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row )
 	matrix_plus_row(x,x_vec);
 	for(int i=0;i<n;i++){
 		for(int j=0;j<n;j++){
-			BOOST_CHECK_CLOSE(v(i,j), x(i,j), 0.01);
-			BOOST_CHECK_CLOSE(v(i,j), w(i,j)+v_vec[j], 0.01);
-			BOOST_CHECK_CLOSE(x(i,j), z(i,j)+x_vec[j], 0.01);
+			BOOST_CHECK_CLOSE((float)v(i,j), (float)x(i,j), 0.01);
+			BOOST_CHECK_CLOSE((float)v(i,j), w(i,j)+v_vec[j], 0.01);
+			BOOST_CHECK_CLOSE((float)x(i,j), z(i,j)+x_vec[j], 0.01);
 		}
 	}
 
@@ -321,9 +321,9 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_col )
 	matrix_plus_col(x,x_vec);
 	for(int i=0;i<n;i++){
 		for(int j=0;j<n;j++){
-			BOOST_CHECK_CLOSE(v(i,j), x(i,j), 0.01);
-			BOOST_CHECK_CLOSE(v(i,j), w(i,j)+v_vec[i], 0.01);
-			BOOST_CHECK_CLOSE(x(i,j), z(i,j)+x_vec[i], 0.01);
+			BOOST_CHECK_CLOSE((float)v(i,j), (float)x(i,j), 0.01);
+			BOOST_CHECK_CLOSE((float)v(i,j), w(i,j)+v_vec[i], 0.01);
+			BOOST_CHECK_CLOSE((float)x(i,j), z(i,j)+x_vec[i], 0.01);
 		}
 	}
 
@@ -341,9 +341,9 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_vec_row_major )
 	matrix_plus_col(X,x_vec);
 	for(int i=0;i<n;i++){
 		for(int j=0;j<n;j++){
-			BOOST_CHECK_CLOSE(V(i,j), X(i,j), 0.01);
-			BOOST_CHECK_CLOSE(V(i,j), W(i,j)+v_vec[i], 0.01);
-			BOOST_CHECK_CLOSE(X(i,j), Z(i,j)+x_vec[i], 0.01);
+			BOOST_CHECK_CLOSE((float)V(i,j), (float)X(i,j), 0.01);
+			BOOST_CHECK_CLOSE((float)V(i,j), W(i,j)+v_vec[i], 0.01);
+			BOOST_CHECK_CLOSE((float)X(i,j), Z(i,j)+x_vec[i], 0.01);
 		}
 	}
 
@@ -382,8 +382,8 @@ BOOST_AUTO_TEST_CASE( mat_op_divide_col )
 
 	for(int i=0;i<n;i++)
 		for(int j=0; j<n; j++) {
-			BOOST_CHECK_CLOSE(v(i,j),x(i,j),0.01);
-			BOOST_CHECK_CLOSE(x(i,j),z(i,j)/x_col[i],0.01);
+			BOOST_CHECK_CLOSE((float)v(i,j),(float)x(i,j),0.01);
+			BOOST_CHECK_CLOSE((float)x(i,j),z(i,j)/x_col[i],0.01);
 		}
 }
 
@@ -426,8 +426,8 @@ BOOST_AUTO_TEST_CASE( mat_op_view )
 	BOOST_CHECK_EQUAL(d2->w(), 2);
 	for(int i=0;i<n;i++)
 		for(int j=0;j<2;j++){
-			BOOST_CHECK_CLOSE((*h2)(i,j),(*d2)(i,j),0.01);
-			BOOST_CHECK_CLOSE((*h2)(i,j),x(i, j+1),0.01);
+			BOOST_CHECK_CLOSE((float)(*h2)(i,j),(float)(*d2)(i,j),0.01);
+			BOOST_CHECK_CLOSE((float)(*h2)(i,j),(float)x(i, j+1),0.01);
 		}
 }
 
@@ -497,7 +497,7 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 				vector<float,host_memory_space>*> p = test_reduce<float>(dim,dA,*it);
 			const float prec = find(rf_rp.begin(), rf_rp.end(), *it)==rf_rp.end() ? 0.1f : 4.5f;
 			for(unsigned int i=0; i<m; i++) {
-				BOOST_CHECK_CLOSE((*p.first)[i], (*p.second)[i],prec);
+				BOOST_CHECK_CLOSE((float)(*p.first)[i], (float)(*p.second)[i],prec);
 			}
 			delete p.first; delete p.second;
 		}
@@ -523,7 +523,7 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 				vector<float,host_memory_space>*> p = test_reduce<float>(dim,dA,*it);
 			const float prec = find(rf_rp.begin(), rf_rp.end(), *it)==rf_rp.end() ? 0.1f : 4.5f;
 			for(unsigned int i=0; i<m; i++) {
-				BOOST_CHECK_CLOSE((*p.first)[i], (*p.second)[i], prec);
+				BOOST_CHECK_CLOSE((float)(*p.first)[i], (float)(*p.second)[i], prec);
 			}
 			delete p.first; delete p.second;
 		}
