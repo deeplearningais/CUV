@@ -47,9 +47,9 @@
 
 //#include <cutil_inline.h>
 #include <assert.h>
-#include <matrix.h>
-#include <nvmatrix.cuh>
-#include "conv_common.cuh"
+#include <3rd_party/CudaConv/matrix.h>
+#include <3rd_party/CudaConv/nvmatrix.cuh>
+#include <3rd_party/CudaConv/conv_common.cuh>
 
 void convolve3(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int numGroups, bool color);
 

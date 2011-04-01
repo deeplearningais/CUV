@@ -46,9 +46,9 @@
 #define CONV2_CUH_
 
 #include <assert.h>
-#include "matrix.h"
-#include <nvmatrix.cuh>
-#include "conv_common.cuh"
+#include <3rd_party/CudaConv/matrix.h>
+#include <3rd_party/CudaConv/nvmatrix.cuh>
+#include <3rd_party/CudaConv/conv_common.cuh>
 
 void convolve2(NVMatrix* images, NVMatrix* filters, NVMatrix* targets, int filterSize, int numGroups, bool colorImages);
 /*

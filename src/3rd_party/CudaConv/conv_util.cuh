@@ -40,8 +40,8 @@
 
 #ifndef CONV_UTIL_CUH_
 #define CONV_UTIL_CUH_
-#include <nvmatrix.cuh>
-#include "conv_common.cuh"
+#include <3rd_party/CudaConv/nvmatrix.cuh>
+#include <3rd_party/CudaConv/conv_common.cuh>
 
 __global__ void kRotate180(float* filters, float* targets, const int filterSize);
 void rotate180(NVMatrix* filters, NVMatrix* targets, bool color);
