@@ -131,6 +131,23 @@ namespace cuv
 			}
 
 			/**
+			 * construct tensor using uint
+			 */
+			explicit const_tensor(const unsigned int& _size){
+				m_shape.clear();
+				m_shape.push_back(_size);
+				allocate();
+			}
+
+			/**
+			 * construct tensor using int
+			 */
+			explicit const_tensor(const int& _size){
+				m_shape.clear();
+				m_shape.push_back(_size);
+				allocate();
+			}
+			/**
 			 * construct tensor using some collection
 			 */
 			template<class Collection>

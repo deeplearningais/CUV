@@ -94,8 +94,8 @@ push @ifclauses, $ifc;
 $outstr .=<<"EOT";
 template<class value_type, class index_type>
 void spmm_device_${kernel_name}_dispatch(const ${kernel_name}_matrix<value_type,dev_memory_space,index_type>& A, 
-					const vector<value_type,dev_memory_space>& v, 
-					vector<value_type,dev_memory_space>& dst, 
+					const tensor<value_type,dev_memory_space>& v, 
+					tensor<value_type,dev_memory_space>& dst, 
 					char transA,
 					const value_type& factAv,
 					const value_type& factC,

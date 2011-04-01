@@ -12,7 +12,7 @@ namespace rbm{
 		   column_major
 	     * ****************************/
 		template<class V, class I>
-		void set_binary_sequence(cuv::dense_matrix<V,column_major,host_memory_space,I>& m, const int& start){
+		void set_binary_sequence(cuv::dense_matrix<V,host_memory_space,column_major,I>& m, const int& start){
 			const int len = m.h();
 			V* ptr  = m.ptr();
 			for(unsigned int i=start; i<m.w()+start; i++){
@@ -32,7 +32,7 @@ namespace rbm{
 			dst[x*h+y] = ((start+x) & (1 << (h-1-y))) ? 1 : 0;
 		}
 		template<class V, class I>
-		void set_binary_sequence(cuv::dense_matrix<V,column_major,dev_memory_space,I>& m, const int& start){
+		void set_binary_sequence(cuv::dense_matrix<V,dev_memory_space,column_major,I>& m, const int& start){
 			dim3 threads(16,16);
 			dim3 grid(ceil(m.h()/float(threads.x)), ceil(m.w()/float(threads.y)));
 			set_binary_sequence_kernel<<<grid,threads>>>(m.ptr(),m.h(),m.w(),start);
@@ -40,7 +40,7 @@ namespace rbm{
 		}
 
 		template<class V, class I>
-		void sigm_temperature(cuv::dense_matrix<V,column_major,host_memory_space,I>& m, const cuv::vector<V,host_memory_space,I>& temp){
+		void sigm_temperature(cuv::dense_matrix<V,host_memory_space,column_major,I>& m, const cuv::tensor<V,host_memory_space>& temp){
 			cuvAssert(m.w() == temp.size())
 			V* mptr = m.ptr();
 			for(unsigned int col=0;col<m.w();col++){
@@ -64,7 +64,7 @@ namespace rbm{
 			dst[x*h+y] = (value_type) (1.0/(1.0 + expf(-src[x*h+y] / T)));
 		}
 		template<class V, class I>
-		void sigm_temperature(cuv::dense_matrix<V,column_major,dev_memory_space,I>& m, const cuv::vector<V,dev_memory_space,I>& temp){
+		void sigm_temperature(cuv::dense_matrix<V,dev_memory_space,column_major,I>& m, const cuv::tensor<V,dev_memory_space>& temp){
 			dim3 threads(16,16);
 			dim3 grid(ceil(m.h()/float(threads.x)), ceil(m.w()/float(threads.y)));
 			sigm_temperature_kernel<<<grid,threads>>>(m.ptr(),m.ptr(),temp.ptr(),m.h(),m.w());
@@ -75,20 +75,20 @@ namespace rbm{
 		   row_major
 	     * ****************************/
 		template<class V, class I>
-		void set_binary_sequence(cuv::dense_matrix<V,row_major,host_memory_space,I>& m, const int& start){
+		void set_binary_sequence(cuv::dense_matrix<V,host_memory_space,row_major,I>& m, const int& start){
 			// TODO: make column-major view, then call again
 		}
 		template<class V, class I>
-		void set_binary_sequence(cuv::dense_matrix<V,row_major,dev_memory_space,I>& m, const int& start){
+		void set_binary_sequence(cuv::dense_matrix<V,dev_memory_space,row_major,I>& m, const int& start){
 			// TODO: make column-major view, then call again
 		}
 
 		template<class V, class I>
-		void sigm_temperature(cuv::dense_matrix<V,row_major,host_memory_space,I>& m, const cuv::vector<V,host_memory_space,I>& temp){
+		void sigm_temperature(cuv::dense_matrix<V,host_memory_space,row_major,I>& m, const cuv::tensor<V,host_memory_space>& temp){
 			// TODO: make column-major view, then call again
 		}
 		template<class V, class I>
-		void sigm_temperature(cuv::dense_matrix<V,row_major,dev_memory_space,I>& m, const cuv::vector<V,dev_memory_space,I>& temp){
+		void sigm_temperature(cuv::dense_matrix<V,dev_memory_space,row_major,I>& m, const cuv::tensor<V,dev_memory_space>& temp){
 			// TODO: make column-major view, then call again
 		}
 
@@ -137,7 +137,7 @@ namespace rbm{
 		}
 
 		template<class V, class I>
-		void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<V,column_major,dev_memory_space,I>& m, int patchsize, int px, int py, int pxh, int pyh, int maxdist_from_main_dia, bool round){
+		void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<V,dev_memory_space,column_major,I>& m, int patchsize, int px, int py, int pxh, int pyh, int maxdist_from_main_dia, bool round){
 			cuvAssert(m.ptr());
 			cuvAssert(m.h()%(px*py) == 0);
 			cuvAssert(m.w()%(pxh*pyh) == 0);
@@ -178,7 +178,7 @@ namespace rbm{
 				dst[tidx*h+tidy] = src[tidx*h+tidy];
 		}
 		template<class VM, class I>
-		void copy_redblack(cuv::dense_matrix<VM,column_major,dev_memory_space,I>& dst, const cuv::dense_matrix<VM,column_major,dev_memory_space,I>& src, const unsigned int num_maps, const unsigned int color){
+		void copy_redblack(cuv::dense_matrix<VM,dev_memory_space,column_major,I>& dst, const cuv::dense_matrix<VM,dev_memory_space,column_major,I>& src, const unsigned int num_maps, const unsigned int color){
 			cuvAssert(dst.w() == src.w());
 			cuvAssert(dst.h() == src.h());
 			/*cuvAssert(rowidx.h() == src.w());*/
@@ -216,7 +216,7 @@ namespace rbm{
 				dst[tidx*h+tidy] = src[tidx*h+tidy];
 		}
 		template<class VM, class VV, class I>
-		void copy_at_rowidx(cuv::dense_matrix<VM,column_major,dev_memory_space,I>& dst, const cuv::dense_matrix<VM,column_major,dev_memory_space,I>& src, const cuv::dense_matrix<VV,column_major,dev_memory_space,I>& rowidx, const unsigned int color){
+		void copy_at_rowidx(cuv::dense_matrix<VM,dev_memory_space,column_major,I>& dst, const cuv::dense_matrix<VM,dev_memory_space,column_major,I>& src, const cuv::dense_matrix<VV,dev_memory_space,column_major,I>& rowidx, const unsigned int color){
 			cuvAssert(dst.w() == src.w());
 			cuvAssert(dst.h() == src.h());
 			/*cuvAssert(rowidx.h() == src.w());*/
@@ -250,20 +250,20 @@ void copy_redblack(__matrix_type& dst, const __matrix_type&  src, const unsigned
 	detail::copy_redblack(dst,src, num_maps, color);
 }
 template
-void copy_at_rowidx(cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const unsigned int);
+void copy_at_rowidx(cuv::dense_matrix<float,dev_memory_space,column_major>&, const cuv::dense_matrix<float,dev_memory_space,column_major>&, const cuv::dense_matrix<float,dev_memory_space,column_major>&, const unsigned int);
 
 
 #define INST(V,L,M,I) \
   template void set_binary_sequence(cuv::dense_matrix<V,L,M,I>& m, const int&); \
-  template void sigm_temperature(cuv::dense_matrix<V,L,M,I>& m, const cuv::vector<V,M,I>&); \
+  template void sigm_temperature(cuv::dense_matrix<V,L,M,I>& m, const cuv::tensor<V,L>&); \
 
-INST(float,column_major,host_memory_space,unsigned int);
-INST(float,column_major,dev_memory_space,unsigned int);
+INST(float,host_memory_space,column_major,unsigned int);
+INST(float,dev_memory_space,column_major,unsigned int);
 
 template
-void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<float,column_major,dev_memory_space>& m, int patchsize, int px, int py, int,int,int, bool);
+void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<float,dev_memory_space,column_major>& m, int patchsize, int px, int py, int,int,int, bool);
 template
-void copy_redblack(cuv::dense_matrix<float,column_major,dev_memory_space>&, const cuv::dense_matrix<float,column_major,dev_memory_space>&, const unsigned int num_maps, const unsigned int);
+void copy_redblack(cuv::dense_matrix<float,dev_memory_space,column_major>&, const cuv::dense_matrix<float,dev_memory_space,column_major>&, const unsigned int num_maps, const unsigned int);
 
 }
 }

@@ -88,8 +88,8 @@ namespace cuv{
 
 		template <typename value_type, typename index_type>
 			void spmv_dia_device(const dia_matrix<value_type,dev_memory_space,index_type>& A, 
-					const vector<value_type,dev_memory_space>& v, 
-					vector<value_type,dev_memory_space>& dst, 
+					const tensor<value_type,dev_memory_space>& v, 
+					tensor<value_type,dev_memory_space>& dst, 
 					char transA,
 					const value_type& factAv,
 					const value_type& factC)
@@ -103,8 +103,8 @@ namespace cuv{
 
 		/*template <bool transA, typename value_type, typename index_type>*/
 		/*    void spmv_dia_tex_device(const dia_matrix<value_type,dev_memory_space,index_type>& A, */
-		/*            const vector<value_type,dev_memory_space>& v, */
-		/*            vector<value_type,dev_memory_space>& dst)*/
+		/*            const tensor<value_type,dev_memory_space>& v, */
+		/*            tensor<value_type,dev_memory_space>& dst)*/
 		/*    {*/
 		/*        const unsigned int BLOCK_SIZE = 256;*/
 		/*        const dim3 grid = make_large_grid(A.h(),BLOCK_SIZE);*/
@@ -128,7 +128,7 @@ namespace cuv{
 		/*        unbind_x(v.ptr());*/
 		/*    }*/
 		template<class value_type, class index_type>
-			void spmv(vector<value_type,dev_memory_space,index_type>& dst, dia_matrix<value_type,dev_memory_space,index_type>& A, vector<value_type,dev_memory_space,index_type>& v, char transA, const float& factAv, const float& factC){
+			void spmv(tensor<value_type,dev_memory_space>& dst, dia_matrix<value_type,dev_memory_space,index_type>& A, tensor<value_type,dev_memory_space>& v, char transA, const float& factAv, const float& factC){
 				// TODO: find a good assert
 				/*if(transA=='t'){*/
 					/*cuvAssert(A.w() == dst.size());*/
@@ -143,17 +143,17 @@ namespace cuv{
 		 *  Host Code
 		 ****************************************************************/
 		template<class value_type, class index_type>
-			void spmv(vector<value_type,host_memory_space,index_type>& dst, dia_matrix<value_type,host_memory_space,index_type>& A, vector<value_type,host_memory_space,index_type>& v, char transA, const float& factAv, const float& factC){
-				const vector<int,host_memory_space>& offsets = A.get_offsets();
+			void spmv(tensor<value_type,host_memory_space>& dst, dia_matrix<value_type,host_memory_space,index_type>& A, tensor<value_type,host_memory_space>& v, char transA, const float& factAv, const float& factC){
+				const tensor<int,host_memory_space>& offsets = A.get_offsets();
 				const int num_diags             = A.num_dia();
 				const int A_h                   = A.h();
 				const int A_w                   = A.w();
 				const int A_stride              = A.stride();
 				index_type max_dst = ((transA=='t') ? A_w : A_h);
 				if(factC==0.f)
-					for(int i=0;i<max_dst;i++) dst.set(i, 0);
+					for(int i=0;i<max_dst;i++) dst[i]=0;
 				else
-					for(int i=0;i<max_dst;i++) dst.set(i, dst[i] * factC);
+					for(int i=0;i<max_dst;i++) dst[i]=dst[i] * factC;
 				const int rf = A.row_fact();
 				if(transA == 't'){
 					cuvAssert(A_h == v.size());
@@ -201,9 +201,9 @@ namespace cuv{
 	}
 
 	template<>
-		void prod(dense_matrix<float,column_major,host_memory_space>& dst,
+		void prod(dense_matrix<float,host_memory_space,column_major>& dst,
 				  dia_matrix<float,host_memory_space>&                  A,
-				  dense_matrix<float,column_major,host_memory_space>&   B,
+				  dense_matrix<float,host_memory_space,column_major>&   B,
 				  char transA,
 				  char transB,
 				  const float& factAB,
@@ -211,15 +211,15 @@ namespace cuv{
 			cuvAssert(transB == 'n');
 			cuvAssert(dst.w() == B.w());
 			for(int i=0;i<dst.w();i++){
-				vector<float,host_memory_space> dst_v(dst.h(), dst.ptr()+i*dst.h(), true);
-				vector<float,host_memory_space> src_v(B.h(),   B.ptr()+i*B.h(), true);
+				tensor<float,host_memory_space> dst_v(extents[dst.h()], dst.ptr()+i*dst.h());
+				tensor<float,host_memory_space> src_v(extents[B.h()],   B.ptr()+i*B.h());
 				spmv(dst_v,A,src_v,transA,factAB,factC);
 			}
 		}
 	template<>
-		void prod(dense_matrix<float,column_major,dev_memory_space>& dst,
+		void prod(dense_matrix<float,dev_memory_space,column_major>& dst,
 				  dia_matrix<float,dev_memory_space>&                  A,
-				  dense_matrix<float,column_major,dev_memory_space>&   B,
+				  dense_matrix<float,dev_memory_space,column_major>&   B,
 				  char transA,
 				  char transB,
 				  const float& factAB,
@@ -236,8 +236,8 @@ namespace cuv{
 			}
 			const int num_at_same_time = min(MAX_NUM_IMGS_AT_ONCE, B.w());
 			for(int i=0; i<dst.w(); i += num_at_same_time){
-				vector<float,dev_memory_space> dst_v(dst.h() * min(dst.w()-i,num_at_same_time), dst.ptr()+i*dst.h(), true);
-				vector<float,dev_memory_space> src_v(B.h()   * min(B.w()-i,  num_at_same_time), B.ptr()+i*B.h(), true);
+				tensor<float,dev_memory_space> dst_v(extents[dst.h() * min(dst.w()-i,num_at_same_time)], dst.ptr()+i*dst.h());
+				tensor<float,dev_memory_space> src_v(extents[B.h()* min(B.w()-i,  num_at_same_time)], B.ptr()+i*B.h());
 				spmv(dst_v,A,src_v,transA,factAB,factC);
 			}
 		}
@@ -245,6 +245,6 @@ namespace cuv{
 		void spmv(__vector_type& dst, __matrix_type& A, __vector_type& v, char transA, const float& factAv, const float& factC){
 			spmv_impl::spmv(dst,A,v,transA,factAv,factC);
 		}
-	template void spmv<dia_matrix<float,host_memory_space>, vector<float,host_memory_space> >(vector<float,host_memory_space>&dst, dia_matrix<float,host_memory_space>& A, vector<float,host_memory_space>& v, char, const float&, const float&);
-	template void spmv<dia_matrix<float,dev_memory_space>, vector<float,dev_memory_space> >(vector<float,dev_memory_space>&dst, dia_matrix<float,dev_memory_space>& A, vector<float,dev_memory_space>& v, char, const float&, const float&);
+	template void spmv<dia_matrix<float,host_memory_space>, tensor<float,host_memory_space> >(tensor<float,host_memory_space>&dst, dia_matrix<float,host_memory_space>& A, tensor<float,host_memory_space>& v, char, const float&, const float&);
+	template void spmv<dia_matrix<float,dev_memory_space>, tensor<float,dev_memory_space> >(tensor<float,dev_memory_space>&dst, dia_matrix<float,dev_memory_space>& A, tensor<float,dev_memory_space>& v, char, const float&, const float&);
 }

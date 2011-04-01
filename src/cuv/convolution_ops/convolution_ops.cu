@@ -39,10 +39,11 @@
  */
 #include <float.h>
 
-#include "convolution_ops.hpp"
+#include <cuv/convolution_ops/convolution_ops.hpp>
 
 #include <cuv/convert/convert.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/random/random.hpp>
 #include <3rd_party/CudaConv/conv_util.cuh>
 #include <3rd_party/CudaConv/nvmatrix.cuh>
@@ -61,9 +62,9 @@ using namespace std;
 namespace cuv{
 
 template<>
-	void convolve(dense_matrix<float,row_major,dev_memory_space>& dst,
-			  dense_matrix<float,row_major,dev_memory_space>&   img,
-			  dense_matrix<float,row_major,dev_memory_space>&   filter,
+	void convolve(dense_matrix<float,dev_memory_space,row_major>& dst,
+			  dense_matrix<float,dev_memory_space,row_major>&   img,
+			  dense_matrix<float,dev_memory_space,row_major>&   filter,
 			  int numGroups){
 
 	// some preliminary checks to ensure compatibility
@@ -92,9 +93,9 @@ template<>
 	}
 
 template<>
-void convolve(dense_matrix<float,row_major,host_memory_space>& dst,
-		  dense_matrix<float,row_major,host_memory_space>&   img,
-		  dense_matrix<float,row_major,host_memory_space>&   filter,
+void convolve(dense_matrix<float,host_memory_space,row_major>& dst,
+		  dense_matrix<float,host_memory_space,row_major>&   img,
+		  dense_matrix<float,host_memory_space,row_major>&   filter,
 		  int numGroups) {
 
 	int numImages = img.h() / numGroups;
@@ -134,9 +135,9 @@ void convolve(dense_matrix<float,row_major,host_memory_space>& dst,
 
 
 template<>
-	void convolve2(dense_matrix<float,row_major,dev_memory_space>& dst,
-			  dense_matrix<float,row_major,dev_memory_space>&   img,
-			  dense_matrix<float,row_major,dev_memory_space>&   filter,
+	void convolve2(dense_matrix<float,dev_memory_space,row_major>& dst,
+			  dense_matrix<float,dev_memory_space,row_major>&   img,
+			  dense_matrix<float,dev_memory_space,row_major>&   filter,
 			  int numFilters,
 			  int numGroups) {
 	int imgSize = sqrt(img.w());
@@ -164,9 +165,9 @@ template<>
 }
 
 template<>
-void convolve2(dense_matrix<float,row_major,host_memory_space>& dst,
-		  dense_matrix<float,row_major,host_memory_space>&   img,
-		  dense_matrix<float,row_major,host_memory_space>&   filter,
+void convolve2(dense_matrix<float,host_memory_space,row_major>& dst,
+		  dense_matrix<float,host_memory_space,row_major>&   img,
+		  dense_matrix<float,host_memory_space,row_major>&   filter,
 		  int numFilters,
 		  int numGroups) {
 	int imgSize = sqrt(img.w());
@@ -179,8 +180,8 @@ void convolve2(dense_matrix<float,row_major,host_memory_space>& dst,
 
 // images --> blocks
 template<>
-void grid_to_matrix(dense_matrix<float,row_major,dev_memory_space>& mat,
-		  dense_matrix<float,row_major,dev_memory_space>&   grid,
+void grid_to_matrix(dense_matrix<float,dev_memory_space,row_major>& mat,
+		  dense_matrix<float,dev_memory_space,row_major>&   grid,
 		  int poolSize) {
 	int numImages = grid.h();
 	int imgPixels = grid.w();
@@ -195,7 +196,7 @@ void grid_to_matrix(dense_matrix<float,row_major,dev_memory_space>& mat,
 	// make nvMatrices with this data
 	NVMatrix nv_mat(mat.ptr(), mat.h(), mat.w(), false);
 	NVMatrix nv_grid(grid.ptr(), grid.h(), grid.w(), false);
-	fill(mat);
+	fill(mat,0);
 
 	gridToMatrix(&nv_grid, &nv_mat, poolSize, true);
 
@@ -203,8 +204,8 @@ void grid_to_matrix(dense_matrix<float,row_major,dev_memory_space>& mat,
 }
 
 template<>
-void matrix_to_grid(dense_matrix<float,row_major,dev_memory_space>& grid,
-		  dense_matrix<float,row_major,dev_memory_space>&   mat,
+void matrix_to_grid(dense_matrix<float,dev_memory_space,row_major>& grid,
+		  dense_matrix<float,dev_memory_space,row_major>&   mat,
 		  int poolSize) {
 	int numImages = grid.h();
 	int imgPixels = grid.w();
@@ -228,11 +229,11 @@ void matrix_to_grid(dense_matrix<float,row_major,dev_memory_space>& grid,
 }
 
 template<>
-void sample_multinomial(dense_matrix<float,row_major,dev_memory_space>& grid){
-   /*dense_matrix<float,row_major,dev_memory_space> tmp(grid.h(),grid.w());*/
+void sample_multinomial(dense_matrix<float,dev_memory_space,row_major>& grid){
+   /*dense_matrix<float,dev_memory_space,row_major> tmp(grid.h(),grid.w());*/
    /*apply_binary_functor(tmp,grid,BF_COPY);*/
 
-   dense_matrix<float,row_major,dev_memory_space> rnd(grid.h(),1);
+   dense_matrix<float,dev_memory_space,row_major> rnd(grid.h(),1);
    fill_rnd_uniform(rnd);
 
    NVMatrix nv_grid(grid.ptr(),grid.h(),grid.w(),false);
@@ -245,12 +246,12 @@ void sample_multinomial(dense_matrix<float,row_major,dev_memory_space>& grid){
 }
 
 template<>
-void prob_max_pooling(vector<float,dev_memory_space>& sums,dense_matrix<float,row_major,dev_memory_space>& grid, int poolSize, bool sample){
+void prob_max_pooling(tensor<float,dev_memory_space>& sums,dense_matrix<float,dev_memory_space,row_major>& grid, int poolSize, bool sample){
 	int numImages = grid.h();
 	int imgPixels = grid.w();
 	int regionsPerImage = imgPixels / (poolSize * poolSize);
 
-	dense_matrix<float,row_major,dev_memory_space> mat(numImages*regionsPerImage, poolSize*poolSize);
+	dense_matrix<float,dev_memory_space,row_major> mat(numImages*regionsPerImage, poolSize*poolSize);
 	grid_to_matrix(mat,grid,poolSize);
 
 	// normalize rows
@@ -270,20 +271,20 @@ void prob_max_pooling(vector<float,dev_memory_space>& sums,dense_matrix<float,ro
 }
 
 template<>
-void prob_max_pooling(dense_matrix<float,row_major,dev_memory_space>& grid, int poolSize, bool sample){
+void prob_max_pooling(dense_matrix<float,dev_memory_space,row_major>& grid, int poolSize, bool sample){
 	int numImages = grid.h();
 	int imgPixels = grid.w();
 	int regionsPerImage = imgPixels / (poolSize * poolSize);
 
-	vector<float,dev_memory_space> sums(numImages*regionsPerImage);
+	tensor<float,dev_memory_space> sums(numImages*regionsPerImage);
 	prob_max_pooling(sums, grid, poolSize,sample);
 }
 
 
 template<>
-	void convolve3(dense_matrix<float,row_major,dev_memory_space>& dst,
-			  dense_matrix<float,row_major,dev_memory_space>&   img,
-			  dense_matrix<float,row_major,dev_memory_space>&   filter,
+	void convolve3(dense_matrix<float,dev_memory_space,row_major>& dst,
+			  dense_matrix<float,dev_memory_space,row_major>&   img,
+			  dense_matrix<float,dev_memory_space,row_major>&   filter,
 			  int numGroups) {
 
 	int numFilters = filter.h();
@@ -303,9 +304,9 @@ template<>
 }
 
 template<>
-void convolve3(dense_matrix<float,row_major,host_memory_space>& dst,
-		  dense_matrix<float,row_major,host_memory_space>&   img,
-		  dense_matrix<float,row_major,host_memory_space>&   filter,
+void convolve3(dense_matrix<float,host_memory_space,row_major>& dst,
+		  dense_matrix<float,host_memory_space,row_major>&   img,
+		  dense_matrix<float,host_memory_space,row_major>&   filter,
 		  int numGroups) {
 	// TODO
 	printf("convolve3 NYI on host!\n");
@@ -325,8 +326,8 @@ void reorder_kernel(float*dst, float* src, int len) {
 }
 
 template<class V>
-void reorder_impl(dense_matrix<V,row_major,dev_memory_space>& dst,
-				  dense_matrix<V,row_major,dev_memory_space>& src,
+void reorder_impl(dense_matrix<V,dev_memory_space,row_major>& dst,
+				  dense_matrix<V,dev_memory_space,row_major>& src,
 		  		  int blockLength) {
 	int patternCount = src.h();
 	int imgCount = src.w()/blockLength;
@@ -343,8 +344,8 @@ void reorder_impl(dense_matrix<V,row_major,dev_memory_space>& dst,
 }
 
 template<class V>
-void reorder_impl(dense_matrix<V,row_major,host_memory_space>& dst,
-		dense_matrix<V,row_major,host_memory_space>& src,
+void reorder_impl(dense_matrix<V,host_memory_space,row_major>& dst,
+		dense_matrix<V,host_memory_space,row_major>& src,
 		int blockLength) {
 	int patternCount = src.h();
 	int imgCount = src.w()/blockLength;
@@ -388,16 +389,16 @@ void reorder(__matrix_type& dst,
 }
 
 #define REORDER_INSTANTIATE(V) \
-	template void reorder( dense_matrix<V,row_major,host_memory_space>&, int); \
-	template void reorder( dense_matrix<V,row_major,host_memory_space>&, dense_matrix<V,row_major,host_memory_space>&, int); \
-	template void reorder( dense_matrix<V,row_major,dev_memory_space>&, int); \
-	template void reorder( dense_matrix<V,row_major,dev_memory_space>&, dense_matrix<V,row_major,dev_memory_space>&, int);
+	template void reorder( dense_matrix<V,host_memory_space,row_major>&, int); \
+	template void reorder( dense_matrix<V,host_memory_space,row_major>&, dense_matrix<V,host_memory_space,row_major>&, int); \
+	template void reorder( dense_matrix<V,dev_memory_space,row_major>&, int); \
+	template void reorder( dense_matrix<V,dev_memory_space,row_major>&, dense_matrix<V,dev_memory_space,row_major>&, int);
 
 REORDER_INSTANTIATE(float);
 
 template<>
-	void subsample(dense_matrix<float,row_major,dev_memory_space>& dst,
-			  dense_matrix<float,row_major,dev_memory_space>&   img,
+	void subsample(dense_matrix<float,dev_memory_space,row_major>& dst,
+			  dense_matrix<float,dev_memory_space,row_major>&   img,
 			  int factor,
 			  bool avoidBankConflicts) {
 	// make NVMatrices with this data
@@ -415,8 +416,8 @@ template<>
 }
 
 template<>
-	void subsample(dense_matrix<float,row_major,host_memory_space>& dst,
-			  dense_matrix<float,row_major,host_memory_space>&   img,
+	void subsample(dense_matrix<float,host_memory_space,row_major>& dst,
+			  dense_matrix<float,host_memory_space,row_major>&   img,
 			  int factor,
 			  bool avoidBankConflicts) {
 	int imgSize = sqrt(img.w());
@@ -445,10 +446,10 @@ void supersample_kernel(float*dst, float* src, int* indices, int len, int factor
 }
 
 template<>
-void supersample(dense_matrix<float,row_major,dev_memory_space>& dst,
-		dense_matrix<float,row_major,dev_memory_space>& img,
+void supersample(dense_matrix<float,dev_memory_space,row_major>& dst,
+		dense_matrix<float,dev_memory_space,row_major>& img,
 		int factor,
-		dense_matrix<int,row_major,dev_memory_space>* indices) {
+		dense_matrix<int,dev_memory_space,row_major>* indices) {
 	int numImages = img.h();
 	int imgPixels = img.w();
 	int dstPixels = imgPixels * (factor * factor);
@@ -478,10 +479,10 @@ void supersample(dense_matrix<float,row_major,dev_memory_space>& dst,
 }
 
 template<>
-void supersample(dense_matrix<float,row_major,host_memory_space>& dst,
-		dense_matrix<float,row_major,host_memory_space>& img,
+void supersample(dense_matrix<float,host_memory_space,row_major>& dst,
+		dense_matrix<float,host_memory_space,row_major>& img,
 		int factor,
-		dense_matrix<int,row_major,host_memory_space>* indices) {
+		dense_matrix<int,host_memory_space,row_major>* indices) {
 	int numImages = img.h();
 	int imgSize = sqrt(img.w());
 	int dstSize = imgSize * factor;
@@ -564,12 +565,12 @@ void super_to_max_kernel(float*dst, float* src, int* indices, int imgSize, int d
 }
 
 template<>
-void super_to_max(dense_matrix<float,row_major,dev_memory_space>& dst,
-		dense_matrix<float,row_major,dev_memory_space>& img,
+void super_to_max(dense_matrix<float,dev_memory_space,row_major>& dst,
+		dense_matrix<float,dev_memory_space,row_major>& img,
 		int poolSize,
 		int overlap,
-		dense_matrix<int,row_major,dev_memory_space>* indices,
-		dense_matrix<float,row_major,dev_memory_space>* filter) {
+		dense_matrix<int,dev_memory_space,row_major>* indices,
+		dense_matrix<float,dev_memory_space,row_major>* filter) {
 	cuvAssert(indices->w() == img.w());
 	cuvAssert(indices->h() == img.h());
 	cuvAssert(poolSize > overlap);
@@ -623,12 +624,12 @@ void super_to_max(dense_matrix<float,row_major,dev_memory_space>& dst,
 }
 
 template<>
-void super_to_max(dense_matrix<float,row_major,host_memory_space>& dst,
-		dense_matrix<float,row_major,host_memory_space>& img,
+void super_to_max(dense_matrix<float,host_memory_space,row_major>& dst,
+		dense_matrix<float,host_memory_space,row_major>& img,
 		int poolSize,
 		int overlap,
-		dense_matrix<int,row_major,host_memory_space>* indices,
-		dense_matrix<float,row_major,host_memory_space>* filter) {
+		dense_matrix<int,host_memory_space,row_major>* indices,
+		dense_matrix<float,host_memory_space,row_major>* filter) {
 	cuvAssert(poolSize > overlap);
 	int numImages = dst.h();
 	cuvAssert(numImages == img.h());
@@ -666,8 +667,8 @@ void super_to_max(dense_matrix<float,row_major,host_memory_space>& dst,
 }
 
 template<>
-	void copy_into(dense_matrix<float,row_major,dev_memory_space>& dst,
-			  dense_matrix<float,row_major,dev_memory_space>&   img,
+	void copy_into(dense_matrix<float,dev_memory_space,row_major>& dst,
+			  dense_matrix<float,dev_memory_space,row_major>&   img,
 			  int padding) {
 	int inputSize = sqrt(img.w());
 	int outputSize = sqrt(dst.w());
@@ -684,8 +685,8 @@ template<>
 }
 
 template<>
-	void copy_into(dense_matrix<float,row_major,host_memory_space>& dst,
-			  dense_matrix<float,row_major,host_memory_space>&   img,
+	void copy_into(dense_matrix<float,host_memory_space,row_major>& dst,
+			  dense_matrix<float,host_memory_space,row_major>&   img,
 			  int padding) {
 	int inputSize = sqrt(img.w());
 	int outputSize = sqrt(dst.w());
@@ -710,12 +711,12 @@ template<>
 }
 
 template<>
-	void max_pooling(dense_matrix<float,row_major,host_memory_space>& dst,
-			dense_matrix<float,row_major,host_memory_space>& img,
+	void max_pooling(dense_matrix<float,host_memory_space,row_major>& dst,
+			dense_matrix<float,host_memory_space,row_major>& img,
 			unsigned int poolSize,
 			unsigned int overlap,
-			dense_matrix<int,row_major,host_memory_space>* indices,
-			dense_matrix<float,row_major,host_memory_space>* filter) {
+			dense_matrix<int,host_memory_space,row_major>* indices,
+			dense_matrix<float,host_memory_space,row_major>* filter) {
 	if (indices!=NULL) {
 		cuvAssert(indices->w() == dst.w());
 		cuvAssert(indices->h() == dst.h());
@@ -834,7 +835,7 @@ void first_pooling_zeros_kernel(float* img, int imgSize, int stepSize) {
 }
 
 template<>
-	void first_pooling_zeros(dense_matrix<float,row_major,dev_memory_space>& img,
+	void first_pooling_zeros(dense_matrix<float,dev_memory_space,row_major>& img,
 			unsigned int poolSize
 			) {
 
@@ -876,8 +877,8 @@ void first_pooling_kernel(float* dst, float* img, int imgSize, int dstSize, int 
 }
 
 template<>
-	void first_pooling(dense_matrix<float,row_major,dev_memory_space>& dst,
-			dense_matrix<float,row_major,dev_memory_space>& img,
+	void first_pooling(dense_matrix<float,dev_memory_space,row_major>& dst,
+			dense_matrix<float,dev_memory_space,row_major>& img,
 			unsigned int poolSize
 			) {
 
@@ -902,12 +903,12 @@ template<>
 }
 
 template<>
-	void max_pooling(dense_matrix<float,row_major,dev_memory_space>& dst,
-			dense_matrix<float,row_major,dev_memory_space>& img,
+	void max_pooling(dense_matrix<float,dev_memory_space,row_major>& dst,
+			dense_matrix<float,dev_memory_space,row_major>& img,
 			unsigned int poolSize,
 			unsigned int overlap,
-			dense_matrix<int,row_major,dev_memory_space>* indices,
-			dense_matrix<float,row_major,dev_memory_space>* filter) {
+			dense_matrix<int,dev_memory_space,row_major>* indices,
+			dense_matrix<float,dev_memory_space,row_major>* filter) {
 
 	if (indices!=NULL) {
 		cuvAssert(indices->w() == dst.w());
@@ -989,8 +990,8 @@ __global__ void strip_padding_kernel(float* targets, float* images, const int im
  *
  */
 template<>
-	void strip_padding(dense_matrix<float,row_major,dev_memory_space>& dst,
-					   dense_matrix<float,row_major,dev_memory_space>& img,
+	void strip_padding(dense_matrix<float,dev_memory_space,row_major>& dst,
+					   dense_matrix<float,dev_memory_space,row_major>& img,
 					   unsigned int padding) {
 	int inputSize = sqrt(img.w());
 	int imgWidth = inputSize;
@@ -1010,8 +1011,8 @@ template<>
 }
 
 template<>
-	void strip_padding(dense_matrix<float,row_major,host_memory_space>& dst,
-					   dense_matrix<float,row_major,host_memory_space>& img,
+	void strip_padding(dense_matrix<float,host_memory_space,row_major>& dst,
+					   dense_matrix<float,host_memory_space,row_major>& img,
 					   unsigned int padding) {
 	int inputSize = sqrt(img.w());
 	int imgWidth = inputSize;
@@ -1067,8 +1068,8 @@ __global__ void row_ncopy_kernel(float* targets, float* row, const int imgSize, 
  */
 
 template<>
-	void row_ncopy(dense_matrix<float,row_major,dev_memory_space>& dst,
-				   vector<float,dev_memory_space>& row,
+	void row_ncopy(dense_matrix<float,dev_memory_space,row_major>& dst,
+				   tensor<float,dev_memory_space>& row,
 				   unsigned int n) {
 	int inputSize = row.size();
 	cuvAssert(n == dst.h());
@@ -1086,8 +1087,8 @@ template<>
 
 
 template<>
-	void row_ncopy(dense_matrix<float,row_major,host_memory_space>& erg_h,
-				   vector<float,host_memory_space>& row,
+	void row_ncopy(dense_matrix<float,host_memory_space,row_major>& erg_h,
+				   tensor<float,host_memory_space>& row,
 				   unsigned int n) {
 
 	cuvAssert(n == erg_h.h());
@@ -1164,8 +1165,8 @@ void cols_ncopy(dense_matrix<float,row_major, host_memory_space>& dst,
 
 
 template<>
-	void filter_rotate(dense_matrix<float,row_major,host_memory_space>& dst,
-					    dense_matrix<float,row_major,host_memory_space>& filter,
+	void filter_rotate(dense_matrix<float,host_memory_space,row_major>& dst,
+					    dense_matrix<float,host_memory_space,row_major>& filter,
 					    unsigned int fs){
 		int f = filter.w() / fs;
 		float* f_h_ptr = filter.ptr();
@@ -1223,8 +1224,8 @@ __global__ void filter_rotate_kernel(float* dst, float* src, const int h, const 
 }
 
 template<>
-void filter_rotate(	dense_matrix<float,row_major,dev_memory_space>& dst,
-					dense_matrix<float,row_major,dev_memory_space>& filter,
+void filter_rotate(	dense_matrix<float,dev_memory_space,row_major>& dst,
+					dense_matrix<float,dev_memory_space,row_major>& filter,
 					unsigned int fs){
 		cuvAssert(dst.h() == filter.h())
 		cuvAssert(dst.w() == filter.w())
@@ -1276,8 +1277,8 @@ void filter_rotate(	dense_matrix<float,row_major,dev_memory_space>& dst,
 //}
 //
 //template<>
-//void add_maps_h(	dense_matrix<float,row_major,dev_memory_space>& dst,
-//					dense_matrix<float,row_major,dev_memory_space>& mat,
+//void add_maps_h(	dense_matrix<float,dev_memory_space,row_major>& dst,
+//					dense_matrix<float,dev_memory_space,row_major>& mat,
 //					unsigned int image_size){
 //
 //		int num_images = mat.w() / image_size;
@@ -1296,8 +1297,8 @@ void filter_rotate(	dense_matrix<float,row_major,dev_memory_space>& dst,
 //}
 //
 //template<>
-//void add_maps_h(	dense_matrix<float,row_major,host_memory_space>& dst,
-//					dense_matrix<float,row_major,host_memory_space>& mat,
+//void add_maps_h(	dense_matrix<float,host_memory_space,row_major>& dst,
+//					dense_matrix<float,host_memory_space,row_major>& mat,
 //					unsigned int image_size){
 //
 //		int num_images = mat.w() / image_size;
@@ -1368,9 +1369,9 @@ __global__ void calc_error_to_blob_kernel(float* img,
 
 
 template<>
-void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
-							dense_matrix<float,row_major,dev_memory_space>& img,
-							dense_matrix<float,row_major,dev_memory_space>& blob_mat,
+void calc_error_to_blob(	dense_matrix<float,dev_memory_space,row_major>& dst,
+							dense_matrix<float,dev_memory_space,row_major>& img,
+							dense_matrix<float,dev_memory_space,row_major>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
 							float sigma,
@@ -1405,9 +1406,9 @@ void calc_error_to_blob(	dense_matrix<float,row_major,dev_memory_space>& dst,
 };
 
 template<>
-void calc_error_to_blob(	dense_matrix<float,row_major,host_memory_space>& dst,
-							dense_matrix<float,row_major,host_memory_space>& img,
-							dense_matrix<float,row_major,host_memory_space>& blob_mat,
+void calc_error_to_blob(	dense_matrix<float,host_memory_space,row_major>& dst,
+							dense_matrix<float,host_memory_space,row_major>& img,
+							dense_matrix<float,host_memory_space,row_major>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
 							float sigma,
@@ -1477,7 +1478,7 @@ __global__ void check_exitatory_inhibitory_kernel(float* filter,
 }
 
 template<>
-void check_exitatory_inhibitory(dense_matrix<float,row_major,dev_memory_space>& filter,
+void check_exitatory_inhibitory(dense_matrix<float,dev_memory_space,row_major>& filter,
 								unsigned int start_filter,
 								unsigned int filter_pixels,
 								unsigned int num_inhibitory,
@@ -1508,7 +1509,7 @@ void check_exitatory_inhibitory(dense_matrix<float,row_major,dev_memory_space>& 
 };
 
 template<>
-void check_exitatory_inhibitory(dense_matrix<float,row_major,host_memory_space>& filter,
+void check_exitatory_inhibitory(dense_matrix<float,host_memory_space,row_major>& filter,
 								unsigned int start_filter,
 								unsigned int filter_pixels,
 								unsigned int num_inhibitory,
@@ -1570,7 +1571,7 @@ __global__ void init_exitatory_inhibitory_kernel(float* filter,
 }
 
 template<>
-void init_exitatory_inhibitory(dense_matrix<float,row_major,dev_memory_space>& filter,
+void init_exitatory_inhibitory(dense_matrix<float,dev_memory_space,row_major>& filter,
 								unsigned int start_filter,
 								unsigned int filter_pixels,
 								unsigned int num_inhibitory,
@@ -1601,7 +1602,7 @@ void init_exitatory_inhibitory(dense_matrix<float,row_major,dev_memory_space>& f
 };
 
 template<>
-void init_exitatory_inhibitory(dense_matrix<float,row_major,host_memory_space>& filter,
+void init_exitatory_inhibitory(dense_matrix<float,host_memory_space,row_major>& filter,
 								unsigned int start_filter,
 								unsigned int filter_pixels,
 								unsigned int num_inhibitory,

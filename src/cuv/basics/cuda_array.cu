@@ -76,7 +76,7 @@ void cuda_array<V,S,I>::dealloc(){
 
 #define CA cuda_array<V,S,I>
 template<class V,class S, class I>
-void cuda_array<V,S,I>::assign(const dense_matrix<V, row_major, host_memory_space, I>& src){
+void cuda_array<V,S,I>::assign(const dense_matrix<V, host_memory_space, row_major, I>& src){
 	cuvAssert(src.ptr()!=NULL);
 	cuvAssert(src.w()/m_dim == m_width);
 	cuvAssert(src.h()       == m_height);
@@ -84,7 +84,7 @@ void cuda_array<V,S,I>::assign(const dense_matrix<V, row_major, host_memory_spac
 	checkCudaError("cudaMemcpyToArray");
 }
 template<class V,class S, class I>
-void cuda_array<V,S,I>::assign(const dense_matrix<V,row_major,dev_memory_space,I>& src){
+void cuda_array<V,S,I>::assign(const dense_matrix<V,dev_memory_space,row_major,I>& src){
 	cuvAssert(src.ptr()!=NULL);
 	cuvAssert(src.w()/m_dim  == m_width);
 	cuvAssert(src.h()        == m_height);
@@ -104,8 +104,8 @@ cuda_array<V,S,I>::operator()(const I& i, const I& j)const{
 #define INST(V,M,I) \
 	template void cuda_array<V,M,I>::alloc();   \
 	template void cuda_array<V,M,I>::dealloc();   \
-	template void cuda_array<V,M,I>::assign(const dense_matrix<V,row_major,host_memory_space,I>&);   \
-	template void cuda_array<V,M,I>::assign(const dense_matrix<V,row_major,dev_memory_space,I>&);    \
+	template void cuda_array<V,M,I>::assign(const dense_matrix<V,host_memory_space,row_major,I>&);   \
+	template void cuda_array<V,M,I>::assign(const dense_matrix<V,dev_memory_space,row_major,I>&);    \
 	template V cuda_array<V,M,I>::operator()(const I&, const I&)const;   
 
 INST(float,dev_memory_space,unsigned int);

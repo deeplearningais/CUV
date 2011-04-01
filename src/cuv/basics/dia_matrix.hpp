@@ -45,7 +45,7 @@
 #include <memory>
 #include <iostream>
 #include <cuv/basics/vector.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/basics/matrix.hpp>
 #include <cuv/tools/cuv_general.hpp>
 
@@ -62,10 +62,11 @@ namespace cuv{
 		  typedef matrix<__value_type, __index_type> 					   base_type; 			///< Basic matrix type
 		  typedef __memory_space_type 									   memory_space_type;	///< Whether this is a host or device matrix
 		  typedef typename base_type::index_type 						   index_type;			///< Type of indices
-		  typedef const vector<value_type,memory_space_type,index_type> const_vec_type; 		///< Basic vector type used
-		  typedef vector<value_type,memory_space_type,index_type>  		   vec_type; 			///< Basic vector type used
-		  typedef vector<int,memory_space_type,index_type> 				   intvec_type; 		///< Type of offsets for diagonals
+		  typedef const_tensor<value_type,memory_space_type> const_vec_type; 		///< Basic vector type used
+		  typedef tensor<value_type,memory_space_type>  		   vec_type; 			///< Basic vector type used
+		  typedef tensor<int,memory_space_type> 				   intvec_type; 		///< Type of offsets for diagonals
 		  typedef dia_matrix<value_type,memory_space_type,index_type> 	   my_type;				///< Type of this matix
+		  typedef typename vec_type::pointer_type ptr_type;
 		public:
 		  int m_num_dia;                        ///< number of diagonals stored
 		  unsigned int m_stride;                ///< how long the stored diagonals are
@@ -120,6 +121,8 @@ namespace cuv{
 			inline       vec_type& vec()     { return *m_vec; } ///< Return pointer to vector storing entries
 			inline const vec_type* vec_ptr()const{ return m_vec; } ///< Return reference to vector storing entries
 			inline       vec_type* vec_ptr()     { return m_vec; } ///< Return reference to vector storing entries
+			inline       ptr_type ptr()     { return m_vec->ptr(); } ///< Return reference to vector storing entries
+			inline const ptr_type ptr()const{ return m_vec->ptr(); } ///< Return reference to vector storing entries
 			inline int num_dia()const{ return m_num_dia; } ///< Return number of diagonals
 			inline unsigned int stride()const { return m_stride;  }///< Return stride of matrix
 			inline int row_fact()const{ return m_row_fact; } ///< Return steepness of diagonals
@@ -185,7 +188,7 @@ namespace cuv{
 				const index_type i_start = std::max((int)0,-k);
 				const index_type j_start = std::max((int)0, k);
 				const index_type N = std::min(base_type::m_height - i_start, (base_type::m_width - j_start));
-				return new vec_type(m_stride,  m_vec->ptr() + off * m_stride, true); 
+				return new const_vec_type(extents[m_stride],  m_vec->ptr() + off * m_stride); 
 				//return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
 			} 
 			/** Return a vector (view) on the specified diagonal
@@ -195,7 +198,7 @@ namespace cuv{
 				const index_type i_start = std::max((int)0,-k);
 				const index_type j_start = std::max((int)0, k);
 				const index_type N = std::min(base_type::m_height - i_start, (base_type::m_width - j_start));
-				return new vec_type(m_stride,  m_vec->ptr() + off * m_stride, true); 
+				return new vec_type(extents[m_stride],  m_vec->ptr() + off * m_stride); 
 				//return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
 			} 
 			inline const intvec_type& get_offsets()const{return m_offsets;} ///< Return the vector of offsets

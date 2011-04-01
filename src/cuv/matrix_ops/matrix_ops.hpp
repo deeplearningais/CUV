@@ -34,7 +34,6 @@
 #ifndef __MATRIX_OPS_HPP__
 #define __MATRIX_OPS_HPP__
 
-//#include <cuv/vector_ops/vector_ops.hpp>
 #include <cuv/basics/vector.hpp>
 #include <cuv/basics/dense_matrix.hpp>
 
@@ -425,5 +424,9 @@ namespace cuv{
           //return v;
   //}
 
+  template<class V, class M, class T, class I, class V2>
+    void fill(cuv::dense_matrix<V, M, T, I>& m, V2 v){
+	   cuvAssert(false); //not implemented!
+    }
   
 #endif

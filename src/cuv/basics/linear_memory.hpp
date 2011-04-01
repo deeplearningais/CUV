@@ -126,7 +126,8 @@ class linear_memory{
 	   */
 	  linear_memory(const my_type& o):m_ptr(NULL),m_is_view(false),m_size(o.size()) {
 		  alloc();
-		  copy(*this,o);
+		  //copy(*this,o);
+		  cuvAssert(false);//not implemented yet
 	  }
 	  /** 
 	   * @brief Creates linear_memory from pointer to entries.
@@ -185,7 +186,8 @@ class linear_memory{
 			  m_size = o.size();
 			  this->alloc();
 			}
-			copy(*this, o);
+			//copy(*this, o);
+			 cuvAssert(false);//not implemented yet
 			  
 			return *this;
 		  }

@@ -8,7 +8,7 @@ namespace cuv{
 	 * @param dst the vector where the results are stored in
 	 * @param dia the diagonal matrix where the diagonals are supposed to be summed
 	 */
-	template<class T, class M, class I>
-	void avg_diagonals( cuv::vector<T,M,I>& dst, const cuv::dia_matrix<T,M>& dia );
+	template<class T, class M>
+	void avg_diagonals( cuv::tensor<T,M>& dst, const cuv::dia_matrix<T,M>& dia );
 
 }

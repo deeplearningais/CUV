@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cuv/basics/dense_matrix.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/tools/meta_programming.hpp>
 #include <cuv/libs/kmeans/kmeans.hpp>
 
@@ -7,7 +8,7 @@ using cuv::column_major;
 using cuv::dev_memory_space;
 using cuv::host_memory_space;
 using cuv::dense_matrix;
-using cuv::vector;
+using cuv::tensor;
 
 
 template<int BLOCK_DIM, class T, class V>
@@ -74,9 +75,9 @@ void compute_clusters_kernel(const T* matrix, T* centers, const V* indices, cons
 }
 
 template<class V, class I>
-void compute_clusters_impl(dense_matrix<V,column_major,dev_memory_space,I>& centers,
-		const dense_matrix<V,column_major,dev_memory_space,I>& m,
-		const cuv::vector<I,dev_memory_space,I>& indices){
+void compute_clusters_impl(dense_matrix<V,dev_memory_space,column_major,I>& centers,
+		const dense_matrix<V,dev_memory_space,column_major,I>& m,
+		const cuv::tensor<I,dev_memory_space>& indices){
 
 		static const int BLOCK_DIM = 16;
 		const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM));
@@ -104,9 +105,9 @@ void compute_clusters_impl(dense_matrix<V,column_major,dev_memory_space,I>& cent
 
 
 template<class V, class I>
-void compute_clusters_impl(dense_matrix<V,column_major,host_memory_space,I>& clusters,
-		const dense_matrix<V,column_major,host_memory_space,I>& data,
-		const vector<I,host_memory_space,I>& indices){
+void compute_clusters_impl(dense_matrix<V,host_memory_space,column_major,I>& clusters,
+		const dense_matrix<V,host_memory_space,column_major,I>& data,
+		const tensor<I,host_memory_space>& indices){
 	const int data_length=data.h();
 	int* points_in_cluster=new int[clusters.w()];
 	for (int i=0; i <clusters.w(); i++)
@@ -141,7 +142,7 @@ void compute_clusters(__data_matrix_type& clusters, const __data_matrix_type& da
 	compute_clusters_impl(clusters,data,indices);
 	}
 
-template void compute_clusters<dense_matrix<float, column_major, host_memory_space, unsigned int>, vector<unsigned int, host_memory_space, unsigned int> >(dense_matrix<float, column_major, host_memory_space, unsigned int>&, const dense_matrix<float, column_major, host_memory_space, unsigned int>&,const vector<unsigned int, host_memory_space, unsigned int>&);
-template void compute_clusters<dense_matrix<float, column_major, dev_memory_space, unsigned int>, vector<unsigned int, dev_memory_space, unsigned int> >(dense_matrix<float, column_major, dev_memory_space, unsigned int>&, const dense_matrix<float, column_major, dev_memory_space, unsigned int>&,const vector<unsigned int, dev_memory_space, unsigned int>&);
+template void compute_clusters<dense_matrix<float, host_memory_space, column_major, unsigned int>, tensor<unsigned int, host_memory_space> >(dense_matrix<float, host_memory_space, column_major, unsigned int>&, const dense_matrix<float, host_memory_space, column_major, unsigned int>&,const tensor<unsigned int, host_memory_space>&);
+template void compute_clusters<dense_matrix<float, dev_memory_space, column_major, unsigned int>, tensor<unsigned int, dev_memory_space> >(dense_matrix<float, dev_memory_space, column_major, unsigned int>&, const dense_matrix<float, dev_memory_space, column_major, unsigned int>&,const tensor<unsigned int, dev_memory_space>&);
 
 } } }

@@ -180,9 +180,9 @@ namespace cuv{
   * @param sf 	NullaryFunctor to apply 
   * 
   */
-  template<class __vector_type>
+  template<class __tensor_type>
   void
-  apply_0ary_functor(__vector_type& v, const NullaryFunctor& sf);
+  apply_0ary_functor(__tensor_type& v, const NullaryFunctor& sf);
 
   /** 
    * @brief Apply a pointwise nullary functor with a scalar parameter to a vector.
@@ -192,9 +192,9 @@ namespace cuv{
    * @param param	scalar parameter 
    * 
    */
-  template<class __vector_type>
+  template<class __tensor_type>
   void
-  apply_0ary_functor(__vector_type& v, const NullaryFunctor& sf, const typename __vector_type::value_type& param);
+  apply_0ary_functor(__tensor_type& v, const NullaryFunctor& sf, const typename __tensor_type::value_type& param);
 
   // convenience wrappers
   /** 
@@ -204,8 +204,8 @@ namespace cuv{
    * 
    * This is a convenience wrapper that applies the nullary functor NF_SEQ to v.
    */
-  template<class __vector_type>
-  void sequence(__vector_type& v){ apply_0ary_functor(v,NF_SEQ); }
+  template<class __tensor_type>
+  void sequence(__tensor_type& v){ apply_0ary_functor(v,NF_SEQ); }
 
   /** 
    * @brief Fill a vector with a value
@@ -215,8 +215,8 @@ namespace cuv{
    * 
    * This is a convenience wrapper that applies the nullary functor NF_FILL to v.
    */
-  template<class __vector_type>
-  void fill(__vector_type& v, const typename __vector_type::value_type& p){ apply_0ary_functor(v,NF_FILL,p); }
+  template<class __tensor_type>
+  void fill(__tensor_type& v, const typename __tensor_type::value_type& p){ apply_0ary_functor(v,NF_FILL,p); }
 
 
   /**
@@ -333,8 +333,8 @@ namespace cuv{
    * 
    * This is a convenience wrapper that applies the binary functor SF_COPY 
    */
-  template<class __vector_type>
-  void copy(__vector_type& dst, const  __vector_type& src){
+  template<class __tensor_type>
+  void copy(__tensor_type& dst, const  __tensor_type& src){
 	  apply_scalar_functor(dst,src,SF_COPY);
   }
  /** @} */ //end group functors_vectors
@@ -350,7 +350,7 @@ namespace cuv{
    * 
    * @return true if v contains "Inf" or "-Inf", false otherwise 
    */
-  template<class __vector_type1> bool has_inf(const __vector_type1& v);
+  template<class __tensor_type1> bool has_inf(const __tensor_type1& v);
   /** 
    * @brief Check whether a float vector contains "NaN"
    * 
@@ -358,7 +358,7 @@ namespace cuv{
    * 
    * @return true if v contains "NaN", false otherwise 
    */
-  template<class __vector_type1> bool has_nan(const __vector_type1& v);
+  template<class __tensor_type1> bool has_nan(const __tensor_type1& v);
   /** 
    * @brief Return the sum of a vector 
    * 
@@ -366,7 +366,7 @@ namespace cuv{
    * 
    * @return sum of v 
    */
-  template<class __vector_type1> float sum(const __vector_type1& v);
+  template<class __tensor_type1> float sum(const __tensor_type1& v);
   /** 
    * @brief Return the two-norm or Euclidean norm of a vector 
    * 
@@ -374,7 +374,7 @@ namespace cuv{
    * 
    * @return Two-norm of v 
    */
-  template<class __vector_type1> float norm2(const __vector_type1& v);
+  template<class __tensor_type1> float norm2(const __tensor_type1& v);
   /** 
    * @brief Return the one-norm or sum-norm of a vector 
    * 
@@ -382,7 +382,7 @@ namespace cuv{
    * 
    * @return one-norm of v 
    */
-  template<class __vector_type1> float norm1(const __vector_type1& v);
+  template<class __tensor_type1> float norm1(const __tensor_type1& v);
   /** 
    * @brief Return the minimum entry of a vector 
    * 
@@ -390,7 +390,7 @@ namespace cuv{
    * 
    * @return Minimum entry of v 
    */
-  template<class __vector_type1> float minimum(const __vector_type1& v);
+  template<class __tensor_type1> float minimum(const __tensor_type1& v);
   /** 
    * @brief Return the maximum entry of a vector 
    * 
@@ -398,7 +398,7 @@ namespace cuv{
    * 
    * @return Maximum entry of v 
    */
-  template<class __vector_type1> float maximum(const __vector_type1& v);
+  template<class __tensor_type1> float maximum(const __tensor_type1& v);
   /** 
    * @brief Return the mean of the entries of a vector 
    * 
@@ -406,7 +406,7 @@ namespace cuv{
    * 
    * @return Mean of entries of v 
    */
-  template<class __vector_type1> float mean(const __vector_type1& v);
+  template<class __tensor_type1> float mean(const __tensor_type1& v);
   /** 
    * @brief Return the variation of the entries of a vector 
    * 
@@ -414,7 +414,7 @@ namespace cuv{
    * 
    * @return Variation of entries of v 
    */
-  template<class __vector_type1> float var(const __vector_type1& v);
+  template<class __tensor_type1> float var(const __tensor_type1& v);
 
   /** 
    * @brief Return the index of the maximum element
@@ -423,9 +423,9 @@ namespace cuv{
    * 
    * @return index of max element
    */
-  template<class __vector_type1> 
-	  typename __vector_type1::index_type 
-	  arg_max(const __vector_type1& v);
+  template<class __tensor_type1> 
+	  typename __tensor_type1::index_type 
+	  arg_max(const __tensor_type1& v);
   /** 
    * @brief Return the index of the minimum element
    * 
@@ -433,9 +433,9 @@ namespace cuv{
    * 
    * @return index of min element
    */
-  template<class __vector_type1> 
-	  typename __vector_type1::index_type 
-	  arg_min(const __vector_type1& v);
+  template<class __tensor_type1> 
+	  typename __tensor_type1::index_type 
+	  arg_min(const __tensor_type1& v);
 
  /** @} */ //end group reductions_vectors
 

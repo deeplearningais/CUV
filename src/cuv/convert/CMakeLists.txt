@@ -3,7 +3,7 @@ CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/basics )
 CUDA_ADD_LIBRARY(cuv_convert STATIC
 	convert.cu
   )
-TARGET_LINK_LIBRARIES(cuv_convert cuv_basics cuv_vector_ops ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY})
+TARGET_LINK_LIBRARIES(cuv_convert cuv_basics cuv_tensor_ops ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY})
 
 install(TARGETS cuv_convert
 	RUNTIME DESTINATION bin

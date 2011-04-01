@@ -167,7 +167,7 @@ void prob_max_pooling(dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
  * If sample is false the entry in sums is the sum of all entries in the corresponding window.
  */
 template<class V, class M, class T, class I>
-void prob_max_pooling(tensor<V,T>& sums, dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
+void prob_max_pooling(tensor<V,M>& sums, dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
 
 
 /** 
@@ -224,7 +224,7 @@ template<class V, class M, class T, class I>
 void supersample(dense_matrix<V,M,T,I>& dst,
 		dense_matrix<V,M,T,I>& img,
 		int factor,
-		dense_matrix<int,row_major,T>* indices = NULL);
+		dense_matrix<int,M,row_major>* indices = NULL);
 
 
 /**
@@ -308,7 +308,7 @@ void super_to_max(dense_matrix<V,M,T,I>& dst,
 		dense_matrix<V,M,T,I>& img,
 		int poolSize,
 		int overlap = 0,
-		dense_matrix<int,row_major,T,I>* indices = NULL,
+		dense_matrix<int,M,row_major,I>* indices = NULL,
 		dense_matrix<V,M,T,I>* filter = NULL);
 
 
@@ -372,7 +372,7 @@ void max_pooling(dense_matrix<V,M,T,I>& dst,
 		dense_matrix<V,M,T,I>& img,
 		unsigned int poolSize,
 		unsigned int overlap = 0,
-		dense_matrix<int,row_major,T,I>* indices = NULL,
+		dense_matrix<int,M,row_major,I>* indices = NULL,
 		dense_matrix<V,M,T,I>* filter = NULL);
 
 template<class V, class M, class T, class I>
@@ -409,7 +409,7 @@ void strip_padding(dense_matrix<V,M,T,I>& dst,
  */
 template<class V, class M, class T,  class I>
 void row_ncopy(dense_matrix<V,M,T,I>& dst,
-			   tensor<V,T>& row,
+			   tensor<V,M>& row,
 			   unsigned int n);
 
 /**

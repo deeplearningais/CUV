@@ -5,8 +5,9 @@
  * Further modified by Hannes Schulz
  */
 
-#include <cuv/basics/vector.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/basics/dense_matrix.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/libs/separable_conv/separable_convolution.hpp>
 
 namespace cuv{
@@ -234,10 +235,10 @@ namespace cuv{
 
 			if(filt      == SP_GAUSS){
 				const int kernel_w = 2*radius+1;
-				cuv::vector<float, host_memory_space> kernel(kernel_w);
+				cuv::tensor<float, host_memory_space> kernel(kernel_w);
 				for(int i = 0; i < kernel_w; i++){
 					float dist = (float)(i - radius) / (float)radius;
-					kernel.set(i, expf(- dist * dist / 2));
+					kernel[i]=expf(- dist * dist / 2);
 				}
 				kernel /= cuv::sum(kernel);
 				cuvSafeCall( cudaMemcpyToSymbol(d_Kernel, kernel.ptr(), kernel.memsize()) );
@@ -248,10 +249,10 @@ namespace cuv{
 				intermed = convolve<DstV>(src,radius,SP_GAUSS);
 
 				const int kernel_w = 3;
-				cuv::vector<float, host_memory_space> kernel(kernel_w);
-				kernel.set(0, -0.5);
-				kernel.set(1,  0);
-				kernel.set(2,  0.5);
+				cuv::tensor<float, host_memory_space> kernel(kernel_w);
+				kernel[0]=-0.5;
+				kernel[1]= 0;
+				kernel[2]= 0.5;
 				cuvSafeCall( cudaMemcpyToSymbol(d_Kernel, kernel.ptr(), kernel.memsize()) );
 
 				res.push_back(new result_type(src.h(),src.w()));

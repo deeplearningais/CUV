@@ -1,6 +1,6 @@
 #include <memory>
 #include <numeric>
-#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/matrix_ops/diagonals.hpp>
 
 namespace cuv{
@@ -10,29 +10,29 @@ namespace cuv{
 		/***********************************************************
 		 * With vector result
 		 ***********************************************************/
-		template<class T,class I>
+		template<class T>
 			void avg_diagonals(
-					cuv::vector<T,dev_memory_space,I>& dst,
-					const cuv::dia_matrix<T,dev_memory_space,I>& dia
+					cuv::tensor<T,dev_memory_space>& dst,
+					const cuv::dia_matrix<T,dev_memory_space>& dia
 					){
 				for( int i=0;i<dia.num_dia();i++ ){
-					std::auto_ptr<const vector<T,dev_memory_space> > diagonal ( dia.get_dia( dia.get_offset( i ) ));
-					dst.set( i , mean( *(diagonal.get()) ) );
+					std::auto_ptr<const_tensor<T,dev_memory_space> > diagonal ( dia.get_dia( dia.get_offset( i ) ));
+					dst[i]= mean( *(diagonal.get()) );
 				}
 			}
-		template<class T,class I>
+		template<class T>
 			void avg_diagonals(
-					cuv::vector<T,host_memory_space,I>& dst,
-					const cuv::dia_matrix<T,host_memory_space,I>& dia
+					cuv::tensor<T,host_memory_space>& dst,
+					const cuv::dia_matrix<T,host_memory_space>& dia
 					){
 				cuvAssert( dia.row_fact( )==1 );
 				cuvAssert( dia.num_dia( )==dst.size( ));
-				typedef I index_type;
+				typedef unsigned int index_type;
 				typedef T value_type;
 				unsigned int A_stride = dia.stride();
 				unsigned int A_h      = dia.h();
 				unsigned int A_w      = dia.w();
-				const cuv::vector<int,host_memory_space>& offsets = dia.get_offsets();
+				const cuv::tensor<int,host_memory_space>& offsets = dia.get_offsets();
 				for( unsigned int i=0; i<dia.num_dia(); i++ ){
 					T sum=0;
 					const int k = offsets[i];  //diagonal offset
@@ -44,19 +44,19 @@ namespace cuv{
 					const value_type * d = dia.vec().ptr() + i*A_stride + i_start;
 					for( int j=0;j<N;j++)
 						sum += *d++;
-					dst.set( i , sum/N);
+					dst[i]= sum/N;
 				}
 			}
 	}
 
-	template<class T, class M, class I>
-	void avg_diagonals( cuv::vector<T,M,I>& dst, const cuv::dia_matrix<T,M>& dia ){
+	template<class T, class M>
+	void avg_diagonals( cuv::tensor<T,M>& dst, const cuv::dia_matrix<T,M>& dia ){
 		avg_diagonals_impl::avg_diagonals( dst, dia );
 	}
 
 	template void
-	avg_diagonals(cuv::vector<float,host_memory_space,unsigned int>&, const cuv::dia_matrix<float,host_memory_space>&);
+	avg_diagonals(cuv::tensor<float,host_memory_space>&, const cuv::dia_matrix<float,host_memory_space>&);
 	template void
-	avg_diagonals(cuv::vector<float,dev_memory_space,unsigned int>&, const cuv::dia_matrix<float,dev_memory_space>&);
+	avg_diagonals(cuv::tensor<float,dev_memory_space>&, const cuv::dia_matrix<float,dev_memory_space>&);
 
 }

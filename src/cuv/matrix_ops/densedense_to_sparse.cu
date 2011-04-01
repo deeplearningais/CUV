@@ -28,9 +28,6 @@
 //*LE*
 
 
-
-
-
 #include <cmath>
 #include <iostream>
 #include <thrust/device_ptr.h>
@@ -208,8 +205,8 @@ namespace cuv{
 			void densedense_to_dia(
 					dia_matrix<value_type,host_memory_space,index_type>& dst,
 					const host_block_descriptor<value_type,index_type>& bd,
-					const dense_matrix<value_type,cuv::column_major,host_memory_space,index_type>& A,
-					const dense_matrix<value_type,cuv::column_major,host_memory_space,index_type>& B,
+					const dense_matrix<value_type,cuv::host_memory_space,column_major,index_type>& A,
+					const dense_matrix<value_type,cuv::host_memory_space,column_major,index_type>& B,
 					const value_type& factAB,
 					const value_type& factC){
 				cuvAssert(dst.w() == B.h());
@@ -255,8 +252,8 @@ namespace cuv{
 			void densedense_to_dia(
 					dia_matrix<value_type,dev_memory_space,index_type>& dst,
 					const dev_block_descriptor<value_type,index_type>& bd,
-					const dense_matrix<value_type,cuv::column_major,dev_memory_space,index_type>& A,
-					const dense_matrix<value_type,cuv::column_major,dev_memory_space,index_type>& B,
+					const dense_matrix<value_type,cuv::dev_memory_space,column_major,index_type>& A,
+					const dense_matrix<value_type,cuv::dev_memory_space,column_major,index_type>& B,
 					const value_type& factAB,
 					const value_type& factC
 					){
@@ -283,13 +280,13 @@ namespace cuv{
 #endif
 				if(0);
 				else if(factAB==1.f && factC==0.f)
-					dense2dia_mm<false,false,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
+					dense2dia_mm<false,false,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 				else if(factAB==1.f && factC!=0.f)
-					dense2dia_mm<false,true,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
+					dense2dia_mm<false,true,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 				else if(factAB!=1.f && factC==0.f)
-					dense2dia_mm<true,false,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
+					dense2dia_mm<true,false,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 				else if(factAB!=1.f && factC!=0.f)
-					dense2dia_mm<true,true,value_type><<<grid,block>>>(dst.vec().ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
+					dense2dia_mm<true,true,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 
 				cuvSafeCall(cudaThreadSynchronize());
 			}
@@ -314,14 +311,14 @@ namespace cuv{
 	template void densedense_to_dia(                                \
 			dia_matrix<V,dev_memory_space>& ,                                  \
 			const dev_block_descriptor<V>& ,                      \
-			const dense_matrix<V,cuv::column_major,dev_memory_space>& ,        \
-			const dense_matrix<V,cuv::column_major,dev_memory_space>&,         \
+			const dense_matrix<V,cuv::dev_memory_space,column_major>& ,        \
+			const dense_matrix<V,cuv::dev_memory_space,column_major>&,         \
 			const V&,const V&);       \
 	template void densedense_to_dia(                                \
 			dia_matrix<V,host_memory_space>& ,                                  \
 			const host_block_descriptor<V>& ,                      \
-			const dense_matrix<V,cuv::column_major,host_memory_space>& ,        \
-			const dense_matrix<V,cuv::column_major,host_memory_space>&,         \
+			const dense_matrix<V,cuv::host_memory_space,column_major>& ,        \
+			const dense_matrix<V,cuv::host_memory_space,column_major>&,         \
 			const V&,const V&);       
 
 INST_DD2DIA(float);
