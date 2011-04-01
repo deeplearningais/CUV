@@ -249,7 +249,7 @@ namespace cuv{
 					cuvAssert(src.dim()==4);
 					grid    = dim3(iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h()/3, CB_TILE_H));
 					threads = dim3(CB_TILE_W, CB_TILE_H);
-					fill(dst.vec(), (V)0);
+					fill(dst, (V)0);
 					cudaBindTextureToArray(tex4, src.ptr(), channelDesc4);
 					checkCudaError("cudaBindTextureToArray");
 					gaussian_pyramid_downsample_kernel4val<V4,V><<<grid,threads>>>(

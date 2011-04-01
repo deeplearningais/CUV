@@ -1,6 +1,6 @@
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} )
 CUDA_ADD_LIBRARY(cuv_basics STATIC
-	vector.cu
+	linear_memory.cu
 	cuda_array.cu
   )
 TARGET_LINK_LIBRARIES(cuv_basics cuv_vector_ops ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY} ${Boost_SERIALIZATION_LIBRARY})

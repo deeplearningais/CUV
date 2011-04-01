@@ -29,8 +29,6 @@
 
 
 
-
-
 /** 
  * @file linear_memory.hpp
  * @brief base class for linear_memory
@@ -43,7 +41,6 @@
 #include <iostream>
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/tools/meta_programming.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
 #include <cuv/basics/reference.hpp>
 
 namespace cuv{
