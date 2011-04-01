@@ -94,9 +94,9 @@ namespace cuv{
 						dense_matrix<__value_type, column_major, dev_memory_space, __index_type> d(src.w(),src.h());
 						dst = d;
 					}
-					cuvAssert(dst.vec_ptr())
-					cuvAssert(src.vec_ptr())
-					convert(dst.vec(), src.vec());
+					cuvAssert(dst.ptr())
+					cuvAssert(src.ptr())
+					convert(dst, src);
 				}
 
 			// dev (col-major) --> host (row-major) 
@@ -109,9 +109,9 @@ namespace cuv{
 						dense_matrix<__value_type, row_major, host_memory_space, __index_type> h(src.w(),src.h());
 						dst = h;
 					}
-					cuvAssert(dst.vec_ptr())
-					cuvAssert(src.vec_ptr())
-					convert(dst.vec(), src.vec());
+					cuvAssert(dst.ptr())
+					cuvAssert(src.ptr())
+					convert(dst, src);
 				}
 
 			// host (col-major) --> dev (row-major) 
@@ -125,9 +125,9 @@ namespace cuv{
 						dense_matrix<__value_type, row_major, dev_memory_space, __index_type> d(src.w(),src.h());
 						dst = d;
 					}
-					cuvAssert(dst.vec_ptr())
-					cuvAssert(src.vec_ptr())
-					convert(dst.vec(), src.vec());
+					cuvAssert(dst.ptr())
+					cuvAssert(src.ptr())
+					convert(dst, src);
 				}
 
 			// dev (row-major) --> host (col-major) 
@@ -140,9 +140,9 @@ namespace cuv{
 						dense_matrix<__value_type, column_major, host_memory_space, __index_type> h(src.w(),src.h());
 						dst = h;
 					}
-					cuvAssert(dst.vec_ptr())
-					cuvAssert(src.vec_ptr())
-					convert(dst.vec(), src.vec());
+					cuvAssert(dst.ptr())
+					cuvAssert(src.ptr())
+					convert(dst, src);
 				}
 
 			/*
@@ -160,9 +160,9 @@ namespace cuv{
 						dense_matrix<__value_type, column_major, host_memory_space, __index_type> h(src.h(),src.w());
 						dst = h;
 					}
-					cuvAssert(dst.vec_ptr())
-					cuvAssert(src.vec_ptr())
-					convert(dst.vec(), src.vec());
+					cuvAssert(dst.ptr())
+					cuvAssert(src.ptr())
+					convert(dst, src);
 				}
 
 			// host (row-major) --> host (row-major)
@@ -175,9 +175,9 @@ namespace cuv{
 						dense_matrix<__value_type, row_major, host_memory_space, __index_type> h(src.h(),src.w());
 						dst = h;
 					}
-					cuvAssert(dst.vec_ptr())
-					cuvAssert(src.vec_ptr())
-					convert(dst.vec(), src.vec());
+					cuvAssert(dst.ptr())
+					cuvAssert(src.ptr())
+					convert(dst, src);
 				}
 
 			// dev (col-major) --> host (col-major) 
@@ -190,9 +190,9 @@ namespace cuv{
 						dense_matrix<__value_type, column_major, host_memory_space, __index_type> h(src.h(),src.w());
 						dst = h;
 					}
-					cuvAssert(dst.vec_ptr())
-					cuvAssert(src.vec_ptr())
-					convert(dst.vec(), src.vec());
+					cuvAssert(dst.ptr())
+					cuvAssert(src.ptr())
+					convert(dst, src);
 				}
 
 			// dev (col-major) --> host (col-major) 
@@ -205,9 +205,9 @@ namespace cuv{
 						dense_matrix<__value_type, column_major, dev_memory_space, __index_type> h(src.h(),src.w());
 						dst = h;
 					}
-					cuvAssert(dst.vec_ptr())
-					cuvAssert(src.vec_ptr())
-					convert(dst.vec(), src.vec());
+					cuvAssert(dst.ptr())
+					cuvAssert(src.ptr())
+					convert(dst, src);
 				}
 
 			// dev (row-major) --> host (row-major) 
@@ -222,7 +222,7 @@ namespace cuv{
 					}
 					cuvAssert(dst.vec_ptr())
 					cuvAssert(src.vec_ptr())
-					convert(dst.vec(), src.vec());
+					convert(dst, src);
 				}
 
 			// host (row-major) --> dev (row-major) 
@@ -237,7 +237,7 @@ namespace cuv{
 					}
 					cuvAssert(dst.vec_ptr())
 					cuvAssert(src.vec_ptr())
-					convert(dst.vec(), src.vec());
+					convert(dst, src);
 				}
 
 			/*
@@ -253,7 +253,7 @@ namespace cuv{
 						dense_matrix<__value_type, __mem_layout_type, host_memory_space, __index_type> d(src.h(),src.w());
 						dst = d;
 					}
-					fill(dst.vec(),0);
+					fill(dst,0);
 					const vector<int, host_memory_space>& off = src.get_offsets();
 					using namespace std;
 					const int rf = src.row_fact();
@@ -288,7 +288,7 @@ namespace cuv{
 					cuvAssert(dst.get_offsets().ptr());
 					cuvAssert(dst.vec().ptr());
 					cuv::convert(dst.get_offsets(), src.get_offsets());
-					cuv::convert(dst.vec(), src.vec());
+					cuv::convert(dst, src);
 					dst.post_update_offsets();
 				}
 
@@ -310,7 +310,7 @@ namespace cuv{
 					cuvAssert(dst.get_offsets().ptr());
 					cuvAssert(dst.vec().ptr());
 					cuv::convert(dst.get_offsets(), src.get_offsets());
-					cuv::convert(dst.vec(), src.vec());
+					cuv::convert(dst, src);
 					dst.post_update_offsets();
 				}
 		}

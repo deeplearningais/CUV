@@ -36,7 +36,7 @@
 #include <cuda.h>
 #include <thrust/device_ptr.h>
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/vector.hpp>
+#include <cuv/basics/linear_memory.hpp>
 
 namespace cuv{
 

@@ -36,7 +36,7 @@
 
 #include <stdio.h>
 
-#include <cuv/vector_ops/vector_ops.hpp>
+//#include <cuv/vector_ops/vector_ops.hpp>
 #include <cuv/basics/dense_matrix.hpp>
 
 namespace cuv{
@@ -167,7 +167,7 @@ void prob_max_pooling(dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
  * If sample is false the entry in sums is the sum of all entries in the corresponding window.
  */
 template<class V, class M, class T, class I>
-void prob_max_pooling(vector<V,T,I>& sums, dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
+void prob_max_pooling(tensor<V,T>& sums, dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
 
 
 /** 
@@ -409,7 +409,7 @@ void strip_padding(dense_matrix<V,M,T,I>& dst,
  */
 template<class V, class M, class T,  class I>
 void row_ncopy(dense_matrix<V,M,T,I>& dst,
-			   vector<V,T,I>& row,
+			   tensor<V,T>& row,
 			   unsigned int n);
 
 /**

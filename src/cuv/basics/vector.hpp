@@ -43,7 +43,7 @@
 #include <iostream>
 #include <cuv/basics/tensor.hpp>
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
+//#include <cuv/vector_ops/vector_ops.hpp>
 #include <cuv/basics/accessors.hpp>
 
 namespace cuv{
@@ -79,6 +79,7 @@ class vector
 		}
 	/// deprecated! use the reference returned by []
 	void set(const index_type& idx, const value_type& val){
+		std::cout << " DEPRECATED SET IN VEC" <<std::endl;
 		(*this)[idx] = val;
 	}
 };

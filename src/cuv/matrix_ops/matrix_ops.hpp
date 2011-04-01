@@ -34,207 +34,11 @@
 #ifndef __MATRIX_OPS_HPP__
 #define __MATRIX_OPS_HPP__
 
-#include <cuv/vector_ops/vector_ops.hpp>
+//#include <cuv/vector_ops/vector_ops.hpp>
 #include <cuv/basics/vector.hpp>
 #include <cuv/basics/dense_matrix.hpp>
 
 namespace cuv{
-
-  /****************************************
-   * Wrappers for Vector Ops
-   ****************************************
-   */
-
- /** @defgroup functors_matrices Pointwise Functors on Matrices
-  * @{
-  */
-
-  /** 
-   * @brief Apply a pointwise nullary functor to a matrix.
-   * 
-   * @param m		Target matrix 
-   * @param sf 	NullaryFunctor to apply 
-   * 
-   */
-  template<class V, class M, class T, class I> 
-	  void apply_0ary_functor(dense_matrix<V,M,T,I>& m, const NullaryFunctor& sf){ apply_0ary_functor(m.vec(),sf); }
-  /** 
-   * @brief Apply a pointwise nullary functor with a scalar parameter to a matrix.
-   * 
-   * @param m	Target matrix 
-   * @param sf	NullaryFunctor to apply 
-   * @param param	scalar parameter 
-   * 
-   */
-  template<class V, class M, class T, class I,class P> 
-	  void apply_0ary_functor(dense_matrix<V,M,T,I>& m, const NullaryFunctor& sf, const P& param){apply_0ary_functor(m.vec(),sf,param);}
-
-  /** 
-   * @brief Apply a pointwise unary functor to a matrix
-   * 
-   * @param m Target matrix 
-   * @param sf ScalarFunctor to apply 
-   * 
-   */
-  template<class V, class M, class T, class I> 
-	  void apply_scalar_functor(dense_matrix<V,M,T,I>& m, const ScalarFunctor& sf){apply_scalar_functor(m.vec(),sf);}
-
-  /** 
-   * @brief Apply pointwise unary functor with one scalar parameter to a matrix
-   * 
-   * @param m Target matrix
-   * @param sf ScalarFunctor to apply
-   * @param p scalar parameter
-   * 
-   */
-  template<class V, class M, class T, class I,class P> 
-	  void apply_scalar_functor(dense_matrix<V,M,T,I>& m, const ScalarFunctor& sf, const P& p) {apply_scalar_functor(m.vec(),sf,p);};
-
-  /** 
-   * @brief Apply pointwise unary functor with to scalar parameters to a matrix
-   * 
-   * @param m Target matrix
-   * @param sf ScalarFunctor to apply 
-   * @param p first scalar parameter 
-   * @param p2 second scalar parameter
-   */
-  template<class V, class M, class T, class I,class P>
-	  void apply_scalar_functor(dense_matrix<V,M,T,I>& m, const ScalarFunctor& sf, const P& p, const P& p2) {apply_scalar_functor(m.vec(),sf,p,p2);};
-
-  /** 
-   * @brief Apply pointwise binary functor to a pair of matrices
-   * 
-   * @param v First parameter of binary functor,  destination matrix
-   * @param w Second parameter of binary functor 
-   * @param bf BinaryFunctor to apply
-   * 
-   */
-  template<class V, class M, class T, class I,class V2> 
-	  void apply_binary_functor(dense_matrix<V,M,T,I>& v, const dense_matrix<V2,M,T,I>& w, const BinaryFunctor& bf){apply_binary_functor(v.vec(),w.vec(),bf);}
-
-  /** 
-   * @brief Apply pointwise binary functor with one scalar parameter to a pair of matrices 
-   * 
-   * @param v	First parameter of binary functor, destination matrix 
-   * @param w	Second parameter of binary functor 
-   * @param bf	 BinaryFunctor to apply
-   * @param param Scalar parameter 
-   */
-  template<class V, class M, class T, class I,class V2,class P>
-	  void apply_binary_functor(dense_matrix<V,M,T,I>& v, const dense_matrix<V2,M,T,I>& w, const BinaryFunctor& bf, const P& param){apply_binary_functor(v.vec(),w.vec(),bf,param);}
-
-  /** 
-   * @brief Apply pointwise binary functor with two scalar parameters to a pair of matrices 
-   * 
-   * @param v	First parameter of binary functor, destination matrix 
-   * @param w	Second parameter of binary functor 
-   * @param bf	 BinaryFunctor to apply
-   * @param param First scalar parameter 
-   * @param param2 Secont scalar parameter 
-   *
-   */
-  template<class V, class M, class T, class I,class V2,class P>
-	  void apply_binary_functor(dense_matrix<V,M,T,I>& v, const dense_matrix<V2,M,T,I>& w, const BinaryFunctor& bf, const P& param, const P& param2)
-	  {apply_binary_functor(v.vec(),w.vec(),bf,param,param2);}
-
-  // convenience wrappers
-
-  /** 
-   * @brief Copy one matrix into another. 
-   * 
-   * @param dst Destination matrix
-   * @param src	Source matrix 
-   * 
-   * This is a convenience wrapper that applies the binary functor BF_COPY 
-   */
-  template<class V, class M, class T, class I>
-	  void copy(dense_matrix<V,M,T,I>& dst, const dense_matrix<V,M,T,I>& src){ copy(dst.vec(),src.vec()); }
-
- /** @} */ // end of group functors_matrices
-
-
- /** @defgroup reductions_matrices Functors reducing a matrix to a scalar
-  * @{
-  */
-  /** 
-   * @brief Check whether a float matrix contains "Inf" or "-Inf"
-   * 
-   * @param v Target matrix 
-   * 
-   * @return true if v contains "Inf" or "-Inf", false otherwise 
-   */
-  template<class V, class M, class T, class I> bool has_inf(const dense_matrix<V,M,T,I>& v){return has_inf(v.vec());}
-  /** 
-   * @brief Check whether a float matrix contains "NaN"
-   * 
-   * @param v Target matrix 
-   * 
-   * @return true if v contains "NaN", false otherwise 
-   */
-  template<class V, class M, class T, class I> bool has_nan(const dense_matrix<V,M,T,I>& v){return has_nan(v.vec());}
-
-  /** 
-   * @brief Return the sum of a matrix 
-   * 
-   * @param v Target matrix
-   * 
-   * @return sum of v 
-   */
-  template<class V, class M, class T, class I> float sum(const dense_matrix<V,M,T,I>& v){return sum(v.vec());}
-
-  /** 
-   * @brief Return the two-norm or Euclidean norm of a matrix 
-   * 
-   * @param v Target matrix
-   * 
-   * @return Two-norm of v 
-   */
-  template<class V, class M, class T, class I> float norm2(const dense_matrix<V,M,T,I>& v){return norm2(v.vec());}
-
-  /** 
-   * @brief Return the one-norm or sum-norm of a matrix 
-   * 
-   * @param v Target matrix
-   * 
-   * @return one-norm of v 
-   */
-  template<class V, class M, class T, class I> float norm1(const dense_matrix<V,M,T,I>& v){return norm1(v.vec());}
-  /** 
-   * @brief Return the minimum entry of a matrix 
-   * 
-   * @param v Target matrix
-   * 
-   * @return Minimum entry of v 
-   */
-  template<class V, class M, class T, class I> float minimum(const dense_matrix<V,M,T,I>& v){return minimum(v.vec());}
-  /** 
-   * @brief Return the maximum entry of a matrix 
-   * 
-   * @param v Target matrix
-   * 
-   * @return Maximum entry of v 
-   */
-  template<class V, class M, class T, class I> float maximum(const dense_matrix<V,M,T,I>& v){return maximum(v.vec());}
-  /** 
-   * @brief Return the mean of the entries of a matrix 
-   * 
-   * @param v Target matrix
-   * 
-   * @return Mean of entries of v 
-   */
-  template<class V, class M, class T, class I> float mean(const dense_matrix<V,M,T,I>& v) {return mean(v.vec());}
-  /** 
-   * @brief Return the variation of the entries of a matrix 
-   * 
-   * @param v Target matrix
-   * 
-   * @return Variation of entries of v 
-   */
-  template<class V, class M, class T, class I> float var(const dense_matrix<V,M,T,I>& v)  {return var(v.vec());}
-
-
-  /** @} */ // end of group reductions_matrices
-
 
   /** @defgroup reductions Reductions from matrix to row or column
    * @{
@@ -499,127 +303,127 @@ namespace cuv{
  /* 
   * operator overloading for arithmetic operations on matrices
   */
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I> 
-    operator- (const cuv::dense_matrix<V, M, T, I> & v){
-  	cuv::dense_matrix<V, M, T, I> temp = v; 	
-        temp.vec()*= (V)-1.0;
-        return temp;
-  }
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I> 
-    operator+ (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
-  	cuv::dense_matrix<V, M, T, I> temp = v; 	
-        temp.vec()+= p;
-        return temp;
-  }
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I> 
+    //operator- (const cuv::dense_matrix<V, M, T, I> & v){
+          //cuv::dense_matrix<V, M, T, I> temp = v; 	
+        //temp.vec()*= (V)-1.0;
+        //return temp;
+  //}
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I> 
+    //operator+ (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
+          //cuv::dense_matrix<V, M, T, I> temp = v; 	
+        //temp.vec()+= p;
+        //return temp;
+  //}
   
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I> 
-    operator- (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
-  	cuv::dense_matrix<V, M, T, I> temp = v; 	
-        temp.vec()-= p;
-        return temp;
-  }
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I> 
-    operator* (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
-  	cuv::dense_matrix<V, M, T, I> temp = v; 	
-        temp.vec()*= p;
-        return temp;
-  }
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I> 
-    operator/ (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
-  	cuv::dense_matrix<V, M, T, I> temp = v; 	
-        temp.vec()/= p;
-        return temp;
-  }
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I> 
-    operator+ (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
-  	cuv::dense_matrix<V, M, T, I> temp = v1; 	
-        temp.vec()+= v2.vec();
-        return temp;
-  }
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I> 
+    //operator- (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
+          //cuv::dense_matrix<V, M, T, I> temp = v; 	
+        //temp.vec()-= p;
+        //return temp;
+  //}
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I> 
+    //operator* (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
+          //cuv::dense_matrix<V, M, T, I> temp = v; 	
+        //temp.vec()*= p;
+        //return temp;
+  //}
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I> 
+    //operator/ (const cuv::dense_matrix<V, M, T, I> & v, const V & p){
+          //cuv::dense_matrix<V, M, T, I> temp = v; 	
+        //temp.vec()/= p;
+        //return temp;
+  //}
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I> 
+    //operator+ (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
+          //cuv::dense_matrix<V, M, T, I> temp = v1; 	
+        //temp.vec()+= v2.vec();
+        //return temp;
+  //}
   
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I> 
-    operator- (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
-  	cuv::dense_matrix<V, M, T, I> temp = v1;	
-        temp.vec()-= v2.vec();
-        return temp;
-  }
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I> 
-    operator* (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
-  	cuv::dense_matrix<V, M, T, I> temp = v1; 	
-        temp.vec()*= v2.vec();
-        return temp;
-  }
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I> 
-    operator/ (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
-  	cuv::dense_matrix<V, M, T, I> temp = v1; 	
-        temp.vec()/= v2.vec();
-        return temp;
-  }
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I> 
+    //operator- (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
+          //cuv::dense_matrix<V, M, T, I> temp = v1;	
+        //temp.vec()-= v2.vec();
+        //return temp;
+  //}
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I> 
+    //operator* (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
+          //cuv::dense_matrix<V, M, T, I> temp = v1; 	
+        //temp.vec()*= v2.vec();
+        //return temp;
+  //}
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I> 
+    //operator/ (const cuv::dense_matrix<V, M, T, I> & v1, const cuv::dense_matrix<V, M, T, I> & v2){
+          //cuv::dense_matrix<V, M, T, I> temp = v1; 	
+        //temp.vec()/= v2.vec();
+        //return temp;
+  //}
   
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I>& 
-    operator-=(cuv::dense_matrix<V, M, T, I>& v1, const cuv::dense_matrix<V, M, T, I>& v2){
-  	cuv::apply_binary_functor(v1.vec(), v2.vec(), cuv::BF_SUBTRACT);
-  	return v1;
-  }
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I>& 
+    //operator-=(cuv::dense_matrix<V, M, T, I>& v1, const cuv::dense_matrix<V, M, T, I>& v2){
+          //cuv::apply_binary_functor(v1.vec(), v2.vec(), cuv::BF_SUBTRACT);
+          //return v1;
+  //}
   
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I>& 
-    operator*=(cuv::dense_matrix<V, M, T, I>& v1, const cuv::dense_matrix<V, M, T, I>& v2){
-  	cuv::apply_binary_functor(v1.vec(), v2.vec(), cuv::BF_MULT);
-  	return v1;
-  }
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I>& 
+    //operator*=(cuv::dense_matrix<V, M, T, I>& v1, const cuv::dense_matrix<V, M, T, I>& v2){
+          //cuv::apply_binary_functor(v1.vec(), v2.vec(), cuv::BF_MULT);
+          //return v1;
+  //}
   
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I>& 
-    operator/=(cuv::dense_matrix<V, M, T, I>& v1, const cuv::dense_matrix<V, M, T, I>& v2){
-  	cuv::apply_binary_functor(v1.vec(), v2.vec(), cuv::BF_DIV);
-  	return v1;
-  }
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I>& 
+    //operator/=(cuv::dense_matrix<V, M, T, I>& v1, const cuv::dense_matrix<V, M, T, I>& v2){
+          //cuv::apply_binary_functor(v1.vec(), v2.vec(), cuv::BF_DIV);
+          //return v1;
+  //}
   
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I>& 
-    operator+=(cuv::dense_matrix<V, M, T, I>& v1, const cuv::dense_matrix<V, M, T, I>& v2){
-  	cuv::apply_binary_functor(v1.vec(), v2.vec(), cuv::BF_ADD);
-  	return v1;
-  }
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I>& 
+    //operator+=(cuv::dense_matrix<V, M, T, I>& v1, const cuv::dense_matrix<V, M, T, I>& v2){
+          //cuv::apply_binary_functor(v1.vec(), v2.vec(), cuv::BF_ADD);
+          //return v1;
+  //}
   
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I>& 
-    operator-=(cuv::dense_matrix<V, M, T, I>& v, const V& p){
-  	cuv::apply_scalar_functor(v.vec(), cuv::SF_SUBTRACT, p);
-  	return v;
-  }
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I>& 
+    //operator-=(cuv::dense_matrix<V, M, T, I>& v, const V& p){
+          //cuv::apply_scalar_functor(v.vec(), cuv::SF_SUBTRACT, p);
+          //return v;
+  //}
   
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I>& 
-    operator*=(cuv::dense_matrix<V, M, T, I>& v, const V& p){
-  	cuv::apply_scalar_functor(v.vec(), cuv::SF_MULT, p);
-  	return v;
-  }
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I>& 
+    //operator*=(cuv::dense_matrix<V, M, T, I>& v, const V& p){
+          //cuv::apply_scalar_functor(v.vec(), cuv::SF_MULT, p);
+          //return v;
+  //}
   
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I>& 
-    operator/=(cuv::dense_matrix<V, M, T, I>& v, const V& p){
-  	cuv::apply_scalar_functor(v.vec(), cuv::SF_DIV, p);
-  	return v;
-  }
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I>& 
+    //operator/=(cuv::dense_matrix<V, M, T, I>& v, const V& p){
+          //cuv::apply_scalar_functor(v.vec(), cuv::SF_DIV, p);
+          //return v;
+  //}
   
-  template<class V, class M, class T, class I>
-    cuv::dense_matrix<V, M, T, I>& 
-    operator+=(cuv::dense_matrix<V, M, T, I>& v, const V& p){
-  	cuv::apply_scalar_functor(v.vec(), cuv::SF_ADD, p);
-  	return v;
-  }
+  //template<class V, class M, class T, class I>
+    //cuv::dense_matrix<V, M, T, I>& 
+    //operator+=(cuv::dense_matrix<V, M, T, I>& v, const V& p){
+          //cuv::apply_scalar_functor(v.vec(), cuv::SF_ADD, p);
+          //return v;
+  //}
 
   
 #endif

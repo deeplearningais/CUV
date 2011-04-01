@@ -41,25 +41,25 @@
 #ifndef __DENSE_MATRIX_HPP__
 #define __DENSE_MATRIX_HPP__
 #include <cuv/basics/tensor.hpp>
-#include <cuv/basics/vector.hpp>
+#include <cuv/basics/linear_memory.hpp>
 #include <cuv/tools/cuv_general.hpp>
 
 namespace cuv{
 	/** 
 	 * @brief Class for dense matrices
 	 */
-	template<class __value_type, class __mem_layout, class __memory_space_type, class __index_type = unsigned int >
+	template<class __value_type, class __memory_space_type, class __mem_layout = row_major, class __index_type = unsigned int >
 	class dense_matrix 
-	:public tensor<__value_type,__mem_layout,__memory_space_type>{
+	:public tensor<__value_type,__memory_space_type, __mem_layout>{
 		public:
-		typedef tensor<__value_type,__mem_layout,__memory_space_type> tensor_type;
+		typedef tensor<__value_type,__memory_space_type,__mem_layout> tensor_type;
 		typedef typename tensor_type::value_type         value_type;
 		typedef typename tensor_type::const_value_type   const_value_type;
 		typedef typename tensor_type::memory_space_type  memory_space_type;
 		typedef typename tensor_type::memory_layout_type memory_layout;
 		typedef typename tensor_type::index_type         index_type;
 		typedef typename tensor_type::pointer_type       pointer_type;
-		typedef vector<value_type,memory_space_type>     vector_type;
+		typedef linear_memory<value_type,memory_space_type>     vector_type;
 		private:
 		mutable vector_type m_vec;
 		public:
@@ -75,6 +75,7 @@ namespace cuv{
 			}
 		/// deprecated! use the reference returned by (..)
 		void set(const index_type& i, const index_type& j, const value_type& val){
+			std::cout << "DEPRECATED SET"<<std::endl;
 			(*this)(i,j) = val;
 		}
 		const index_type& h()const{ return this->shape()[0]; };
@@ -82,23 +83,29 @@ namespace cuv{
 		const index_type  n()const{ return this->size(); };
 
 
-		/// deprecated! define your stuff on tensor instead!
-		vector<value_type,memory_space_type>&
-		vec(){
-			m_vec = vector<value_type,memory_space_type>(this->size(),this->ptr());
-			return m_vec;
-		}
+		///// deprecated! define your stuff on tensor instead!
+		//linear_memory<value_type,memory_space_type>&
+		//vec(){
+			//std::cout << "DEPRECATED VEC"<<std::endl;
+			//m_vec = vector<value_type,memory_space_type>(this->size(),this->ptr());
+			//return m_vec;
+		//}
 
-		/// deprecated! define your stuff on tensor instead!
-		const vector<value_type,memory_space_type>
-		vec()const{
-			m_vec = vector<value_type,memory_space_type>(this->size(),this->ptr());
-			return m_vec;
-		}
+		///// deprecated! define your stuff on tensor instead!
+		//const vector<value_type,memory_space_type>&
+		//vec()const{
+			//std::cout << "DEPRECATED VEC"<<std::endl;
+			//m_vec = vector<value_type,memory_space_type>(this->size(),this->ptr());
+			//return m_vec;
+		//}
 		/// deprecated! use ptr()
-		const_value_type* vec_ptr()const{return this->ptr();}
+		const_value_type* vec_ptr()const{
+			std::cout << "DEPRECATED vec_ptr"<<std::endl;
+			return this->ptr();}
 		/// deprecated! use ptr()
-		value_type*       vec_ptr()     {return this->ptr();}
+		value_type*       vec_ptr()     {
+			std::cout << "DEPRECATED vec_ptr"<<std::endl;
+			return this->ptr();}
 	};
 
 	template<class Mat, class NewVT>

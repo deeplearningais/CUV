@@ -61,7 +61,7 @@ namespace cuv
 	}
 #endif
 
-	template<class __value_type, class __memory_layout, class __memory_space_type, class Tptr=const __value_type*>
+	template<class __value_type, class __memory_space_type, class __memory_layout = row_major, class Tptr=const __value_type*>
 	class const_tensor{
 		public:
 			typedef typename unconst<__value_type>::type value_type;	///< Type of the entries of matrix
@@ -204,10 +204,10 @@ namespace cuv
 			 */
 			void allocate(pointer_type ptr = NULL){ 
 				if(ptr==NULL){
-					m_data.set_size(this->size()); 
+					m_data.set_size(size()); 
 					return;
 				}
-				m_data = linear_memory_type(this->size(),ptr, true);
+				m_data = linear_memory_type(size(),ptr, true);
 			}
 			/**
 			 * delete the memory used by this container (calls dealloc of wrapped linear memory)
@@ -236,12 +236,12 @@ namespace cuv
 		
 	};
 	
-	template<class __value_type, class __memory_layout, class __memory_space_type>
+	template<class __value_type, class __memory_space_type, class __memory_layout=row_major>
 	class tensor
-	: public const_tensor<__value_type,__memory_layout, __memory_space_type, __value_type*>
+	: public const_tensor<__value_type, __memory_space_type,__memory_layout, __value_type*>
 	{
 		public:
-			typedef const_tensor<__value_type,__memory_layout, __memory_space_type, __value_type*> super_type;
+			typedef const_tensor<__value_type, __memory_space_type, __memory_layout, __value_type*> super_type;
 			typedef typename super_type::value_type                      value_type;
 			typedef typename super_type::const_value_type          const_value_type;
 			typedef typename super_type::memory_space_type        memory_space_type;
@@ -255,6 +255,7 @@ namespace cuv
 			using super_type::m_data;
 			using super_type::m_shape;
 			using super_type::index_of;
+			using super_type::size;
 			using super_type::operator[];
 			using super_type::operator();
 
@@ -324,6 +325,19 @@ namespace cuv
 				index_type arr[4] = {d0,d1,d2,d3};
 				index_type idx = super_type::template index_of<4>(memory_layout_type(),arr);
 				return m_data[idx];
+			}
+			
+			template<unsigned long D>
+			void reshape(const extent_gen<D>& eg){
+				unsigned long new_size=1;	
+				for(int i=0; i<D; i++)
+					new_size *= eg.ranges_[i].finish();
+
+				cuvAssert(size() == new_size);
+				m_shape.clear();
+				m_shape.reserve(D);
+				for(unsigned long i=0;i<D;i++)
+					m_shape.push_back(eg.ranges_[i].finish());
 			}
 	};
 

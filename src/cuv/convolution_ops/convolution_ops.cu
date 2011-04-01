@@ -195,7 +195,7 @@ void grid_to_matrix(dense_matrix<float,row_major,dev_memory_space>& mat,
 	// make nvMatrices with this data
 	NVMatrix nv_mat(mat.ptr(), mat.h(), mat.w(), false);
 	NVMatrix nv_grid(grid.ptr(), grid.h(), grid.w(), false);
-	fill(mat.vec(),0);
+	fill(mat);
 
 	gridToMatrix(&nv_grid, &nv_mat, poolSize, true);
 
@@ -219,7 +219,7 @@ void matrix_to_grid(dense_matrix<float,row_major,dev_memory_space>& grid,
 	// make nvMatrices with this data
 	NVMatrix nv_mat(mat.ptr(), mat.h(), mat.w(), false);
 	NVMatrix nv_grid(grid.ptr(), grid.h(), grid.w(), false);
-	fill(grid.vec(),0);
+	fill(grid,0);
 
 	// transform and calculate maximum
 	matrixToGrid(&nv_mat, &nv_grid, poolSize, true);
@@ -233,7 +233,7 @@ void sample_multinomial(dense_matrix<float,row_major,dev_memory_space>& grid){
    /*apply_binary_functor(tmp,grid,BF_COPY);*/
 
    dense_matrix<float,row_major,dev_memory_space> rnd(grid.h(),1);
-   fill_rnd_uniform(rnd.vec());
+   fill_rnd_uniform(rnd);
 
    NVMatrix nv_grid(grid.ptr(),grid.h(),grid.w(),false);
    NVMatrix nv_rnd(rnd.ptr(),rnd.h(),rnd.w(),false);
@@ -337,7 +337,7 @@ void reorder_impl(dense_matrix<V,row_major,dev_memory_space>& dst,
 
 	cuvSafeCall(cudaThreadSynchronize());
 
-	dst.resize(patternCount*imgCount, blockLength);
+	dst.reshape(extents[patternCount*imgCount][blockLength]);
 
 	cuvSafeCall(cudaThreadSynchronize());
 }
@@ -361,7 +361,7 @@ void reorder_impl(dense_matrix<V,row_major,host_memory_space>& dst,
 		dst_ptr += blockLength;
 	}
 
-	dst.resize(patternCount*imgCount, blockLength);
+	dst.reshape(extents[patternCount*imgCount][blockLength]);
 }
 
 template<class __matrix_type>
@@ -375,7 +375,7 @@ void reorder(__matrix_type& M,
 
 	// change pointer to temp matrix / copy
 	if(M.is_view())
-		copy(M.vec(), tmp.vec());
+		copy(M, tmp);
 	else
 		M = tmp;
 }
@@ -423,7 +423,7 @@ template<>
 	int numImg = img.h();
 
 	// execute convolution
-    subsampleCPU(img.vec().ptr(), dst.vec().ptr(), imgSize, factor, numImg);
+    subsampleCPU(img.ptr(), dst.ptr(), imgSize, factor, numImg);
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
@@ -497,7 +497,7 @@ void supersample(dense_matrix<float,row_major,host_memory_space>& dst,
 		for(int i = 0; i < numImages; i++) {
 			for(int r = 0; r < imgSize; r++)
 				for(int c = 0; c < imgSize; c++) {
-					int idx = (indices->vec())[r*imgSize+c + i*imgSize*imgSize];
+					int idx = (*indices)[r*imgSize+c + i*imgSize*imgSize];
 					int row = idx % factor;
 					int col = idx / factor;
 					target[(r*factor+row)*dstSize + c*factor+col] = image[r*imgSize + c];
