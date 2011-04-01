@@ -211,8 +211,8 @@ namespace cuv{
 			cuvAssert(transB == 'n');
 			cuvAssert(dst.w() == B.w());
 			for(int i=0;i<dst.w();i++){
-				vector<float,host_memory_space> dst_v(dst.h(), dst.vec().ptr()+i*dst.h(), true);
-				vector<float,host_memory_space> src_v(B.h(),   B.vec().ptr()+i*B.h(), true);
+				vector<float,host_memory_space> dst_v(dst.h(), dst.ptr()+i*dst.h(), true);
+				vector<float,host_memory_space> src_v(B.h(),   B.ptr()+i*B.h(), true);
 				spmv(dst_v,A,src_v,transA,factAB,factC);
 			}
 		}
@@ -236,8 +236,8 @@ namespace cuv{
 			}
 			const int num_at_same_time = min(MAX_NUM_IMGS_AT_ONCE, B.w());
 			for(int i=0; i<dst.w(); i += num_at_same_time){
-				vector<float,dev_memory_space> dst_v(dst.h() * min(dst.w()-i,num_at_same_time), dst.vec().ptr()+i*dst.h(), true);
-				vector<float,dev_memory_space> src_v(B.h()   * min(B.w()-i,  num_at_same_time), B.vec().ptr()+i*B.h(), true);
+				vector<float,dev_memory_space> dst_v(dst.h() * min(dst.w()-i,num_at_same_time), dst.ptr()+i*dst.h(), true);
+				vector<float,dev_memory_space> src_v(B.h()   * min(B.w()-i,  num_at_same_time), B.ptr()+i*B.h(), true);
 				spmv(dst_v,A,src_v,transA,factAB,factC);
 			}
 		}
