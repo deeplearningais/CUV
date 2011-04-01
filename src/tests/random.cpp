@@ -121,13 +121,13 @@ BOOST_AUTO_TEST_CASE( binarize )
 	float m   = mean(v);
 	BOOST_CHECK_SMALL( m-0.5f, 0.01f );
 	for(int i = 0; i < n; ++ i) {
-		BOOST_CHECK( v[i] == 0  || v[i] == 1 );
+		BOOST_CHECK( v[i] == 0.f  || v[i] == 1.f );
 	}
 
 	m   = mean(x);
 	BOOST_CHECK_SMALL( m-0.5f, 0.01f );
 	for(int i = 0; i < n; ++ i) {
-		BOOST_CHECK( v[i] == 0  || v[i] == 1 );
+		BOOST_CHECK( v[i] == 0.f  || v[i] == 1.f );
 	}
 }
 

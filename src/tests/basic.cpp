@@ -42,6 +42,7 @@
 
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/vector.hpp>
 #include <cuv/basics/cuda_array.hpp>
 #include <cuv/convert/convert.hpp>
 
@@ -92,7 +93,7 @@ BOOST_AUTO_TEST_CASE( create_dev_plain )
 BOOST_AUTO_TEST_CASE( create_dev_view )
 {
 	dense_matrix<float,column_major,dev_memory_space> m(16,16);
-	dense_matrix<float,column_major,dev_memory_space> m2(16,16,new vector<float,dev_memory_space>(m.n(), m.ptr(), true));
+	//dense_matrix<float,column_major,dev_memory_space> m2(16,16,new linear_memory<float,dev_memory_space>(m.n(), m.ptr(), true));
 }
 
 /** 
@@ -102,7 +103,7 @@ BOOST_AUTO_TEST_CASE( create_dev_view )
 BOOST_AUTO_TEST_CASE( create_dev_from_mat )
 {
 	dense_matrix<float,column_major,dev_memory_space> m(16,16);
-	dense_matrix<float,column_major,dev_memory_space> m2(&m);
+	//dense_matrix<float,column_major,dev_memory_space> m2(&m);
 }
 
 /** 
@@ -112,7 +113,7 @@ BOOST_AUTO_TEST_CASE( create_dev_from_mat )
 BOOST_AUTO_TEST_CASE( create_host )
 {
 	dense_matrix<float,column_major,host_memory_space> m(16,16);
-	dense_matrix<float,column_major,host_memory_space> m2(16,16,new vector<float,host_memory_space>(m.n(),m.ptr(),true));
+	//dense_matrix<float,column_major,host_memory_space> m2(16,16,new vector<float,host_memory_space>(m.n(),m.ptr(),true));
 }
 
 /** 
