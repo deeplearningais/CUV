@@ -62,7 +62,7 @@ namespace cuv{
 		  typedef matrix<__value_type, __index_type> 					   base_type; 			///< Basic matrix type
 		  typedef __memory_space_type 									   memory_space_type;	///< Whether this is a host or device matrix
 		  typedef typename base_type::index_type 						   index_type;			///< Type of indices
-		  typedef const_tensor<value_type,memory_space_type> const_vec_type; 		///< Basic vector type used
+		  typedef const tensor<value_type,memory_space_type> const_vec_type; 		///< Basic vector type used
 		  typedef tensor<value_type,memory_space_type>  		   vec_type; 			///< Basic vector type used
 		  typedef tensor<int,memory_space_type> 				   intvec_type; 		///< Type of offsets for diagonals
 		  typedef dia_matrix<value_type,memory_space_type,index_type> 	   my_type;				///< Type of this matix

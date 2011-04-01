@@ -28,9 +28,6 @@
 //*LE*
 
 
-
-
-
 #include <cmath>
 #include <iostream>
 #include <cublas.h>

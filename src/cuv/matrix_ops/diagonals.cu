@@ -16,7 +16,7 @@ namespace cuv{
 					const cuv::dia_matrix<T,dev_memory_space>& dia
 					){
 				for( int i=0;i<dia.num_dia();i++ ){
-					std::auto_ptr<const_tensor<T,dev_memory_space> > diagonal ( dia.get_dia( dia.get_offset( i ) ));
+					std::auto_ptr<const tensor<T,dev_memory_space> > diagonal ( dia.get_dia( dia.get_offset( i ) ));
 					dst[i]= mean( *(diagonal.get()) );
 				}
 			}
