@@ -45,12 +45,11 @@
 #include <thrust/logical.h>
 
 #include <cuv/tools/cuv_general.hpp>
-/*#include <cutil_inline.h>*/
 
-#include <cuv/basics/vector.hpp>
-#include <cuv/vector_ops/functors.hpp>
+#include <cuv/basics/tensor.hpp>
+#include <cuv/tensor_ops/functors.hpp>
 
-#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 
 
 /*
@@ -80,7 +79,7 @@ struct memspace_cuv2thrustptr<T,cuv::dev_memory_space> { typedef thrust::device_
 #if ! USE_THRUST_LAUNCHER
 template<class unary_functor, class value_type, class index_type>
 __global__
-void unary_functor_kernel(value_type* dst, value_type* src, index_type n, unary_functor uf){
+void unary_functor_kernel(value_type* dst, value_type* src n, unary_functor uf){
 	const unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
 	const unsigned int off = __mul24(blockDim.x , gridDim.x);
 	for (unsigned int i = idx; i < n; i += off)
@@ -89,7 +88,7 @@ void unary_functor_kernel(value_type* dst, value_type* src, index_type n, unary_
 
 template<class binary_functor, class value_type, class value_type2, class index_type>
 __global__
-void binary_functor_kernel(value_type* dst, value_type* src, value_type2* src2, index_type n, binary_functor bf){
+void binary_functor_kernel(value_type* dst, value_type* src, value_type2* src2 n, binary_functor bf){
 	const unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
 	const unsigned int off = __mul24(blockDim.x , gridDim.x);
 	for (unsigned int i = idx; i < n; i += off)
@@ -103,10 +102,10 @@ void setLinearGridAndThreads(dim3& blocks, dim3& threads, size_t len, int thread
 }
 #endif
 
-template<class unary_functor, class V1, class V2, class index_type>
+template<class unary_functor, class V1, class V2>
 void launch_unary_kernel(
-   cuv::vector<V1,dev_memory_space,index_type>& dst,
-   const cuv::vector<V2,dev_memory_space,index_type>& src, 
+   cuv::tensor<V1,dev_memory_space>& dst,
+   const cuv::tensor<V2,dev_memory_space>& src, 
 	 unary_functor uf){
 	 cuvAssert(dst.ptr());
 	 cuvAssert(src.ptr());
@@ -125,10 +124,10 @@ void launch_unary_kernel(
 	 cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<class unary_functor, class V1, class V2, class index_type>
+template<class unary_functor, class V1, class V2>
 void launch_unary_kernel(
-   cuv::vector<V1,host_memory_space,index_type>& dst,
-   const cuv::vector<V2,host_memory_space,index_type>& src, 
+   cuv::tensor<V1,host_memory_space>& dst,
+   const cuv::tensor<V2,host_memory_space>& src, 
 	 unary_functor uf){
 	 cuvAssert(src.ptr());
 	 cuvAssert(dst.ptr());
@@ -139,10 +138,10 @@ void launch_unary_kernel(
 	   *dst_ptr++ = uf( *src_ptr++ );
 }
 
-template<class binary_functor, class V1, class V2, class index_type>
+template<class binary_functor, class V1, class V2>
 void launch_binary_kernel(
-   cuv::vector<V1,dev_memory_space,index_type>& v,
-   const cuv::vector<V2,dev_memory_space,index_type>& w, 
+   cuv::tensor<V1,dev_memory_space>& v,
+   const cuv::tensor<V2,dev_memory_space>& w, 
 	 binary_functor bf){
 	 cuvAssert(v.ptr());
 	 cuvAssert(w.ptr());
@@ -161,10 +160,10 @@ void launch_binary_kernel(
 	 cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<class binary_functor, class V1, class V2, class index_type>
+template<class binary_functor, class V1, class V2>
 void launch_binary_kernel(
-   cuv::vector<V1,host_memory_space,index_type>& dst,
-   const cuv::vector<V2,host_memory_space,index_type>& src, 
+   cuv::tensor<V1,host_memory_space>& dst,
+   const cuv::tensor<V2,host_memory_space>& src, 
 	 binary_functor uf){
 	 cuvAssert(src.ptr());
 	 cuvAssert(dst.ptr());
@@ -182,12 +181,12 @@ namespace cuv{
  *
  */
 
-template<class __vector_type>
+template<class __tensor_type>
 void
-apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf){
+apply_0ary_functor(__tensor_type& v, const NullaryFunctor& nf){
 	 cuvAssert(v.ptr());
-	 typedef typename __vector_type::value_type value_type;
-	 typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+	 typedef typename __tensor_type::value_type value_type;
+	 typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	 ptr_type dst_ptr(v.ptr());
 	 switch(nf){
 		 case NF_SEQ:
@@ -198,13 +197,13 @@ apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf){
 	 cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<class __vector_type>
+template<class __tensor_type>
 void
-apply_0ary_functor(__vector_type& v, const NullaryFunctor& nf, const typename __vector_type::value_type& param){
+apply_0ary_functor(__tensor_type& v, const NullaryFunctor& nf, const typename __tensor_type::value_type& param){
 	 cuvAssert(v.ptr());
 
-	 typedef typename __vector_type::value_type value_type;
-	 typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+	 typedef typename __tensor_type::value_type value_type;
+	 typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	 ptr_type dst_ptr(v.ptr());
 	 switch(nf){
 		 case NF_FILL:
@@ -375,102 +374,102 @@ namespace detail{
 /*
  * Reductions
  */
-template<class __vector_type>
+template<class __tensor_type>
 bool
-has_inf(const __vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+has_inf(const __tensor_type& v){
+	typedef typename __tensor_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	uf_is_inf<value_type> uo;
 	return  thrust::any_of(v_ptr, v_ptr+v.size(), uo);
 }
-template<class __vector_type>
+template<class __tensor_type>
 bool
-has_nan(const __vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+has_nan(const __tensor_type& v){
+	typedef typename __tensor_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	uf_is_nan<value_type> uo;
 	return  thrust::any_of(v_ptr, v_ptr+v.size(), uo);
 }
-template<class __vector_type>
+template<class __tensor_type>
 float
-norm2(const __vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+norm2(const __tensor_type& v){
+	typedef typename __tensor_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=0;
 	return  std::sqrt( thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_square<float,value_type>(), init, bf_plus<float,float,value_type>()) );
 }
-template<class __vector_type>
+template<class __tensor_type>
 float
-norm1(const __vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+norm1(const __tensor_type& v){
+	typedef typename __tensor_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=0;
 	uf_abs<float,value_type> unary_op;
 	bf_plus<float,float,value_type> binary_op;
 	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), unary_op, init, binary_op);
 }
-template<class __vector_type>
+template<class __tensor_type>
 float
-sum(const __vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+sum(const __tensor_type& v){
+	typedef typename __tensor_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=0.0;
 	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,float,value_type>());
 }
-template<class __vector_type>
+template<class __tensor_type>
 float
-maximum(const __vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+maximum(const __tensor_type& v){
+	typedef typename __tensor_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=-INT_MAX;
 	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_max<float,float,value_type>());
 }
-template<class __vector_type>
+template<class __tensor_type>
 float
-minimum(const __vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+minimum(const __tensor_type& v){
+	typedef typename __tensor_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=INT_MAX;
 	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_min<float,float,value_type>());
 }
-template<class __vector_type>
+template<class __tensor_type>
 float
-mean(const __vector_type& v){
+mean(const __tensor_type& v){
 	return   sum(v) / (float)v.size();
 }
-template<class __vector_type>
+template<class __tensor_type>
 float
-var(const __vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+var(const __tensor_type& v){
+	typedef typename __tensor_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
 	float init=0;
 	float m = mean(v);
 	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), 
-			make_bind2nd(bf_squared_diff<float,value_type,float>(),m),  // result, vector-type, mean-type
+			make_bind2nd(bf_squared_diff<float,value_type,float>(),m),  // result, tensor-type, mean-type
 			init, bf_plus<float,float,float>()) / (float)v.size();
 }
-template<class __vector_type>
-typename __vector_type::index_type
-arg_max(const __vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+template<class __tensor_type>
+typename __tensor_type::index_type
+arg_max(const __tensor_type& v){
+	typedef typename __tensor_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type begin(const_cast<value_type*>(v.ptr()));
 	ptr_type elem = thrust::max_element(begin, begin	+v.size());
 	return thrust::distance(begin,elem);
 }
-template<class __vector_type>
-typename __vector_type::index_type
-arg_min(const __vector_type& v){
-	typedef typename __vector_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __vector_type::memory_space_type>::ptr_type ptr_type;
+template<class __tensor_type>
+typename __tensor_type::index_type
+arg_min(const __tensor_type& v){
+	typedef typename __tensor_type::value_type value_type;
+	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
 	ptr_type begin(const_cast<value_type*>(v.ptr()));
 	ptr_type elem = thrust::min_element(begin, begin	+v.size());
 	return thrust::distance(begin,elem);
@@ -480,7 +479,7 @@ arg_min(const __vector_type& v){
  * Template instantiations
  */
 
-#include "vector_ops_inst.hxx"
+#include "tensor_ops_inst.hxx"
 
 } // cuv
 

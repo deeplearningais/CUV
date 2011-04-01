@@ -1,14 +1,13 @@
 #!/usr/bin/python
 
 class vec_t:
-	def __init__(self, v, m, i):
-		self.types = (v,m,i)
+	def __init__(self, v, m):
+		self.types = (v,m)
 	def __str__(self):
 		#return "vector<%s,%s,%s> "%self.types
-		return "vector<%s,%s>"%self.types[:-1]
+		return "tensor<%s,%s>"%self.types
 	def value_type(self): return self.types[0]
 	def memory_space_type(self): return self.types[1]
-	def index_type(self): return self.types[2]
 
 def apply_0ary_functor(types):
 	for t in types:
@@ -40,32 +39,30 @@ template typename {0}::index_type     arg_min<{0} >(const {0}&);""".split("\n")
 			yield x.format(v);
 
 
-def vectors(value_types, memory_types, index_types):
+def tensors(value_types, memory_types):
 	for v in value_types:
 		for m in memory_types:
-			for i in index_types:
-				yield vec_t(v,m,i)
+			yield vec_t(v,m)
 
 def instantiate_memtype(memtype):
 	value_types = "float,unsigned int,int,unsigned char,signed char".split(",")
-	index_types = "unsigned int".split(",")
-	vector_types = [x for x in vectors(value_types, [memtype], index_types)]
+	tensor_types = [x for x in tensors(value_types, [memtype])]
 	scalar_types = "float,int".split(",")
 
-	for s in apply_0ary_functor(zip(vector_types,[x.value_type() for x in vector_types])):
+	for s in apply_0ary_functor(zip(tensor_types,[x.value_type() for x in tensor_types])):
 		yield s
 
 	# operators which have the same type before and after the operation
-	for s in apply_scalar_functor(zip(vector_types, vector_types, [x.value_type() for x in vector_types])):
+	for s in apply_scalar_functor(zip(tensor_types, tensor_types, [x.value_type() for x in tensor_types])):
 		yield s
 	# boolean predicates
-	for s in apply_scalar_functor(zip([vec_t("unsigned char",memtype,index_types[0]) for v in vector_types], vector_types, [x.value_type() for x in vector_types])):
+	for s in apply_scalar_functor(zip([vec_t("unsigned char",memtype) for v in tensor_types], tensor_types, [x.value_type() for x in tensor_types])):
 		yield s
 
 	# operators where all operands have the same type
-	for s in apply_binary_functor(zip(vector_types,vector_types,vector_types,[x.value_type() for x in vector_types])):
+	for s in apply_binary_functor(zip(tensor_types,tensor_types,tensor_types,[x.value_type() for x in tensor_types])):
 		yield s
-	for s in reductions(vector_types):
+	for s in reductions(tensor_types):
 		yield s
 
 
