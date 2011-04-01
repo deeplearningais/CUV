@@ -40,7 +40,7 @@
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/tools/timing.hpp>
 #include <cuv/basics/dense_matrix.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/convolution_ops/convolution_ops.hpp>
 #include <cuv/random/random.hpp>
@@ -69,8 +69,8 @@ struct Fix{
 	static const int g = 8;    // filter size
 	static const int k = n-g+1;// target image size
 	static const int o = n/p;  // pooling output size
-	dense_matrix<float, row_major, dev_memory_space>  d_img,d_filter,d_dst,d_pooled;
-	dense_matrix<float, row_major, host_memory_space> h_img,h_filter,h_dst,h_pooled;
+	dense_matrix<float, dev_memory_space, row_major>  d_img,d_filter,d_dst,d_pooled;
+	dense_matrix<float, host_memory_space, row_major> h_img,h_filter,h_dst,h_pooled;
 	Fix()
 	:   d_img(c,n*n), d_filter(f,g*g), d_dst(f,c*k*k), d_pooled(c,o*o)
 	,   h_img(c,n*n), h_filter(f,g*g), h_dst(f,c*k*k), h_pooled(c,o*o)
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE( convolution )
 	convolve(d_dst,d_img,d_filter);
 	convolve(h_dst,h_img,h_filter);
 
-	dense_matrix<float, row_major, host_memory_space> dst2(d_dst.h(), d_dst.w());
+	dense_matrix<float, host_memory_space, row_major> dst2(d_dst.h(), d_dst.w());
 	convert(dst2,d_dst);
 
 	for(int i=0;i<d_dst.h();i++){
@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE( local_maxima )
 	max_pooling(h_pooled, h_img, p);
 	max_pooling(d_pooled, d_img, p);
 
-	dense_matrix<float, row_major, host_memory_space> pooled2(d_pooled.h(), d_pooled.w());
+	dense_matrix<float, host_memory_space, row_major> pooled2(d_pooled.h(), d_pooled.w());
 	convert(pooled2,d_pooled);
 
 	for(int i=0;i<d_pooled.h();i++){
@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE( supersampling )
 	supersample(h_img, h_pooled, p);
 	supersample(d_img, d_pooled, p);
 
-	dense_matrix<float, row_major,host_memory_space> img2(d_img.h(), d_img.w());
+	dense_matrix<float, host_memory_space,row_major> img2(d_img.h(), d_img.w());
 	convert(img2, d_img);
 
 	MAT_CMP(img2, h_img, 0.001);
@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE( reorder_matrix )
 	reorder(d_dst, k*k);
 	reorder(h_dst, k*k);
 
-	dense_matrix<float, row_major, host_memory_space> dst2(d_dst.h(), d_dst.w());
+	dense_matrix<float, host_memory_space, row_major> dst2(d_dst.h(), d_dst.w());
 	convert(dst2, d_dst);
 
 	MAT_CMP(dst2, h_dst, 0.1);
@@ -177,8 +177,8 @@ BOOST_AUTO_TEST_CASE( copy_into_matrix )
 	const int padding = 5;
 	const int size = n + 2 * padding;
 
-	dense_matrix<float, row_major, host_memory_space> h_pad(h_img.h(), size * size);
-	dense_matrix<float, row_major, dev_memory_space> d_pad(d_img.h(), size * size);
+	dense_matrix<float, host_memory_space, row_major> h_pad(h_img.h(), size * size);
+	dense_matrix<float, dev_memory_space, row_major> d_pad(d_img.h(), size * size);
 
 	sequence(d_img); apply_scalar_functor(d_img, SF_MULT,0.001f);
 	sequence(h_img); apply_scalar_functor(h_img, SF_MULT,0.001f);
@@ -196,16 +196,16 @@ BOOST_AUTO_TEST_CASE( local_maxima_index )
 	initialize_mersenne_twister_seeds();
 
 	// part 1: calculate matrix indices
-	fill_rnd_uniform(d_img.vec());
+	fill_rnd_uniform(d_img);
 	convert(h_img, d_img);
 
-	dense_matrix<int,row_major,host_memory_space> h_indices(c,o*o);
-	dense_matrix<int,row_major,dev_memory_space> d_indices(c,o*o);
+	dense_matrix<int,host_memory_space,row_major> h_indices(c,o*o);
+	dense_matrix<int,dev_memory_space,row_major> d_indices(c,o*o);
 
 	max_pooling(h_pooled, h_img, p, 0, &h_indices);
 	max_pooling(d_pooled, d_img, p, 0, &d_indices);
 
-	dense_matrix<int, row_major, host_memory_space> indices2(d_indices.h(), d_indices.w());
+	dense_matrix<int, host_memory_space, row_major> indices2(d_indices.h(), d_indices.w());
 	convert(indices2,d_indices);
 
 	for(int i=0;i<d_indices.h();i++){
@@ -215,7 +215,7 @@ BOOST_AUTO_TEST_CASE( local_maxima_index )
 	}
 
 	// part 2: propagate back to those indices
-	fill_rnd_uniform(d_pooled.vec());
+	fill_rnd_uniform(d_pooled);
 	convert(h_pooled, d_pooled);
 
 	fill(h_img, 0.f);
@@ -237,15 +237,15 @@ BOOST_AUTO_TEST_CASE( max_pool_res )
 	const int m = (n-p)/(p-l)+1; // resulting image size
 	const int c = 6;
 
-	dense_matrix<float,row_major,host_memory_space> h_img(c,n*n);
-	dense_matrix<float,row_major,host_memory_space> h_dst(c,m*m);
-	dense_matrix<int,row_major,host_memory_space> h_indices(c,m*m);
+	dense_matrix<float,host_memory_space,row_major> h_img(c,n*n);
+	dense_matrix<float,host_memory_space,row_major> h_dst(c,m*m);
+	dense_matrix<int,host_memory_space,row_major> h_indices(c,m*m);
 
-	dense_matrix<float,row_major,dev_memory_space> d_img(c,n*n);
-	dense_matrix<float,row_major,dev_memory_space> d_dst(c,m*m);
-	dense_matrix<int,row_major,dev_memory_space> d_indices(c,m*m);
+	dense_matrix<float,dev_memory_space,row_major> d_img(c,n*n);
+	dense_matrix<float,dev_memory_space,row_major> d_dst(c,m*m);
+	dense_matrix<int,dev_memory_space,row_major> d_indices(c,m*m);
 
-	fill_rnd_uniform(h_img.vec());
+	fill_rnd_uniform(h_img);
 	convert(d_img, h_img);
 
 	max_pooling(h_dst, h_img, p, l, &h_indices);
@@ -288,18 +288,18 @@ BOOST_AUTO_TEST_CASE( row_ncopy )
 
 	int n=128;
 
-	dense_matrix<float, row_major, host_memory_space> erg_h(n, h_img.w());
-	dense_matrix<float, row_major, dev_memory_space> erg_d(n, d_img.w());
+	dense_matrix<float, host_memory_space, row_major> erg_h(n, h_img.w());
+	dense_matrix<float, dev_memory_space, row_major> erg_d(n, d_img.w());
 	fill(erg_d, 0.0f);
 	fill(erg_h, 0.0f);
 	for(int idx = 0; idx < erg_h.w(); idx++ ){
 		for (int idy = 0; idy < n; idy++){
-			erg_h.set(idy,idx, *(h_img.vec().ptr() + idx));
+			erg_h(idy,idx)=*(h_img.ptr() + idx);
 		}
 	}
 
 
-	cuv::row_ncopy(erg_d, d_img.vec(), n);
+	cuv::row_ncopy(erg_d, d_img, n);
 
 	for(int i=0;i<erg_h.h();i++){
 		for(int j=0;j<erg_h.w();j++){
@@ -322,8 +322,8 @@ BOOST_AUTO_TEST_CASE( strip_padding )
 
 	int img_width 		= sqrt(d_img.w());
 	int stripped_width  = img_width-2*padding;
-	dense_matrix<float, row_major, host_memory_space> erg_h(d_img.h(), stripped_width*stripped_width);
-	dense_matrix<float, row_major, dev_memory_space> erg_d(d_img.h(), stripped_width*stripped_width);
+	dense_matrix<float, host_memory_space, row_major> erg_h(d_img.h(), stripped_width*stripped_width);
+	dense_matrix<float, dev_memory_space, row_major> erg_d(d_img.h(), stripped_width*stripped_width);
 	fill(erg_d, 0.0f);
 	fill(erg_h, 0.0f);
 
@@ -356,8 +356,8 @@ BOOST_AUTO_TEST_CASE( strip_padding )
 
 BOOST_AUTO_TEST_CASE( check_exitatory_inhibitory )
 {
-	dense_matrix<float, row_major, host_memory_space> filter_h(f, c*g*g);
-	dense_matrix<float, row_major, dev_memory_space> filter_d(f, c*g*g);
+	dense_matrix<float, host_memory_space, row_major> filter_h(f, c*g*g);
+	dense_matrix<float, dev_memory_space, row_major> filter_d(f, c*g*g);
 
 	sequence(filter_h);
 	sequence(filter_d);
@@ -382,17 +382,17 @@ BOOST_AUTO_TEST_CASE( check_exitatory_inhibitory )
 
 BOOST_AUTO_TEST_CASE( reverse_filters )
 {
-	dense_matrix<float, row_major, host_memory_space> filter_h(f*c, g*g);
-	dense_matrix<float, row_major, dev_memory_space> filter_d(f*c, g*g);
+	dense_matrix<float, host_memory_space, row_major> filter_h(f*c, g*g);
+	dense_matrix<float, dev_memory_space, row_major> filter_d(f*c, g*g);
 
-	dense_matrix<float, row_major, host_memory_space> erg_h(f, c*g*g);
-	dense_matrix<float, row_major, dev_memory_space> erg_d(f, c*g*g);
+	dense_matrix<float, host_memory_space, row_major> erg_h(f, c*g*g);
+	dense_matrix<float, dev_memory_space, row_major> erg_d(f, c*g*g);
 
 	fill(filter_h, 0.0f);fill(filter_d, 0.0f);
 	fill(erg_h, 0.0f);fill(erg_d, 0.0f);
 
-	vector<float,host_memory_space> one_filter_h(g*g);
-	vector<float,dev_memory_space> one_filter_d(g*g);
+	tensor<float,host_memory_space> one_filter_h(g*g);
+	tensor<float,dev_memory_space> one_filter_d(g*g);
 	sequence(one_filter_h); sequence(one_filter_d);
 
 	cuv::row_ncopy(filter_d, one_filter_d, c*f);
@@ -423,8 +423,8 @@ BOOST_AUTO_TEST_CASE( reverse_filters )
 //	sequence(d_img);
 //
 //	// contains a map in each row where the summed pixels are stored
-//	dense_matrix<float, row_major, host_memory_space> erg_h(c, n);
-//	dense_matrix<float, row_major, dev_memory_space> erg_d(c, n);
+//	dense_matrix<float, host_memory_space, row_major> erg_h(c, n);
+//	dense_matrix<float, dev_memory_space, row_major> erg_d(c, n);
 //
 //	fill(erg_h, 0.0f);
 //	fill(erg_d, 0.0f);

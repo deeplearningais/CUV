@@ -34,7 +34,8 @@
 #ifndef __MATRIX_RPROP_HPP__
 #define __MATRIX_RPROP_HPP__
 
-#include <cuv/vector_ops/rprop.hpp>
+#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/tensor_ops/rprop.hpp>
 
 namespace cuv{
 

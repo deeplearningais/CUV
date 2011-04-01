@@ -56,7 +56,7 @@
 #include <vector>
 
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/vector.hpp>
+#include <cuv/basics/tensor.hpp>
 #include "cuv/random/random.hpp"
 
 
@@ -422,7 +422,7 @@ namespace cuv{
 	__global__ void kRndNormal (float2* dst,int n, rnd_normal<float2> rng){ rng(dst,n); }
 
 	template<>
-	void rnd_binarize(vector<float,dev_memory_space>& v){
+	void rnd_binarize(tensor<float,dev_memory_space>& v){
 		cuvAssert(v.ptr());
 		cuvAssert(g_mersenne_twister_initialized);
 
@@ -433,21 +433,21 @@ namespace cuv{
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<>
-	void rnd_binarize(vector<float,host_memory_space>& v){
+	void rnd_binarize(tensor<float,host_memory_space>& v){
 	   cuvAssert(v.ptr());
-	   vector<float,host_memory_space>::value_type* ptr = v.ptr();
+	   tensor<float,host_memory_space>::value_type* ptr = v.ptr();
 	   for(int i=0;i<v.size();i++)
 		   *ptr++ = ((float)rand()/RAND_MAX) < *ptr;
 	}
 	template<>
-	void fill_rnd_uniform(vector<float,host_memory_space>& v){
+	void fill_rnd_uniform(tensor<float,host_memory_space>& v){
 	   cuvAssert(v.ptr());
-	   vector<float,host_memory_space>::value_type* ptr = v.ptr();
+	   tensor<float,host_memory_space>::value_type* ptr = v.ptr();
 	   for(int i=0;i<v.size();i++)
 		   *ptr++ = ((float)rand()/RAND_MAX);
 	}
 	template<>
-	void fill_rnd_uniform(vector<float,dev_memory_space>& v){
+	void fill_rnd_uniform(tensor<float,dev_memory_space>& v){
 		cuvAssert(v.ptr());
 		cuvAssert(g_mersenne_twister_initialized);
 
@@ -459,9 +459,9 @@ namespace cuv{
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<>
-	void add_rnd_normal(vector<float,host_memory_space>& v, const float& std){
+	void add_rnd_normal(tensor<float,host_memory_space>& v, const float& std){
 	   cuvAssert(v.ptr());
-	   vector<float,host_memory_space>::value_type* ptr = v.ptr();
+	   tensor<float,host_memory_space>::value_type* ptr = v.ptr();
 	   typedef boost::mt19937 rng_type;
 	   rng_type rng;
 	   boost::normal_distribution<float> nd;
@@ -470,7 +470,7 @@ namespace cuv{
 		   *ptr++ += std*die();
 	}
 	template<>
-	void add_rnd_normal(vector<float,dev_memory_space>& v, const float& std){
+	void add_rnd_normal(tensor<float,dev_memory_space>& v, const float& std){
 		cuvAssert(g_mersenne_twister_initialized);
 		cuvAssert(v.ptr());
 		cuvAssert((v.size()%2) == 0);

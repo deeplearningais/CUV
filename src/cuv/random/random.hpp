@@ -28,7 +28,7 @@
 //*LE*
 
 
-
+#include <cuv/basics/tensor.hpp>
 
 
 #ifndef __RANDOM_HPP__
@@ -45,14 +45,14 @@ namespace cuv{
 	 * 
 	 * @param dst Destionation matrix/vector
 	 */
-	template<class T> void fill_rnd_uniform(T& dst);  
+	template<class V, class M, class T> void fill_rnd_uniform(tensor<V, M, T>& dst);  
 
 	/** 
 	 * @brief Binarize a matrix/vector to 1 or 0 with probability given by current values
 	 * 
 	 * @param dst	Destionation matrix/vector 
 	 */
-	template<class T> void rnd_binarize(T& dst);      
+	template<class V, class M, class T> void rnd_binarize(tensor<V, M, T>& dst);      
 
 	/** 
 	 * @brief Add random numbers (normally distributed, mean 0) to a matrix/vector
@@ -60,9 +60,9 @@ namespace cuv{
 	 * @param dst Destination matrix/vector
 	 * @param std Standard deviation of normal distribution used
 	 */
-	template<class T> void add_rnd_normal(T& dst,const float& std=1.0f);  
+	template<class V, class M, class T> void add_rnd_normal(tensor<V, M, T>& dst,const float& std=1.0f);  
 
-	//template<class T> void fill_rnd_normal(T&);   ///< fill a matrix/vector with  numbers (normally distributed, mean 0, std 1)
+	//template<class V, class M, class T> void fill_rnd_normal(tensor<V, M, T>&);   ///< fill a matrix/vector with  numbers (normally distributed, mean 0, std 1)
 
 	/** 
 	 * @brief Initialize Mersenne twister to generate random numbers on GPU
