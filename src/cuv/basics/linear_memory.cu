@@ -49,12 +49,12 @@ struct allocator<value_type,index_type,dev_memory_space>{
 		cuvSafeCall(cudaFree((void*)*ptr));
 		*ptr = NULL;
 	}
-	/*void alloc(const value_type** ptr, index_type size) const{*/
-	/*        cuvAssert(false);*/
-	/*}*/
-	/*void dealloc(const value_type** ptr)const {*/
-	/*        cuvAssert(false);*/
-	/*}*/
+	void alloc(const value_type** ptr, index_type size) const{
+	       cuvAssert(false);
+	}
+	void dealloc(const value_type** ptr)const {
+	       cuvAssert(false);
+	}
 };
 
 template <class value_type, class index_type>
@@ -72,7 +72,6 @@ value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space) {
 
 #define VECTOR_INST(T,I) \
 template struct allocator<T, I, dev_memory_space>; \
-template struct allocator<const T, I, dev_memory_space>; \
 template void entry_set(T*, I, T, dev_memory_space); \
 template T entry_get(const T*, I, dev_memory_space); \
 

@@ -61,7 +61,7 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	static const int N=256;
+	static const int N;
 	tensor<float,dev_memory_space> v;
 	tensor<float,host_memory_space> w;
 	Fix()
@@ -72,6 +72,7 @@ struct Fix{
 	~Fix(){
 	}
 };
+const int Fix::N = 256;
 
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )

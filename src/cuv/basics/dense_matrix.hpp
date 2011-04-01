@@ -59,9 +59,9 @@ namespace cuv{
 		typedef typename tensor_type::memory_layout_type memory_layout;
 		typedef typename tensor_type::index_type         index_type;
 		typedef typename tensor_type::pointer_type       pointer_type;
-		typedef linear_memory<value_type,memory_space_type>     vector_type;
-		private:
-		mutable vector_type m_vec;
+		//typedef linear_memory<value_type,memory_space_type>     vector_type;
+		//private:
+		//mutable vector_type m_vec;
 		public:
 		
 		/// we simply add a convenience constructor here.
