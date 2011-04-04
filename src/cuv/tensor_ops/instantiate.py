@@ -22,7 +22,7 @@ def apply_scalar_functor(types):
 
 def apply_binary_functor(types):
 	for t in types:
-		yield "namespace detail{{ template void apply_binary_functor<{0}::value_type,{1}::value_type,{2}::value_type,{3},{3} >({0}&,const {1}&,const {2}&, const BinaryFunctor&,const int&, const {3}&, const {3}&);}}".format(t[0],t[1],t[2],t[3])
+		yield "namespace detail{{ template void apply_binary_functor<{0}::value_type,{1}::value_type,{2}::value_type,{0}::memory_space_type,{3},{3} >({0}&,const {1}&,const {2}&, const BinaryFunctor&,const int&, const {3}&, const {3}&);}}".format(t[0],t[1],t[2],t[3])
 
 def reductions(vecs):
 	L= """template bool has_inf<{0}::value_type,{0}::memory_space_type >(const {0}&);
