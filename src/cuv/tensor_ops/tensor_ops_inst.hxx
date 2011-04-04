@@ -1,13 +1,13 @@
 template void apply_0ary_functor<float,host_memory_space >(tensor<float,host_memory_space>&, const NullaryFunctor&);
-template void apply_0ary_functor<float,host_memory_space >(tensor<float,host_memory_space>&, const NullaryFunctor&, const float::value_type&);
+template void apply_0ary_functor<float,host_memory_space >(tensor<float,host_memory_space>&, const NullaryFunctor&, const float&);
 template void apply_0ary_functor<unsigned int,host_memory_space >(tensor<unsigned int,host_memory_space>&, const NullaryFunctor&);
-template void apply_0ary_functor<unsigned int,host_memory_space >(tensor<unsigned int,host_memory_space>&, const NullaryFunctor&, const unsigned int::value_type&);
+template void apply_0ary_functor<unsigned int,host_memory_space >(tensor<unsigned int,host_memory_space>&, const NullaryFunctor&, const unsigned int&);
 template void apply_0ary_functor<int,host_memory_space >(tensor<int,host_memory_space>&, const NullaryFunctor&);
-template void apply_0ary_functor<int,host_memory_space >(tensor<int,host_memory_space>&, const NullaryFunctor&, const int::value_type&);
+template void apply_0ary_functor<int,host_memory_space >(tensor<int,host_memory_space>&, const NullaryFunctor&, const int&);
 template void apply_0ary_functor<unsigned char,host_memory_space >(tensor<unsigned char,host_memory_space>&, const NullaryFunctor&);
-template void apply_0ary_functor<unsigned char,host_memory_space >(tensor<unsigned char,host_memory_space>&, const NullaryFunctor&, const unsigned char::value_type&);
+template void apply_0ary_functor<unsigned char,host_memory_space >(tensor<unsigned char,host_memory_space>&, const NullaryFunctor&, const unsigned char&);
 template void apply_0ary_functor<signed char,host_memory_space >(tensor<signed char,host_memory_space>&, const NullaryFunctor&);
-template void apply_0ary_functor<signed char,host_memory_space >(tensor<signed char,host_memory_space>&, const NullaryFunctor&, const signed char::value_type&);
+template void apply_0ary_functor<signed char,host_memory_space >(tensor<signed char,host_memory_space>&, const NullaryFunctor&, const signed char&);
 namespace detail{ template void apply_scalar_functor<tensor<float,host_memory_space>::value_type,tensor<float,host_memory_space>::value_type,tensor<float,host_memory_space>::memory_space_type,float,float>(tensor<float,host_memory_space>&,const tensor<float,host_memory_space>&, const ScalarFunctor&,const int&, const float&, const float&);}
 namespace detail{ template void apply_scalar_functor<tensor<unsigned int,host_memory_space>::value_type,tensor<unsigned int,host_memory_space>::value_type,tensor<unsigned int,host_memory_space>::memory_space_type,unsigned int,unsigned int>(tensor<unsigned int,host_memory_space>&,const tensor<unsigned int,host_memory_space>&, const ScalarFunctor&,const int&, const unsigned int&, const unsigned int&);}
 namespace detail{ template void apply_scalar_functor<tensor<int,host_memory_space>::value_type,tensor<int,host_memory_space>::value_type,tensor<int,host_memory_space>::memory_space_type,int,int>(tensor<int,host_memory_space>&,const tensor<int,host_memory_space>&, const ScalarFunctor&,const int&, const int&, const int&);}
@@ -78,15 +78,15 @@ template float var<tensor<signed char,host_memory_space>::value_type,tensor<sign
 template typename tensor<signed char,host_memory_space>::index_type     arg_max<tensor<signed char,host_memory_space>::value_type,tensor<signed char,host_memory_space>::memory_space_type >(const tensor<signed char,host_memory_space>&);
 template typename tensor<signed char,host_memory_space>::index_type     arg_min<tensor<signed char,host_memory_space>::value_type,tensor<signed char,host_memory_space>::memory_space_type >(const tensor<signed char,host_memory_space>&);
 template void apply_0ary_functor<float, dev_memory_space >(tensor<float, dev_memory_space>&, const NullaryFunctor&);
-template void apply_0ary_functor<float, dev_memory_space >(tensor<float, dev_memory_space>&, const NullaryFunctor&, const float::value_type&);
+template void apply_0ary_functor<float, dev_memory_space >(tensor<float, dev_memory_space>&, const NullaryFunctor&, const float&);
 template void apply_0ary_functor<unsigned int, dev_memory_space >(tensor<unsigned int, dev_memory_space>&, const NullaryFunctor&);
-template void apply_0ary_functor<unsigned int, dev_memory_space >(tensor<unsigned int, dev_memory_space>&, const NullaryFunctor&, const unsigned int::value_type&);
+template void apply_0ary_functor<unsigned int, dev_memory_space >(tensor<unsigned int, dev_memory_space>&, const NullaryFunctor&, const unsigned int&);
 template void apply_0ary_functor<int, dev_memory_space >(tensor<int, dev_memory_space>&, const NullaryFunctor&);
-template void apply_0ary_functor<int, dev_memory_space >(tensor<int, dev_memory_space>&, const NullaryFunctor&, const int::value_type&);
+template void apply_0ary_functor<int, dev_memory_space >(tensor<int, dev_memory_space>&, const NullaryFunctor&, const int&);
 template void apply_0ary_functor<unsigned char, dev_memory_space >(tensor<unsigned char, dev_memory_space>&, const NullaryFunctor&);
-template void apply_0ary_functor<unsigned char, dev_memory_space >(tensor<unsigned char, dev_memory_space>&, const NullaryFunctor&, const unsigned char::value_type&);
+template void apply_0ary_functor<unsigned char, dev_memory_space >(tensor<unsigned char, dev_memory_space>&, const NullaryFunctor&, const unsigned char&);
 template void apply_0ary_functor<signed char, dev_memory_space >(tensor<signed char, dev_memory_space>&, const NullaryFunctor&);
-template void apply_0ary_functor<signed char, dev_memory_space >(tensor<signed char, dev_memory_space>&, const NullaryFunctor&, const signed char::value_type&);
+template void apply_0ary_functor<signed char, dev_memory_space >(tensor<signed char, dev_memory_space>&, const NullaryFunctor&, const signed char&);
 namespace detail{ template void apply_scalar_functor<tensor<float, dev_memory_space>::value_type,tensor<float, dev_memory_space>::value_type,tensor<float, dev_memory_space>::memory_space_type,float,float>(tensor<float, dev_memory_space>&,const tensor<float, dev_memory_space>&, const ScalarFunctor&,const int&, const float&, const float&);}
 namespace detail{ template void apply_scalar_functor<tensor<unsigned int, dev_memory_space>::value_type,tensor<unsigned int, dev_memory_space>::value_type,tensor<unsigned int, dev_memory_space>::memory_space_type,unsigned int,unsigned int>(tensor<unsigned int, dev_memory_space>&,const tensor<unsigned int, dev_memory_space>&, const ScalarFunctor&,const int&, const unsigned int&, const unsigned int&);}
 namespace detail{ template void apply_scalar_functor<tensor<int, dev_memory_space>::value_type,tensor<int, dev_memory_space>::value_type,tensor<int, dev_memory_space>::memory_space_type,int,int>(tensor<int, dev_memory_space>&,const tensor<int, dev_memory_space>&, const ScalarFunctor&,const int&, const int&, const int&);}

@@ -14,7 +14,7 @@ class vec_t:
 def apply_0ary_functor(types):
 	for t in types:
 		yield "template void apply_0ary_functor<{0},{1} >({2}&, const NullaryFunctor&);".format(t[0].v,t[0].m,t[0])
-		yield "template void apply_0ary_functor<{0},{1} >({2}&, const NullaryFunctor&, const {0}::value_type&);".format(t[0].v,t[0].m,t[0])
+		yield "template void apply_0ary_functor<{0},{1} >({2}&, const NullaryFunctor&, const {0}&);".format(t[0].v,t[0].m,t[0])
 
 def apply_scalar_functor(types):
 	for t in types:
