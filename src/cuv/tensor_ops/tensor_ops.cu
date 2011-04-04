@@ -182,8 +182,7 @@ template<class __value_type, class __memory_space_type>
 void
 apply_0ary_functor(tensor<__value_type, __memory_space_type>& v, const NullaryFunctor& nf){
 	 cuvAssert(v.ptr());
-	 typedef typename __tensor_type::value_type value_type;
-	 typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
+	 typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
 	 ptr_type dst_ptr(v.ptr());
 	 switch(nf){
 		 case NF_SEQ:
@@ -199,12 +198,11 @@ void
 apply_0ary_functor(tensor<V1, M>& v, const NullaryFunctor& nf, const S& param){
 	 cuvAssert(v.ptr());
 
-	 typedef typename __tensor_type::value_type value_type;
-	 typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
+	 typedef typename memspace_cuv2thrustptr<V1,M >::ptr_type ptr_type;
 	 ptr_type dst_ptr(v.ptr());
 	 switch(nf){
 		 case NF_FILL:
-			 thrust::fill(dst_ptr,dst_ptr + v.size(), (value_type)param); break;
+			 thrust::fill(dst_ptr,dst_ptr + v.size(), (V1)param); break;
 		 default:
 			 cuvAssert(false);
 	 }
@@ -219,17 +217,15 @@ namespace detail{
 	template<class V1, class V2, class M, class S1, class S2>
 	void apply_scalar_functor(tensor<V1, M>& dst, const tensor<V2, M>& src, const ScalarFunctor& sf, const int& numparams, const S1& p, const S2& p2){
 		cuvAssert(dst.size()==src.size());
-		typedef typename S::value_type SV;
-		typedef typename D::value_type DV;
 
-		typedef typename memspace_cuv2thrustptr<DV, typename D::memory_space_type>::ptr_type ptr_type1;
-		typedef typename memspace_cuv2thrustptr<SV, typename S::memory_space_type>::ptr_type ptr_type2;
+		typedef typename memspace_cuv2thrustptr<V1, M>::ptr_type ptr_type1;
+		typedef typename memspace_cuv2thrustptr<V2, M>::ptr_type ptr_type2;
 		ptr_type1 d_ptr(dst.ptr());
-		ptr_type2 s_ptr(const_cast<SV*>(src.ptr()));
+		ptr_type2 s_ptr(src.ptr());
 		if(numparams==2){
 			switch(sf){
-				case SF_TANH:      launch_unary_kernel(dst,src,make_bind2nd3rd(tf_tanh <DV>(),p,p2)); break;
-				case SF_DTANH:     launch_unary_kernel(dst,src,make_bind2nd3rd(tf_dtanh<DV>(),p,p2)); break;
+				case SF_TANH:      launch_unary_kernel(dst,src,make_bind2nd3rd(tf_tanh <V1>(),p,p2)); break;
+				case SF_DTANH:     launch_unary_kernel(dst,src,make_bind2nd3rd(tf_dtanh<V1>(),p,p2)); break;
 				default:
 						   cout << "No suitable two-parameter scalar functor was found." << endl;
 						   cuvAssert(false);
@@ -237,20 +233,20 @@ namespace detail{
 		}
 		else if(numparams==1){
 			switch(sf){
-				case SF_SIGM:      launch_unary_kernel(dst,src,make_bind2nd(bf_sigm_temp<DV,SV>(),p)); break;
-				case SF_ADD:       launch_unary_kernel(dst,src,make_bind2nd(thrust::plus<DV>(),p)); break;
-				case SF_MULT:      launch_unary_kernel(dst,src,make_bind2nd(thrust::multiplies<DV>(),p)); break;
-				case SF_DIV:       launch_unary_kernel(dst,src,make_bind2nd(thrust::divides<DV>(),p)); break;
-				case SF_SUBTRACT:  launch_unary_kernel(dst,src,make_bind2nd(thrust::minus<DV>(),p)); break;
-				case SF_MIN:       launch_unary_kernel(dst,src,make_bind2nd(bf_min<DV,SV,V>(),p)); break;
-				case SF_MAX:       launch_unary_kernel(dst,src,make_bind2nd(bf_max<DV,SV,V>(),p)); break;
-				case SF_RECT:      launch_unary_kernel(dst,src,make_bind2nd(bf_rect<DV,SV,V>(),p)); break;
-				case SF_DRECT:     launch_unary_kernel(dst,src,make_bind2nd(bf_drect<DV,SV,V>(),p)); break;
-				case SF_EQ:        launch_unary_kernel(dst,src,make_bind2nd(thrust::equal_to<SV>(),p)); break;
-				case SF_LT:        launch_unary_kernel(dst,src,make_bind2nd(thrust::less<SV>(),p)); break;
-				case SF_GT:        launch_unary_kernel(dst,src,make_bind2nd(thrust::greater<SV>(),p)); break;
-				case SF_LEQ:       launch_unary_kernel(dst,src,make_bind2nd(thrust::less_equal<SV>(),p)); break;
-				case SF_GEQ:       launch_unary_kernel(dst,src,make_bind2nd(thrust::greater_equal<SV>(),p)); break;
+				case SF_SIGM:      launch_unary_kernel(dst,src,make_bind2nd(bf_sigm_temp<V1,V2>(),p)); break;
+				case SF_ADD:       launch_unary_kernel(dst,src,make_bind2nd(thrust::plus<V1>(),p)); break;
+				case SF_MULT:      launch_unary_kernel(dst,src,make_bind2nd(thrust::multiplies<V1>(),p)); break;
+				case SF_DIV:       launch_unary_kernel(dst,src,make_bind2nd(thrust::divides<V1>(),p)); break;
+				case SF_SUBTRACT:  launch_unary_kernel(dst,src,make_bind2nd(thrust::minus<V1>(),p)); break;
+				case SF_MIN:       launch_unary_kernel(dst,src,make_bind2nd(bf_min<V1,V2,S1>(),p)); break;
+				case SF_MAX:       launch_unary_kernel(dst,src,make_bind2nd(bf_max<V1,V2,S1>(),p)); break;
+				case SF_RECT:      launch_unary_kernel(dst,src,make_bind2nd(bf_rect<V1,V2,S1>(),p)); break;
+				case SF_DRECT:     launch_unary_kernel(dst,src,make_bind2nd(bf_drect<V1,V2,S1>(),p)); break;
+				case SF_EQ:        launch_unary_kernel(dst,src,make_bind2nd(thrust::equal_to<V2>(),p)); break;
+				case SF_LT:        launch_unary_kernel(dst,src,make_bind2nd(thrust::less<V2>(),p)); break;
+				case SF_GT:        launch_unary_kernel(dst,src,make_bind2nd(thrust::greater<V2>(),p)); break;
+				case SF_LEQ:       launch_unary_kernel(dst,src,make_bind2nd(thrust::less_equal<V2>(),p)); break;
+				case SF_GEQ:       launch_unary_kernel(dst,src,make_bind2nd(thrust::greater_equal<V2>(),p)); break;
 				default:
 						   cout << "No suitable one-parameter scalar functor was found." << endl;
 						   cuvAssert(false);
@@ -258,22 +254,22 @@ namespace detail{
 		}
 		else if(numparams==0){
 			switch(sf){
-				case SF_EXP:        launch_unary_kernel(dst,src, uf_exp<DV,SV>()); break;
-				case SF_LOG:        launch_unary_kernel(dst,src, uf_log<DV,SV>()); break;
-				case SF_SIGN:       launch_unary_kernel(dst,src, uf_sign<DV,SV>()); break;
-				case SF_SIGM:       launch_unary_kernel(dst,src, uf_sigm<DV,SV>()); break;
-				case SF_DSIGM:      launch_unary_kernel(dst,src, uf_dsigm<DV,SV>()); break;
-				case SF_TANH:       launch_unary_kernel(dst,src, uf_tanh<DV,SV>()); break;
-				case SF_DTANH:      launch_unary_kernel(dst,src, uf_dtanh<DV,SV>()); break;
-				case SF_SQUARE:     launch_unary_kernel(dst,src, uf_square<DV,SV>()); break;
-				case SF_SUBLIN:     launch_unary_kernel(dst,src, uf_sublin<DV,SV>()); break;
-				case SF_ENERG:      launch_unary_kernel(dst,src, uf_energ<DV,SV>()); break;
-				case SF_INV:        launch_unary_kernel(dst,src, uf_inv<DV,SV>()); break;
-				case SF_SQRT:       launch_unary_kernel(dst,src, uf_sqrt<DV,SV>()); break;
-				case SF_SMAX:       launch_unary_kernel(dst,src, uf_smax<DV,SV>()); break;
-				case SF_NEGATE:     launch_unary_kernel(dst,src, thrust::negate<DV>()); break;
-				case SF_ABS:        launch_unary_kernel(dst,src, uf_abs<DV,SV>()); break;
-				case SF_POSLIN:     launch_unary_kernel(dst,src, uf_poslin<DV,SV>()); break;
+				case SF_EXP:        launch_unary_kernel(dst,src, uf_exp<V1,V2>()); break;
+				case SF_LOG:        launch_unary_kernel(dst,src, uf_log<V1,V2>()); break;
+				case SF_SIGN:       launch_unary_kernel(dst,src, uf_sign<V1,V2>()); break;
+				case SF_SIGM:       launch_unary_kernel(dst,src, uf_sigm<V1,V2>()); break;
+				case SF_DSIGM:      launch_unary_kernel(dst,src, uf_dsigm<V1,V2>()); break;
+				case SF_TANH:       launch_unary_kernel(dst,src, uf_tanh<V1,V2>()); break;
+				case SF_DTANH:      launch_unary_kernel(dst,src, uf_dtanh<V1,V2>()); break;
+				case SF_SQUARE:     launch_unary_kernel(dst,src, uf_square<V1,V2>()); break;
+				case SF_SUBLIN:     launch_unary_kernel(dst,src, uf_sublin<V1,V2>()); break;
+				case SF_ENERG:      launch_unary_kernel(dst,src, uf_energ<V1,V2>()); break;
+				case SF_INV:        launch_unary_kernel(dst,src, uf_inv<V1,V2>()); break;
+				case SF_SQRT:       launch_unary_kernel(dst,src, uf_sqrt<V1,V2>()); break;
+				case SF_SMAX:       launch_unary_kernel(dst,src, uf_smax<V1,V2>()); break;
+				case SF_NEGATE:     launch_unary_kernel(dst,src, thrust::negate<V1>()); break;
+				case SF_ABS:        launch_unary_kernel(dst,src, uf_abs<V1,V2>()); break;
+				case SF_POSLIN:     launch_unary_kernel(dst,src, uf_poslin<V1,V2>()); break;
 				case SF_COPY:       thrust::copy(s_ptr, s_ptr+src.size(), d_ptr); break;
 				default:
 						    cout << "No suitable no-parameter scalar functor was found." << endl;
@@ -291,48 +287,45 @@ namespace detail{
 	  void apply_binary_functor(tensor<V1, M>& dst,const tensor<V2, M>& src1, const tensor<V3, M>& src2, const BinaryFunctor& bf, const int& numparams, const S1& p, const S2& p2){
 		cuvAssert(dst.size() == src1.size());
 		cuvAssert(dst.size() == src2.size());
-		typedef typename D::value_type  DV;
-		typedef typename S1::value_type S1V;
-		typedef typename S2::value_type S2V;
-		typedef typename memspace_cuv2thrustptr<DV, typename  D::memory_space_type>::ptr_type ptr_type1;
-		typedef typename memspace_cuv2thrustptr<S1V,typename S1::memory_space_type>::ptr_type ptr_type2;
-		typedef typename memspace_cuv2thrustptr<S2V,typename S2::memory_space_type>::ptr_type ptr_type3;
+		typedef typename memspace_cuv2thrustptr<V1, M>::ptr_type ptr_type1;
+		typedef typename memspace_cuv2thrustptr<V2,M>::ptr_type ptr_type2;
+		typedef typename memspace_cuv2thrustptr<V3,M>::ptr_type ptr_type3;
 		ptr_type1 d_ptr(dst.ptr());
-		ptr_type2 s1_ptr(const_cast<S1V*>(src1.ptr()));
-		ptr_type2 s2_ptr(const_cast<S2V*>(src2.ptr()));
+		ptr_type2 s1_ptr(src1.ptr());
+		ptr_type2 s2_ptr(src2.ptr());
 		if(numparams==0){
 #if USE_THRUST_LAUNCHER 
 			switch(bf){
-				case BF_ADD:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_plus<DV,S1V,S2V>()); break;
-				case BF_SUBTRACT: thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_minus<DV,S1V,S2V>()); break;
-				case BF_MULT:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_multiplies<DV,S1V,S2V>()); break;
-				case BF_DIV:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_divides<DV,S1V,S2V>()); break;
-				case BF_MIN:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_min<DV,S1V,S2V>()); break;
-				case BF_MAX:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_max<DV,S1V,S2V>()); break;
-				case BF_ATAN2:    thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_atan2<DV,S1V,S2V>()); break;
-				case BF_NORM:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_norm<DV,S1V,S2V>()); break;
+				case BF_ADD:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_plus<V1,V2,V3>()); break;
+				case BF_SUBTRACT: thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_minus<V1,V2,V3>()); break;
+				case BF_MULT:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_multiplies<V1,V2,V3>()); break;
+				case BF_DIV:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_divides<V1,V2,V3>()); break;
+				case BF_MIN:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_min<V1,V2,V3>()); break;
+				case BF_MAX:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_max<V1,V2,V3>()); break;
+				case BF_ATAN2:    thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_atan2<V1,V2,V3>()); break;
+				case BF_NORM:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_norm<V1,V2,V3>()); break;
 				default: cuvAssert(false);
 			}
 #else
 			dim3 blocks, threads;
 			setLinearGridAndThreads(blocks,threads,v.size());
 			switch(bf){
-				case BF_ADD:      launch_binary_kernel(v,w,bf_plus<DV,S1V,S2V>()); break;
-				case BF_SUBTRACT: launch_binary_kernel(v,w,bf_minus<DV,S1V,S2V>()); break;
-				case BF_MULT:     launch_binary_kernel(v,w,bf_multiplies<DV,S1V,S2V>()); break;
-				case BF_DIV:      launch_binary_kernel(v,w,bf_divides<DV,S1V,S2V>()); break;
-				case BF_MIN:      launch_binary_kernel(v,w,bf_min<DV,S1V,S2V>()); break;
-				case BF_MAX:      launch_binary_kernel(v,w,bf_max<DV,S1V,S2V>()); break;
-				case BF_ATAN2:    launch_binary_kernel(v,w,bf_atan2<DV,S1V,S2V>()); break;
-				case BF_NORM:    launch_binary_kernel(v,w,bf_norm<DV,S1V,S2V>()); break;
+				case BF_ADD:      launch_binary_kernel(v,w,bf_plus<V1,V2,V3>()); break;
+				case BF_SUBTRACT: launch_binary_kernel(v,w,bf_minus<V1,V2,V3>()); break;
+				case BF_MULT:     launch_binary_kernel(v,w,bf_multiplies<V1,V2,V3>()); break;
+				case BF_DIV:      launch_binary_kernel(v,w,bf_divides<V1,V2,V3>()); break;
+				case BF_MIN:      launch_binary_kernel(v,w,bf_min<V1,V2,V3>()); break;
+				case BF_MAX:      launch_binary_kernel(v,w,bf_max<V1,V2,V3>()); break;
+				case BF_ATAN2:    launch_binary_kernel(v,w,bf_atan2<V1,V2,V3>()); break;
+				case BF_NORM:    launch_binary_kernel(v,w,bf_norm<V1,V2,V3>()); break;
 				default: cuvAssert(false);
 			}
 #endif
 		}else if(numparams==1){
 #if USE_THRUST_LAUNCHER
 			switch(bf){
-				case BF_AXPY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_axpy<DV,S1V,S2V>(p)); break;
-				case BF_XPBY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_xpby<DV,S1V,S2V>(p)); break;
+				case BF_AXPY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_axpy<V1,V2,V3>(p)); break;
+				case BF_XPBY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_xpby<V1,V2,V3>(p)); break;
 						  /*case BF_XPBY:     cublasSaxpy(v.size(), param, (float*)w.ptr(), 1, (float*)v.ptr(), 1) ; break;*/
 				default: cuvAssert(false);
 			}
@@ -340,22 +333,22 @@ namespace detail{
 			dim3 blocks, threads;
 			setLinearGridAndThreads(blocks,threads,v.size());
 			switch(bf){
-				case BF_AXPY:     launch_binary_kernel(dst,src1,src2,bf_axpy<DV,S1V,S2V>(p)); break;
-				case BF_XPBY:     launch_binary_kernel(dst,src1,src2,bf_xpby<DV,S1V,S2V>(p)); break;
+				case BF_AXPY:     launch_binary_kernel(dst,src1,src2,bf_axpy<V1,V2,V3>(p)); break;
+				case BF_XPBY:     launch_binary_kernel(dst,src1,src2,bf_xpby<V1,V2,V3>(p)); break;
 				default: cuvAssert(false);
 			}
 #endif
 		}else if(numparams==2){
 #if USE_THRUST_LAUNCHER
 			switch(bf){
-				case BF_AXPBY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_axpby<DV,S1V,S2V>(p,p2)); break;
+				case BF_AXPBY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_axpby<V1,V2,V3>(p,p2)); break;
 				default: cuvAssert(false);
 			}
 #else
 			dim3 blocks, threads;
 			setLinearGridAndThreads(blocks,threads,v.size());
 			switch(bf){
-				case BF_AXPBY:     launch_binary_kernel(dst,src1,src2,bf_axpby<DV,S1V,S2V>(p,p2)); break;
+				case BF_AXPBY:     launch_binary_kernel(dst,src1,src2,bf_axpby<V1,V2,V3>(p,p2)); break;
 				default: cuvAssert(false);
 			}
 #endif
