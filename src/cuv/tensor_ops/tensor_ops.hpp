@@ -193,13 +193,13 @@ namespace cuv{
    * @param param	scalar parameter 
    * 
    */
-  template<class __value_type, class __memory_space_type>
+  template<class V1, class M, class S>
   void
-  apply_0ary_functor(tensor<__value_type, __memory_space_type>& v, const NullaryFunctor& sf, const __value_type& param);
+  apply_0ary_functor(tensor<V1, M>& v, const NullaryFunctor& sf, const S& param);
 
-  template<class __value_type, class __memory_space_type>
-  void apply_0ary_functor(tensor<__value_type, __memory_space_type, column_major>& v, const NullaryFunctor& sf, const __value_type& param){
-      apply_0ary_functor(* reinterpret_cast<tensor<__value_type, __memory_space_type, row_major>* >(&v), sf, param);
+  template<class V1, class M, class S>
+  void apply_0ary_functor(tensor<V1, M, column_major>& v, const NullaryFunctor& sf, const S& param){
+      apply_0ary_functor(* reinterpret_cast<tensor<V1, M, row_major>* >(&v), sf, param);
   }
   // convenience wrappers
   /** 
@@ -232,12 +232,12 @@ namespace cuv{
    * @{
    */
   namespace detail{
-	  template<class V, class M>
-	  void apply_scalar_functor(tensor<V, M>&, const tensor<V, M>&, const ScalarFunctor& sf, const int& numparams=0, const V& p=V(), const V& p2=V());
+	  template<class V1, class V2, class M, class S1, class S2>
+	  void apply_scalar_functor(tensor<V1, M>&, const tensor<V2, M>&, const ScalarFunctor& sf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2());
 
-          template<class V, class M>
-          void apply_scalar_functor(tensor<V, M, column_major>& dst, const tensor<V, M, column_major>& src, const ScalarFunctor& sf, const int& numparams=0, const V& p=V(), const V& p2=V()){
-              appl_scalar_functor(*static_cast<tensor<V, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V, M, row_major>*>(&src), sf, numparams, p, p2); 
+	  template<class V1, class V2, class M, class S1, class S2>
+          void apply_scalar_functor(tensor<V1, M, column_major>& dst, const tensor<V2, M, column_major>& src, const ScalarFunctor& sf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2()){
+              appl_scalar_functor(*static_cast<tensor<V1, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V2, M, row_major>*>(&src), sf, numparams, p, p2); 
           }
   }
 
@@ -290,11 +290,11 @@ namespace cuv{
    * @{
    */
   namespace detail{
-	  template<class V, class M>
-	  void apply_binary_functor(tensor<V, M>&,const tensor<V, M>&, const tensor<V, M>&, const BinaryFunctor& bf, const int& numparams=0, const V& p=V(), const V& p2=V());
-          template<class V, class M>
-	  void apply_binary_functor(tensor<V, M, column_major>& dst, const tensor<V, M, column_major>& src1, const tensor<V, M, column_major>& src2, const BinaryFunctor& bf, const int& numparams=0, const V& p=V(), const V& p2=V()){
-              apply_binary_functor(*reinterpret_cast<tensor<V, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V, M, row_major>*>(&src1), * reinterpret_cast<const tensor<V, M, row_major>*>(&src2), bf, numparams, p, p2); 
+	  template<class V1, class V2, class V3, class M, class S1, class S2>
+	  void apply_binary_functor(tensor<V1, M>&,const tensor<V2, M>&, const tensor<V3, M>&, const BinaryFunctor& bf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2());
+	  template<class V1, class V2, class V3, class M, class S1, class S2>
+	  void apply_binary_functor(tensor<V1, M, column_major>& dst, const tensor<V2, M, column_major>& src1, const tensor<V3, M, column_major>& src2, const BinaryFunctor& bf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2()){
+              apply_binary_functor(*reinterpret_cast<tensor<V1, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V2, M, row_major>*>(&src1), * reinterpret_cast<const tensor<V3, M, row_major>*>(&src2), bf, numparams, p, p2); 
           }
   }
   /// @brief in-place, no parameters
