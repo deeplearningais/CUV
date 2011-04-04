@@ -362,103 +362,93 @@ namespace detail{
 /*
  * Reductions
  */
-template<class __tensor_type>
+template<class __value_type, class __memory_space_type>
 bool
-has_inf(const __tensor_type& v){
-	typedef typename __tensor_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
-	uf_is_inf<value_type> uo;
+has_inf(const tensor<__value_type, __memory_space_type>& v){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(const_cast<__value_type*>(v.ptr()));
+	uf_is_inf<__value_type> uo;
 	return  thrust::any_of(v_ptr, v_ptr+v.size(), uo);
 }
-template<class __tensor_type>
+template<class __value_type, class __memory_space_type>
 bool
-has_nan(const __tensor_type& v){
-	typedef typename __tensor_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
-	uf_is_nan<value_type> uo;
+has_nan(const tensor<__value_type, __memory_space_type>& v){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(const_cast<__value_type*>(v.ptr()));
+	uf_is_nan<__value_type> uo;
 	return  thrust::any_of(v_ptr, v_ptr+v.size(), uo);
 }
-template<class __tensor_type>
+template<class __value_type, class __memory_space_type>
 float
-norm2(const __tensor_type& v){
-	typedef typename __tensor_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
+norm2(const tensor<__value_type, __memory_space_type>& v){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(const_cast<__value_type*>(v.ptr()));
 	float init=0;
-	return  std::sqrt( thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_square<float,value_type>(), init, bf_plus<float,float,value_type>()) );
+	return  std::sqrt( thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_square<float,__value_type>(), init, bf_plus<float,float,__value_type>()) );
 }
-template<class __tensor_type>
+template<class __value_type, class __memory_space_type>
 float
-norm1(const __tensor_type& v){
-	typedef typename __tensor_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
+norm1(const tensor<__value_type, __memory_space_type>& v){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(const_cast<__value_type*>(v.ptr()));
 	float init=0;
-	uf_abs<float,value_type> unary_op;
-	bf_plus<float,float,value_type> binary_op;
+	uf_abs<float,__value_type> unary_op;
+	bf_plus<float,float,__value_type> binary_op;
 	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), unary_op, init, binary_op);
 }
-template<class __tensor_type>
+template<class __value_type, class __memory_space_type>
 float
-sum(const __tensor_type& v){
-	typedef typename __tensor_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
+sum(const tensor<__value_type, __memory_space_type>& v){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(const_cast<__value_type*>(v.ptr()));
 	float init=0.0;
-	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,float,value_type>());
+	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,float,__value_type>());
 }
-template<class __tensor_type>
+template<class __value_type, class __memory_space_type>
 float
-maximum(const __tensor_type& v){
-	typedef typename __tensor_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
+maximum(const tensor<__value_type, __memory_space_type>& v){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(const_cast<__value_type*>(v.ptr()));
 	float init=-INT_MAX;
-	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_max<float,float,value_type>());
+	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_max<float,float,__value_type>());
 }
-template<class __tensor_type>
+template<class __value_type, class __memory_space_type>
 float
-minimum(const __tensor_type& v){
-	typedef typename __tensor_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
+minimum(const tensor<__value_type, __memory_space_type>& v){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(const_cast<__value_type*>(v.ptr()));
 	float init=INT_MAX;
-	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_min<float,float,value_type>());
+	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_min<float,float,__value_type>());
 }
-template<class __tensor_type>
+template<class __value_type, class __memory_space_type>
 float
-mean(const __tensor_type& v){
+mean(const tensor<__value_type, __memory_space_type>& v){
 	return   sum(v) / (float)v.size();
 }
-template<class __tensor_type>
+template<class __value_type, class __memory_space_type>
 float
-var(const __tensor_type& v){
-	typedef typename __tensor_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type v_ptr(const_cast<value_type*>(v.ptr()));
+var(const tensor<__value_type, __memory_space_type>& v){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(const_cast<__value_type*>(v.ptr()));
 	float init=0;
 	float m = mean(v);
 	return   thrust::transform_reduce(v_ptr, v_ptr+v.size(), 
-			make_bind2nd(bf_squared_diff<float,value_type,float>(),m),  // result, tensor-type, mean-type
+			make_bind2nd(bf_squared_diff<float,__value_type,float>(),m),  // result, tensor-type, mean-type
 			init, bf_plus<float,float,float>()) / (float)v.size();
 }
-template<class __tensor_type>
-typename __tensor_type::index_type
-arg_max(const __tensor_type& v){
-	typedef typename __tensor_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type begin(const_cast<value_type*>(v.ptr()));
+template<class __value_type, class __memory_space_type>
+typename tensor<__value_type, __memory_space_type>::index_type
+arg_max(const tensor<__value_type, __memory_space_type>& v){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type begin(const_cast<__value_type*>(v.ptr()));
 	ptr_type elem = thrust::max_element(begin, begin	+v.size());
 	return thrust::distance(begin,elem);
 }
-template<class __tensor_type>
-typename __tensor_type::index_type
-arg_min(const __tensor_type& v){
-	typedef typename __tensor_type::value_type value_type;
-	typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
-	ptr_type begin(const_cast<value_type*>(v.ptr()));
+template<class __value_type, class __memory_space_type>
+typename tensor<__value_type, __memory_space_type>::index_type
+arg_min(const tensor<__value_type, __memory_space_type>& v){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type begin(const_cast<__value_type*>(v.ptr()));
 	ptr_type elem = thrust::min_element(begin, begin	+v.size());
 	return thrust::distance(begin,elem);
 }
