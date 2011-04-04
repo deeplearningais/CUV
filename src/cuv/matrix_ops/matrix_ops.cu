@@ -388,30 +388,30 @@ namespace matrix_plus_vector_impl {
 }
 
 // ====================  col ======================
-template<class __matrix_type, class __tensor_type>
-void matrix_plus_col(__matrix_type& A, const __tensor_type& v) {
-	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::plus<typename __matrix_type::value_type>());
+template<class __value_type, class __memory_space_type, class __memory_layout_type>
+void matrix_plus_col(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::plus<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
 }
-template<class __matrix_type, class __tensor_type>
-void matrix_times_col(__matrix_type& A, const __tensor_type& v) {
-	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<typename __matrix_type::value_type>());
+template<class __value_type, class __memory_space_type, class __memory_layout_type>
+void matrix_times_col(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
 }
-template<class __matrix_type, class __tensor_type>
-void matrix_divide_col(__matrix_type& A, const __tensor_type& v) {
-	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::divides<typename __matrix_type::value_type>());
+template<class __value_type, class __memory_space_type, class __memory_layout_type>
+void matrix_divide_col(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::divides<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
 }
 // ====================  row ======================
-template<class __matrix_type, class __tensor_type>
-void matrix_plus_row(__matrix_type& A, const __tensor_type& v) {
-	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::plus<typename __matrix_type::value_type>());
+template<class __value_type, class __memory_space_type, class __memory_layout_type>
+void matrix_plus_row(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::plus<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
 }
-template<class __matrix_type, class __tensor_type>
-void matrix_times_row(__matrix_type& A, const __tensor_type& v) {
-	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::multiplies<typename __matrix_type::value_type>());
+template<class __value_type, class __memory_space_type, class __memory_layout_type>
+void matrix_times_row(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::multiplies<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
 }
-template<class __matrix_type, class __tensor_type>
-void matrix_divide_row(__matrix_type& A, const __tensor_type& v) {
-	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::divides<typename __matrix_type::value_type>());
+template<class __value_type, class __memory_space_type, class __memory_layout_type>
+void matrix_divide_row(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::divides<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
 }
 
 namespace transpose_impl{
@@ -535,8 +535,8 @@ INSTANTIATE_TRANSPOSED_VIEW(float,unsigned int);
 
 INSTANTIATE_MV(float, float, column_major);
 INSTANTIATE_MV(float, float, row_major);
-INSTANTIATE_MV(float, unsigned char, column_major);
-INSTANTIATE_MV(float, unsigned char, row_major);
+/*INSTANTIATE_MV(float, unsigned char, column_major);*/
+/*INSTANTIATE_MV(float, unsigned char, row_major);*/
 
 INSTANTIATE_BLOCKVIEW(float,column_major,unsigned int);
 INSTANTIATE_BLOCKVIEW(float,row_major,unsigned int);
