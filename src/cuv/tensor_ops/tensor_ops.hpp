@@ -246,27 +246,29 @@ namespace cuv{
   void
   apply_scalar_functor(D& v, const ScalarFunctor& sf){
 	  typedef typename D::value_type V;
-	  detail::apply_scalar_functor(v,v,sf);
+	  detail::apply_scalar_functor(v,v,sf,0,V(),V());
   }
   /// @brief no parameters
   template<class D, class S>
   void
   apply_scalar_functor(D& dst, const S& src, const ScalarFunctor& sf){
 	  typedef typename S::value_type V;
-	  detail::apply_scalar_functor(dst,src,sf);
+	  detail::apply_scalar_functor(dst,src,sf,0,V(),V());
   }
 
   /// @brief in-place, one parameter
   template<class D>
   void
   apply_scalar_functor(D& dst,const ScalarFunctor& sf, const typename D::value_type& p){
-	  detail::apply_scalar_functor(dst,dst,sf,1,p);
+	  typedef typename D::value_type V;
+	  detail::apply_scalar_functor(dst,dst,sf,1,p,V());
   }
   /// @brief one parameter
   template<class D, class S>
   void
   apply_scalar_functor(D& dst,const S& src, const ScalarFunctor& sf, const typename S::value_type& p){
-	  detail::apply_scalar_functor(dst,src,sf,1,p);
+	  typedef typename S::value_type V;
+	  detail::apply_scalar_functor(dst,src,sf,1,p,V());
   }
   
   /// @brief in-place, two parameters
