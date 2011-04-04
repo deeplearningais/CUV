@@ -42,8 +42,8 @@
 using namespace boost::python;
 using namespace cuv;
 
-void export_vector();
-void export_vector_ops();
+void export_tensor();
+void export_tensor_ops();
 void export_dense_matrix();
 void export_cuda_array();
 void export_matrix_ops();
@@ -57,23 +57,23 @@ void export_libs_kmeans();
 void export_libs_kernels();
 
 BOOST_PYTHON_MODULE(_cuv_python){
-	def("initCUDA", initCUDA);
-	def("exitCUDA", exitCUDA);
-	def("safeThreadSync", safeThreadSync);
-	def("initialize_mersenne_twister_seeds", initialize_mersenne_twister_seeds);
-	export_vector();
-	export_vector_ops();
-	export_dense_matrix();
-	export_cuda_array();
-	export_matrix_ops();
-	export_random();
-	export_dia_matrix();
-	export_convolution_ops();
-	export_image_ops();
-	export_tools();
-	export_libs_rbm();
-	export_libs_kmeans();
-	export_libs_kernels();
+        def("initCUDA", initCUDA);
+        def("exitCUDA", exitCUDA);
+        def("safeThreadSync", safeThreadSync);
+        def("initialize_mersenne_twister_seeds", initialize_mersenne_twister_seeds);
+        export_tensor();
+        export_tensor_ops();
+        export_dense_matrix();
+        export_cuda_array();
+        export_matrix_ops();
+        export_random();
+        export_dia_matrix();
+        export_convolution_ops();
+        export_image_ops();
+        export_tools();
+        export_libs_rbm();
+        export_libs_kmeans();
+        export_libs_kernels();
 }
 
 

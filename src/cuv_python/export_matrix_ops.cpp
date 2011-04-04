@@ -50,22 +50,22 @@ using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
 template<class VT, class MST, class IT>
-boost::python::tuple matrix_arg_max(dense_matrix<VT, row_major, MST, IT>& mat){
+boost::python::tuple matrix_arg_max(dense_matrix<VT, MST, row_major, IT>& mat){
 	IT idx = arg_max(mat.vec());	
 	return boost::python::make_tuple(idx / mat.w(), idx % mat.w());
 }
 template<class VT, class MST, class IT>
-boost::python::tuple matrix_arg_max(dense_matrix<VT, column_major, MST, IT>& mat){
+boost::python::tuple matrix_arg_max(dense_matrix<VT, MST, column_major, IT>& mat){
 	IT idx = arg_max(mat.vec());	
 	return boost::python::make_tuple(idx % mat.h(), idx / mat.h());
 }
 template<class VT, class MST, class IT>
-boost::python::tuple matrix_arg_min(dense_matrix<VT, row_major, MST, IT>& mat){
+boost::python::tuple matrix_arg_min(dense_matrix<VT, MST, row_major, IT>& mat){
 	IT idx = arg_min(mat.vec());	
 	return boost::python::make_tuple(idx / mat.w(), idx % mat.w());
 }
 template<class VT, class MST, class IT>
-boost::python::tuple matrix_arg_min(dense_matrix<VT, column_major, MST, IT>& mat){
+boost::python::tuple matrix_arg_min(dense_matrix<VT, MST, column_major, IT>& mat){
 	IT idx = arg_min(mat.vec());	
 	return boost::python::make_tuple(idx % mat.h(), idx / mat.h());
 }
@@ -204,12 +204,12 @@ void export_pooling(){
 
 template <class V, class MS>
 void export_argmax_vec(){
-	typedef dense_matrix<V,column_major,MS> Mc;
-	typedef dense_matrix<V,row_major,MS> Mr;
-	typedef vector<int,MS> Vecint;
+	typedef dense_matrix<V,MS,column_major> Mc;
+	typedef dense_matrix<V,MS,row_major> Mr;
+	typedef tensor<int,MS> Vecint;
 	def("argmax_to_row",  (void (*)(Vecint&,const Mc&)) argmax_to_row<Vecint, Mc>);
 	def("argmax_to_col",  (void (*)(Vecint&,const Mr&)) argmax_to_column<Vecint, Mr>);
-	typedef vector<float,MS> Vecf;
+	typedef tensor<float,MS> Vecf;
 	def("argmax_to_row",  (void (*)(Vecf&,const Mc&)) argmax_to_row<Vecf, Mc>);
 	def("argmax_to_col",  (void (*)(Vecf&,const Mr&)) argmax_to_column<Vecf, Mr>);
 }
@@ -288,8 +288,8 @@ export_transpose(){
 template<class V, class T, class I>
 void
 export_transposed_view(){
-	typedef dense_matrix<V,row_major,T,I> M;
-	typedef dense_matrix<V,column_major,T,I> N;
+	typedef dense_matrix<V,T,row_major,I> M;
+	typedef dense_matrix<V,T,column_major,I> N;
 	def("transposed_view", (M*(*)(N&))transposed_view<V,T,I>,return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 	def("transposed_view", (N*(*)(M&))transposed_view<V,T,I>,return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 }
@@ -319,21 +319,21 @@ void export_matrix_ops(){
         .value("ADDEXP", RF_ADDEXP)
         .value("MULT", RF_MULT)
         ;
-	typedef dense_matrix<float,column_major,dev_memory_space> fdev;
-	typedef dense_matrix<float,column_major,host_memory_space> fhost;
+	typedef dense_matrix<float,dev_memory_space,column_major> fdev;
+	typedef dense_matrix<float,host_memory_space,column_major> fhost;
 	typedef dense_matrix<float,row_major,host_memory_space> fhostr;
-	typedef dense_matrix<float,row_major,dev_memory_space> fdevr;
-	typedef dense_matrix<unsigned char,column_major,dev_memory_space> udev;
-	typedef dense_matrix<unsigned char,column_major,host_memory_space> uhost;
-	typedef dense_matrix<int,column_major,dev_memory_space> idev;
-	typedef dense_matrix<int,column_major,host_memory_space> ihost;
-	typedef dense_matrix<unsigned int,column_major,dev_memory_space> uidev;
-	typedef dense_matrix<unsigned int,column_major,host_memory_space> uihost;
-	typedef dense_matrix<unsigned int,row_major,dev_memory_space> uidevr;
+	typedef dense_matrix<float,dev_memory_space,row_major> fdevr;
+	typedef dense_matrix<unsigned char,dev_memory_space,column_major> udev;
+	typedef dense_matrix<unsigned char,host_memory_space,column_major> uhost;
+	typedef dense_matrix<int,dev_memory_space,column_major> idev;
+	typedef dense_matrix<int,host_memory_space,column_major> ihost;
+	typedef dense_matrix<unsigned int,dev_memory_space,column_major> uidev;
+	typedef dense_matrix<unsigned int,host_memory_space,column_major> uihost;
+	typedef dense_matrix<unsigned int,dev_memory_space,row_major> uidevr;
 	typedef dense_matrix<unsigned int,row_major,host_memory_space> uihostr;
-	typedef dense_matrix<unsigned char,column_major,dev_memory_space> ucdev;
-	typedef dense_matrix<unsigned char,column_major,host_memory_space> uchost;
-	typedef dense_matrix<unsigned char,row_major,dev_memory_space> ucdevr;
+	typedef dense_matrix<unsigned char,dev_memory_space,column_major> ucdev;
+	typedef dense_matrix<unsigned char,host_memory_space,column_major> uchost;
+	typedef dense_matrix<unsigned char,dev_memory_space,row_major> ucdevr;
 	typedef dense_matrix<unsigned char,row_major,host_memory_space> uchostr;
 
 	export_blas3<fdev,fdev,fdev>();
@@ -404,7 +404,7 @@ void export_matrix_ops(){
 	export_transposed_view<float,host_memory_space,unsigned int>();
 	export_transposed_view<float,dev_memory_space,unsigned int>();
 
-	export_multinomial_sampling<dense_matrix<float,row_major,dev_memory_space> >();
+	export_multinomial_sampling<dense_matrix<float,dev_memory_space,row_major> >();
 
 }
 

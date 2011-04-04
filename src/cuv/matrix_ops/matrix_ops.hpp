@@ -34,7 +34,6 @@
 #ifndef __MATRIX_OPS_HPP__
 #define __MATRIX_OPS_HPP__
 
-#include <cuv/basics/vector.hpp>
 #include <cuv/basics/dense_matrix.hpp>
 
 namespace cuv{
@@ -76,8 +75,8 @@ namespace cuv{
    *	 dst= factOld * dst + factNew * rf(src)
    *	 By default, the reduce functor is RF_ADD so that rf(src) is the sum over all columns of src.
    */
-  template<class __matrix_type, class __vector_type> 
-	  void reduce_to_col(__vector_type& dst, const __matrix_type& src, reduce_functor rf=RF_ADD, const typename __matrix_type::value_type& factNew=1.f, const typename __matrix_type::value_type& factOld=0.f);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void reduce_to_col(tensor<__value_type, __memory_space_type>& dst, const dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& src, reduce_functor rf=RF_ADD, const __value_type& factNew=1.f, const __value_type& factOld=0.f);
 
   /** 
    * @brief Reduce a matrix to one row using specified reduce functor (or add them up by default)
@@ -92,8 +91,8 @@ namespace cuv{
    *	 dst= factOld * dst + factNew * rf(src)
    *	 By default, the reduce functor is RF_ADD so that rf(src) is the sum over all rows of src.
    */
-  template<class __matrix_type, class __vector_type> 
-	  void reduce_to_row(__vector_type& dst, const __matrix_type& src, reduce_functor rf=RF_ADD, const typename __matrix_type::value_type& factNew=1.f, const typename __matrix_type::value_type& factOld=0.f);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void reduce_to_row(tensor<__value_type, __memory_space_type>& dst, const dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& src, reduce_functor rf=RF_ADD, const __value_type& factNew=1.f, const __value_type& factOld=0.f);
 
   /** 
    * @brief Write the index of the maximum for each column of a matrix into a vector
@@ -101,8 +100,8 @@ namespace cuv{
    * @param dst Destination vector, dst.size = src.h()
    * @param src Source matrix 
    */
-  template<class __vector_type, class __matrix_type>
-	  void argmax_to_row(__vector_type& dst, const __matrix_type& src);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void argmax_to_row(tensor<__value_type, __memory_space_type>& dst, const dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& src);
 
   /** 
    * @brief Write the index of the maximum for each row of a matrix into a vector
@@ -111,8 +110,8 @@ namespace cuv{
    * @param src Source matrix
    * 
    */
-  template<class __vector_type, class __matrix_type>
-	  void argmax_to_column(__vector_type& dst, const __matrix_type& src);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void argmax_to_column(tensor<__value_type, __memory_space_type>& dst, const dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& src);
 
  /** @} */ // end of group reductions
 
@@ -182,8 +181,8 @@ namespace cuv{
    * In the above transA(A)*transB(B) is the matrix product and all other operations are pointwise.
    * This is a thin wrapper of CUBLAS.
    */
-  template<class __matrix_type, class __matrix_type2, class __matrix_type3>
-	  void prod(__matrix_type& dst, __matrix_type2& A, __matrix_type3& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
+  template<class __matrix_type, class __matrix_type1, class __matrix_type2>
+	  void prod(__matrix_type C, __matrix_type1 A, __matrix_type2 B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
 
   /** @} */ // end group blas3
 
@@ -209,8 +208,8 @@ namespace cuv{
    *	Here transA(A) is the transpose of A if transA = 't' and transA(A) is A if transA = 'n'.
    *	transA(A)*v is the matrix-vector product and all other operations are pointwise.
    */
-  template<class __matrix_type, class __vector_type>
-	  void spmv(__vector_type& dst, __matrix_type& A, __vector_type& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void spmv(tensor<__value_type, __memory_space_type>& dst, dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, tensor<__value_type, __memory_space_type>& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
   
   /** 
    * @brief Add a vector to each column of a matrix A.
@@ -219,8 +218,8 @@ namespace cuv{
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __matrix_type, class __vector_type>
-	  void matrix_plus_col(__matrix_type& A, const __vector_type& v);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void matrix_plus_col(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Multiply each column of a matrix A pointwise with a vector v.
@@ -229,8 +228,8 @@ namespace cuv{
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __matrix_type, class __vector_type>
-	  void matrix_times_col(__matrix_type& A, const __vector_type& v);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void matrix_times_col(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Devide each column of a matrix A pointwise by a vector v.
@@ -239,8 +238,8 @@ namespace cuv{
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __matrix_type, class __vector_type>
-	  void matrix_divide_col(__matrix_type& A, const __vector_type& v);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void matrix_divide_col(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Add a vector to each row of a matrix A.
@@ -249,8 +248,8 @@ namespace cuv{
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __matrix_type, class __vector_type>
-	  void matrix_plus_row(__matrix_type& A, const __vector_type& v);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void matrix_plus_row(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Multiply each row of a matrix A pointwise with a vector v.
@@ -259,8 +258,8 @@ namespace cuv{
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __matrix_type, class __vector_type>
-	  void matrix_times_row(__matrix_type& A, const __vector_type& v);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void matrix_times_row(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Devide each row of a matrix A pointwise by a vector v.
@@ -269,8 +268,8 @@ namespace cuv{
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __matrix_type, class __vector_type>
-	  void matrix_divide_row(__matrix_type& A, const __vector_type& v);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void matrix_divide_row(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Transpose a matrix
@@ -279,7 +278,7 @@ namespace cuv{
    * @param src Source matrix 
    * 
    */
-  template<class __matrix_type> void transpose(__matrix_type&  dst, const __matrix_type&  src);
+  template<class __matrix_type > void transpose(__matrix_type&  dst, const __matrix_type&  src);
 
   /** 
    * @brief Transpose a matrix by creating a view with different storage

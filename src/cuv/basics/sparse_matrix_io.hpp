@@ -54,11 +54,11 @@ namespace cuv{
 	 * @param v  the vector to serialize
 	 * @param version not used
 	 */
-	template<class Archive, class value_type, class index_type>
-		void serialize(Archive& ar, cuv::vector<value_type,host_memory_space,index_type>& v, const unsigned int version){
-			ar & v.m_size;
+	template<class Archive, class value_type>
+		void serialize(Archive& ar, cuv::tensor<value_type,host_memory_space>& v, const unsigned int version){
+			ar & v.memsize;
 			if(!v.ptr())
-				v.alloc();
+				v.allocate();
 			ar & boost::serialization::make_array(v.ptr(),v.size());
 		}
 

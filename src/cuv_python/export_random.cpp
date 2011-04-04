@@ -35,7 +35,7 @@
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
-#include  <boost/type_traits/is_base_of.hpp>
+#include <boost/type_traits/is_base_of.hpp>
 
 #include <cuv/basics/dense_matrix.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
@@ -67,8 +67,8 @@ void export_functions() {
 }
 
 void export_random(){
-	typedef dense_matrix<float,column_major,dev_memory_space> fdev;
-	typedef dense_matrix<float,column_major,host_memory_space> fhost;
+	typedef dense_matrix<float,dev_memory_space,column_major> fdev;
+	typedef dense_matrix<float,host_memory_space,column_major> fhost;
 	export_functions<fdev>();
 	export_functions<fhost>();
 	}

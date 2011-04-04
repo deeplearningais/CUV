@@ -35,9 +35,9 @@
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
-#include  <boost/type_traits/is_base_of.hpp>
-#include <cuv/basics/vector.hpp>
+#include <boost/type_traits/is_base_of.hpp>
 #include <cuv/basics/dense_matrix.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/convert/convert.hpp>
 
@@ -69,8 +69,8 @@ struct ublas2matrix_traits<boost::numeric::ublas::row_major >    { typedef cuv::
  * Create RM view of CM matrix
  */
 template<class V, class T, class I>
-dense_matrix<V,row_major,T,I>*
-	make_rm_view(dense_matrix<V,column_major,T,I> &m,int h, int w){
+dense_matrix<V,T,row_major,I>*
+	make_rm_view(dense_matrix<V,T,column_major,I> &m,int h, int w){
 	if (w==-1) {
 		w=m.h();
 		}
@@ -78,7 +78,7 @@ dense_matrix<V,row_major,T,I>*
 		h=m.w();
 	}
 	cuvAssert(w*h==m.h()*m.w());
-	return new dense_matrix<V,row_major,T,I>(h,w,m.ptr(),true);
+	return new dense_matrix<V,T,row_major,I>(h,w,m.ptr(),true);
 }
 
 template<class V, class T, class I>
@@ -90,8 +90,8 @@ void export_rm_view(){
  * Create CM view of RM matrix
  */
 template<class V, class T,class I>
-dense_matrix<V,column_major,T,I>*
-	make_cm_view(dense_matrix<V,row_major,T,I> &m,int h, int w){
+dense_matrix<V,T,column_major,I>*
+	make_cm_view(dense_matrix<V,T,row_major,I> &m,int h, int w){
 	if (w==-1) {
 		w=m.h();
 		}
@@ -99,7 +99,7 @@ dense_matrix<V,column_major,T,I>*
 		h=m.w();
 	}
 	cuvAssert(w*h==m.h()*m.w());
-	return new dense_matrix<V,column_major,T,I>(h,w,m.ptr(),true);
+	return new dense_matrix<V,T,column_major,I>(h,w,m.ptr(),true);
 }
 
 template<class V, class T,class I>
@@ -111,18 +111,18 @@ void export_cm_view(){
  * Create VIEWs at the same location in memory
  */
 template<class T,class S>
-cuv::vector<T,host_memory_space, S> *
+cuv::tensor<T,host_memory_space, S> *
 vec_view(pyublas::numpy_vector<T> v){
-	return new cuv::vector<T,host_memory_space>(v.size(),v.as_ublas().data().data(),true);
+	return new cuv::tensor<T,host_memory_space>(v.size(),v.as_ublas().data().data(),true);
 }
 template<class T, class Mto, class Mfrom>
 dense_matrix<T, Mto, host_memory_space>*
 mat_view(pyublas::numpy_matrix<T, Mfrom> m){
-	typedef typename dense_matrix<T,Mto,host_memory_space>::index_type index_type;
-	cuv::vector<T,host_memory_space>* vec = new cuv::vector<T,host_memory_space>((index_type)m.size1()*m.size2(),m.as_ublas().data().data(),true);
+	typedef typename dense_matrix<T,host_memory_space,Mto>::index_type index_type;
+	cuv::tensor<T,host_memory_space>* vec = new cuv::tensor<T,host_memory_space>((index_type)m.size1()*m.size2(),m.as_ublas().data().data(),true);
 	const bool same = boost::is_same<Mto, typename ublas2matrix_traits<Mfrom>::storage_type >::value;
-	if(same) return new dense_matrix<T,Mto,host_memory_space>((index_type)m.size1(), (index_type)m.size2(), vec);
-	else     return new dense_matrix<T,Mto,host_memory_space>((index_type)m.size2(), (index_type)m.size1(), vec);
+	if(same) return new dense_matrix<T,host_memory_space,Mto>((index_type)m.size1(), (index_type)m.size2(), vec);
+	else     return new dense_matrix<T,host_memory_space,Mto>((index_type)m.size2(), (index_type)m.size1(), vec);
 }
 /*
  * Create COPYs at another location in memory
@@ -130,11 +130,11 @@ mat_view(pyublas::numpy_matrix<T, Mfrom> m){
 template<class T, class Mto, class Mfrom>
 dense_matrix<T, Mto, host_memory_space>*
 copy(pyublas::numpy_matrix<T, boost::numeric::ublas::column_major> m){
-	typedef typename dense_matrix<T,Mto,host_memory_space>::index_type index_type;
+	typedef typename dense_matrix<T,host_memory_space,Mto>::index_type index_type;
 	const bool same = boost::is_same<Mto, typename ublas2matrix_traits<Mfrom>::storage_type >::value;
-	dense_matrix<T,Mto,host_memory_space>* mat;
-	if(same) new dense_matrix<T,Mto,host_memory_space>((index_type)m.size1(), (index_type)m.size2());
-	else     new dense_matrix<T,Mto,host_memory_space>((index_type)m.size2(), (index_type)m.size1());
+	dense_matrix<T,host_memory_space,Mto>* mat;
+	if(same) new dense_matrix<T,host_memory_space,Mto>((index_type)m.size1(), (index_type)m.size2());
+	else     new dense_matrix<T,host_memory_space,Mto>((index_type)m.size2(), (index_type)m.size1());
     memcpy(mat->ptr(), m.as_ublas().data().data(), mat->n() * sizeof(T));
     return mat;
 }
@@ -168,15 +168,15 @@ export_dense_matrix_common(std::string name){
 		.def(self -= self)
 		.def(self *= self)
 		.def(self /= self)
-		.def("__add__", ( mat (*) (const mat&,const mat&))operator+<value_type,memlayout_type,memspace_type,index_type>)
-		.def("__sub__", ( mat (*) (const mat&,const mat&))operator-<value_type,memlayout_type,memspace_type,index_type>)
-		.def("__mul__", ( mat (*) (const mat&,const mat&))operator*<value_type,memlayout_type,memspace_type,index_type>)
-		.def("__div__", ( mat (*) (const mat&,const mat&))operator/<value_type,memlayout_type,memspace_type,index_type>)
-		.def("__add__", ( mat (*) (const mat&,const value_type&))operator+<value_type,memlayout_type,memspace_type,index_type>)
-		.def("__sub__", ( mat (*) (const mat&,const value_type&))operator-<value_type,memlayout_type,memspace_type,index_type>)
-		.def("__mul__", ( mat (*) (const mat&,const value_type&))operator*<value_type,memlayout_type,memspace_type,index_type>)
-		.def("__div__", ( mat (*) (const mat&,const value_type&))operator/<value_type,memlayout_type,memspace_type,index_type>)
-		.def("__neg__", ( mat (*) (const mat&))operator-<value_type,memlayout_type,memspace_type,index_type>)
+		.def("__add__", ( mat (*) (const mat&,const mat&))operator+<value_type,memspace_type,memlayout_type,index_type>)
+		.def("__sub__", ( mat (*) (const mat&,const mat&))operator-<value_type,memspace_type,memlayout_type,index_type>)
+		.def("__mul__", ( mat (*) (const mat&,const mat&))operator*<value_type,memspace_type,memlayout_type,index_type>)
+		.def("__div__", ( mat (*) (const mat&,const mat&))operator/<value_type,memspace_type,memlayout_type,index_type>)
+		.def("__add__", ( mat (*) (const mat&,const value_type&))operator+<value_type,memspace_type,memlayout_type,index_type>)
+		.def("__sub__", ( mat (*) (const mat&,const value_type&))operator-<value_type,memspace_type,memlayout_type,index_type>)
+		.def("__mul__", ( mat (*) (const mat&,const value_type&))operator*<value_type,memspace_type,memlayout_type,index_type>)
+		.def("__div__", ( mat (*) (const mat&,const value_type&))operator/<value_type,memspace_type,memlayout_type,index_type>)
+		.def("__neg__", ( mat (*) (const mat&))operator-<value_type,memspace_type,memlayout_type,index_type>)
 		.add_property("h", &mat::h)
 		.add_property("w", &mat::w)
 		.add_property("n", &mat::n)
@@ -191,10 +191,10 @@ export_dense_matrix_common(std::string name){
 template <class T, class M, class M2>
 void
 export_dense_matrix(std::string typen){
-	export_dense_matrix_common<dense_matrix<T, M, dev_memory_space> >  ( std::string( "dev_matrix_" ) + (typen));
-	export_dense_matrix_common<dense_matrix<T, M2, host_memory_space> >( std::string( "host_matrix_" ) + (typen));
-	def("convert", (void(*)(dense_matrix<T,M,dev_memory_space>&,const dense_matrix<T,M2,host_memory_space>&)) cuv::convert);
-	def("convert", (void(*)(dense_matrix<T,M2,host_memory_space>&,const dense_matrix<T,M,dev_memory_space>&)) cuv::convert);
+	export_dense_matrix_common<dense_matrix<T, dev_memory_space, M> >  ( std::string( "dev_matrix_" ) + (typen));
+	export_dense_matrix_common<dense_matrix<T, host_memory_space, M2> >( std::string( "host_matrix_" ) + (typen));
+	def("convert", (void(*)(dense_matrix<T,dev_memory_space,M>&,const dense_matrix<T,host_memory_space,M2>&)) cuv::convert);
+	def("convert", (void(*)(dense_matrix<T,host_memory_space,M2>&,const dense_matrix<T,dev_memory_space,M>&)) cuv::convert);
 }
 
 /*
@@ -205,7 +205,7 @@ export_dense_matrix(std::string typen){
 template <class T, class Mfrom, class Mto>
 void
 export_dense_matrix_view(const char* str){
-	typedef dense_matrix<T,Mto,host_memory_space>             to_type;            // destination type
+	typedef dense_matrix<T,host_memory_space,Mto>             to_type;            // destination type
 	typedef typename matrix2ublas_traits<Mfrom>::storage_type Mfrom_ublas_type;   // our column/row major type (derived from ublas)
 	typedef pyublas::numpy_matrix<T,Mfrom_ublas_type>         from_type;          // source data type
 	typedef to_type* (*func_type)(from_type)                  ;
@@ -236,10 +236,10 @@ export_dense_matrix_views(){
  *   Possible solution: A special constructor for matrix, which leaves it uninitialized.
  */
 template<class T, class Mfrom, class Mto>
-dense_matrix<T,Mto,dev_memory_space>*
+dense_matrix<T,dev_memory_space,Mto>*
 numpy2dev_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
-	dense_matrix<T,Mto,host_memory_space>* from = mat_view<T,Mto,Mfrom>(m);
-	dense_matrix<T,Mto,dev_memory_space>* to = new dense_matrix<T,Mto,dev_memory_space>(from->h(),from->w());
+	dense_matrix<T,host_memory_space,Mto>* from = mat_view<T,Mto,Mfrom>(m);
+	dense_matrix<T,dev_memory_space,Mto>* to = new dense_matrix<T,dev_memory_space,Mto>(from->h(),from->w());
 	convert(*to,*from);
 	delete from;
 	return to;
@@ -251,10 +251,10 @@ numpy2dev_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
  *   Possible solution: A special constructor for matrix, which leaves it uninitialized.
  */
 template<class T, class Mfrom, class Mto>
-dense_matrix<T,Mto,host_memory_space>*
+dense_matrix<T,host_memory_space,Mto>*
 numpy2host_dense_mat(pyublas::numpy_matrix<T, Mfrom> m){
-	dense_matrix<T,Mto,host_memory_space>* from = mat_view<T,Mto,Mfrom>(m);
-	dense_matrix<T,Mto,host_memory_space>* to = new dense_matrix<T,Mto,host_memory_space>(from->h(), from->w());
+	dense_matrix<T,host_memory_space,Mto>* from = mat_view<T,Mto,Mfrom>(m);
+	dense_matrix<T,host_memory_space,Mto>* to = new dense_matrix<T,host_memory_space,Mto>(from->h(), from->w());
 	cuv::copy(*to,*from);
 	delete from;
 	return to;

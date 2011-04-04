@@ -32,8 +32,8 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 #include <boost/type_traits/is_base_of.hpp>
-#include <cuv/basics/vector.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/basics/tensor.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/convolution_ops/convolution_ops.hpp>
 #include <cuv/tools/device_tools.h>

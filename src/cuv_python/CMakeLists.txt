@@ -5,7 +5,7 @@ include_directories(
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/basics
         ${CMAKE_SOURCE_DIR}/src/convert
-        ${CMAKE_SOURCE_DIR}/src/vector_ops
+        ${CMAKE_SOURCE_DIR}/src/tensor_ops
         ${CMAKE_SOURCE_DIR}/src/matrix_ops
         ${CMAKE_SOURCE_DIR}/src/convolution_ops
         ${CMAKE_SOURCE_DIR}/src/random
@@ -13,20 +13,20 @@ include_directories(
         /usr/local/lib/python2.6/dist-packages/PyUblas-0.93.1-py2.6-linux-x86_64.egg/include
         )
 ADD_LIBRARY(cuv_python SHARED 
-	python_bindings.cpp
-	export_vector.cpp
-	export_dense_matrix.cpp
-	export_cuda_array.cpp
-	export_dia_mat.cpp
-	export_matrix_ops.cpp
-	export_vector_ops.cpp
-	export_random.cpp
-	export_convolution_ops.cpp
-	export_image_ops.cpp
-	export_tools.cpp
-	export_libs_rbm.cpp
-	export_libs_kmeans.cpp
-	export_libs_kernels.cpp
+        python_bindings.cpp
+        export_tensor.cpp
+        export_dense_matrix.cpp
+        export_cuda_array.cpp
+        export_dia_mat.cpp
+        export_matrix_ops.cpp
+        export_tensor_ops.cpp
+        export_random.cpp
+        export_convolution_ops.cpp
+        export_image_ops.cpp
+        export_tools.cpp
+        export_libs_rbm.cpp
+        export_libs_kmeans.cpp
+        export_libs_kernels.cpp
     )
 
 CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
@@ -34,26 +34,26 @@ CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py ${CMAKE_CURRENT_BINARY_D
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES OUTPUT_NAME "_cuv_python")
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES PREFIX "")
 TARGET_LINK_LIBRARIES(cuv_python 
-		cuv_tools
-        cuv_basics
-		cuv_vector_ops
-		cuv_matrix_ops
-		cuv_convert
-		cuv_random
-		cuv_matrix_ops
-		cuv_convolution_ops
-		cuv_image_ops
-		cuv_rbm
-		cuv_kmeans
-		cuv_kernels
+                cuv_tools
+                cuv_basics
+                cuv_tensor_ops
+                cuv_matrix_ops
+                cuv_convert
+                cuv_random
+                cuv_matrix_ops
+                cuv_convolution_ops
+                cuv_image_ops
+                cuv_rbm
+                cuv_kmeans
+                cuv_kernels
         #${Boost_LIBRARIES}
-		${Boost_DATE_TIME_LIBRARY_RELEASE}
-		${Boost_PYTHON_LIBRARY_RELEASE}
+                ${Boost_DATE_TIME_LIBRARY_RELEASE}
+                ${Boost_PYTHON_LIBRARY_RELEASE}
         ${PYTHON_LIBRARY}
         ${CUDA_CUBLAS_LIBRARIES}
 )
 install(TARGETS cuv_python
-	RUNTIME DESTINATION bin
-	LIBRARY DESTINATION lib
-	ARCHIVE DESTINATION lib/static)
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib/static)
 

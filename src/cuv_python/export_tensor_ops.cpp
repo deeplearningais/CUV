@@ -36,10 +36,10 @@
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
-#include  <boost/type_traits/is_base_of.hpp>
+#include <boost/type_traits/is_base_of.hpp>
 
-#include <cuv/basics/vector.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/basics/tensor.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/convert/convert.hpp>
 
 using namespace std;
@@ -102,7 +102,7 @@ void export_binary_functors(){
         ;
 }
 
-void export_vector_ops(){
+void export_tensor_ops(){
 	export_scalar_functors();
 	export_binary_functors();
 	export_0ary_functors();

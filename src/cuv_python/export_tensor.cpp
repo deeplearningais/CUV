@@ -34,10 +34,10 @@
 #include <string>
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
-#include  <boost/type_traits/is_same.hpp>
+#include <boost/type_traits/is_same.hpp>
 
 
-#include <cuv/basics/vector.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/convert/convert.hpp>
 
 using namespace boost::python;
@@ -54,18 +54,18 @@ long int internal_ptr(const T& t){
 
 template<class T>
 void
-export_vector_common(const char* name){
+export_tensor_common(const char* name){
 	typedef T vec;
 	typedef typename vec::value_type value_type;
 
 	class_<vec> (name, init<int>())
-		.def("__len__",&vec::size, "vector size")
+		.def("__len__",&vec::size, "tensor size")
 		.def("alloc",&vec::alloc, "allocate memory")
 		.def("dealloc",&vec::dealloc, "deallocate memory")
 		.def("set",    &vec::set, "set index to value")
 		.def("at",  (value_type  (vec::*)(const typename vec::index_type&)const)(&vec::operator[]))
 		.add_property("size", &vec::size)
-		.add_property("memsize",&vec::memsize, "size of vector in memory (bytes)")
+		.add_property("memsize",&vec::memsize, "size of tensor in memory (bytes)")
 		;
 	def("this_ptr", this_ptr<vec>);
 	def("internal_ptr", internal_ptr<vec>);
@@ -74,28 +74,28 @@ export_vector_common(const char* name){
 
 template <class T>
 void
-export_vector_conversion(){
-	def("convert", (void(*)(vector<T,dev_memory_space>&,const vector<T,host_memory_space>&)) cuv::convert);
-	def("convert", (void(*)(vector<T,host_memory_space>&,const vector<T,dev_memory_space>&)) cuv::convert);
+export_tensor_conversion(){
+	def("convert", (void(*)(tensor<T,dev_memory_space>&,const tensor<T,host_memory_space>&)) cuv::convert);
+	def("convert", (void(*)(tensor<T,host_memory_space>&,const tensor<T,dev_memory_space>&)) cuv::convert);
 }
 
 
-void export_vector(){
-	export_vector_common<vector<float,dev_memory_space> >("dev_vector_float");
-	export_vector_common<vector<float,host_memory_space> >("host_vector_float");
+void export_tensor(){
+	export_tensor_common<tensor<float,dev_memory_space> >("dev_tensor_float");
+	export_tensor_common<tensor<float,host_memory_space> >("host_tensor_float");
 
-	export_vector_common<vector<unsigned char,dev_memory_space> >("dev_vector_uc");
-	export_vector_common<vector<unsigned char,host_memory_space> >("host_vector_uc");
+	export_tensor_common<tensor<unsigned char,dev_memory_space> >("dev_tensor_uc");
+	export_tensor_common<tensor<unsigned char,host_memory_space> >("host_tensor_uc");
 
-	export_vector_common<vector<int,dev_memory_space> >("dev_vector_int");
-	export_vector_common<vector<int,host_memory_space> >("host_vector_int");
+	export_tensor_common<tensor<int,dev_memory_space> >("dev_tensor_int");
+	export_tensor_common<tensor<int,host_memory_space> >("host_tensor_int");
 
-	export_vector_common<vector<unsigned int,dev_memory_space> >("dev_vector_uint");
-	export_vector_common<vector<unsigned int,host_memory_space> >("host_vector_uint");
+	export_tensor_common<tensor<unsigned int,dev_memory_space> >("dev_tensor_uint");
+	export_tensor_common<tensor<unsigned int,host_memory_space> >("host_tensor_uint");
 
-	export_vector_conversion<float>();
-	export_vector_conversion<unsigned char>();
-	export_vector_conversion<int>();
-	export_vector_conversion<unsigned int>();
+	export_tensor_conversion<float>();
+	export_tensor_conversion<unsigned char>();
+	export_tensor_conversion<int>();
+	export_tensor_conversion<unsigned int>();
 	}
 

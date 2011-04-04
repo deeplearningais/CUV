@@ -44,7 +44,7 @@
 #include <map>
 #include <memory>
 #include <iostream>
-#include <cuv/basics/vector.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/basics/matrix.hpp>
 #include <cuv/tools/cuv_general.hpp>

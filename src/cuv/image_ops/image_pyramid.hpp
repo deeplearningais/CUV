@@ -39,7 +39,7 @@
 #define __IMAGE_PYRAMID_HPP__
 
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/basics/dense_matrix.hpp>
 #include <cuv/basics/cuda_array.hpp>
 

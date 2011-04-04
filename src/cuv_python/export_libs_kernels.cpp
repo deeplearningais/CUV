@@ -20,5 +20,5 @@ void export_kernels(){
 
 void export_libs_kernels(){
 	//export_kernels<float,column_major,host_memory_space,unsigned int>();
-	export_kernels<float,row_major,dev_memory_space,unsigned int>();
+	export_kernels<float,dev_memory_space,row_major,unsigned int>();
 }

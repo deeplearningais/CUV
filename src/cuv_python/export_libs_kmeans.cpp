@@ -44,13 +44,13 @@ namespace ublas = boost::numeric::ublas;
 
 template<class V, class L, class M, class I>
 void export_kmeans(){
-	typedef dense_matrix<V,L,M,I> mat;
-	typedef vector<I,M,I> vec;
+	typedef dense_matrix<V,M,L,I> mat;
+	typedef tensor<I,M> vec;
 	def("compute_clusters",compute_clusters<mat,vec>, (arg("clusters"),arg("data"),arg("indices")));
 }
 
 
 void export_libs_kmeans(){
-	export_kmeans<float,column_major,host_memory_space,unsigned int>();
-	export_kmeans<float,column_major,dev_memory_space,unsigned int>();
+	export_kmeans<float,host_memory_space, column_major,unsigned int>();
+	export_kmeans<float,dev_memory_space,column_major, unsigned int>();
 }

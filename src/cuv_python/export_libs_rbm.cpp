@@ -47,30 +47,30 @@ namespace ublas = boost::numeric::ublas;
 
 template<class V, class L, class M, class I>
 void export_libs_rbm_detail(){
-	typedef dense_matrix<V,L,M,I> mat;
-	typedef vector<V,M,I> vec;
+	typedef dense_matrix<V,M,L,I> mat;
+	typedef tensor<V,M> vec;
 	def("set_binary_sequence", set_binary_sequence<mat>, (arg("matrix"), arg("startvalue")));
 	def("sigm_temperature", sigm_temperature<mat,vec>, (arg("matrix"), arg("temperature")));
 }
 
 template<class V, class L, class M, class I>
 void export_set_local_conn(){
-	typedef dense_matrix<V,L,M,I> mat;
-	typedef vector<V,M,I> vec;
+	typedef dense_matrix<V,M,L,I> mat;
+	typedef tensor<V,M> vec;
 	def("set_local_connectivity_in_dense_matrix", set_local_connectivity_in_dense_matrix<mat>, (arg("matrix"),arg("patchsize"),arg("px"),arg("py"),arg("pxh"),arg("pyh"),arg("maxdist_from_main_dia"),arg("round")=false));
 }
 
 template<class V, class L, class M, class I>
 void export_copy_at_rowidx(){
-	typedef dense_matrix<V,L,M,I> mat;
-	typedef vector<V,M,I> vec;
+	typedef dense_matrix<V,M,L,I> mat;
+	typedef tensor<V,M> vec;
 	def("copy_at_rowidx", copy_at_rowidx<mat,mat>, (arg("dst"), arg("src"),arg("rowidx"),arg("offset")));
 	def("copy_redblack", copy_redblack<mat>, (arg("dst"), arg("src"),arg("num_maps"), arg("color")));
 }
 
 void export_libs_rbm(){
-	export_libs_rbm_detail<float,column_major,host_memory_space,unsigned int>();
-	export_libs_rbm_detail<float,column_major,dev_memory_space,unsigned int>();
-	export_set_local_conn<float,column_major,dev_memory_space,unsigned int>();
-	export_copy_at_rowidx<float,column_major,dev_memory_space,unsigned int>();
+	export_libs_rbm_detail<float,host_memory_space,column_major,unsigned int>();
+	export_libs_rbm_detail<float,dev_memory_space,column_major,unsigned int>();
+	export_set_local_conn<float,dev_memory_space,column_major,unsigned int>();
+	export_copy_at_rowidx<float,dev_memory_space,column_major,unsigned int>();
 }
