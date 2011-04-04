@@ -1121,8 +1121,8 @@ __global__ void cols_ncopy_kernel(float* targets, float* cols, const int rowSize
 
 
 template<>
-void cols_ncopy(	dense_matrix<float,row_major, dev_memory_space>& dst,
-			dense_matrix<float,row_major, dev_memory_space>& col,
+void cols_ncopy(	dense_matrix<float, dev_memory_space, row_major>& dst,
+			dense_matrix<float, dev_memory_space, row_major>& col,
 			unsigned int n){
 	int inputSize 	= col.w()*col.h();
 	int row_size 	= col.w();
@@ -1142,8 +1142,8 @@ void cols_ncopy(	dense_matrix<float,row_major, dev_memory_space>& dst,
 
 
 template<>
-void cols_ncopy(dense_matrix<float,row_major, host_memory_space>& dst,
-		dense_matrix<float,row_major, host_memory_space>& col,
+void cols_ncopy(dense_matrix<float, host_memory_space, row_major>& dst,
+		dense_matrix<float, host_memory_space, row_major>& col,
 		unsigned int n){
 	int inputSize 	= col.w()*col.h();
 	int row_size 	= col.w();
