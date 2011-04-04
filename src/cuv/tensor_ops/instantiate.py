@@ -3,6 +3,8 @@
 class vec_t:
 	def __init__(self, v, m):
 		self.types = (v,m)
+		self.v     = v
+		self.m     = m
 	def __str__(self):
 		#return "vector<%s,%s,%s> "%self.types
 		return "tensor<%s,%s>"%self.types
@@ -11,29 +13,29 @@ class vec_t:
 
 def apply_0ary_functor(types):
 	for t in types:
-		yield "template void apply_0ary_functor<{0} >({0}&, const NullaryFunctor&);".format(t[0])
-		yield "template void apply_0ary_functor<{0} >({0}&, const NullaryFunctor&, const {0}::value_type&);".format(t[0])
+		yield "template void apply_0ary_functor<{0},{1} >({2}&, const NullaryFunctor&);".format(t[0].v,t[0].m,t[0])
+		yield "template void apply_0ary_functor<{0},{1} >({2}&, const NullaryFunctor&, const {0}::value_type&);".format(t[0].v,t[0].m,t[0])
 
 def apply_scalar_functor(types):
 	for t in types:
-		yield "namespace detail{{ template void apply_scalar_functor<{0},{1},{2} >({0}&,const {1}&, const ScalarFunctor&,const int&, const {2}&, const {2}&);}}".format(t[0], t[1], t[2])
+		yield "namespace detail{{ template void apply_scalar_functor<{0}::value_type,{1}::value_type,{0}::memory_space_type,{2},{2}>({0}&,const {1}&, const ScalarFunctor&,const int&, const {2}&, const {2}&);}}".format(t[0], t[1], t[2])
 
 def apply_binary_functor(types):
 	for t in types:
-		yield "namespace detail{{ template void apply_binary_functor<{0},{1},{2},{3} >({0}&,const {1}&,const {2}&, const BinaryFunctor&,const int&, const {3}&, const {3}&);}}".format(t[0],t[1],t[2], t[3])
+		yield "namespace detail{{ template void apply_binary_functor<{0}::value_type,{1}::value_type,{2}::value_type,{3},{3} >({0}&,const {1}&,const {2}&, const BinaryFunctor&,const int&, const {3}&, const {3}&);}}".format(t[0],t[1],t[2],t[3])
 
 def reductions(vecs):
-	L= """template bool has_inf<{0} >(const {0}&);
-template bool has_nan<{0} >(const {0}&);
-template float minimum<{0} >(const {0}&);
-template float maximum<{0} >(const {0}&);
-template float sum<{0} >(const {0}&);
-template float norm1<{0} >(const {0}&);
-template float norm2<{0} >(const {0}&);
-template float mean<{0} >(const {0}&);
-template float var<{0} >(const {0}&);
-template typename {0}::index_type     arg_max<{0} >(const {0}&);
-template typename {0}::index_type     arg_min<{0} >(const {0}&);""".split("\n")
+	L= """template bool has_inf<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template bool has_nan<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template float minimum<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template float maximum<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template float sum<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template float norm1<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template float norm2<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template float mean<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template float var<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template typename {0}::index_type     arg_max<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template typename {0}::index_type     arg_min<{0}::value_type,{0}::memory_space_type >(const {0}&);""".split("\n")
 	for v in vecs:
 		for x in L:
 			yield x.format(v);
