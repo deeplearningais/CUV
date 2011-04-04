@@ -196,40 +196,40 @@ namespace reduce_impl {
 
 	template<>
 	struct reduce<1, dev_memory_space>{
-                template<class __value_type, class __memory_space_type, class __memory_layout_type, class RF>
-	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type,__memory_space_type,__memory_layout_type> &m,const  __value_type & factNew,const  __value_type & factOld, RF rf)const{
-		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.h() == v.size());
-		static const int BLOCK_DIM = 16;
-		const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM));
-		int grid_x =0, grid_y=0;
+                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF>
+	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const  __value_type2 & factNew,const  __value_type2 & factOld, RF rf)const{
+                    cuvAssert(m.ptr() != NULL);
+                    cuvAssert(m.h() == v.size());
+                    static const int BLOCK_DIM = 16;
+                    const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM));
+                    int grid_x =0, grid_y=0;
 
-		// how to handle grid dimension constraint
-		if (blocks_needed <= 65535){
-			grid_x = blocks_needed;
-			grid_y = 1;
-		}else{
-			// try to avoid large noop blocks by adjusting x and y dimension to nearly equal size
-			grid_x = ceil(sqrt(blocks_needed));
-			grid_y = ceil((float)blocks_needed/grid_x);
-		}
-		dim3 grid(grid_x, grid_y);
-		dim3 threads(BLOCK_DIM,BLOCK_DIM);
-		typedef __value_type matval_t;
-		typedef typename tensor<__value_type,__memory_space_type>::value_type vecval_t;
-		unsigned int mem = sizeof(matval_t) * BLOCK_DIM*BLOCK_DIM ;
+                    // how to handle grid dimension constraint
+                    if (blocks_needed <= 65535){
+                            grid_x = blocks_needed;
+                            grid_y = 1;
+                    }else{
+                            // try to avoid large noop blocks by adjusting x and y dimension to nearly equal size
+                            grid_x = ceil(sqrt(blocks_needed));
+                            grid_y = ceil((float)blocks_needed/grid_x);
+                    }
+                    dim3 grid(grid_x, grid_y);
+                    dim3 threads(BLOCK_DIM,BLOCK_DIM);
+                    typedef __value_type matval_t;
+                    typedef typename tensor<__value_type,__memory_space_type>::value_type vecval_t;
+                    unsigned int mem = sizeof(matval_t) * BLOCK_DIM*BLOCK_DIM ;
 
-		typedef reduce_functor_traits<typename RF::result_value_functor_type> traits_type;
-		if(traits_type::returns_index)
-			mem += sizeof(vecval_t)*BLOCK_DIM*BLOCK_DIM;
-		reduce_to_col_kernel<BLOCK_DIM,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,rf,traits_type::init_value());
-		cuvSafeCall(cudaThreadSynchronize());
+                    typedef reduce_functor_traits<typename RF::result_value_functor_type> traits_type;
+                    if(traits_type::returns_index)
+                            mem += sizeof(vecval_t)*BLOCK_DIM*BLOCK_DIM;
+                    reduce_to_col_kernel<BLOCK_DIM,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,rf,traits_type::init_value());
+                    cuvSafeCall(cudaThreadSynchronize());
 	}};
 
 	template<>
 	struct reduce<0, dev_memory_space>{
-                template<class __value_type, class __memory_space_type, class __memory_layout_type, class RF>
-	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type,__memory_space_type,__memory_layout_type> &m,const  __value_type & factNew,const  __value_type & factOld, RF rf)const{
+                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF>
+	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const  __value_type2 & factNew,const  __value_type2 & factOld, RF rf)const{
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 		static const int BLOCK_DIM = 16;
@@ -249,8 +249,8 @@ namespace reduce_impl {
 
 	template<int dim>
 	struct reduce<dim, host_memory_space>{
-                template<class __value_type, class __memory_space_type, class __memory_layout_type, class RF>
-	       	void operator()(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type,__memory_space_type,__memory_layout_type> & m, const __value_type& factNew, const __value_type& factOld, RF rf) const{
+                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF>
+	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const  __value_type2 & factNew,const  __value_type2 & factOld, RF rf)const{
 		typedef __value_type V;
 		typedef typename tensor<__value_type,__memory_space_type>::value_type V2;
 		typedef typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::index_type I;
@@ -323,7 +323,7 @@ namespace reduce_impl {
 		}
 	}};
 
-        template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
+        template<int dimension, class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
 	void reduce_switch(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const __value_type& factNew, const __value_type& factOld) {
 		typedef __value_type const_mat_val;
 		typedef typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::index_type mat_ind;
