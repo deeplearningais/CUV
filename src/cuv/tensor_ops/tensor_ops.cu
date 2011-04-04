@@ -178,9 +178,9 @@ namespace cuv{
  *
  */
 
-template<class __tensor_type>
+template<class __value_type, class __memory_space_type>
 void
-apply_0ary_functor(__tensor_type& v, const NullaryFunctor& nf){
+apply_0ary_functor(tensor<__value_type, __memory_space_type>& v, const NullaryFunctor& nf){
 	 cuvAssert(v.ptr());
 	 typedef typename __tensor_type::value_type value_type;
 	 typedef typename memspace_cuv2thrustptr<value_type,typename __tensor_type::memory_space_type>::ptr_type ptr_type;
@@ -194,9 +194,9 @@ apply_0ary_functor(__tensor_type& v, const NullaryFunctor& nf){
 	 cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<class __tensor_type>
+template<class V1, class M, class S>
 void
-apply_0ary_functor(__tensor_type& v, const NullaryFunctor& nf, const typename __tensor_type::value_type& param){
+apply_0ary_functor(tensor<V1, M>& v, const NullaryFunctor& nf, const S& param){
 	 cuvAssert(v.ptr());
 
 	 typedef typename __tensor_type::value_type value_type;
@@ -216,9 +216,8 @@ namespace detail{
 	// **********************************
 	//       Scalar Functor
 	// **********************************
-	template<class D, class S, class V>
-	void
-	apply_scalar_functor(D&dst,const S&src, const ScalarFunctor& sf, const int& numparams, const V& p, const V& p2){
+	template<class V1, class V2, class M, class S1, class S2>
+	void apply_scalar_functor(tensor<V1, M>& dst, const tensor<V2, M>& src, const ScalarFunctor& sf, const int& numparams, const S1& p, const S2& p2){
 		cuvAssert(dst.size()==src.size());
 		typedef typename S::value_type SV;
 		typedef typename D::value_type DV;
@@ -288,9 +287,8 @@ namespace detail{
 	// **********************************
 	//       Binary Functor
 	// **********************************
-	template<class D, class S1, class S2, class V>
-	void
-	apply_binary_functor(D& dst,const S1&src1, const S2&src2, const BinaryFunctor& bf, const int& numparams, const V& p, const V& p2){
+	template<class V1, class V2, class V3, class M, class S1, class S2>
+	  void apply_binary_functor(tensor<V1, M>& dst,const tensor<V2, M>& src1, const tensor<V3, M>& src2, const BinaryFunctor& bf, const int& numparams, const S1& p, const S2& p2){
 		cuvAssert(dst.size() == src1.size());
 		cuvAssert(dst.size() == src2.size());
 		typedef typename D::value_type  DV;
