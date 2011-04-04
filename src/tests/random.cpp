@@ -38,8 +38,7 @@
 
 
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/vector.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/random/random.hpp>
 
 using namespace cuv;
@@ -56,8 +55,8 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	vector<float,dev_memory_space> v;
-	vector<float,host_memory_space> x;
+	tensor<float,dev_memory_space> v;
+	tensor<float,host_memory_space> x;
 	static const int n =32368;
 	Fix()
 		:v(n),x(n) // needs large sample number.
@@ -84,7 +83,7 @@ BOOST_AUTO_TEST_CASE( random_uniform )
 }
 //BOOST_AUTO_TEST_CASE( random_normal_nan )
 //{
-	//vector<float,dev_memory_space> large(105*150*96);
+	//tensor<float,dev_memory_space> large(105*150*96);
 	//apply_0ary_functor(large,NF_FILL,0);
 	////apply_0ary_functor(x,NF_FILL,0);	
 	//for(int iter=0;iter<10000;iter++){
@@ -97,8 +96,8 @@ BOOST_AUTO_TEST_CASE( random_uniform )
 //}
 BOOST_AUTO_TEST_CASE( random_normal )
 {
-	apply_0ary_functor(v,NF_FILL,0);
-	apply_0ary_functor(x,NF_FILL,0);	
+	fill(v,0);
+	fill(x,0);	
 	add_rnd_normal(v);
 	add_rnd_normal(x);
 	float m   = mean(v);

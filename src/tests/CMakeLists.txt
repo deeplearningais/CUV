@@ -21,11 +21,11 @@ TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools cuv_matrix_ops cuv_conver
 ADD_EXECUTABLE( test_convert convert.cpp )
 TARGET_LINK_LIBRARIES( test_convert cuv_basics cuv_tools cuv_convert)
 
-ADD_EXECUTABLE( test_vec_op vec_op.cpp )
-TARGET_LINK_LIBRARIES( test_vec_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops)
+ADD_EXECUTABLE( test_tensor_op tensor_op.cpp )
+TARGET_LINK_LIBRARIES( test_tensor_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops)
 
-ADD_EXECUTABLE( test_vec_op_speed vec_op_speed.cpp )
-TARGET_LINK_LIBRARIES( test_vec_op_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random )
+ADD_EXECUTABLE( test_tensor_op_speed tensor_op_speed.cpp )
+TARGET_LINK_LIBRARIES( test_tensor_op_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random )
 
 ADD_EXECUTABLE( test_mat_op matrix_op.cpp )
 TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
@@ -78,7 +78,7 @@ ENDIF(CUV_CIMG_BINDINGS)
 
 ADD_TEST( basics  "${CMAKE_BINARY_DIR}/src/tests/test_basic" )
 ADD_TEST( convert "${CMAKE_BINARY_DIR}/src/tests/test_convert" )
-ADD_TEST( vec_op "${CMAKE_BINARY_DIR}/src/tests/test_vec_op" )
+ADD_TEST( tensor_op "${CMAKE_BINARY_DIR}/src/tests/test_tensor_op" )
 ADD_TEST( matrix_op "${CMAKE_BINARY_DIR}/src/tests/test_mat_op" )
 ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/src/tests/test_dia_mat" )
 ADD_TEST( spmv "${CMAKE_BINARY_DIR}/src/tests/test_spmv" )
@@ -91,7 +91,7 @@ ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/src/tests/test_conv_op" )
 #ADD_TEST( memory  "${CMAKE_BINARY_DIR}/src/tests/test_memory" )
 
 # speed tests just take too long.
-#ADD_TEST( vec_op_speed "${CMAKE_BINARY_DIR}/tests/test_vec_op_speed" )
+#ADD_TEST( tensor_op_speed "${CMAKE_BINARY_DIR}/tests/test_tensor_op_speed" )
 #ADD_TEST( mat_op_speed "${CMAKE_BINARY_DIR}/tests/test_mat_op_speed" )
 #ADD_TEST( spmv_speed "${CMAKE_BINARY_DIR}/tests/test_spmv_speed" )
 #ADD_TEST( densedense_to_dia_speed "${CMAKE_BINARY_DIR}/tests/test_densedense_to_dia_speed" )
