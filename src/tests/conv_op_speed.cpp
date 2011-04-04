@@ -148,10 +148,10 @@ void conv_rlcnp(dense_matrix<float, ms_type, row_major>& dst,
 	int c = inputSize;
 	int k = inputSize - filterSize + 1;
 	int f = numFilter;
-	dense_matrix<float, row_major, ms_type>  helper(c, f*k*k);
+	dense_matrix<float, ms_type, row_major>  helper(c, f*k*k);
 
 	convolve2(helper, img, filter, numFilter);
-	reduce_to_row(dst.vec(), helper, RF_ADD);
+	reduce_to_row(dst, helper, RF_ADD);
 
 }
 
