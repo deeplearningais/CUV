@@ -364,7 +364,10 @@ namespace cuv{
    * 
    * @return true if v contains "Inf" or "-Inf", false otherwise 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type> bool has_inf(const tensor<__value_type, __memory_space_type, __memory_layout_type>& v);
+  template<class __value_type, class __memory_space_type> bool has_inf(const tensor<__value_type, __memory_space_type>& v);
+  template<class __value_type, class __memory_space_type> bool has_inf(const tensor<__value_type, __memory_space_type, column_major>& v){
+	return has_inf(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
   /** 
    * @brief Check whether a float vector contains "NaN"
    * 
@@ -372,7 +375,10 @@ namespace cuv{
    * 
    * @return true if v contains "NaN", false otherwise 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type> bool has_nan(const tensor<__value_type, __memory_space_type, __memory_layout_type>& v);
+  template<class __value_type, class __memory_space_type> bool has_nan(const tensor<__value_type, __memory_space_type>& v);
+  template<class __value_type, class __memory_space_type> bool has_nan(const tensor<__value_type, __memory_space_type, column_major>& v){
+	return has_nan(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
   /** 
    * @brief Return the sum of a vector 
    * 
@@ -380,7 +386,10 @@ namespace cuv{
    * 
    * @return sum of v 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type> float sum(const tensor<__value_type, __memory_space_type, __memory_layout_type>& v);
+  template<class __value_type, class __memory_space_type> float sum(const tensor<__value_type, __memory_space_type>& v);
+  template<class __value_type, class __memory_space_type> float sum(const tensor<__value_type, __memory_space_type, column_major>& v){
+	return sum(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
   /** 
    * @brief Return the two-norm or Euclidean norm of a vector 
    * 
@@ -388,7 +397,10 @@ namespace cuv{
    * 
    * @return Two-norm of v 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type> float norm2(const tensor<__value_type, __memory_space_type, __memory_layout_type>& v);
+  template<class __value_type, class __memory_space_type> float norm2(const tensor<__value_type, __memory_space_type>& v);
+  template<class __value_type, class __memory_space_type> float norm2(const tensor<__value_type, __memory_space_type, column_major>& v){
+	return norm2(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
   /** 
    * @brief Return the one-norm or sum-norm of a vector 
    * 
@@ -396,7 +408,10 @@ namespace cuv{
    * 
    * @return one-norm of v 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type> float norm1(const tensor<__value_type, __memory_space_type, __memory_layout_type>& v);
+  template<class __value_type, class __memory_space_type> float norm1(const tensor<__value_type, __memory_space_type>& v);
+  template<class __value_type, class __memory_space_type> float norm1(const tensor<__value_type, __memory_space_type, column_major>& v){
+	return norm1(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
   /** 
    * @brief Return the minimum entry of a vector 
    * 
@@ -404,7 +419,10 @@ namespace cuv{
    * 
    * @return Minimum entry of v 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type> float minimum(const tensor<__value_type, __memory_space_type, __memory_layout_type>& v);
+  template<class __value_type, class __memory_space_type> float minimum(const tensor<__value_type, __memory_space_type>& v);
+  template<class __value_type, class __memory_space_type> float minimum(const tensor<__value_type, __memory_space_type, column_major>& v){
+	return minimum(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
   /** 
    * @brief Return the maximum entry of a vector 
    * 
@@ -412,7 +430,10 @@ namespace cuv{
    * 
    * @return Maximum entry of v 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type> float maximum(const tensor<__value_type, __memory_space_type, __memory_layout_type>& v);
+  template<class __value_type, class __memory_space_type> float maximum(const tensor<__value_type, __memory_space_type>& v);
+  template<class __value_type, class __memory_space_type> float maximum(const tensor<__value_type, __memory_space_type, column_major>& v){
+	return maximum(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
   /** 
    * @brief Return the mean of the entries of a vector 
    * 
@@ -420,7 +441,10 @@ namespace cuv{
    * 
    * @return Mean of entries of v 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type> float mean(const tensor<__value_type, __memory_space_type, __memory_layout_type>& v);
+  template<class __value_type, class __memory_space_type> float mean(const tensor<__value_type, __memory_space_type>& v);
+  template<class __value_type, class __memory_space_type> float mean(const tensor<__value_type, __memory_space_type, column_major>& v){
+	return mean(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
   /** 
    * @brief Return the variation of the entries of a vector 
    * 
@@ -428,7 +452,10 @@ namespace cuv{
    * 
    * @return Variation of entries of v 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type> float var(const tensor<__value_type, __memory_space_type, __memory_layout_type>& v);
+  template<class __value_type, class __memory_space_type> float var(const tensor<__value_type, __memory_space_type>& v);
+  template<class __value_type, class __memory_space_type> float var(const tensor<__value_type, __memory_space_type, column_major>& v){
+	return var(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
 
   /** 
    * @brief Return the index of the maximum element
@@ -437,9 +464,14 @@ namespace cuv{
    * 
    * @return index of max element
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type> 
-	  typename tensor<__value_type, __memory_space_type, __memory_layout_type>::index_type 
-	  arg_max(const tensor<__value_type, __memory_space_type, __memory_layout_type>& v);
+  template<class __value_type, class __memory_space_type> 
+	  typename tensor<__value_type, __memory_space_type>::index_type 
+	  arg_max(const tensor<__value_type, __memory_space_type>& v);
+  template<class __value_type, class __memory_space_type> 
+	  typename tensor<__value_type, __memory_space_type, column_major>::index_type 
+	  arg_max(const tensor<__value_type, __memory_space_type, column_major>& v){
+	return arg_max(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
   /** 
    * @brief Return the index of the minimum element
    * 
@@ -447,9 +479,14 @@ namespace cuv{
    * 
    * @return index of min element
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type> 
-	  typename tensor<__value_type, __memory_space_type, __memory_layout_type>::index_type 
-	  arg_min(const tensor<__value_type, __memory_space_type, __memory_layout_type>& v);
+  template<class __value_type, class __memory_space_type> 
+	  typename tensor<__value_type, __memory_space_type>::index_type 
+	  arg_min(const tensor<__value_type, __memory_space_type>& v);
+  template<class __value_type, class __memory_space_type> 
+	  typename tensor<__value_type, __memory_space_type, column_major>::index_type 
+	  arg_min(const tensor<__value_type, __memory_space_type, column_major>& v){
+	return arg_min(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
 
  /** @} */ //end group reductions_vectors
 
