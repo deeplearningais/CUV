@@ -196,8 +196,8 @@ namespace reduce_impl {
 
 	template<>
 	struct reduce<1, dev_memory_space>{
-                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF, class S>
-	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const  S & factNew,const  S & factOld, RF rf)const{
+                template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
+	       	void operator()(tensor<__value_type,dev_memory_space> &v,const  dense_matrix<__value_type2,dev_memory_space,__memory_layout_type> &m,const  S & factNew,const  S & factOld, RF rf)const{
                     cuvAssert(m.ptr() != NULL);
                     cuvAssert(m.h() == v.size());
                     static const int BLOCK_DIM = 16;
@@ -216,7 +216,7 @@ namespace reduce_impl {
                     dim3 grid(grid_x, grid_y);
                     dim3 threads(BLOCK_DIM,BLOCK_DIM);
                     typedef __value_type matval_t;
-                    typedef typename tensor<__value_type,__memory_space_type>::value_type vecval_t;
+                    typedef typename tensor<__value_type,dev_memory_space>::value_type vecval_t;
                     unsigned int mem = sizeof(matval_t) * BLOCK_DIM*BLOCK_DIM ;
 
                     typedef reduce_functor_traits<typename RF::result_value_functor_type> traits_type;
@@ -228,8 +228,8 @@ namespace reduce_impl {
 
 	template<>
 	struct reduce<0, dev_memory_space>{
-                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF, class S>
-	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const S & factNew,const  S & factOld, RF rf)const{
+                template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
+	       	void operator()(tensor<__value_type,dev_memory_space> &v,const  dense_matrix<__value_type2,dev_memory_space,__memory_layout_type> &m,const S & factNew,const  S & factOld, RF rf)const{
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 		static const int BLOCK_DIM = 16;
@@ -237,7 +237,7 @@ namespace reduce_impl {
 		dim3 threads(BLOCK_DIM*BLOCK_DIM,1);
 
 		typedef __value_type matval_t;
-		typedef typename tensor<__value_type,__memory_space_type>::value_type vecval_t;
+		typedef typename tensor<__value_type,dev_memory_space>::value_type vecval_t;
 		unsigned int mem = sizeof(matval_t) * threads.x*threads.y;
 		typedef reduce_functor_traits<typename RF::result_value_functor_type> traits_type;
 		if(traits_type::returns_index)
@@ -249,11 +249,11 @@ namespace reduce_impl {
 
 	template<int dim>
 	struct reduce<dim, host_memory_space>{
-                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF, class S>
-	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const S & factNew,const S & factOld, RF rf)const{
+                template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
+	       	void operator()(tensor<__value_type,host_memory_space> &v,const  dense_matrix<__value_type2,host_memory_space,__memory_layout_type> &m,const S & factNew,const S & factOld, RF rf)const{
 		typedef __value_type V;
-		typedef typename tensor<__value_type,__memory_space_type>::value_type V2;
-		typedef typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::index_type I;
+		typedef typename tensor<__value_type,host_memory_space>::value_type V2;
+		typedef typename dense_matrix<__value_type,host_memory_space,__memory_layout_type>::index_type I;
 		typedef typename unconst<V>::type unconstV;
 		typedef cuv::reduce_functor_traits<typename RF::result_value_functor_type> functor_traits;
 
