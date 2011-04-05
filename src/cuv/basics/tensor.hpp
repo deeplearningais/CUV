@@ -294,7 +294,7 @@ namespace cuv
 					m_data.set_size(size()); 
 					return;
 				}
-				m_data = linear_memory_type(size(),ptr, true);
+				m_data.set_view(size(),ptr);
 			}
 			/**
 			 * delete the memory used by this container (calls dealloc of wrapped linear memory)
