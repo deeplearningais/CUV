@@ -71,7 +71,7 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 
 struct Fix{
-	static const int n = 1024; 
+	static const int n; 
 	dense_matrix<float,dev_memory_space,column_major>  u_dev,v_dev,w_dev;
 	dense_matrix<float,host_memory_space,column_major> u_host,v_host,w_host;
 	Fix()
@@ -83,6 +83,7 @@ struct Fix{
 	~Fix(){
 	}
 };
+const int Fix::n = 1024;
 
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )

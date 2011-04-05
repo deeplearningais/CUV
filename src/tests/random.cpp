@@ -57,7 +57,7 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 struct Fix{
 	tensor<float,dev_memory_space> v;
 	tensor<float,host_memory_space> x;
-	static const int n =32368;
+	static const int n;
 	Fix()
 		:v(n),x(n) // needs large sample number.
 	{
@@ -66,6 +66,7 @@ struct Fix{
 	~Fix(){
 	}
 };
+const int Fix::n=32368;
 
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )

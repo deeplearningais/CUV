@@ -68,8 +68,8 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 BOOST_AUTO_TEST_CASE( mem_dealloc )
 {
 	for(int i=0; i<100000000; i++) {
-		dense_matrix<float, row_major, host_memory_space> c(1000, 100000);
-		dense_matrix<float, row_major, dev_memory_space> d(1000, 100000);
+		dense_matrix<float, host_memory_space, row_major> c(1000, 100000);
+		dense_matrix<float, dev_memory_space, row_major> d(1000, 100000);
 	}
 }
 

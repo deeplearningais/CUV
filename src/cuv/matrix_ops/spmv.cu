@@ -241,10 +241,10 @@ namespace cuv{
 				spmv(dst_v,A,src_v,transA,factAB,factC);
 			}
 		}
-	template<class __matrix_type, class __vector_type>
-		void spmv(__vector_type& dst, __matrix_type& A, __vector_type& v, char transA, const float& factAv, const float& factC){
+      template<class __value_type, class __memory_space_type>
+              void spmv(tensor<__value_type, __memory_space_type>& dst, dia_matrix<__value_type, __memory_space_type>& A, tensor<__value_type, __memory_space_type>& v, char transA, const float& factAv, const float& factC){
 			spmv_impl::spmv(dst,A,v,transA,factAv,factC);
 		}
-	template void spmv<dia_matrix<float,host_memory_space>, tensor<float,host_memory_space> >(tensor<float,host_memory_space>&dst, dia_matrix<float,host_memory_space>& A, tensor<float,host_memory_space>& v, char, const float&, const float&);
-	template void spmv<dia_matrix<float,dev_memory_space>, tensor<float,dev_memory_space> >(tensor<float,dev_memory_space>&dst, dia_matrix<float,dev_memory_space>& A, tensor<float,dev_memory_space>& v, char, const float&, const float&);
+	template void spmv<float,host_memory_space>(tensor<float,host_memory_space>&dst, dia_matrix<float,host_memory_space>& A, tensor<float,host_memory_space>& v, char, const float&, const float&);
+	template void spmv<float,dev_memory_space>(tensor<float,dev_memory_space>&dst, dia_matrix<float,dev_memory_space>& A, tensor<float,dev_memory_space>& v, char, const float&, const float&);
 }

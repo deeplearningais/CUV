@@ -64,9 +64,9 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	dia_matrix<float,host_memory_space>   A;
-	dense_matrix<float,column_major,host_memory_space> A_;
-	dense_matrix<float,column_major,host_memory_space> B,B_;
-	dense_matrix<float,column_major,host_memory_space> C,C_;
+	dense_matrix<float,host_memory_space,column_major> A_;
+	dense_matrix<float,host_memory_space,column_major> B,B_;
+	dense_matrix<float,host_memory_space,column_major> C,C_;
 	Fix()
 	:   A(n,m,7,max(n,m),rf)
 	,   A_(n,m)
@@ -102,12 +102,12 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( spmv_dev_correctness_trans )
 {
-	sequence(C.vec());
+	sequence(C);
 	dia_matrix<float,dev_memory_space> A2(n,m,A.num_dia(),A.stride(),rf);
 	convert(A2,A);
-	dense_matrix<float,column_major,dev_memory_space> C2(C.h(),C.w());
+	dense_matrix<float,dev_memory_space,column_major> C2(C.h(),C.w());
 	convert(C2,C);
-	dense_matrix<float,column_major,dev_memory_space> B2(B.h(),B.w());
+	dense_matrix<float,dev_memory_space,column_major> B2(B.h(),B.w());
 	convert(B2,B);
 	prod(B ,A, C, 't','n');
 	prod(B2,A2,C2,'t','n');
@@ -117,9 +117,9 @@ BOOST_AUTO_TEST_CASE( spmv_dev_correctness )
 {
  dia_matrix<float,dev_memory_space> A2(n,m,A.num_dia(),A.stride(),rf);
  convert(A2,A);
- dense_matrix<float,column_major,dev_memory_space> C2(C.h(),C.w());
+ dense_matrix<float,dev_memory_space,column_major> C2(C.h(),C.w());
  convert(C2,C);
- dense_matrix<float,column_major,dev_memory_space> B2(B.h(),B.w());
+ dense_matrix<float,dev_memory_space,column_major> B2(B.h(),B.w());
  convert(B2,B);
 
  float factAv = 2.f, factC = 1.3f;

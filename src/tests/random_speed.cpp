@@ -38,8 +38,8 @@
 
 #include <cuv/tools/timing.hpp>
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/vector.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/basics/tensor.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/random/random.hpp>
 
 #define MEASURE_TIME(MSG, OPERATION, ITERS)     \
@@ -69,9 +69,9 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	vector<float,dev_memory_space> v_dev;
-	vector<float,host_memory_space> v_host;
-	static const int n = 150*150*96;
+	tensor<float,dev_memory_space> v_dev;
+	tensor<float,host_memory_space> v_host;
+	static const int n;
 	Fix()
 		:v_dev(n),v_host(n) // needs large sample number.
 	{
@@ -80,6 +80,7 @@ struct Fix{
 	~Fix(){
 	}
 };
+const int Fix::n = 150*150*96;
 
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
@@ -94,8 +95,8 @@ BOOST_AUTO_TEST_CASE( random_uniform )
 }
 BOOST_AUTO_TEST_CASE( random_normal )
 {
-	apply_0ary_functor(v_dev,NF_FILL,0);
-	apply_0ary_functor(v_host,NF_FILL,0);	
+	fill(v_dev,0);
+	fill(v_host,0);	
 	MEASURE_TIME(dev,add_rnd_normal(v_dev),10);
 	MEASURE_TIME(host,add_rnd_normal(v_host),10);
 	printf("Speedup: %3.4f\n", host/dev);
