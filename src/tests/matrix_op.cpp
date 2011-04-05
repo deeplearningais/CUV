@@ -76,8 +76,8 @@ struct Fix{
 };
 
 template<class VT2, class VT, class ML, class I>
-std::pair<tensor<VT2,host_memory_space,I>*,    // host result
-	 tensor<VT2,host_memory_space,I>*>   // dev  result
+std::pair<tensor<VT2,host_memory_space>*,    // host result
+	 tensor<VT2,host_memory_space>*>   // dev  result
 test_reduce(
 	int dim,
 	dense_matrix<VT,dev_memory_space,ML,I>&   d_mat,
