@@ -222,7 +222,7 @@ namespace reduce_impl {
                     typedef reduce_functor_traits<typename RF::result_value_functor_type> traits_type;
                     if(traits_type::returns_index)
                             mem += sizeof(vecval_t)*BLOCK_DIM*BLOCK_DIM;
-                    reduce_to_col_kernel<BLOCK_DIM,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,rf,traits_type::init_value());
+                    reduce_to_col_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
                     cuvSafeCall(cudaThreadSynchronize());
 	}};
 
@@ -243,7 +243,7 @@ namespace reduce_impl {
 		if(traits_type::returns_index)
 			mem += sizeof(vecval_t)*threads.x*threads.y;
 
-		reduce_to_row_kernel<BLOCK_DIM,matval_t><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),factNew,factOld,rf,traits_type::init_value());
+                reduce_to_row_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
@@ -251,7 +251,7 @@ namespace reduce_impl {
 	struct reduce<dim, host_memory_space>{
                 template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
 	       	void operator()(tensor<__value_type,host_memory_space> &v,const  dense_matrix<__value_type2,host_memory_space,__memory_layout_type> &m,const S & factNew,const S & factOld, RF rf)const{
-		typedef __value_type V;
+		typedef __value_type2 V;
 		typedef typename tensor<__value_type,host_memory_space>::value_type V2;
 		typedef typename dense_matrix<__value_type,host_memory_space,__memory_layout_type>::index_type I;
 		typedef typename unconst<V>::type unconstV;
@@ -262,7 +262,7 @@ namespace reduce_impl {
 		if (dim==0) cuvAssert(v.size()==m.w());
 		if (dim==1) cuvAssert(v.size()==m.h());
 
-		const V* A_ptr                         = m.ptr();
+		const __value_type2 * A_ptr                         = m.ptr();
 
 		// indices: only needed when arg-max/arg-min etc used
 		tensor<I,host_memory_space>* indices = NULL;
@@ -323,11 +323,11 @@ namespace reduce_impl {
 		}
 	}};
 
-        template<int dimension, class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
-	void reduce_switch(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const __value_type& factNew, const __value_type& factOld) {
-		typedef __value_type const_mat_val;
-		typedef typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::index_type mat_ind;
-		typedef typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::memory_space_type mat_mem;
+        template<int dimension, class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class S>
+	void reduce_switch(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const S& factNew, const S& factOld) {
+		typedef __value_type2 const_mat_val;
+		typedef typename dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>::index_type mat_ind;
+		typedef typename dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>::memory_space_type mat_mem;
 		typedef typename tensor<__value_type,__memory_space_type>::value_type vec_val;
 		typedef typename tensor<__value_type,__memory_space_type>::index_type vec_ind;
 		typedef typename unconst<const_mat_val>::type mat_val;
@@ -372,12 +372,12 @@ namespace reduce_impl {
 // TODO: make sure this is actually called with a matrix type!
 //
 template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
-void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const __value_type& factNew, const __value_type& factOld) {
+void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const __value_type2& factNew, const __value_type2& factOld) {
 	if (IsSame<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::memory_layout,row_major>::Result::value){
 		//matrix is row major
 		//create column major view and call reduce_to_row for column major
 		// downstream from here everything is column major
-		const dense_matrix<const __value_type,typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::memory_space_type,column_major,typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::index_type> cm_view(m.w(),m.h(),m.ptr(),true);
+		const dense_matrix<const __value_type2,typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::memory_space_type,column_major,typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::index_type> cm_view(m.w(),m.h(),m.ptr());
 		reduce_impl::reduce_switch<0>(v,cm_view,rf,factNew,factOld); // 0 means zeroth dimension is summed out - meaning summing over the columns in a column major matrix.
 	}
 	else {
@@ -386,12 +386,12 @@ void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const dense_matri
 }
 
 template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
-void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m,reduce_functor rf, const __value_type& factNew, const __value_type& factOld) {
+void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m,reduce_functor rf, const __value_type2& factNew, const __value_type2& factOld) {
 	if (IsSame<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::memory_layout,row_major>::Result::value){
 		//matrix is row major
 		//create column major view and call reduce_to_row for column major
 		// downstream from here everything is column major
-		const dense_matrix<const __value_type,typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::memory_space_type,column_major,typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::index_type> cm_view(m.w(),m.h(),m.ptr(),true);
+		const dense_matrix<const __value_type2,__memory_space_type,column_major> cm_view(m.w(),m.h(),m.ptr());
 		reduce_impl::reduce_switch<1>(v,cm_view,rf,factNew,factOld); // 1 means first (we start counting at zero) dimension is summed out - meaning summing over the rows in a column major matrix.
 	}
 	else {
@@ -503,7 +503,7 @@ INSTANTIATE_RED(float,float,column_major);
 /*INSTANTIATE_RED(unsigned int,float,column_major);*/
 /*INSTANTIATE_RED(unsigned char,float,column_major);*/
 /*INSTANTIATE_RED(float,int,column_major);*/
-/*INSTANTIATE_RED(float,unsigned int,column_major);*/
+INSTANTIATE_RED(float,unsigned int,column_major);
 /*INSTANTIATE_RED(float,unsigned char,column_major);*/
 INSTANTIATE_RED(unsigned char,unsigned char,column_major);
 /*INSTANTIATE_RED(unsigned char,unsigned int,column_major);*/
@@ -513,7 +513,7 @@ INSTANTIATE_RED(float,float,row_major);
 /*INSTANTIATE_RED(unsigned int,float,row_major);*/
 /*INSTANTIATE_RED(unsigned char,float,row_major);*/
 /*INSTANTIATE_RED(float,int,row_major);*/
-/*INSTANTIATE_RED(float,unsigned int,row_major);*/
+INSTANTIATE_RED(float,unsigned int,row_major);
 /*INSTANTIATE_RED(float,unsigned char,row_major);*/
 INSTANTIATE_RED(unsigned char,unsigned char,row_major);
 /*INSTANTIATE_RED(unsigned char,unsigned int,row_major);*/
