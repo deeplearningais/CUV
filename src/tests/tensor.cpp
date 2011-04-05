@@ -61,7 +61,7 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 BOOST_AUTO_TEST_CASE( create_tensor )
 {
 	// column_major
-	tensor<float,column_major,host_memory_space> m(extents[2][3][4]);
+	tensor<float,host_memory_space,column_major> m(extents[2][3][4]);
 	BOOST_CHECK_EQUAL(24,m.size());
 	BOOST_CHECK_EQUAL(2ul,m.shape()[0]);
 	BOOST_CHECK_EQUAL(3ul,m.shape()[1]);
@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE( create_tensor )
 
 
 	// row_major
-	tensor<float,row_major,host_memory_space> n(extents[2][3][4]);
+	tensor<float,host_memory_space,row_major> n(extents[2][3][4]);
 	BOOST_CHECK_EQUAL(24,m.size());
 	BOOST_CHECK_EQUAL(2ul,n.shape()[0]);
 	BOOST_CHECK_EQUAL(3ul,n.shape()[1]);
@@ -87,11 +87,11 @@ BOOST_AUTO_TEST_CASE( create_tensor )
 
 BOOST_AUTO_TEST_CASE( tensor_data_access )
 {
-	tensor<float,column_major,host_memory_space> m(extents[2][3][4]);
-	tensor<float,row_major,host_memory_space>    n(extents[2][3][4]);
+	tensor<float,host_memory_space,column_major> m(extents[2][3][4]);
+	tensor<float,host_memory_space,row_major>    n(extents[2][3][4]);
 
-	tensor<float,column_major,host_memory_space> o(extents[2][3][4]);
-	tensor<float,row_major,host_memory_space>    p(extents[2][3][4]);
+	tensor<float,host_memory_space,column_major> o(extents[2][3][4]);
+	tensor<float,host_memory_space,row_major>    p(extents[2][3][4]);
 	for (int i = 0; i < 2; ++i) {
 		for (int j = 0; j < 3; ++j) {
 			for (int k = 0; k < 4; ++k) {
@@ -110,6 +110,32 @@ BOOST_AUTO_TEST_CASE( tensor_data_access )
 
 	BOOST_CHECK_EQUAL(1*2+3-1,--p(1,2,3));
 	BOOST_CHECK_EQUAL(1*2+3,  p(1,2,3)+=1);
+}
+
+BOOST_AUTO_TEST_CASE( tensor_assignment )
+{
+	tensor<float,host_memory_space,column_major> m(extents[2][3][4]);
+	tensor<float,host_memory_space,column_major> n(extents[2][3][4]);
+
+	tensor<float,host_memory_space,column_major> o(extents[2][3][4]);
+
+	for (int i = 0; i < 2*3*4; ++i)
+		m[i] = i;
+	n = m;
+	o = m;
+
+	tensor<float,host_memory_space,column_major> s(n);
+	tensor<float,dev_memory_space,column_major> t(n);
+
+	for (int i = 0; i < 2*3*4; ++i){
+		BOOST_CHECK_EQUAL(m[i], i);
+		BOOST_CHECK_EQUAL(n[i], i);
+		BOOST_CHECK_EQUAL(o[i], i);
+		BOOST_CHECK_EQUAL(s[i], i);
+		BOOST_CHECK_EQUAL(t[i], i);
+	}
+
+
 }
 
 BOOST_AUTO_TEST_SUITE_END()

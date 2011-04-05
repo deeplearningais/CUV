@@ -9,8 +9,13 @@ namespace cuv
 		struct allocator{
 			void alloc( value_type** ptr, index_type memsize)const;
 			void dealloc( value_type** ptr)const;
+			void copy(value_type* dst, const value_type*src,index_type size, host_memory_space);
+			void copy(value_type* dst, const value_type*src,index_type size, dev_memory_space);
+
 			void alloc( const value_type** ptr, index_type memsize)const;
 			void dealloc( const value_type** ptr)const;
+			void copy(const value_type* dst, const value_type*src,index_type size, host_memory_space)const{cuvAssert(false);}
+			void copy(const value_type* dst, const value_type*src,index_type size, dev_memory_space)const{cuvAssert(false);};
 		};
 
 	//host
@@ -102,6 +107,17 @@ namespace cuv
 			 * This is the instance of the dealloc function that is called by host vectors.
 			 */
 			void dealloc(const value_type** ptr)const {
+				cuvAssert(false);
+			}
+			void copy(value_type* dst, const value_type*src,index_type size, host_memory_space){
+				memcpy(dst,src,size*sizeof(value_type));
+			}
+			void copy(value_type* dst, const value_type*src,index_type size, dev_memory_space);
+
+			void copy(const value_type* dst, const value_type*src,index_type size, host_memory_space)const{
+				cuvAssert(false);
+			}
+			void copy(const value_type* dst, const value_type*src,index_type size, dev_memory_space)const{
 				cuvAssert(false);
 			}
 		};

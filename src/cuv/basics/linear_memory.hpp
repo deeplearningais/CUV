@@ -126,8 +126,15 @@ class linear_memory{
 	   */
 	  linear_memory(const my_type& o):m_ptr(NULL),m_is_view(false),m_size(o.size()) {
 		  alloc();
-		  //copy(*this,o);
-		  cuvAssert(false);//not implemented yet
+		  m_allocator.copy(m_ptr,o.ptr(),size(),memory_space_type());
+	  }
+	  /** 
+	   * @brief Copy-Constructor for other memory spaces
+	   */
+	  template<class OM, class OP>
+	  linear_memory(const linear_memory<__value_type, OM, OP,__index_type>& o):m_ptr(NULL),m_is_view(false),m_size(o.size()) {
+		  alloc();
+		  m_allocator.copy(m_ptr,o.ptr(),size(),OM());
 	  }
 	  /** 
 	   * @brief Creates linear_memory from pointer to entries.
@@ -186,9 +193,29 @@ class linear_memory{
 			  m_size = o.size();
 			  this->alloc();
 			}
-			//copy(*this, o);
-			 cuvAssert(false);//not implemented yet
+			m_allocator.copy(m_ptr,o.ptr(),size(),memory_space_type());
 			  
+			return *this;
+		  }
+
+		/** 
+		 * @brief Copy linear_memory from other memory type.
+		 * 
+		 * @param o Source linear_memory
+		 * 
+		 * @return copy to *this
+		 *
+		 */
+	  template<class OM, class OP>
+	  my_type& 
+	  
+		  operator=(const linear_memory<value_type, OM, OP,index_type>& o){
+			if(this->size() != o.size()){
+			  this->dealloc();
+			  m_size = o.size();
+			  this->alloc();
+			}
+			m_allocator.copy(m_ptr,o.ptr(),size(),OM());
 			return *this;
 		  }
 

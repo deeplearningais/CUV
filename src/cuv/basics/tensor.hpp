@@ -54,6 +54,22 @@ namespace cuv
 	/// Tag for row major matrices
 	struct row_major    : public memory_layout_tag{};
 
+	template<class T>
+	struct other_memory_layout{};
+	template<>
+	struct other_memory_layout<column_major>{ typedef row_major type; };
+	template<>
+	struct other_memory_layout<row_major>{ typedef column_major type; };
+
+	template<class T>
+	struct other_memory_space{
+	};
+	template<>
+	struct other_memory_space<dev_memory_space>{ typedef host_memory_space type; };
+	template<>
+	struct other_memory_space<host_memory_space>{ typedef dev_memory_space type; };
+
+
 	using boost::detail::multi_array::extent_gen;
 #ifndef CUV_DONT_CREATE_EXTENTS_OBJ
 	namespace{
@@ -147,16 +163,55 @@ namespace cuv
 				m_shape.push_back(_size);
 				allocate();
 			}
+
+			/**
+			 * Copy constructor
+			 */
+			const_tensor(const const_tensor& o);
+
+			/**
+			 * Copy constructor
+			 * also accepts assignment from other memoryspace type
+			 * and convertible pointers
+			 */
+			template<class P, class OM>
+			const_tensor(const const_tensor<__value_type,OM,__memory_layout_type,P>& o);
+
+			/**
+			 * Assignment operator
+			 */
+			const_tensor& operator=(const const_tensor& o){
+				if(&o ==this)
+					return *this;
+				m_shape=o.m_shape;
+				m_data =o.m_data;
+				return *this;
+			}
+
+			/**
+			 * Assignment operator
+			 * also accepts assignment from other memoryspace type
+			 * and convertible pointers
+			 */
+			template<class P, class OM>
+			const_tensor& operator=(const const_tensor<value_type,OM,P>& o){
+				if(&o ==this)
+					return *this;
+				m_shape=o.m_shape;
+				m_data =o.m_data;
+				return *this;
+			}
+
 			/**
 			 * construct tensor using some collection
 			 */
-			template<class Collection>
-			explicit const_tensor(const Collection& eg){
-				m_shape.clear();
-				for(typename Collection::iterator it=eg.begin();it!=eg.end();++it)
-					m_shape.push_back(*it);
-				allocate();
-			}
+			//template<class Collection>
+			//explicit const_tensor(const Collection& eg){
+			//        m_shape.clear();
+			//        for(typename Collection::iterator it=eg.begin();it!=eg.end();++it)
+			//                m_shape.push_back(*it);
+			//        allocate();
+			//}
 
 			/**
 			 * returns the index in linear memory of a point 
@@ -202,6 +257,11 @@ namespace cuv
 				index_type idx = index_of<4>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
+
+			/**
+			 * return reference to underlying memory object
+			 */
+			const linear_memory_type& data()const{return m_data;}
 
 			/**
 			 * return the number of elements stored in this container
@@ -301,11 +361,32 @@ namespace cuv
 			/**
 			 * construct tensor using some collection
 			 */
-			template<class Collection>
-			explicit tensor(const Collection& eg)
-			:super_type(eg)
+			//template<class Collection>
+			//explicit tensor(const Collection& eg)
+			//:super_type(eg)
+			//{
+			//}
+
+			/**
+			 * copy constructor
+			 */
+			tensor(const tensor& o)
+				:super_type(o)
 			{
 			}
+
+			/**
+			 * copy constructor for other memory spaces
+			 */
+			template<class OM>
+			tensor(const tensor<__value_type,OM,__memory_layout_type>& o)
+				:super_type(o)
+			{
+			}
+
+			/**
+			 * assignment operator
+			 */
 			tensor&
 			operator=(const tensor& o){
 				if(this == &o)
@@ -314,6 +395,22 @@ namespace cuv
 				m_data  = o.m_data;
 				return *this;
 			}
+			/**
+			 * assignment operator for other memory spaces
+			 */
+			template<class OM>
+			tensor&
+			operator=(const tensor<__value_type, OM, __memory_layout_type>& o){
+				if(this == &o)
+					return *this;
+				m_shape = o.m_shape;
+				m_data  = o.m_data;
+				return *this;
+			}
+
+			/**
+			 * assignment operator for scalars
+			 */
                         template <class S>
                         tensor& operator=(const S & f);
 
@@ -364,12 +461,40 @@ namespace cuv
       template<class __value_type, class __memory_space_type, class __memory_layout_type, class S>
       void fill(tensor<__value_type, __memory_space_type, __memory_layout_type>& v, const S& p);
 
+      // forward declaration of fill to implement operator= for tensor type
+      template<class __value_type, class __memory_space_type, class __memory_layout_type, class S>
+      void copy(tensor<__value_type, __memory_space_type, __memory_layout_type>& v,
+	 const  tensor<__value_type, __memory_space_type, __memory_layout_type>& w);
+
       template<class __value_type, class __memory_space_type, class __memory_layout_type>
       template<class S>
       tensor<__value_type, __memory_space_type, __memory_layout_type>& 
       tensor<__value_type, __memory_space_type, __memory_layout_type>::operator=(const S & f){
           fill(*this,f);
           return *this;
+      }
+
+      /**
+       * Copy constructor
+       */
+      template<class __value_type, class __memory_space_type, class __memory_layout_type, class Tptr>
+                           const_tensor<__value_type,__memory_space_type,__memory_layout_type,Tptr>
+      ::const_tensor(const const_tensor<__value_type,__memory_space_type,__memory_layout_type,Tptr>& o)
+      :m_shape(o.shape()),
+       m_data(o.data())
+      {
+      }
+
+      /**
+       * Copy constructor for other memory space/pointer types
+       */
+      template<class __value_type, class __memory_space_type, class __memory_layout_type, class Tptr>
+      template<class P, class OM>
+                           const_tensor<__value_type,__memory_space_type,__memory_layout_type,Tptr>
+      ::const_tensor(const const_tensor<__value_type,OM,__memory_layout_type,P>& o)
+      :m_shape(o.shape()),
+       m_data(o.data())
+      {
       }
       
 }
