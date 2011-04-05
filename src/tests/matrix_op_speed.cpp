@@ -72,8 +72,8 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	static const int n = 1024; 
-	dense_matrix<float,column_major,dev_memory_space>  u_dev,v_dev,w_dev;
-	dense_matrix<float,column_major,host_memory_space> u_host,v_host,w_host;
+	dense_matrix<float,dev_memory_space,column_major>  u_dev,v_dev,w_dev;
+	dense_matrix<float,host_memory_space,column_major> u_host,v_host,w_host;
 	Fix()
 	:   u_dev(n,n),v_dev(n,n),w_dev(n,n)
 	,   u_host(n,n),v_host(n,n),w_host(n,n)
@@ -112,8 +112,8 @@ BOOST_AUTO_TEST_CASE( mat_plus_vec )
 
 BOOST_AUTO_TEST_CASE( mat_plus_vec_row_maj )
 {
-	dense_matrix<float,row_major,dev_memory_space> V_dev(v_dev.h(),v_dev.w()); sequence(V_dev);
-	dense_matrix<float,row_major,host_memory_space> X_host(v_host.h(),v_host.w()); sequence(X_host);
+	dense_matrix<float,dev_memory_space,row_major> V_dev(v_dev.h(),v_dev.w()); sequence(V_dev);
+	dense_matrix<float,host_memory_space,row_major> X_host(v_host.h(),v_host.w()); sequence(X_host);
 	tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
 	tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
 	MEASURE_TIME(dev,  matrix_plus_col(V_dev,v_vec), 10);
@@ -123,8 +123,8 @@ BOOST_AUTO_TEST_CASE( mat_plus_vec_row_maj )
 
 //BOOST_AUTO_TEST_CASE( mat_op_argmax )
 //{	
-	//dense_matrix<float,row_major,dev_memory_space> V_dev(v_dev.h(),v_dev.w()); sequence(V_dev);
-	//dense_matrix<float,row_major,host_memory_space> X_host(v_host.h(),v_host.w()); sequence(X_host);
+	//dense_matrix<float,dev_memory_space,row_major> V_dev(v_dev.h(),v_dev.w()); sequence(V_dev);
+	//dense_matrix<float,host_memory_space,row_major> X_host(v_host.h(),v_host.w()); sequence(X_host);
 	//tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
 	//tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
 	//MEASURE_TIME(dev,  argmax_to_column(v_vec,V_dev), 10);
@@ -136,8 +136,8 @@ BOOST_AUTO_TEST_CASE( mat_plus_vec_row_maj )
 
 //BOOST_AUTO_TEST_CASE( mat_op_argmax_new )
 //{	
-	//dense_matrix<float,row_major,dev_memory_space> V_dev(v_dev.h(),v_dev.w()); sequence(V_dev);
-	//dense_matrix<float,row_major,host_memory_space> X_host(v_host.h(),v_host.w()); sequence(X_host);
+	//dense_matrix<float,dev_memory_space,row_major> V_dev(v_dev.h(),v_dev.w()); sequence(V_dev);
+	//dense_matrix<float,host_memory_space,row_major> X_host(v_host.h(),v_host.w()); sequence(X_host);
 	//tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
 	//tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
 	//MEASURE_TIME(dev,  reduce_to_col(v_vec,V_dev,RF_ARGMAX), 10);
@@ -152,8 +152,8 @@ BOOST_AUTO_TEST_CASE( mat_transpose )
 	const int n = 256;
 	const int m = 4096;
 
-	dense_matrix<float,column_major,dev_memory_space> V_dev(n,m), W(m,n); sequence(V_dev);
-	dense_matrix<float,column_major,host_memory_space> X_host(n,m), Y(m,n); sequence(X_host);
+	dense_matrix<float,dev_memory_space,column_major> V_dev(n,m), W(m,n); sequence(V_dev);
+	dense_matrix<float,host_memory_space,column_major> X_host(n,m), Y(m,n); sequence(X_host);
 
 	MEASURE_TIME(dev,  transpose(W,V_dev), 10);
 	MEASURE_TIME(host, transpose(Y,X_host), 10);
@@ -162,9 +162,9 @@ BOOST_AUTO_TEST_CASE( mat_transpose )
 
 BOOST_AUTO_TEST_CASE( mat_op_reduce_big_rm_to_row )
 {
-	dense_matrix<float,row_major,dev_memory_space> A_dev(32, 384*384*32);
+	dense_matrix<float,dev_memory_space,row_major> A_dev(32, 384*384*32);
 	tensor<float,dev_memory_space> V_dev(384*384*32);
-	dense_matrix<float,row_major,host_memory_space> A_host(32, 384*384*32);
+	dense_matrix<float,host_memory_space,row_major> A_host(32, 384*384*32);
 	tensor<float,host_memory_space> V_host(384*384*32);
 
 //	sequence(A_dev);
