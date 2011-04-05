@@ -183,7 +183,7 @@ namespace cuv{
    * This is a thin wrapper of CUBLAS.
    */
   template<class __matrix_type, class __matrix_type1, class __matrix_type2>
-	  void prod(__matrix_type C, __matrix_type1 A, __matrix_type2 B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
+	  void prod(__matrix_type& C, __matrix_type1& A, __matrix_type2& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
 
   /** @} */ // end group blas3
 
