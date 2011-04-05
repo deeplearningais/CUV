@@ -36,7 +36,6 @@
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/basics/dense_matrix.hpp>
 #include <cuv/convert/convert.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/libs/rbm/rbm.hpp>
 
@@ -55,9 +54,9 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	static const int N=10;
-	vector<float,host_memory_space> v;
-	dense_matrix<float,column_major,host_memory_space> m;
+	static const int N;
+	tensor<float,host_memory_space> v;
+	dense_matrix<float,host_memory_space,column_major> m;
 	Fix()
 	:   v(N)
 	,	m(10,N){}
@@ -66,11 +65,13 @@ struct Fix{
 	}
 };
 
+const int Fix::N=10;
+
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( set_bits )
 {
-	dense_matrix<float,column_major,dev_memory_space> m2(m.h(),m.w());
+	dense_matrix<float,dev_memory_space,column_major> m2(m.h(),m.w());
 	set_binary_sequence(m,  0);
 	set_binary_sequence(m2, 0);
 
@@ -80,7 +81,7 @@ BOOST_AUTO_TEST_CASE( sigm_temp_host )
 {
    fill(v,2);
    sequence(m);
-   dense_matrix<float,column_major,host_memory_space> m2(m.h(),m.w());
+   dense_matrix<float,host_memory_space,column_major> m2(m.h(),m.w());
    convert(m2, m);
 
    sigm_temperature(m, v);
@@ -92,7 +93,7 @@ BOOST_AUTO_TEST_CASE( sigm_temp_dev )
 {
    fill(v,2);
    sequence(m);
-   dense_matrix<float,column_major,dev_memory_space> m2(m.h(),m.w());
+   dense_matrix<float,dev_memory_space,column_major> m2(m.h(),m.w());
    convert(m2, m);
 
    sigm_temperature(m, v);

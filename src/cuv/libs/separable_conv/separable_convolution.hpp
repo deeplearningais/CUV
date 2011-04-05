@@ -12,8 +12,8 @@ namespace cuv{
 			SP_SOBEL,
 		};
 		template<class DstV, class SrcV, class M, class I>
-		boost::ptr_vector<dense_matrix<DstV,row_major,M,I> >
-		convolve(  const dense_matrix<SrcV,row_major,M,I>& src,
+		boost::ptr_vector<dense_matrix<DstV,M,row_major,I> >
+		convolve(  const dense_matrix<SrcV,M,row_major,I>& src,
 			   const unsigned int&   radius,
 			   const separable_filter& filt );
 	}

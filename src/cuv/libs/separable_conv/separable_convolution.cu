@@ -183,8 +183,8 @@ namespace cuv{
 
 #define V(X) #X << " : "<< (X)<<"  "
 		template<int radius, class DstV, class SrcV, class I>
-		void convolve(dense_matrix<DstV,row_major,dev_memory_space,I>& dst,
-				     const dense_matrix<SrcV,row_major,dev_memory_space,I>& src, int dir=2){
+		void convolve(dense_matrix<DstV,dev_memory_space,row_major,I>& dst,
+				     const dense_matrix<SrcV,dev_memory_space,row_major,I>& src, int dir=2){
 
 			int dw = src.w();
 			int dh = src.h();
@@ -194,7 +194,7 @@ namespace cuv{
 			dim3 threadBlockColumns(COLUMN_TILE_W, 8);
 			
 			if(dir==2){
-				dense_matrix<DstV,row_major,dev_memory_space,I> intermed(dst.h(),dst.w());
+				dense_matrix<DstV,dev_memory_space,row_major,I> intermed(dst.h(),dst.w());
 				convolutionRowGPU<radius><<<blockGridRows, threadBlockRows>>>( intermed.ptr(), src.ptr(), src.w(), src.h());
 				convolutionColumnGPU<radius><<<blockGridColumns, threadBlockColumns>>>( dst.ptr(), intermed.ptr(), intermed.w(), intermed.h(), COLUMN_TILE_W * threadBlockColumns.y, intermed.w() * threadBlockColumns.y);
 			}
@@ -209,8 +209,8 @@ namespace cuv{
 
 
 		template<class DstV, class SrcV, class M, class I>
-		void radius_dispatch(const unsigned int& radius,dense_matrix<DstV,row_major,M,I>& dst,
-				     const dense_matrix<SrcV,row_major,M,I>& src,int dir=2){
+		void radius_dispatch(const unsigned int& radius,dense_matrix<DstV,M,row_major,I>& dst,
+				     const dense_matrix<SrcV,M,row_major,I>& src,int dir=2){
 			switch(radius){
 				case 1: convolve<1>(dst,src,dir); break;
 				case 2: convolve<2>(dst,src,dir); break;
@@ -224,12 +224,12 @@ namespace cuv{
 			}
 		}
 		template<class DstV, class SrcV, class M, class I>
-		boost::ptr_vector<dense_matrix<DstV,row_major,M,I> >
-		convolve( const dense_matrix<SrcV,row_major,M,I>& src,
+		boost::ptr_vector<dense_matrix<DstV,M,row_major,I> >
+		convolve( const dense_matrix<SrcV,M,row_major,I>& src,
 			  const unsigned int& radius,
 			  const separable_filter& filt ){
 
-			typedef dense_matrix<DstV,row_major,M,I> result_type;
+			typedef dense_matrix<DstV,M,row_major,I> result_type;
 			cuvAssert(radius <= MAX_KERNEL_RADIUS);
 			boost::ptr_vector<result_type> res;
 
@@ -266,8 +266,8 @@ namespace cuv{
 		
 		// instantiations
 #define INST(DSTV, SRCV,M, I) \
-		template boost::ptr_vector<dense_matrix<DSTV,row_major,M,I> > \
-		convolve<DSTV,SRCV,M,I>( const dense_matrix<SRCV,row_major,M,I>&, \
+		template boost::ptr_vector<dense_matrix<DSTV,M,row_major,I> > \
+		convolve<DSTV,SRCV,M,I>( const dense_matrix<SRCV,M,row_major,I>&, \
 				                      const unsigned int&,                     \
 				                      const separable_filter&);
 		INST(float,float,dev_memory_space,unsigned int);

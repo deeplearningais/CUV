@@ -237,7 +237,7 @@ namespace cuv{
 
 	  template<class V1, class V2, class M, class S1, class S2>
           void apply_scalar_functor(tensor<V1, M, column_major>& dst, const tensor<V2, M, column_major>& src, const ScalarFunctor& sf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2()){
-              appl_scalar_functor(*static_cast<tensor<V1, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V2, M, row_major>*>(&src), sf, numparams, p, p2); 
+              apply_scalar_functor(*reinterpret_cast<tensor<V1, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V2, M, row_major>*>(&src), sf, numparams, p, p2); 
           }
   }
 

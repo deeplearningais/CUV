@@ -314,7 +314,8 @@ namespace cuv
 				m_data  = o.m_data;
 				return *this;
 			}
-                        tensor& operator=(const value_type & f);
+                        template <class S>
+                        tensor& operator=(const S & f);
 
 			reference_type operator[](index_type d0){
 				index_type arr[1] = {d0};
@@ -363,8 +364,8 @@ namespace cuv
       template<class __value_type, class __memory_space_type, class __memory_layout_type, class S>
       void fill(tensor<__value_type, __memory_space_type, __memory_layout_type>& v, const S& p);
 
-      template<class __value_type, class __memory_space_type, class __memory_layout_type>
-      tensor<__value_type, __memory_space_type, __memory_layout_type>& tensor<__value_type, __memory_space_type, __memory_layout_type>::operator=(const typename tensor<__value_type, __memory_space_type, __memory_layout_type>::super_type::value_type & f){
+      template<class __value_type, class __memory_space_type, class __memory_layout_type, class S>
+      tensor<__value_type, __memory_space_type, __memory_layout_type>& tensor<__value_type, __memory_space_type, __memory_layout_type>::operator=(const S & f){
           fill(*this,f);
           return *this;
       }
