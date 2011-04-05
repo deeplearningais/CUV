@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE( binary_operators )
   j = k = 1.f;
   const dense_matrix<float,dev_memory_space,column_major>& j_ = j;
   const dense_matrix<float,dev_memory_space,column_major>& k_ = k;
-  const dense_matrix<float,dev_memory_space,column_major> l = j_+k_;
+  const tensor<float,dev_memory_space,column_major> l = j_+k_;
   for(int i=0;i<32*32;i++){
 	  BOOST_CHECK_EQUAL(l[i], 2.f);
   }
