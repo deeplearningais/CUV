@@ -167,15 +167,25 @@ namespace cuv
 			/**
 			 * Copy constructor
 			 */
-			const_tensor(const const_tensor& o);
+			const_tensor(const const_tensor& o)
+			: m_shape(o.shape()),
+			  m_data(o.data())
+			{
+			}
 
 			/**
 			 * Copy constructor
 			 * also accepts assignment from other memoryspace type
 			 * and convertible pointers
 			 */
-			template<class P, class OM>
-			const_tensor(const const_tensor<__value_type,OM,__memory_layout_type,P>& o);
+			template<class P, class OM, class OL>
+			const_tensor(const const_tensor<__value_type,OM,OL,P>& o)
+			:m_shape(o.shape()),
+			 m_data(o.data())
+			{
+				if(! IsSame<OL,__memory_layout_type>::Result::value)
+					std::reverse(m_shape.begin(),m_shape.end());
+			}
 
 			/**
 			 * Assignment operator
@@ -193,12 +203,14 @@ namespace cuv
 			 * also accepts assignment from other memoryspace type
 			 * and convertible pointers
 			 */
-			template<class P, class OM>
-			const_tensor& operator=(const const_tensor<value_type,OM,P>& o){
+			template<class P, class OM, class OL>
+			const_tensor& operator=(const const_tensor<value_type,OM,OL,P>& o){
 				if(&o ==this)
 					return *this;
 				m_shape=o.m_shape;
 				m_data =o.m_data;
+				if(! IsSame<OL,__memory_layout_type>::Result::value)
+					std::reverse(m_shape.begin(),m_shape.end());
 				return *this;
 			}
 
@@ -403,21 +415,22 @@ namespace cuv
 			/**
 			 * assignment operator for other memory spaces
 			 */
-			template<class OM>
+			template<class OM, class OL>
 			tensor&
-			operator=(const tensor<__value_type, OM, __memory_layout_type>& o){
-				if(this == &o)
-					return *this;
+			operator=(const tensor<__value_type, OM, OL>& o){
+				//if(this == &o)   // is different type, anyway.
+				//        return *this;
 				m_shape = o.m_shape;
 				m_data  = o.m_data;
+				if(! IsSame<OL,__memory_layout_type>::Result::value)
+					std::reverse(m_shape.begin(),m_shape.end());
 				return *this;
 			}
 
 			/**
 			 * assignment operator for scalars
 			 */
-                        template <class S>
-                        tensor& operator=(const S & f);
+                        tensor& operator=(const __value_type & f);
 
 			reference_type operator[](index_type d0){
 				index_type arr[1] = {d0};
@@ -472,34 +485,10 @@ namespace cuv
 	 const  tensor<__value_type, __memory_space_type, __memory_layout_type>& w);
 
       template<class __value_type, class __memory_space_type, class __memory_layout_type>
-      template<class S>
       tensor<__value_type, __memory_space_type, __memory_layout_type>& 
-      tensor<__value_type, __memory_space_type, __memory_layout_type>::operator=(const S & f){
+      tensor<__value_type, __memory_space_type, __memory_layout_type>::operator=(const __value_type & f){
           fill(*this,f);
           return *this;
-      }
-
-      /**
-       * Copy constructor
-       */
-      template<class __value_type, class __memory_space_type, class __memory_layout_type, class Tptr>
-                           const_tensor<__value_type,__memory_space_type,__memory_layout_type,Tptr>
-      ::const_tensor(const const_tensor<__value_type,__memory_space_type,__memory_layout_type,Tptr>& o)
-      :m_shape(o.shape()),
-       m_data(o.data())
-      {
-      }
-
-      /**
-       * Copy constructor for other memory space/pointer types
-       */
-      template<class __value_type, class __memory_space_type, class __memory_layout_type, class Tptr>
-      template<class P, class OM>
-                           const_tensor<__value_type,__memory_space_type,__memory_layout_type,Tptr>
-      ::const_tensor(const const_tensor<__value_type,OM,__memory_layout_type,P>& o)
-      :m_shape(o.shape()),
-       m_data(o.data())
-      {
       }
       
 }

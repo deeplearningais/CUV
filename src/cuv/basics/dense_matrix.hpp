@@ -74,6 +74,20 @@ namespace cuv{
 		dense_matrix(const index_type& h, const index_type& w, const pointer_type ptr, bool is_view=true)
 			:tensor_type(extents[h][w],ptr){
 			}
+
+		/// Copy constructor
+		dense_matrix(const dense_matrix& o)
+			:tensor_type(o)
+		{
+		}
+
+		/// Copy constructor for other memory spaces
+		template<class MO, class ML>
+		dense_matrix(const dense_matrix<__value_type,MO,ML,__index_type>& o)
+			:tensor_type(o)
+		{
+		}
+
 		/// deprecated! use the reference returned by (..)
 		void set(const index_type& i, const index_type& j, const value_type& val){
 			std::cout << "DEPRECATED SET"<<std::endl;
