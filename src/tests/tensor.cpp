@@ -137,5 +137,15 @@ BOOST_AUTO_TEST_CASE( tensor_assignment )
 
 
 }
+BOOST_AUTO_TEST_CASE( tensor_view )
+{
+	linear_memory<float,host_memory_space,float*> l(100);
+	linear_memory<float,host_memory_space,float*> k(100, l.ptr(),true);
+	BOOST_CHECK_EQUAL(l.ptr(), k.ptr());
+	
+	tensor<float,host_memory_space,column_major> a(extents[2][3][4]);
+	tensor<float,host_memory_space,column_major> b(extents[2][3][4],a.ptr());
+	BOOST_CHECK_EQUAL(a.ptr(), b.ptr());
+}
 
 BOOST_AUTO_TEST_SUITE_END()
