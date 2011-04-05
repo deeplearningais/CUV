@@ -96,6 +96,7 @@ namespace cuv{
 			 */
 			dia_matrix(const index_type& h, const index_type& w, const int& num_dia, const int& stride, int row_fact=1)
 				: base_type(h,w)
+				, m_vec(NULL)
 				, m_num_dia(num_dia)
 				, m_stride(stride)
 				, m_offsets(num_dia)

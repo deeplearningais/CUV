@@ -84,7 +84,7 @@ namespace cuv{
                     cuvAssert(dst.get_offsets().ptr());
                 cuvAssert(dst.vec().ptr());
                 cuv::convert(dst.get_offsets(), src.get_offsets());
-                cuv::convert(dst, src);
+		dst.vec() = src.vec();
                 dst.post_update_offsets();
             }
 
@@ -106,7 +106,7 @@ namespace cuv{
                 cuvAssert(dst.get_offsets().ptr());
                 cuvAssert(dst.vec().ptr());
                 cuv::convert(dst.get_offsets(), src.get_offsets());
-                cuv::convert(dst, src);
+		dst.vec() = src.vec();
                 dst.post_update_offsets();
             }
 
