@@ -196,8 +196,8 @@ namespace reduce_impl {
 
 	template<>
 	struct reduce<1, dev_memory_space>{
-                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF>
-	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const  __value_type2 & factNew,const  __value_type2 & factOld, RF rf)const{
+                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF, class S>
+	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const  S & factNew,const  S & factOld, RF rf)const{
                     cuvAssert(m.ptr() != NULL);
                     cuvAssert(m.h() == v.size());
                     static const int BLOCK_DIM = 16;
@@ -228,8 +228,8 @@ namespace reduce_impl {
 
 	template<>
 	struct reduce<0, dev_memory_space>{
-                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF>
-	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const  __value_type2 & factNew,const  __value_type2 & factOld, RF rf)const{
+                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF, class S>
+	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const S & factNew,const  S & factOld, RF rf)const{
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.w() == v.size());
 		static const int BLOCK_DIM = 16;
@@ -249,8 +249,8 @@ namespace reduce_impl {
 
 	template<int dim>
 	struct reduce<dim, host_memory_space>{
-                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF>
-	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const  __value_type2 & factNew,const  __value_type2 & factOld, RF rf)const{
+                template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class RF, class S>
+	       	void operator()(tensor<__value_type,__memory_space_type> &v,const  dense_matrix<__value_type2,__memory_space_type,__memory_layout_type> &m,const S & factNew,const S & factOld, RF rf)const{
 		typedef __value_type V;
 		typedef typename tensor<__value_type,__memory_space_type>::value_type V2;
 		typedef typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::index_type I;
