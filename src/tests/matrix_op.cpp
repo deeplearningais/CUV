@@ -76,7 +76,7 @@ struct Fix{
 };
 
 const int Fix::n=128;
-const int Fix::N=Fix::n * Fix::N;
+const int Fix::N=Fix::n * Fix::n;
 template<class VT2, class VT, class ML, class I>
 std::pair<tensor<VT2,host_memory_space>*,    // host result
 	 tensor<VT2,host_memory_space>*>   // dev  result
