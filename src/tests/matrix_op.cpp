@@ -178,13 +178,13 @@ BOOST_AUTO_TEST_CASE( vec_ops_axpby )
 	sequence(w);
 	sequence(v);
 	apply_scalar_functor(v,SF_ADD, 1.f);
-	BOOST_CHECK_EQUAL(w.vec()[0],0);
-	BOOST_CHECK_EQUAL(v.vec()[0],1);
+	BOOST_CHECK_EQUAL(w[0],0);
+	BOOST_CHECK_EQUAL(v[0],1);
 
 	// copy data from v to w
 	apply_binary_functor(v,w,BF_AXPBY, 2.f,3.f);
 	for(int i=0;i<N;i++){
-		BOOST_CHECK_EQUAL(v.vec()[i], 2*(i+1) + 3*i );
+		BOOST_CHECK_EQUAL(v[i], 2*(i+1) + 3*i );
 	}
 }
 
@@ -192,26 +192,26 @@ BOOST_AUTO_TEST_CASE( vec_ops_axpby )
 BOOST_AUTO_TEST_CASE( vec_ops_0ary1 )
 {
 	// test sequence
-	sequence(v.vec());
+	sequence(v);
 	for(int i=0;i<N;i++){
-		BOOST_CHECK_EQUAL(v.vec()[i], i);
+		BOOST_CHECK_EQUAL(v[i], i);
 	}
 
 	// test fill
-	w.vec() = 1.f;
+	w = 1.f;
 	for(int i=0;i<N;i++){
-		BOOST_CHECK_EQUAL(w.vec()[i], 1);
+		BOOST_CHECK_EQUAL(w[i], 1);
 	}
 }
 
 BOOST_AUTO_TEST_CASE( vec_ops_norms )
 {
-	sequence(v.vec());
+	sequence(v);
 	float f1 = norm1(v), f1_ = 0;
 	float f2 = norm2(v), f2_ = 0;
 	for(int i=0;i<N;i++){
-		f2_ += v.vec()[i]*v.vec()[i];
-		f1_ += fabs(v.vec()[i]);
+		f2_ += v[i]*v[i];
+		f1_ += fabs(v[i]);
 	}
 	f2_ = sqrt(f2_);
 	BOOST_CHECK_CLOSE((float)f1,(float)f1_,0.01f);
@@ -479,7 +479,7 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 	if(1){ // column-major
 		std::cout << "Column Major"<<std::endl;
 		dense_matrix<float,dev_memory_space,column_major>  dA(n, m);
-		fill_rnd_uniform(dA.vec());
+		fill_rnd_uniform(dA);
 		dA *= 2.f;
 
 		for(std::list<reduce_functor>::iterator it=rf_arg.begin(); it!=rf_arg.end(); it++)
@@ -505,7 +505,7 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 	if(1){ // row-major
 		std::cout << "Row Major"<<std::endl;
 		dense_matrix<float,dev_memory_space,row_major>  dA(n, m);
-		fill_rnd_uniform(dA.vec());
+		fill_rnd_uniform(dA);
 		dA *= 2.f;
 
 		for(std::list<reduce_functor>::iterator it=rf_arg.begin(); it!=rf_arg.end(); it++)
