@@ -304,14 +304,14 @@ namespace cuv{
   void
   apply_binary_functor(D& v,  const S& w, const BinaryFunctor& bf){
 	  typedef typename S::value_type V;
-	  detail::apply_binary_functor<D,D,S,V>(v,v,w,bf);
+	  detail::apply_binary_functor(v,v,w,bf,0,V(),V());
   }
   /// @brief no parameters
   template<class D, class S, class S2>
   void
   apply_binary_functor(D& v,  const S& w, const S2& w2, const BinaryFunctor& bf){
 	  typedef typename S::value_type V;
-	  detail::apply_binary_functor<D,S,S2,V>(v,w,w2,bf);
+	  detail::apply_binary_functor(v,w,w2,bf,0,V(),V());
   }
 
   /// @brief in-place, one parameter
