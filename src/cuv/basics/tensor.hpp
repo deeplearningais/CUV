@@ -366,6 +366,11 @@ namespace cuv
 			//:super_type(eg)
 			//{
 			//}
+			//
+			explicit tensor(const unsigned int& len)
+			:super_type(len)
+			{
+			}
 
 			/**
 			 * copy constructor
