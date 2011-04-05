@@ -63,6 +63,7 @@ namespace cuv{
 		//private:
 		//mutable vector_type m_vec;
 		public:
+		using tensor_type::operator=;
 		
 		/// we simply add a convenience constructor here.
 		dense_matrix(const index_type& h, const index_type& w)
