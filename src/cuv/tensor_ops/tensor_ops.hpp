@@ -509,112 +509,112 @@ namespace cuv{
         return temp;
   }*/
   
-  template<class T, class V>
-   cuv::tensor<T, V> 
-    operator+ (const cuv::tensor<T, V>& v, const V p){
-        cuv::tensor<T, V> temp = v;
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator+ (const cuv::tensor<T, V, M>& v, const V p){
+        cuv::tensor<T, V, M> temp = v;
         temp+= p;
         return temp;
   }
-  template<class T, class V>
-   cuv::tensor<T, V> 
-    operator- (const cuv::tensor<T, V>& v, const V p){
-        cuv::tensor<T, V> temp = v;
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator- (const cuv::tensor<T, V, M>& v, const V p){
+        cuv::tensor<T, V, M> temp = v;
         temp-= p;
         return temp;
   }
-  template<class T, class V>
-   cuv::tensor<T, V> 
-    operator* (const cuv::tensor<T, V>& v, const V p){
-        cuv::tensor<T, V> temp = v;
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator* (const cuv::tensor<T, V, M>& v, const V p){
+        cuv::tensor<T, V, M> temp = v;
         temp*= p;
         return temp;
   }
-  template<class T, class V>
-   cuv::tensor<T, V> 
-    operator/ (const cuv::tensor<T, V>& v, const V p){
-        cuv::tensor<T, V> temp = v;
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator/ (const cuv::tensor<T, V, M>& v, const V p){
+        cuv::tensor<T, V, M> temp = v;
         temp/= p;
         return temp;
   }
-  template<class T, class V>
-   cuv::tensor<T, V> 
-    operator+ (const cuv::tensor<T, V>& v1, const cuv::tensor<T, V>& v2){
-        cuv::tensor<T, V> temp = v1;
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator+ (const cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
+        cuv::tensor<T, V, M> temp = v1;
         temp+= v2;
         return temp;
   }
   
-  template<class T, class V>
-   cuv::tensor<T, V> 
-    operator- (const cuv::tensor<T, V>& v1, const cuv::tensor<T, V>& v2){
-        cuv::tensor<T, V> temp = v1;
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator- (const cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
+        cuv::tensor<T, V, M> temp = v1;
         temp-= v2;
         return temp;
   }
-  template<class T, class V>
-   cuv::tensor<T, V> 
-    operator* (const cuv::tensor<T, V>& v1, const cuv::tensor<T, V>& v2){
-        cuv::tensor<T, V> temp = v1;
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator* (const cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
+        cuv::tensor<T, V, M> temp = v1;
         temp*= v2;
         return temp;
   }
-  template<class T, class V>
-   cuv::tensor<T, V> 
-    operator/ (const cuv::tensor<T, V>& v1, const cuv::tensor<T, V>& v2){
-        cuv::tensor<T, V> temp = v1;
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator/ (const cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
+        cuv::tensor<T, V, M> temp = v1;
         temp/= v2;
         return temp;
   }
         
-  template<class T, class V>
-    cuv::tensor<T, V>& 
-    operator-=(cuv::tensor<T, V>& v1, const cuv::tensor<T, V>& v2){
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>& 
+    operator-=(cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
   	cuv::apply_binary_functor(v1,v2, cuv::BF_SUBTRACT);
   	return v1;
   }
 
-  template<class T, class V>
-    cuv::tensor<T, V>& 
-    operator*=(cuv::tensor<T, V>& v1, const cuv::tensor<T, V>& v2){
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>& 
+    operator*=(cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
   	cuv::apply_binary_functor(v1,v2, cuv::BF_MULT);
   	return v1;
   }
-  template<class T, class V>
-    cuv::tensor<T, V>& 
-    operator/=(cuv::tensor<T, V>& v1, const cuv::tensor<T, V>& v2){
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>& 
+    operator/=(cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
   	cuv::apply_binary_functor(v1,v2, cuv::BF_DIV);
   	return v1;
   }
-  template<class T, class V>
-    cuv::tensor<T, V>& 
-    operator+=(cuv::tensor<T, V>& v1, const cuv::tensor<T, V>& v2){
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>& 
+    operator+=(cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
   	cuv::apply_binary_functor(v1,v2, cuv::BF_ADD);
   	return v1;
   }
  
-  template<class T, class V>
-    cuv::tensor<T, V>& 
-    operator-=(cuv::tensor<T, V>& v, const T& p){
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>& 
+    operator-=(cuv::tensor<T, V, M>& v, const T& p){
   	cuv::apply_scalar_functor(v, cuv::SF_SUBTRACT, p);
   	return v;
   }
-  template<class T, class V>
-    cuv::tensor<T, V>& 
-    operator*=(cuv::tensor<T, V>& v, const T& p){
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>& 
+    operator*=(cuv::tensor<T, V, M>& v, const T& p){
   	cuv::apply_scalar_functor(v, cuv::SF_MULT, p);
   	return v;
   }
   
-  template<class T, class V>
-    cuv::tensor<T, V>& 
-    operator/=(cuv::tensor<T, V>& v, const T& p){
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>& 
+    operator/=(cuv::tensor<T, V, M>& v, const T& p){
   	cuv::apply_scalar_functor(v, cuv::SF_DIV, p);
   	return v;
   }
-  template<class T, class V>
-    cuv::tensor<T, V>& 
-    operator+=(cuv::tensor<T, V>& v, const T& p){
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>& 
+    operator+=(cuv::tensor<T, V, M>& v, const T& p){
   	cuv::apply_scalar_functor(v, cuv::SF_ADD, p);
   	return v;
   }
