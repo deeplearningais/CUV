@@ -42,7 +42,6 @@
 
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/basics/dense_matrix.hpp>
-#include <cuv/basics/vector.hpp>
 #include <cuv/basics/cuda_array.hpp>
 #include <cuv/convert/convert.hpp>
 

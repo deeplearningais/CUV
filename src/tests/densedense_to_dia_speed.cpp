@@ -80,8 +80,8 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	dia_matrix<float,dev_memory_space>   C_dev;
-	dense_matrix<float,column_major,dev_memory_space> A_dev;
-	dense_matrix<float,column_major,dev_memory_space> B_dev;
+	dense_matrix<float,dev_memory_space,column_major> A_dev;
+	dense_matrix<float,dev_memory_space,column_major> B_dev;
 	Fix()
 	:   C_dev(n,m,fs*fs*nm,n)
 	,   A_dev(n,k)
@@ -113,9 +113,9 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_host_host )
 	fill(C_dev.vec(),0);
 
 	dia_matrix<float,host_memory_space>   C2(C_dev.h(),C_dev.w(),C_dev.num_dia(),C_dev.stride());
-	dense_matrix<float,column_major,host_memory_space> C2dense(C_dev.h(),C_dev.w());
-	dense_matrix<float,column_major,host_memory_space> A2(A_dev.h(),A_dev.w());
-	dense_matrix<float,column_major,host_memory_space> B2(B_dev.h(),B_dev.w());
+	dense_matrix<float,host_memory_space,column_major> C2dense(C_dev.h(),C_dev.w());
+	dense_matrix<float,host_memory_space,column_major> A2(A_dev.h(),A_dev.w());
+	dense_matrix<float,host_memory_space,column_major> B2(B_dev.h(),B_dev.w());
 	convert(C2,C_dev);
 	convert(A2,A_dev);
 	convert(B2,B_dev);
@@ -133,8 +133,8 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_dev_host )
 	fill(C_dev.vec(),0);
 
 	dia_matrix<float,host_memory_space> C2(C_dev.h(),C_dev.w(),C_dev.num_dia(),C_dev.stride());
-	dense_matrix<float,column_major,host_memory_space> A2(A_dev.h(),A_dev.w());
-	dense_matrix<float,column_major,host_memory_space> B2(B_dev.h(),B_dev.w());
+	dense_matrix<float,host_memory_space,column_major> A2(A_dev.h(),A_dev.w());
+	dense_matrix<float,host_memory_space,column_major> B2(B_dev.h(),B_dev.w());
 	convert(C2,C_dev);
 	convert(A2,A_dev);
 	convert(B2,B_dev);
@@ -153,9 +153,9 @@ BOOST_AUTO_TEST_CASE( dd2s_speed_sparse_dense )
 	fill(C_dev.vec(),0);
 
 	// make a dev_dense_matrix equivalent to the dia-matrix
-	dense_matrix<float,column_major,dev_memory_space> Cd(C_dev.h(),C_dev.w());
+	dense_matrix<float,dev_memory_space,column_major> Cd(C_dev.h(),C_dev.w());
 	dia_matrix<float,host_memory_space> C2(C_dev.h(),C_dev.w(),C_dev.num_dia(),C_dev.stride());
-	dense_matrix<float,column_major,host_memory_space> C_2(C_dev.h(),C_dev.w());
+	dense_matrix<float,host_memory_space,column_major> C_2(C_dev.h(),C_dev.w());
 	convert(C2,C_dev);  // dev->host
 	convert(C_2,C2); // dia->dense
 	convert(Cd,C_2); // host->dev

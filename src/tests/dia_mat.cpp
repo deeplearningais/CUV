@@ -37,7 +37,6 @@
 
 #include <cuv/tools/cuv_test.hpp>
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
 #include <cuv/basics/dia_matrix.hpp>
 #include <cuv/matrix_ops/diagonals.hpp>
 #include <cuv/convert/convert.hpp>
@@ -112,8 +111,8 @@ BOOST_AUTO_TEST_CASE( spmv_uninit )
 BOOST_AUTO_TEST_CASE( spmv_dia2dense )
 {
 	// hostdia->hostdense
-	dense_matrix<float,column_major,host_memory_space> w2(n,m);
-	fill(w2.vec(),-1);
+	dense_matrix<float,host_memory_space,column_major> w2(n,m);
+	fill(w2,-1);
 	convert(w2,w);
 	MAT_CMP(w,w2,0.1);
 	//cout << w <<w2;

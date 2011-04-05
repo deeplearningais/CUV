@@ -39,7 +39,7 @@
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/basics/dense_matrix.hpp>
 #include <cuv/basics/dia_matrix.hpp>
-#include <cuv/vector_ops/vector_ops.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/convert/convert.hpp>
 
 using namespace cuv;
@@ -69,10 +69,10 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( convert_pushpull )
 {
-	dense_matrix<float,column_major,dev_memory_space> dfc(32,16);
-	dense_matrix<float,row_major,host_memory_space>  hfr(16,32);
-	dense_matrix<float,row_major,dev_memory_space> dfr(32,16);
-	dense_matrix<float,column_major,host_memory_space>  hfc(16,32);
+	dense_matrix<float,dev_memory_space,column_major> dfc(32,16);
+	dense_matrix<float,host_memory_space,row_major>  hfr(16,32);
+	dense_matrix<float,dev_memory_space,row_major> dfr(32,16);
+	dense_matrix<float,host_memory_space,column_major>  hfc(16,32);
 
 	// dfc <--> hfr
 	convert(dfc, hfr);
@@ -85,8 +85,8 @@ BOOST_AUTO_TEST_CASE( convert_pushpull )
 
 BOOST_AUTO_TEST_CASE( create_dev_plain2 )
 {
-	dense_matrix<float,column_major,dev_memory_space> dfc(16,16); // "wrong" size
-	dense_matrix<float,row_major,host_memory_space>  hfr(16,32);
+	dense_matrix<float,dev_memory_space,column_major> dfc(16,16); // "wrong" size
+	dense_matrix<float,host_memory_space,row_major>  hfr(16,32);
 	convert(dfc, hfr);                               // should make dfc correct size
 	convert(hfr, dfc);
 	BOOST_CHECK( hfr.w() == dfc.h());
@@ -95,8 +95,8 @@ BOOST_AUTO_TEST_CASE( create_dev_plain2 )
 
 BOOST_AUTO_TEST_CASE( create_dev_plain3 )
 {
-	dense_matrix<float,column_major,dev_memory_space> dfc(32,16); 
-	dense_matrix<float,row_major,host_memory_space>  hfr(16,16);  // "wrong" size
+	dense_matrix<float,dev_memory_space,column_major> dfc(32,16); 
+	dense_matrix<float,host_memory_space,row_major>  hfr(16,16);  // "wrong" size
 	convert(hfr, dfc);
 	convert(dfc, hfr);                               // should make dfc correct size
 	BOOST_CHECK( hfr.w() == dfc.h());
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE( create_dev_plain3 )
 BOOST_AUTO_TEST_CASE( dia2host )
 {
 	dia_matrix<float,host_memory_space>                 hdia(32,32,3,32);
-	dense_matrix<float,column_major,host_memory_space>  hdns(32,32);
+	dense_matrix<float,host_memory_space,column_major>  hdns(32,32);
 	std::vector<int> off;
 	off.push_back(0);
 	off.push_back(1);

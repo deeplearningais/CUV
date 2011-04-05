@@ -65,9 +65,9 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	dia_matrix<float,dev_memory_space>   C;
-	dense_matrix<float,column_major,dev_memory_space> C_;
-	dense_matrix<float,column_major,dev_memory_space> A,A_;
-	dense_matrix<float,column_major,dev_memory_space> B,B_;
+	dense_matrix<float,dev_memory_space,column_major> C_;
+	dense_matrix<float,dev_memory_space,column_major> A,A_;
+	dense_matrix<float,dev_memory_space,column_major> B,B_;
 	Fix()
 	:   C(n,m,7,max(n,m),rf)
 	,   C_(n,m)
@@ -93,7 +93,7 @@ struct Fix{
 
 		sequence(C.vec());
 		dia_matrix<float,host_memory_space> C2(C.h(),C.w(),C.num_dia(),C.stride(),rf);
-		dense_matrix<float,column_major,host_memory_space> C_2(C.h(),C.w());
+		dense_matrix<float,host_memory_space,column_major> C_2(C.h(),C.w());
 		convert(C2,C);  // dev->host
 		convert(C_2,C2); // dia->dense
 		convert(C_,C_2); // host->dev
@@ -142,10 +142,10 @@ BOOST_AUTO_TEST_CASE( dd2s_correctness_host )
 	sequence(A);
 	sequence(B);
 
-	dense_matrix<float,column_major,host_memory_space> Chdense(C.h(),C.w());
+	dense_matrix<float,host_memory_space,column_major> Chdense(C.h(),C.w());
 	dia_matrix<float,host_memory_space>   Chdia(C.h(),C.w(),C.num_dia(),C.stride(),rf);
-	dense_matrix<float,column_major,host_memory_space> Ah(A.h(),A.w());
-	dense_matrix<float,column_major,host_memory_space> Bh(B.h(),B.w());
+	dense_matrix<float,host_memory_space,column_major> Ah(A.h(),A.w());
+	dense_matrix<float,host_memory_space,column_major> Bh(B.h(),B.w());
 	convert(Chdia,C);
 	convert(Chdense,Chdia);
 	convert(Ah,A);
@@ -170,8 +170,8 @@ BOOST_AUTO_TEST_CASE( dd2s_cmp_dev_host )
 	sequence(B);
 
 	dia_matrix<float,host_memory_space> C2(C.h(),C.w(),C.num_dia(),C.stride(),rf);
-	dense_matrix<float,column_major,host_memory_space> A2(A.h(),A.w());
-	dense_matrix<float,column_major,host_memory_space> B2(B.h(),B.w());
+	dense_matrix<float,host_memory_space,column_major> A2(A.h(),A.w());
+	dense_matrix<float,host_memory_space,column_major> B2(B.h(),B.w());
 	convert(C2,C);
 	convert(A2,A);
 	convert(B2,B);
