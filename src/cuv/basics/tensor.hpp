@@ -364,8 +364,10 @@ namespace cuv
       template<class __value_type, class __memory_space_type, class __memory_layout_type, class S>
       void fill(tensor<__value_type, __memory_space_type, __memory_layout_type>& v, const S& p);
 
-      template<class __value_type, class __memory_space_type, class __memory_layout_type, class S>
-      tensor<__value_type, __memory_space_type, __memory_layout_type>& tensor<__value_type, __memory_space_type, __memory_layout_type>::operator=(const S & f){
+      template<class __value_type, class __memory_space_type, class __memory_layout_type>
+      template<class S>
+      tensor<__value_type, __memory_space_type, __memory_layout_type>& 
+      tensor<__value_type, __memory_space_type, __memory_layout_type>::operator=(const S & f){
           fill(*this,f);
           return *this;
       }
