@@ -127,7 +127,6 @@ namespace cuv
 			 */
 			template<unsigned long D>
 			explicit const_tensor(const extent_gen<D>& eg){
-				m_shape.clear();
 				m_shape.reserve(D);
 				for(unsigned long i=0;i<D;i++)
 					m_shape.push_back(eg.ranges_[i].finish());
@@ -139,7 +138,6 @@ namespace cuv
 			 */
 			template<unsigned long D>
 			explicit const_tensor(const extent_gen<D>& eg, pointer_type ptr){
-				m_shape.clear();
 				m_shape.reserve(D);
 				for(unsigned long i=0;i<D;i++)
 					m_shape.push_back(eg.ranges_[i].finish());
@@ -150,7 +148,6 @@ namespace cuv
 			 * construct tensor using uint
 			 */
 			explicit const_tensor(const unsigned int& _size){
-				m_shape.clear();
 				m_shape.push_back(_size);
 				allocate();
 			}
@@ -159,7 +156,6 @@ namespace cuv
 			 * construct tensor using int
 			 */
 			explicit const_tensor(const int& _size){
-				m_shape.clear();
 				m_shape.push_back(_size);
 				allocate();
 			}
