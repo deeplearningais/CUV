@@ -80,10 +80,10 @@ std::pair<tensor<VT2,host_memory_space,I>*,    // host result
 	 tensor<VT2,host_memory_space,I>*>   // dev  result
 test_reduce(
 	int dim,
-	dense_matrix<VT,ML,dev_memory_space,I>&   d_mat,
+	dense_matrix<VT,dev_memory_space,ML,I>&   d_mat,
 	cuv::reduce_functor rf
 ){
-	dense_matrix<VT,ML,host_memory_space> h_mat(d_mat.h(), d_mat.w());
+	dense_matrix<VT,host_memory_space,ML> h_mat(d_mat.h(), d_mat.w());
 	convert(h_mat,d_mat);
 
 	unsigned int len = d_mat.h();
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
 	w=v;
 	sequence(a);
 	//apply_scalar_functor(v,SF_ADD,1);
-	v+= (float)1.0;
+	v+= float(1.0);
 	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v[i], i + 1);
 	}
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
 
 BOOST_AUTO_TEST_CASE( vec_ops_binary2 )
 {
-	apply_binary_functor(v,w, BF_AXPY, 2);
+	apply_binary_functor(v,w, BF_AXPY, 2.f);
 }
 
 BOOST_AUTO_TEST_CASE( vec_ops_copy )

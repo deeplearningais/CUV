@@ -318,7 +318,8 @@ namespace cuv{
   template<class D, class S>
   void
   apply_binary_functor(D& v,const  S& w, const BinaryFunctor& bf, const typename S::value_type& param){
-	  detail::apply_binary_functor(v,v,w,bf,1,param);
+	  typedef typename S::value_type V;
+	  detail::apply_binary_functor(v,v,w,bf,1,param,V());
   }
   /// @brief one parameter
   template<class D, class S, class S2>

@@ -371,8 +371,8 @@ namespace reduce_impl {
 
 // TODO: make sure this is actually called with a matrix type!
 //
-template<class __value_type, class __memory_space_type, class __memory_layout_type>
-void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const __value_type& factNew, const __value_type& factOld) {
+template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
+void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const __value_type& factNew, const __value_type& factOld) {
 	if (IsSame<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::memory_layout,row_major>::Result::value){
 		//matrix is row major
 		//create column major view and call reduce_to_row for column major
@@ -385,8 +385,8 @@ void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const dense_matri
 	}
 }
 
-template<class __value_type, class __memory_space_type, class __memory_layout_type>
-void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& m,reduce_functor rf, const __value_type& factNew, const __value_type& factOld) {
+template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
+void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m,reduce_functor rf, const __value_type& factNew, const __value_type& factOld) {
 	if (IsSame<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::memory_layout,row_major>::Result::value){
 		//matrix is row major
 		//create column major view and call reduce_to_row for column major
