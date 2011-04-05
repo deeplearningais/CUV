@@ -156,7 +156,7 @@ namespace cuv{
 			template<class T>
 			void set_offsets(const std::vector<T>& v){
 				for(unsigned int i=0;i<v.size();i++)
-					m_offsets.set(i,v[i]);
+					m_offsets[i]=v[i];
 				post_update_offsets();
 			}
 			/**
