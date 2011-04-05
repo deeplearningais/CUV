@@ -146,6 +146,19 @@ class linear_memory{
 	  linear_memory(index_type s,pointer_type p, bool is_view):m_ptr(p),m_is_view(is_view),m_size(s) {
 		  alloc();
 	  }
+
+	  /**
+	   * @brief Make an already existing linear_memory a view on another linear_memory.
+	   *
+	   * this is a substitute for operator=, when you do NOT want to copy.
+	   */
+	  void set_view(index_type s, pointer_type p){ 
+		  dealloc();
+		  m_ptr=p;
+		  m_is_view=true;
+		  m_size=s;
+	  }
+
 	  /** 
 	   * @brief Deallocate memory if is_view is false.
 	   */
