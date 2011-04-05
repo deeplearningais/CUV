@@ -60,9 +60,9 @@ export_tensor_common(const char* name){
 
 	class_<vec> (name, init<int>())
 		.def("__len__",&vec::size, "tensor size")
-		.def("alloc",&vec::alloc, "allocate memory")
+		.def("alloc",&vec::allocate, "allocate memory")
 		.def("dealloc",&vec::dealloc, "deallocate memory")
-		.def("set",    &vec::set, "set index to value")
+		.def("set",    &vec::operator[], "set index to value")
 		.def("at",  (value_type  (vec::*)(const typename vec::index_type&)const)(&vec::operator[]))
 		.add_property("size", &vec::size)
 		.add_property("memsize",&vec::memsize, "size of tensor in memory (bytes)")
