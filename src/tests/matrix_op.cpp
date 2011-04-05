@@ -61,8 +61,8 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	static const int n=128;
-	static const int N=n*n;
+	static const int n;
+	static const int N;
 	static const int big_images = 384*384*2;
 	dense_matrix<float,dev_memory_space,column_major> a,b,u,v,w,d_reduce_big;
 	dense_matrix<float,host_memory_space,column_major> s,t,r,x,z,h_reduce_big;
@@ -75,6 +75,8 @@ struct Fix{
 	}
 };
 
+const int Fix::n=128;
+const int Fix::N=Fix::n * Fix::N;
 template<class VT2, class VT, class ML, class I>
 std::pair<tensor<VT2,host_memory_space>*,    // host result
 	 tensor<VT2,host_memory_space>*>   // dev  result
