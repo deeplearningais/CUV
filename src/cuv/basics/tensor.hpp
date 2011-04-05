@@ -238,15 +238,17 @@ namespace cuv
 			 * return a reference to the value at this position in linear memory
 			 */
 			const_reference_type operator[](index_type d0)const{
-				index_type arr[1] = {d0};
-				index_type idx = index_of<1>(memory_layout_type(),arr);
-				return m_data[idx];
+				//index_type arr[1] = {d0};
+				//index_type idx = index_of<1>(memory_layout_type(),arr);
+				//return m_data[idx];
+				return m_data[d0];
 			}
 
 			const_reference_type operator()(index_type d0)const{
-				index_type arr[1] = {d0};
-				index_type idx = index_of<1>(memory_layout_type(),arr);
-				return m_data[idx];
+				//index_type arr[1] = {d0};
+				//index_type idx = index_of<1>(memory_layout_type(),arr);
+				//return m_data[idx];
+				return m_data[d0];
 			}
 			const_reference_type operator()(index_type d0, index_type d1)const{
 				index_type arr[2] = {d0,d1};
@@ -429,15 +431,17 @@ namespace cuv
                         tensor& operator=(const __value_type & f);
 
 			reference_type operator[](index_type d0){
-				index_type arr[1] = {d0};
-				index_type idx = super_type::template index_of<1>(memory_layout_type(),arr);
-				return m_data[idx];
+				//index_type arr[1] = {d0};
+				//index_type idx = super_type::template index_of<1>(memory_layout_type(),arr);
+				//return m_data[idx];
+				return m_data[d0];
 			}
 
 			reference_type operator()(index_type d0){
-				index_type arr[1] = {d0};
-				index_type idx = super_type::template index_of<1>(memory_layout_type(),arr);
-				return m_data[idx];
+				//index_type arr[1] = {d0};
+				//index_type idx = super_type::template index_of<1>(memory_layout_type(),arr);
+				//return m_data[idx];
+				return m_data[d0];
 			}
 			reference_type operator()(index_type d0, index_type d1){
 				index_type arr[2] = {d0,d1};
