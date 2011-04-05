@@ -36,214 +36,6 @@ namespace cuv{
 
     namespace convert_impl{
         /*
-         * Vector Conversion
-         */
-
-
-        // host  --> dev 
-        template<class __value_type>
-            static void
-            convert(
-                    tensor <__value_type, dev_memory_space>& dst, 
-                    const
-                    tensor<__value_type, host_memory_space>& src){
-                if(        dst.size() != src.size()){
-                    tensor<__value_type,dev_memory_space> d(src.size());
-                    dst = d;
-                }
-                cuvSafeCall(cudaMemcpy(dst.ptr(),src.ptr(),dst.memsize(),cudaMemcpyHostToDevice));
-            }
-
-        // dev  --> host  
-        template<class __value_type>
-            static void
-            convert(
-                    tensor<__value_type, host_memory_space>& dst, 
-                    const
-                    tensor<__value_type, dev_memory_space>& src){
-                if( dst.size() != src.size()){
-                    tensor<__value_type, host_memory_space> h(src.size());
-                    dst = h;
-                }
-                cuvSafeCall(cudaMemcpy(dst.ptr(),src.ptr(),dst.memsize(),cudaMemcpyDeviceToHost));
-            }
-
-        // host  --> host
-        template<class __value_type>
-            static void
-            convert(
-                    tensor<__value_type, host_memory_space>& dst,
-                    const
-                    tensor<__value_type, host_memory_space>& src){
-                if( dst.size() != src.size()){
-                    tensor<__value_type, host_memory_space> h(src.size());
-                    dst = h;
-                }
-                memcpy(dst.ptr(),src.ptr(),dst.memsize());
-            }
-
-        /*
-         * Matrix Conversion
-         */
-
-        // host (row-major) --> dev (col-major) 
-        template<class __value_type, class __index_type>
-            static void
-            convert(        dense_matrix <__value_type, dev_memory_space, column_major, __index_type>& dst, 
-                    const dense_matrix<__value_type, host_memory_space, row_major, __index_type>& src){
-                if(        dst.h() != src.w()
-                        || dst.w() != src.h()){
-
-                    dense_matrix<__value_type, dev_memory_space, column_major, __index_type> d(src.w(),src.h());
-                    dst = d;
-                }
-                cuvAssert(dst.ptr())
-                    cuvAssert(src.ptr())
-                    convert(dst, src);
-            }
-
-        // dev (col-major) --> host (row-major) 
-        template<class __value_type, class __index_type>
-            static void
-            convert(        dense_matrix<__value_type, host_memory_space, row_major, __index_type>& dst, 
-                    const dense_matrix<__value_type, dev_memory_space, column_major, __index_type>& src){
-                if(        dst.h() != src.w()
-                        || dst.w() != src.h()){
-                    dense_matrix<__value_type, host_memory_space, row_major, __index_type> h(src.w(),src.h());
-                    dst = h;
-                }
-                cuvAssert(dst.ptr())
-                    cuvAssert(src.ptr())
-                    convert(dst, src);
-            }
-
-        // host (col-major) --> dev (row-major) 
-        template<class __value_type, class __index_type>
-            static void
-            convert(        dense_matrix <__value_type, dev_memory_space, row_major, __index_type>& dst, 
-                    const dense_matrix<__value_type, host_memory_space, column_major, __index_type>& src){
-                if(        dst.h() != src.w()
-                        || dst.w() != src.h()){
-
-                    dense_matrix<__value_type, dev_memory_space, row_major, __index_type> d(src.w(),src.h());
-                    dst = d;
-                }
-                cuvAssert(dst.ptr())
-                    cuvAssert(src.ptr())
-                    convert(dst, src);
-            }
-
-        // dev (row-major) --> host (col-major) 
-        template<class __value_type, class __index_type>
-            static void
-            convert(        dense_matrix<__value_type, host_memory_space, column_major, __index_type>& dst, 
-                    const dense_matrix<__value_type, dev_memory_space, row_major, __index_type>& src){
-                if(        dst.h() != src.w()
-                        || dst.w() != src.h()){
-                    dense_matrix<__value_type, host_memory_space, column_major, __index_type> h(src.w(),src.h());
-                    dst = h;
-                }
-                cuvAssert(dst.ptr())
-                    cuvAssert(src.ptr())
-                    convert(dst, src);
-            }
-
-        /*
-         * Simple copying
-         *
-         */
-
-        // host (col-major) --> host (col-major)
-        template<class __value_type, class __index_type>
-            static void
-            convert(        dense_matrix<__value_type, host_memory_space, column_major, __index_type>& dst,
-                    const   dense_matrix<__value_type, host_memory_space, column_major, __index_type>& src){
-                if(        dst.h() != src.h()
-                        || dst.w() != src.w()){
-                    dense_matrix<__value_type, host_memory_space, column_major, __index_type> h(src.h(),src.w());
-                    dst = h;
-                }
-                cuvAssert(dst.ptr())
-                    cuvAssert(src.ptr())
-                    convert(dst, src);
-            }
-
-        // host (row-major) --> host (row-major)
-        template<class __value_type, class __index_type>
-            static void
-            convert(        dense_matrix<__value_type, host_memory_space, row_major, __index_type>& dst,
-                    const   dense_matrix<__value_type, host_memory_space, row_major, __index_type>& src){
-                if(        dst.h() != src.h()
-                        || dst.w() != src.w()){
-                    dense_matrix<__value_type, host_memory_space, row_major, __index_type> h(src.h(),src.w());
-                    dst = h;
-                }
-                cuvAssert(dst.ptr())
-                    cuvAssert(src.ptr())
-                    convert(dst, src);
-            }
-
-        // dev (col-major) --> host (col-major) 
-        template<class __value_type, class __index_type>
-            static void
-            convert(        dense_matrix<__value_type, host_memory_space, column_major, __index_type>& dst, 
-                    const    dense_matrix<__value_type, dev_memory_space, column_major, __index_type>& src){
-                if(        dst.h() != src.h()
-                        || dst.w() != src.w()){
-                    dense_matrix<__value_type, host_memory_space, column_major, __index_type> h(src.h(),src.w());
-                    dst = h;
-                }
-                cuvAssert(dst.ptr())
-                    cuvAssert(src.ptr())
-                    convert(dst, src);
-            }
-
-        // dev (col-major) --> host (col-major) 
-        template<class __value_type, class __index_type>
-            static void
-            convert(         dense_matrix<__value_type, dev_memory_space, column_major, __index_type>& dst, 
-                    const   dense_matrix<__value_type, host_memory_space, column_major, __index_type>& src){
-                if(        dst.h() != src.h()
-                        || dst.w() != src.w()){
-                    dense_matrix<__value_type, dev_memory_space, column_major, __index_type> h(src.h(),src.w());
-                    dst = h;
-                }
-                cuvAssert(dst.ptr())
-                    cuvAssert(src.ptr())
-                    convert(dst, src);
-            }
-
-        // dev (row-major) --> host (row-major) 
-        template<class __value_type, class __index_type>
-            static void
-            convert(        dense_matrix<__value_type, host_memory_space, row_major, __index_type>& dst, 
-                    const dense_matrix<__value_type, dev_memory_space, row_major, __index_type>& src){
-                if(        dst.h() != src.h()
-                        || dst.w() != src.w()){
-                    dense_matrix<__value_type, host_memory_space, row_major, __index_type> h(src.h(),src.w());
-                    dst = h;
-                }
-                cuvAssert(dst.vec_ptr())
-                    cuvAssert(src.vec_ptr())
-                    convert(dst, src);
-            }
-
-        // host (row-major) --> dev (row-major) 
-        template<class __value_type, class __index_type>
-            static void
-            convert(         dense_matrix<__value_type, dev_memory_space, row_major, __index_type>& dst, 
-                    const dense_matrix<__value_type, host_memory_space, row_major, __index_type>& src){
-                if(        dst.h() != src.h()
-                        || dst.w() != src.w()){
-                    dense_matrix<__value_type, dev_memory_space, row_major, __index_type> h(src.h(),src.w());
-                    dst = h;
-                }
-                cuvAssert(dst.vec_ptr())
-                    cuvAssert(src.vec_ptr())
-                    convert(dst, src);
-            }
-
-        /*
          * Host Dia -> Host Dense
          */
         template<class __value_type, class __mem_layout_type, class __index_type>
@@ -317,6 +109,24 @@ namespace cuv{
                 cuv::convert(dst, src);
                 dst.post_update_offsets();
             }
+
+        /*
+         * Everything else
+         */
+        template<class __value_type,  class __memory_space, class __mem_layout_type,
+		 class __value_type2, class __memory_space2, class __mem_layout_type2>
+            static void
+            convert(      tensor<__value_type,  __memory_space,  __mem_layout_type>& dst, 
+                    const tensor<__value_type2, __memory_space2, __mem_layout_type2>& src){
+		    dst = src;
+	    }
+        template<class __value_type,  class __memory_space, class __mem_layout_type, class __index_type,
+		 class __value_type2, class __memory_space2, class __mem_layout_type2, class __index_type2>
+            static void
+            convert(      dense_matrix<__value_type,  __memory_space,  __mem_layout_type, __index_type>& dst, 
+                    const dense_matrix<__value_type2, __memory_space2, __mem_layout_type2,__index_type2>& src){
+		    dst = src;
+	    }
     }
     template<class Dst, class Src>
         void convert(Dst& dst, const Src& src)
