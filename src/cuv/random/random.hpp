@@ -62,8 +62,6 @@ namespace cuv{
 	 */
 	template<class V, class M, class T> void add_rnd_normal(tensor<V, M, T>& dst,const float& std=1.0f);  
 
-	//template<class V, class M, class T> void fill_rnd_normal(tensor<V, M, T>&);   ///< fill a matrix/vector with  numbers (normally distributed, mean 0, std 1)
-
 	/** 
 	 * @brief Initialize Mersenne twister to generate random numbers on GPU
 	 * 

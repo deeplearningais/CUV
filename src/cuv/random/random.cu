@@ -59,171 +59,6 @@
 #include <cuv/basics/tensor.hpp>
 #include "cuv/random/random.hpp"
 
-
-// Old RNG 
-
-/*__global__ void kSeedRandom(unsigned int* rndMults, unsigned long long* rndWords, unsigned int seed) {*/
-/*    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;*/
-        
-/*    // The initial x is the seed and the initial carry is 1*/
-/*    unsigned long long rndWord = ((unsigned long long)seed << 32) + 1;*/
-/*    const unsigned int rndMult = rndMults[idx]; */
-    /*
-     * Run the chain for a few steps so that all the streams have a chance
-     * to differentiate. They start out generating similar random numbers
-     * because all the multipliers are similar. 
-     */
-/*    for(unsigned int i = 0; i < NUM_RND_BURNIN; i++) {*/
-/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
-/*    }*/
-/*    rndWords[idx] = rndWord;*/
-/*}  */
-
-/*__global__ void kRandomUniform(unsigned int* rndMults, unsigned long long* rndWords, float* gData, unsigned int numElements) {*/
-/*    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;*/
-/*    unsigned long long rndWord = rndWords[idx]; */
-/*    const unsigned int rndMult = rndMults[idx];*/
-   
-/*    for(unsigned int i = idx; i < numElements; i += NUM_RND_STREAMS) {*/
-/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
-/*        gData[i] = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
-/*    }*/
-/*    rndWords[idx] = rndWord;*/
-/*}       */
-
-/*
- * TODO: modify to take mean/stdev 
- */     
-/*__global__ void kRandomGaussian(unsigned int* rndMults, unsigned long long* rndWords, float* gData, unsigned int numElements) {*/
-/*    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;*/
-/*    unsigned long long rndWord = rndWords[idx];*/
-/*    const unsigned int rndMult = rndMults[idx];*/
-
-/*    float rnd1, rnd2, R, T;*/
-/*    for(unsigned int i = idx; i < numElements; i += 2*NUM_RND_STREAMS) {*/
-/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
-/*        rnd1 = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
-/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
-/*        rnd2 = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
-/*        T = 2 * M_PI * rnd2;*/
-/*        R = sqrtf(-2 * __logf(rnd1));*/
-/*        gData[i] = R * __cosf(T);*/
-/*        if (i + NUM_RND_STREAMS < numElements)*/
-/*            gData[i + NUM_RND_STREAMS] = R * __sinf(T);*/
-/*    }*/
-/*    rndWords[idx] = rndWord;*/
-/*}*/
-
-/*  
- * TODO: modify to take mean
- */     
-/*__global__ void kAddGaussianNoise(unsigned int* rndMults, unsigned long long* rndWords, float* gData, float stdev, unsigned int numElements) {*/
-/*    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;*/
-/*    unsigned long long rndWord = rndWords[idx];*/
-/*    const unsigned int rndMult = rndMults[idx];*/
-        
-/*    float rnd1, rnd2, R, T;*/
-/*    for(unsigned int i = idx; i < numElements; i += 2*NUM_RND_STREAMS) {*/
-/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
-/*        rnd1 = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
-/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
-/*        rnd2 = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
-/*        T = 2 * M_PI * rnd2;*/
-/*        R = sqrtf(-2 * __logf(rnd1));*/
-/*        gData[i] += stdev * R * __cosf(T);*/
-/*        if (i + NUM_RND_STREAMS < numElements)*/
-/*            gData[i + NUM_RND_STREAMS] += stdev * R * __sinf(T);*/
-/*    }*/
-/*    rndWords[idx] = rndWord;*/
-/*}*/
-
-
-
-/*template<class T>*/
-/*void MatrixTools<T>::init_RNG(unsigned int seed, const char* fn) {*/
-/*    assert(!sRndInitialized);*/
-/*    std::ifstream inFile;*/
-/*    inFile.open(fn);*/
-/*    if(!inFile) {*/
-/*        std::cerr << "Unable to open file " << RND_MULTIPLIERS_FILE << std::endl;*/
-/*        exit(EXIT_FAILURE);*/
-/*    }*/
-    
-/*    int numRead = 0;*/
-/*    unsigned int mult;*/
-/*    shRndMults = new unsigned int[NUM_RND_STREAMS];*/
-/*    while(numRead < NUM_RND_STREAMS) {*/
-/*        if(!(inFile >> mult)) {*/
-/*            std::cerr << "Not enough numbers in file " << RND_MULTIPLIERS_FILE << std::endl;*/
-/*            exit(EXIT_FAILURE);*/
-/*        }*/
-/*        shRndMults[numRead] = mult;*/
-/*        numRead++;*/
-/*    }*/
-/*    inFile.close();*/
-
-/*    cutilSafeCall(cudaMalloc((void **)&sdRndMults,   NUM_RND_STREAMS * sizeof(unsigned int)));*/
-/*    cutilSafeCall(cudaMalloc((void **)&sdRndWords,   NUM_RND_STREAMS * sizeof(unsigned long long)));*/
-/*    cutilSafeCall(cudaMemcpy(sdRndMults, shRndMults, NUM_RND_STREAMS * sizeof(unsigned int), cudaMemcpyHostToDevice));*/
-
-/*    kSeedRandom<<<NUM_RND_BLOCKS, NUM_RND_THREADS_PER_BLOCK>>>(sdRndMults, sdRndWords, seed);*/
-/*    cutilSafeCall(cudaThreadSynchronize());*/
-/*    checkCudaError("Kernel execution failed");*/
-/*    sRndInitialized = true;*/
-/*}*/
-
-/*template<class T>*/
-/*void MatrixTools<T>::init_rnd_uniform(T& m) {*/
-/*    assert(sRndInitialized);*/
-/*    assert(m.getDev());*/
-/*    kRandomUniform<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(sdRndMults, sdRndWords, m.getDev(),m.n());*/
-/*    cutilSafeCall(cudaThreadSynchronize());*/
-/*    checkCudaError("Kernel execution failed");*/
-/*}*/
-/*template<class T>*/
-/*void MatrixTools<T>::init_rnd_gaussian(T& m) {*/
-/*    assert(sRndInitialized);*/
-/*    assert(m.getDev());*/
-/*    kRandomGaussian<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(sdRndMults, sdRndWords, m.getDev(),m.n());*/
-/*    cutilSafeCall(cudaThreadSynchronize());*/
-/*    checkCudaError("Kernel execution failed");*/
-/*}*/
-
-/*template<class T>*/
-/*void MatrixTools<T>::add_gaussian_noise(T& m, float stddev) {*/
-/*    assert(sRndInitialized);*/
-/*    assert(m.getDev());*/
-/*    assert(m.n() % 2 == 0);*/
-/*    kAddGaussianNoise<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(sdRndMults, sdRndWords, m.getDev(),stddev,m.n());*/
-/*    cutilSafeCall(cudaThreadSynchronize());*/
-/*    checkCudaError("Kernel execution failed");*/
-/*}*/
-
-/*template<class T>*/
-/*__global__ void kBinarizeProbs(unsigned int* rndMults, unsigned long long* rndWords, T *gData, unsigned int numElements) {*/
-/*    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;*/
-/*    unsigned long long rndWord = rndWords[idx];*/
-/*    const unsigned int rndMult = rndMults[idx];*/
-
-/*    for(unsigned int i = idx; i < numElements; i += NUM_RND_STREAMS) {*/
-/*        rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord);*/
-/*        gData[i] = gData[i] > (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;*/
-/*    }*/
-/*    rndWords[idx] = rndWord;*/
-/*}*/
-
-/*template<class T>*/
-/*void MatrixTools<T>::binarize_probs(T& m) {*/
-/*    assert(sRndInitialized);*/
-/*    assert(m.getDev());*/
-/*    kBinarizeProbs<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(sdRndMults, sdRndWords, m.getDev(),m.n());*/
-/*    cutilSafeCall(cudaThreadSynchronize());*/
-/*    checkCudaError("Kernel execution failed");*/
-/*}*/
-
-
-// New RNG
- 
 #define MT_MM     9
 #define MT_NN     19
 #define MT_WMASK  0xFFFFFFFFU
@@ -439,9 +274,13 @@ namespace cuv{
 	   for(int i=0;i<v.size();i++)
 		   *ptr++ = ((float)rand()/RAND_MAX) < *ptr;
 	}
-        template<class __memory_space_type>
-	void rnd_binarize(tensor<float,__memory_space_type,column_major>& v){
-            rnd_binarize(*reinterpret_cast<tensor<float,__memory_space_type>* >(&v));
+        template<>
+	void rnd_binarize(tensor<float,host_memory_space,column_major>& v){
+            rnd_binarize(*reinterpret_cast<tensor<float,host_memory_space>* >(&v));
+        }
+        template<>
+	void rnd_binarize(tensor<float,dev_memory_space,column_major>& v){
+            rnd_binarize(*reinterpret_cast<tensor<float,dev_memory_space>* >(&v));
         }
 	template<>
 	void fill_rnd_uniform(tensor<float,host_memory_space>& v){
@@ -462,9 +301,13 @@ namespace cuv{
 
 		cuvSafeCall(cudaThreadSynchronize());
 	}
-        template<class __memory_space_type>
-	void fill_rnd_uniform(tensor<float,__memory_space_type,column_major>& v){
-            fill_rnd_uniform(*reinterpret_cast<tensor<float,__memory_space_type>* >(&v));
+        template<>
+	void fill_rnd_uniform(tensor<float,host_memory_space,column_major>& v){
+            fill_rnd_uniform(*reinterpret_cast<tensor<float,host_memory_space>* >(&v));
+        }
+        template<>
+	void fill_rnd_uniform(tensor<float,dev_memory_space,column_major>& v){
+            fill_rnd_uniform(*reinterpret_cast<tensor<float,dev_memory_space>* >(&v));
         }
 	template<>
 	void add_rnd_normal(tensor<float,host_memory_space>& v, const float& std){
@@ -489,9 +332,13 @@ namespace cuv{
 		kRndNormal<<<grid,threads>>>((float2*)v.ptr(),v.size()/2,rng);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
-        template<class __memory_space_type>
-	void add_rnd_normal(tensor<float,__memory_space_type,column_major>& v, const float& std){
-            add_rnd_normal(*reinterpret_cast<tensor<float,__memory_space_type>* >(&v),std);
+        template<>
+	void add_rnd_normal(tensor<float,dev_memory_space,column_major>& v, const float& std){
+            add_rnd_normal(*reinterpret_cast<tensor<float,dev_memory_space>* >(&v),std);
+        }
+        template<>
+	void add_rnd_normal(tensor<float,host_memory_space,column_major>& v, const float& std){
+            add_rnd_normal(*reinterpret_cast<tensor<float,host_memory_space>* >(&v),std);
         }
 
 } // cuv
