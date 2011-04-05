@@ -173,7 +173,7 @@ namespace cuv{
 	template<>        struct single_to_4<unsigned char>{typedef uchar4 type;};
 	template<class V,class S, class I>
 		void gaussian(
-				dense_matrix<V,row_major,S,I>& dst,
+				dense_matrix<V,S,row_major,I>& dst,
 				const cuda_array<V,S,I>& src){
 
 			typedef typename texref<V>::type textype;
@@ -202,7 +202,7 @@ namespace cuv{
 		}
 	template<class V,class S, class I>
 		void gaussian_pyramid_downsample(
-				dense_matrix<V,row_major,S,I>& dst,
+				dense_matrix<V,S,row_major,I>& dst,
 				const cuda_array<V,S,I>& src,
 				const unsigned int interleaved_channels){
 
@@ -271,7 +271,7 @@ namespace cuv{
 	// Upsampling with hardware linear interpolation
 	template<class V,class S, class I>
 		void gaussian_pyramid_upsample(
-				dense_matrix<V,row_major,S,I>& dst,
+				dense_matrix<V,S,row_major,I>& dst,
 				const cuda_array<V,S,I>& src){
 			cuvAssert(dst.w() > src.w());
 			cuvAssert(dst.h() > src.h());
@@ -378,7 +378,7 @@ namespace cuv{
 	// smoothly and according to detail level in the image
 	template<class VDest, class V, class S, class I>
 		void get_pixel_classes(
-			dense_matrix<VDest,row_major,S,I>& dst,
+			dense_matrix<VDest,S,row_major,I>& dst,
 			const cuda_array<V,S,I>&             src_smooth,
 			float scale_fact
 		){
@@ -412,37 +412,37 @@ namespace cuv{
 
 	// explicit instantiation
 	template void gaussian(
-			dense_matrix<float,row_major,dev_memory_space,unsigned int>& dst,
+			dense_matrix<float,dev_memory_space,row_major,unsigned int>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src);
 	template void gaussian(
-			dense_matrix<unsigned char,row_major,dev_memory_space,unsigned int>& dst,
+			dense_matrix<unsigned char,dev_memory_space,row_major,unsigned int>& dst,
 			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src);
 
 	template void gaussian_pyramid_downsample(
-			dense_matrix<float,row_major,dev_memory_space,unsigned int>& dst,
+			dense_matrix<float,dev_memory_space,row_major,unsigned int>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src,
 			const unsigned int);
 	template void gaussian_pyramid_downsample(
-			dense_matrix<unsigned char,row_major,dev_memory_space,unsigned int>& dst,
+			dense_matrix<unsigned char,dev_memory_space,row_major,unsigned int>& dst,
 			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src,
 			const unsigned int);
 	template void gaussian_pyramid_upsample(
-			dense_matrix<float,row_major,dev_memory_space,unsigned int>& dst,
+			dense_matrix<float,dev_memory_space,row_major,unsigned int>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src);
 	template void gaussian_pyramid_upsample(
-			dense_matrix<unsigned char,row_major,dev_memory_space,unsigned int>& dst,
+			dense_matrix<unsigned char,dev_memory_space,row_major,unsigned int>& dst,
 			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src);
 
 	template void get_pixel_classes(
-			dense_matrix<unsigned char,row_major,dev_memory_space,unsigned int>& dst,
+			dense_matrix<unsigned char,dev_memory_space,row_major,unsigned int>& dst,
 			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src,
 			float scale_fact);
 	template void get_pixel_classes(
-			dense_matrix<float,row_major,dev_memory_space,unsigned int>& dst,
+			dense_matrix<float,dev_memory_space,row_major,unsigned int>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src,
 			float scale_fact);
 	template void get_pixel_classes(
-			dense_matrix<unsigned char,row_major,dev_memory_space,unsigned int>& dst,
+			dense_matrix<unsigned char,dev_memory_space,row_major,unsigned int>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src,
 			float scale_fact);
 }
