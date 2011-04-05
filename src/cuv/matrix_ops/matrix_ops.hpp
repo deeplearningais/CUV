@@ -35,6 +35,7 @@
 #define __MATRIX_OPS_HPP__
 
 #include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/dia_matrix.hpp>
 
 namespace cuv{
 
@@ -208,8 +209,8 @@ namespace cuv{
    *	Here transA(A) is the transpose of A if transA = 't' and transA(A) is A if transA = 'n'.
    *	transA(A)*v is the matrix-vector product and all other operations are pointwise.
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void spmv(tensor<__value_type, __memory_space_type>& dst, dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, tensor<__value_type, __memory_space_type>& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
+  template<class __value_type, class __memory_space_type>
+	  void spmv(tensor<__value_type, __memory_space_type>& dst, dia_matrix<__value_type, __memory_space_type>& A, tensor<__value_type, __memory_space_type>& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
   
   /** 
    * @brief Add a vector to each column of a matrix A.

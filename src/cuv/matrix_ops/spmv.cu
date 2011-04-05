@@ -127,8 +127,8 @@ namespace cuv{
 
 		/*        unbind_x(v.ptr());*/
 		/*    }*/
-		template<class value_type, class index_type>
-			void spmv(tensor<value_type,dev_memory_space>& dst, dia_matrix<value_type,dev_memory_space,index_type>& A, tensor<value_type,dev_memory_space>& v, char transA, const float& factAv, const float& factC){
+		template<class value_type>
+			void spmv(tensor<value_type,dev_memory_space>& dst, dia_matrix<value_type,dev_memory_space>& A, tensor<value_type,dev_memory_space>& v, char transA, const float& factAv, const float& factC){
 				// TODO: find a good assert
 				/*if(transA=='t'){*/
 					/*cuvAssert(A.w() == dst.size());*/
