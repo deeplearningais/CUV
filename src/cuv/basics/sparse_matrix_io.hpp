@@ -41,6 +41,7 @@
 #ifndef __SPARSE_MATRIX_IO_HPP__
 
 #include <boost/serialization/array.hpp>
+#include <boost/serialization/vector.hpp> 
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <cuv/basics/dia_matrix.hpp>
@@ -56,7 +57,7 @@ namespace cuv{
 	 */
 	template<class Archive, class value_type>
 		void serialize(Archive& ar, cuv::tensor<value_type,host_memory_space>& v, const unsigned int version){
-			ar & v.memsize;
+			ar & v.m_shape;
 			if(!v.ptr())
 				v.allocate();
 			ar & boost::serialization::make_array(v.ptr(),v.size());
