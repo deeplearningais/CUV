@@ -439,6 +439,10 @@ namespace cuv{
 	   for(int i=0;i<v.size();i++)
 		   *ptr++ = ((float)rand()/RAND_MAX) < *ptr;
 	}
+        template<class __memory_space_type>
+	void rnd_binarize(tensor<float,__memory_space_type,column_major>& v){
+            rnd_binarize(*reinterpret_cast<tensor<float,__memory_space_type>* >(&v));
+        }
 	template<>
 	void fill_rnd_uniform(tensor<float,host_memory_space>& v){
 	   cuvAssert(v.ptr());
@@ -458,6 +462,10 @@ namespace cuv{
 
 		cuvSafeCall(cudaThreadSynchronize());
 	}
+        template<class __memory_space_type>
+	void fill_rnd_uniform(tensor<float,__memory_space_type,column_major>& v){
+            fill_rnd_uniform(*reinterpret_cast<tensor<float,__memory_space_type>* >(&v));
+        }
 	template<>
 	void add_rnd_normal(tensor<float,host_memory_space>& v, const float& std){
 	   cuvAssert(v.ptr());
@@ -481,4 +489,9 @@ namespace cuv{
 		kRndNormal<<<grid,threads>>>((float2*)v.ptr(),v.size()/2,rng);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
+        template<class __memory_space_type>
+	void add_rnd_normal(tensor<float,__memory_space_type,column_major>& v, const float& std){
+            add_rnd_normal(*reinterpret_cast<tensor<float,__memory_space_type>* >(&v),std);
+        }
+
 } // cuv
