@@ -61,12 +61,12 @@ namespace cuv
 	}
 #endif
 
-	template<class __value_type, class __memory_space_type, class __memory_layout = row_major, class Tptr=const __value_type*>
+	template<class __value_type, class __memory_space_type, class __memory_layout_type = row_major, class Tptr=const __value_type*>
 	class const_tensor{
 		public:
 			typedef typename unconst<__value_type>::type value_type;	///< Type of the entries of matrix
 			typedef const value_type const_value_type;	///< Type of the entries of matrix
-			typedef __memory_layout  memory_layout_type; ///< host or device
+			typedef __memory_layout_type  memory_layout_type; ///< host or device
 			typedef __memory_space_type memory_space_type; ///< C or Fortran storage
 			typedef unsigned int index_type;       ///< the type of the tensor indices
 			typedef linear_memory<value_type,memory_space_type,Tptr, index_type> linear_memory_type;  ///< the type of the underlying memory container
@@ -253,12 +253,12 @@ namespace cuv
 		
 	};
 	
-	template<class __value_type, class __memory_space_type, class __memory_layout=row_major>
+	template<class __value_type, class __memory_space_type, class __memory_layout_type=row_major>
 	class tensor
-	: public const_tensor<__value_type, __memory_space_type,__memory_layout, __value_type*>
+	: public const_tensor<__value_type, __memory_space_type,__memory_layout_type, __value_type*>
 	{
 		public:
-			typedef const_tensor<__value_type, __memory_space_type, __memory_layout, __value_type*> super_type;
+			typedef const_tensor<__value_type, __memory_space_type, __memory_layout_type, __value_type*> super_type;
 			typedef typename super_type::value_type                      value_type;
 			typedef typename super_type::const_value_type          const_value_type;
 			typedef typename super_type::memory_space_type        memory_space_type;
