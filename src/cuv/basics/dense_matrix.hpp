@@ -114,13 +114,13 @@ namespace cuv{
 			//return m_vec;
 		//}
 		/// deprecated! use ptr()
-		const_value_type* vec_ptr()const{
-			std::cout << "DEPRECATED vec_ptr"<<std::endl;
-			return this->ptr();}
+		//const_value_type* vec_ptr()const{
+			//std::cout << "DEPRECATED vec_ptr"<<std::endl;
+			//return this->ptr();}
 		/// deprecated! use ptr()
-		value_type*       vec_ptr()     {
-			std::cout << "DEPRECATED vec_ptr"<<std::endl;
-			return this->ptr();}
+		//value_type*       vec_ptr()     {
+			//std::cout << "DEPRECATED vec_ptr"<<std::endl;
+			//return this->ptr();}
 	};
 
 	template<class Mat, class NewVT>

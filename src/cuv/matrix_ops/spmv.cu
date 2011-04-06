@@ -226,9 +226,9 @@ namespace cuv{
 				  const float& factC){
 			cuvAssert(transB == 'n');
 			cuvAssert(dst.w() == B.w());
-			cuvAssert(dst.vec_ptr());
+			cuvAssert(dst.ptr());
 			cuvAssert(A.vec_ptr());
-			cuvAssert(B.vec_ptr());
+			cuvAssert(B.ptr());
 			if(transA=='t'){
 				cuvAssert(A.w() == dst.h());
 			}else{
