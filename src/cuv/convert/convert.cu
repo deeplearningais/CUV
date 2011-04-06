@@ -59,7 +59,7 @@ namespace cuv{
                     __index_type i = rf*max((int)0,-o);
                     for(;i<src.h() && j<src.w(); j++){
                         for(int k=0;k<rf;k++,i++)
-                            dst.set(i,j, src(i,j));
+                            dst(i,j)=src(i,j);
                     }
                 }
             }

@@ -144,7 +144,7 @@ namespace cuv{
 			void set_offsets(T begin, const T& end){ 
 				int i=0;
 				while(begin!=end)
-					m_offsets.set(i++,*begin++);
+					m_offsets[i++]= *begin++;
 				post_update_offsets();
 			}
 			/**
@@ -178,7 +178,7 @@ namespace cuv{
 			 * @param val the offset number
 			 */
 			inline void set_offset(const index_type& idx, const index_type& val){
-				m_offsets.set(idx,val);
+				m_offsets[idx] = val;
 				m_dia2off[val] = idx;
 			}
 			/** Return vector (view) containing specified diagonal.
