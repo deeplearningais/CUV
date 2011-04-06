@@ -1098,7 +1098,7 @@ template<>
 	fill(erg_h, 0.0f);
 	for(int idx = 0; idx < erg_h.w(); idx++ ){
 		for (int idy = 0; idy < n; idy++){
-			erg_h(idy,idx)=*(row.ptr() + idx);
+			erg_h(idy,idx)=row[idx];
 		}
 	}
 }
