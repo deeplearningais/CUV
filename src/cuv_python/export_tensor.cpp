@@ -55,20 +55,20 @@ long int internal_ptr(const T& t){
 template<class T>
 void
 export_tensor_common(const char* name){
-	typedef T vec;
-	typedef typename vec::value_type value_type;
+	typedef T arr;
+	typedef typename arr::value_type value_type;
 
-	class_<vec> (name, init<int>())
-		.def("__len__",&vec::size, "tensor size")
-		.def("alloc",&vec::allocate, "allocate memory")
-		.def("dealloc",&vec::dealloc, "deallocate memory")
-		.def("set",    &vec::operator[], "set index to value")
-		.def("at",  (value_type  (vec::*)(const typename vec::index_type&)const)(&vec::operator[]))
-		.add_property("size", &vec::size)
-		.add_property("memsize",&vec::memsize, "size of tensor in memory (bytes)")
+	class_<arr> (name, init<int>())
+                .def("__len__",&arr::size, "tensor size")
+                .def("alloc",&arr::allocate, "allocate memory")
+                .def("dealloc",&arr::dealloc, "deallocate memory")
+                //.def("set",    T::const_reference_type &arr::operator[], "set index to value")
+		//.def("at",  (value_type  (arr::*)(const typename arr::index_type&)const)(&arr::operator[]))
+                .add_property("size", &arr::size)
+                .add_property("memsize",&arr::memsize, "size of tensor in memory (bytes)")
 		;
-	def("this_ptr", this_ptr<vec>);
-	def("internal_ptr", internal_ptr<vec>);
+	def("this_ptr", this_ptr<arr>);
+	def("internal_ptr", internal_ptr<arr>);
 	
 }
 

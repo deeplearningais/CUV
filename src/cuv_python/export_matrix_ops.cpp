@@ -40,6 +40,7 @@
 
 #include <cuv/basics/dense_matrix.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/matrix_ops/rprop.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/convolution_ops/convolution_ops.hpp>
@@ -83,30 +84,17 @@ void export_nullary_functor() {
 	   (void (*)(M&,const NullaryFunctor&)) 
 	   apply_0ary_functor<
 	     typename M::value_type,
-		 typename M::memory_layout,
-		 typename M::memory_space_type,
-		 typename M::index_type>);
+	         typename M::memory_space_type>);
 	def("apply_nullary_functor",
 	   (void (*)(M&,const NullaryFunctor&, const typename M::value_type&)) 
 	   apply_0ary_functor<
 	     typename M::value_type,
-		 typename M::memory_layout,
 		 typename M::memory_space_type,
-		 typename M::index_type,
 		 typename M::value_type>);
-	typedef typename M::vec_type V;
-	def("apply_nullary_functor",
-	   (void (*)(V&,const NullaryFunctor&)) 
-	   apply_0ary_functor<V>);
-	def("apply_nullary_functor",
-	   (void (*)(V&,const NullaryFunctor&, const typename V::value_type&)) 
-	   apply_0ary_functor<V>);
 
 	// convenience wrappers
-	def("sequence", (void (*)(V&)) sequence);
 	def("sequence", (void (*)(M&)) sequence);
-	def("fill",     (void (*)(V&,const typename V::value_type&)) fill);
-	def("fill",     (void (*)(M&,const typename V::value_type&)) fill);
+	def("fill",     (void (*)(M&,const typename M::value_type&)) fill);
 }
 
 template<class M>
@@ -116,31 +104,26 @@ void export_scalar_functor() {
 	   (void (*)(M&,const ScalarFunctor&)) 
 	   apply_scalar_functor<
 	     typename M::value_type,
-		 typename M::memory_layout,
-		 typename M::memory_space_type,
-		 typename M::index_type>);
+		 typename M::memory_space_type >);
 	def("apply_scalar_functor",
 	   (void (*)(M&,const ScalarFunctor&, const typename M::value_type&)) 
 	   apply_scalar_functor<
 	     typename M::value_type,
-		 typename M::memory_layout,
 		 typename M::memory_space_type,
-		 typename M::index_type,
 		 typename M::value_type>);
-	typedef typename M::vec_type V;
-	def("apply_scalar_functor",
-	   (void (*)(V&,const ScalarFunctor&)) 
-	   apply_scalar_functor<V>);
-	def("apply_scalar_functor",
-	   (void (*)(V&,const ScalarFunctor&, const typename V::value_type&)) 
-	   apply_scalar_functor<V>);
-	// not in place
-	def("apply_scalar_functor",
-	   (void (*)(V&, const V&, const ScalarFunctor&)) 
-	   apply_scalar_functor<V>);
-	def("apply_scalar_functor",
-	   (void (*)(V&,const V&,const ScalarFunctor&, const typename V::value_type&)) 
-	   apply_scalar_functor<V>);
+	//def("apply_scalar_functor",
+	   //(void (*)(M&,const ScalarFunctor&)) 
+	   //apply_scalar_functor<M>);
+	//def("apply_scalar_functor",
+	   //(void (*)(M&,const ScalarFunctor&, const typename M::value_type&)) 
+	   //apply_scalar_functor<M>);
+	//// not in place
+	//def("apply_scalar_functor",
+	   //(void (*)(M&, const M&, const ScalarFunctor&)) 
+	   //apply_scalar_functor<M>);
+	//def("apply_scalar_functor",
+	   //(void (*)(M&,const M&,const ScalarFunctor&, const typename M::value_type&)) 
+	   //apply_scalar_functor<M>);
 }
 
 template<class M, class N>
@@ -149,9 +132,7 @@ void export_binary_functor_simple() {
 	   (void (*)(M&, const N&, const BinaryFunctor&)) 
 	   apply_binary_functor<
 	     typename M::value_type,
-		 typename M::memory_layout,
 		 typename M::memory_space_type,
-		 typename M::index_type,
 		 typename N::value_type>);
 }
 template<class M, class N>
@@ -160,39 +141,31 @@ void export_binary_functor() {
 	   (void (*)(M&, const N&, const BinaryFunctor&)) 
 	   apply_binary_functor<
 	     typename M::value_type,
-		 typename M::memory_layout,
 		 typename M::memory_space_type,
-		 typename M::index_type,
 		 typename N::value_type>);
 	def("apply_binary_functor",
 	   (void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&)) 
 	   apply_binary_functor<
 	     typename M::value_type,
-		 typename M::memory_layout,
 		 typename M::memory_space_type,
-		 typename M::index_type,
-	     typename M::value_type,
+                 typename M::value_type,
 		 typename N::value_type>);
 	def("apply_binary_functor",
 	   (void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&, const typename M::value_type&)) 
 	   apply_binary_functor<
 	     typename M::value_type,
-		 typename M::memory_layout,
 		 typename M::memory_space_type,
-		 typename M::index_type,
 	     typename M::value_type,
 		 typename N::value_type>);
-	typedef typename M::vec_type V;
-	typedef typename N::vec_type W;
-	def("apply_binary_functor",
-	   (void (*)(V&,const W&, const BinaryFunctor&)) 
-	   apply_binary_functor<V,W>);
-	def("apply_binary_functor",
-	   (void (*)(V&, const W&, const BinaryFunctor&, const typename V::value_type&)) 
-	   apply_binary_functor<V,W>);
-	def("apply_binary_functor",
-	   (void (*)(V&, const W&, const BinaryFunctor&, const typename V::value_type&, const typename V::value_type&)) 
-	   apply_binary_functor< V, W>);
+	//def("apply_binary_functor",
+	   //(void (*)(M&,const N&, const BinaryFunctor&)) 
+	   //apply_binary_functor<M,N>);
+	//def("apply_binary_functor",
+	   //(void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&)) 
+	   //apply_binary_functor<M,N>);
+	//def("apply_binary_functor",
+	   //(void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&, const typename M::value_type&)) 
+	   //apply_binary_functor< M, N>);
 }
 
 template <class M>
@@ -215,43 +188,36 @@ void export_argmax_vec(){
 }
 template <class M>
 void export_reductions(){
-	typedef typename switch_value_type<M, typename M::index_type>::type::vec_type idx_vec;
-	typedef typename switch_value_type<M, float>::type::vec_type float_vec;
+	//typedef typename switch_value_type<M, typename M::index_type>::type::vec_type idx_vec;
+	//typedef typename switch_value_type<M, float>::type::vec_type float_vec;
 	typedef typename M::value_type value_type;
-	def("has_inf",(bool (*)(const typename M::vec_type&)) has_inf<typename M::vec_type>);
-	def("has_inf",(bool (*)(const M&)) has_inf<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("has_nan",(bool (*)(const typename M::vec_type&)) has_nan<typename M::vec_type>);
-	def("has_nan",(bool (*)(const M&)) has_nan<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("sum",(float (*)(const typename M::vec_type&)) sum<typename M::vec_type>);
-	def("sum",(float (*)(const M&)) sum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("norm1",(float (*)(const typename M::vec_type&)) norm1<typename M::vec_type>);
-	def("norm1",(float (*)(const M&)) norm1<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("norm2",(float (*)(const typename M::vec_type&)) norm2<typename M::vec_type>);
-	def("norm2",(float (*)(const M&)) norm2<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("maximum",(float (*)(const typename M::vec_type&)) maximum<typename M::vec_type>);
-	def("maximum",(float (*)(const M&)) maximum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("minimum",(float (*)(const typename M::vec_type&)) minimum<typename M::vec_type>);
-	def("minimum",(float (*)(const M&)) minimum<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("mean", (float (*)(const M&)) mean<typename M::value_type, typename M::memory_layout, typename M::memory_space_type, typename M::index_type>);
-	def("arg_max",  (tuple(*)( M&)) matrix_arg_max<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
-	def("arg_min",  (tuple(*)( M&)) matrix_arg_min<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
-	def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-	def("reduce_to_row", reduce_to_row<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-	def("reduce_to_col", reduce_to_col<M,idx_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-	def("reduce_to_row", reduce_to_row<M,idx_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	def("has_inf",(bool (*)(const M&)) has_inf<typename M::value_type,typename M::memory_space_type>);
+	def("has_nan",(bool (*)(const M&)) has_nan<typename M::value_type,typename M::memory_space_type>);
+	def("sum",(float (*)(const M&)) sum<typename M::value_type,typename M::memory_space_type>);
+	def("norm1",(float (*)(const M&)) norm1<typename M::value_type,typename M::memory_space_type>);
+	def("norm2",(float (*)(const M&)) norm2<typename M::value_type,typename M::memory_space_type>);
+	def("maximum",(float (*)(const M&)) maximum<typename M::value_type,typename M::memory_space_type>);
+	def("minimum",(float (*)(const M&)) minimum<typename M::value_type,typename M::memory_space_type>);
+	def("mean", (float (*)(const M&)) mean<typename M::value_type,typename M::memory_space_type>);
+	//def("arg_max",  (tuple(*)( M&)) matrix_arg_max<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
+	//def("arg_min",  (tuple(*)( M&)) matrix_arg_min<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
+	//def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	//def("reduce_to_row", reduce_to_row<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	//def("reduce_to_col", reduce_to_col<M,idx_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	//def("reduce_to_row", reduce_to_row<M,idx_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
 
-	def("reduce_to_col", reduce_to_col<M,float_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-	def("reduce_to_row", reduce_to_row<M,float_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	//def("reduce_to_col", reduce_to_col<M,float_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	//def("reduce_to_row", reduce_to_row<M,float_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
 }
 
 template <class M, class V2>
 void export_blas2(){
-	def("matrix_plus_col", matrix_plus_col<M,typename switch_value_type<M,V2>::type::vec_type>);
-	def("matrix_times_col", matrix_times_col<M,typename switch_value_type<M,V2>::type::vec_type>);
-	def("matrix_divide_col", matrix_divide_col<M,typename switch_value_type<M,V2>::type::vec_type>);
-	def("matrix_plus_row", matrix_plus_row<M,typename switch_value_type<M,V2>::type::vec_type>);
-	def("matrix_times_row", matrix_times_row<M,typename switch_value_type<M,V2>::type::vec_type>);
-	def("matrix_divide_row", matrix_divide_row<M,typename switch_value_type<M,V2>::type::vec_type>);
+	//def("matrix_plus_col", matrix_plus_col<M,typename switch_value_type<M,V2>::type::vec_type>);
+	//def("matrix_times_col", matrix_times_col<M,typename switch_value_type<M,V2>::type::vec_type>);
+	//def("matrix_divide_col", matrix_divide_col<M,typename switch_value_type<M,V2>::type::vec_type>);
+	//def("matrix_plus_row", matrix_plus_row<M,typename switch_value_type<M,V2>::type::vec_type>);
+	//def("matrix_times_row", matrix_times_row<M,typename switch_value_type<M,V2>::type::vec_type>);
+	//def("matrix_divide_row", matrix_divide_row<M,typename switch_value_type<M,V2>::type::vec_type>);
 }
 
 template <class M>
@@ -274,9 +240,8 @@ void export_learn_step(){
 			(void (*)(M&, M&, M&,M&, const float&))
 			rprop<typename M::value_type, typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>,
 			(arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("cost")=0));
-	typedef typename M::vec_type V;
-	def("learn_step_weight_decay",(void (*)(V&, V&, const float&, const float&)) learn_step_weight_decay<V>);
-	def("rprop",(void (*)(V&, V&, V&,V&, const float&)) rprop<V,V>);
+	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<M>);
+	def("rprop",(void (*)(M&, M&, M&,M&, const float&)) rprop<M,M>);
 }
 
 template<class T>
@@ -302,8 +267,8 @@ export_multinomial_sampling(){
 	def("first_pool_zeros",	(void (*)(M&,  typename M::index_type))first_pooling_zeros<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>);
 	def("grid_to_matrix",    (void (*)(M&,M&,int))grid_to_matrix<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>);
 	def("matrix_to_grid",    (void (*)(M&,M&,int))matrix_to_grid<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>);
-	def("prob_max_pooling",    (void (*)(typename M::vec_type&,M&,int,bool))prob_max_pooling<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>, (arg("sums"),arg("detection_layer"),arg("poolSize"),arg("sample")));
-	def("prob_max_pooling",    (void (*)(M&,int,bool))prob_max_pooling<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>, (arg("detection_layer"),arg("poolSize"),arg("sample")));
+	//def("prob_max_pooling",    (void (*)(typename M::vec_type&,M&,int,bool))prob_max_pooling<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>, (arg("sums"),arg("detection_layer"),arg("poolSize"),arg("sample")));
+	//def("prob_max_pooling",    (void (*)(M&,int,bool))prob_max_pooling<typename M::value_type,typename M::memory_layout,typename M::memory_space_type, typename M::index_type>, (arg("detection_layer"),arg("poolSize"),arg("sample")));
 }
 
 

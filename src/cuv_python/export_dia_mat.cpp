@@ -184,11 +184,11 @@ export_filter_factory(const char* name){
 	typedef typename mat::index_type index_type;
 
 	class_<filter_factory<value_type, memory_space> > (name, init<int, int, int, int, int>())
-		.def("extract_filter",(dense_matrix<value_type, row_major, memory_space>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, host_memory_space>&, unsigned int))
+		.def("extract_filter",(dense_matrix<value_type, memory_space, row_major>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, host_memory_space>&, unsigned int))
 				&filter_factory<value_type, memory_space>::extract_filter, (
 					arg("dia matrix"), arg("filter number")),
 				return_value_policy<manage_new_object>())
-		.def("extract_filter",(dense_matrix<value_type, row_major, memory_space>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, dev_memory_space>&, unsigned int))
+		.def("extract_filter",(dense_matrix<value_type, memory_space, row_major>*  (filter_factory<value_type, memory_space>::*)(const dia_matrix<value_type, dev_memory_space>&, unsigned int))
 				&filter_factory<value_type, memory_space>::extract_filter, (
 					arg("dia matrix"), arg("filter number")),
 				return_value_policy<manage_new_object>())
