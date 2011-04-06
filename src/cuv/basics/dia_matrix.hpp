@@ -218,7 +218,7 @@ namespace cuv{
 				typename std::map<int,index_type>::const_iterator it = m_dia2off.find(off);
 				if( it == m_dia2off.end() )
 					return;
-				m_vec->set(it->second * m_stride +i, val);
+				(*m_vec)[it->second * m_stride +i]=val;
 			}
 			value_type operator()(const index_type& i, const index_type& j)const ///< Return matrix entry (i,j)
 			{
