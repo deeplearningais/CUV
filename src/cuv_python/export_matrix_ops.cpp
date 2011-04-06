@@ -81,49 +81,39 @@ void export_blas3() {
 template<class M>
 void export_nullary_functor() {
 	def("apply_nullary_functor",
-	   (void (*)(M&,const NullaryFunctor&)) 
-	   apply_0ary_functor<
-	     typename M::value_type,
-	         typename M::memory_space_type>);
+	   (void (*)(typename M::tensor_type&,const NullaryFunctor&)) 
+	   apply_0ary_functor< typename M::value_type, typename M::memory_space_type>);
 	def("apply_nullary_functor",
-	   (void (*)(M&,const NullaryFunctor&, const typename M::value_type&)) 
-	   apply_0ary_functor<
-	     typename M::value_type,
-		 typename M::memory_space_type,
-		 typename M::value_type>);
+	   (void (*)(typename M::tensor_type&,const NullaryFunctor&, const typename M::value_type&)) 
+	   apply_0ary_functor< typename M::value_type, typename M::memory_space_type, typename M::value_type>);
 
 	// convenience wrappers
-	def("sequence", (void (*)(M&)) sequence);
-	def("fill",     (void (*)(M&,const typename M::value_type&)) fill);
+	def("sequence", (void (*)(typename M::tensor_type&)) sequence);
+	def("fill",     (void (*)(typename M::tensor_type&,const typename M::value_type&)) fill);
 }
 
 template<class M>
 void export_scalar_functor() {
 	// in place
-	def("apply_scalar_functor",
-	   (void (*)(M&,const ScalarFunctor&)) 
-	   apply_scalar_functor<
-	     typename M::value_type,
-		 typename M::memory_space_type >);
-	def("apply_scalar_functor",
-	   (void (*)(M&,const ScalarFunctor&, const typename M::value_type&)) 
-	   apply_scalar_functor<
-	     typename M::value_type,
-		 typename M::memory_space_type,
-		 typename M::value_type>);
 	//def("apply_scalar_functor",
-	   //(void (*)(M&,const ScalarFunctor&)) 
-	   //apply_scalar_functor<M>);
+	   //(void (*)(typename M::tensor_type&,const ScalarFunctor&)) 
+	   //apply_scalar_functor< typename M::value_type, typename M::memory_space_type >);
 	//def("apply_scalar_functor",
-	   //(void (*)(M&,const ScalarFunctor&, const typename M::value_type&)) 
-	   //apply_scalar_functor<M>);
-	//// not in place
-	//def("apply_scalar_functor",
-	   //(void (*)(M&, const M&, const ScalarFunctor&)) 
-	   //apply_scalar_functor<M>);
-	//def("apply_scalar_functor",
-	   //(void (*)(M&,const M&,const ScalarFunctor&, const typename M::value_type&)) 
-	   //apply_scalar_functor<M>);
+	   //(void (*)(typename M::tensor_type&,const ScalarFunctor&, const typename M::value_type&)) 
+	   //apply_scalar_functor< typename M::value_type, typename M::memory_space_type, typename M::value_type>);
+        def("apply_scalar_functor",
+           (void (*)(M&,const ScalarFunctor&)) 
+           apply_scalar_functor<M>);
+        def("apply_scalar_functor",
+           (void (*)(M&,const ScalarFunctor&, const typename M::value_type&)) 
+           apply_scalar_functor<M>);
+        // not in place
+        def("apply_scalar_functor",
+           (void (*)(M&, const M&, const ScalarFunctor&)) 
+           apply_scalar_functor<M>);
+        def("apply_scalar_functor",
+           (void (*)(M&,const M&,const ScalarFunctor&, const typename M::value_type&)) 
+           apply_scalar_functor<M>);
 }
 
 template<class M, class N>
@@ -137,68 +127,68 @@ void export_binary_functor_simple() {
 }
 template<class M, class N>
 void export_binary_functor() {
-	def("apply_binary_functor",
-	   (void (*)(M&, const N&, const BinaryFunctor&)) 
-	   apply_binary_functor<
-	     typename M::value_type,
-		 typename M::memory_space_type,
-		 typename N::value_type>);
-	def("apply_binary_functor",
-	   (void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&)) 
-	   apply_binary_functor<
-	     typename M::value_type,
-		 typename M::memory_space_type,
-                 typename M::value_type,
-		 typename N::value_type>);
-	def("apply_binary_functor",
-	   (void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&, const typename M::value_type&)) 
-	   apply_binary_functor<
-	     typename M::value_type,
-		 typename M::memory_space_type,
-	     typename M::value_type,
-		 typename N::value_type>);
 	//def("apply_binary_functor",
-	   //(void (*)(M&,const N&, const BinaryFunctor&)) 
-	   //apply_binary_functor<M,N>);
+	   //(void (*)(M&, const N&, const BinaryFunctor&)) 
+	   //apply_binary_functor<
+	     //typename M::value_type,
+		 //typename M::memory_space_type,
+		 //typename N::value_type>);
 	//def("apply_binary_functor",
 	   //(void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&)) 
-	   //apply_binary_functor<M,N>);
+	   //apply_binary_functor<
+	     //typename M::value_type,
+		 //typename M::memory_space_type,
+                 //typename M::value_type,
+		 //typename N::value_type>);
 	//def("apply_binary_functor",
 	   //(void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&, const typename M::value_type&)) 
-	   //apply_binary_functor< M, N>);
+	   //apply_binary_functor<
+	     //typename M::value_type,
+		 //typename M::memory_space_type,
+	     //typename M::value_type,
+		 //typename N::value_type>);
+        def("apply_binary_functor",
+           (void (*)(M&,const N&, const BinaryFunctor&)) 
+           apply_binary_functor<M,N>);
+        def("apply_binary_functor",
+           (void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&)) 
+           apply_binary_functor<M,N>);
+        def("apply_binary_functor",
+           (void (*)(M&, const N&, const BinaryFunctor&, const typename M::value_type&, const typename M::value_type&)) 
+           apply_binary_functor< M, N>);
 }
 
-template <class M>
-void export_pooling(){
-	typedef typename switch_value_type<M,int>::type Mint;
-	def("max_pool",(void (*)(M&,M&,unsigned int,unsigned int,Mint*, M*))max_pooling<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (arg("dst"),arg("img"),arg("poolSize"),arg("overlap"),arg("optional_indices_of_maxima")=object(),arg("filter")=object()));
-	def("supersample",(void (*)(M&,M&,int,Mint*))supersample<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>,(arg("dst"),arg("img"),arg("factor"),arg("optional_indices")=object()));
-}
+//template <class M>
+//void export_pooling(){
+	//typedef typename switch_value_type<M,int>::type Mint;
+	//def("max_pool",(void (*)(M&,M&,unsigned int,unsigned int,Mint*, M*))max_pooling<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>, (arg("dst"),arg("img"),arg("poolSize"),arg("overlap"),arg("optional_indices_of_maxima")=object(),arg("filter")=object()));
+	//def("supersample",(void (*)(M&,M&,int,Mint*))supersample<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>,(arg("dst"),arg("img"),arg("factor"),arg("optional_indices")=object()));
+//}
 
-template <class V, class MS>
-void export_argmax_vec(){
-	typedef dense_matrix<V,MS,column_major> Mc;
-	typedef dense_matrix<V,MS,row_major> Mr;
-	typedef tensor<int,MS> Vecint;
-	def("argmax_to_row",  (void (*)(Vecint&,const Mc&)) argmax_to_row<Vecint, Mc>);
-	def("argmax_to_col",  (void (*)(Vecint&,const Mr&)) argmax_to_column<Vecint, Mr>);
-	typedef tensor<float,MS> Vecf;
-	def("argmax_to_row",  (void (*)(Vecf&,const Mc&)) argmax_to_row<Vecf, Mc>);
-	def("argmax_to_col",  (void (*)(Vecf&,const Mr&)) argmax_to_column<Vecf, Mr>);
-}
+//template <class V, class MS>
+//void export_argmax_vec(){
+	//typedef dense_matrix<V,MS,column_major> Mc;
+	//typedef dense_matrix<V,MS,row_major> Mr;
+	//typedef tensor<int,MS> Vecint;
+	//def("argmax_to_row",  (void (*)(Vecint&,const Mc&)) argmax_to_row<Vecint, Mc>);
+	//def("argmax_to_col",  (void (*)(Vecint&,const Mr&)) argmax_to_column<Vecint, Mr>);
+	//typedef tensor<float,MS> Vecf;
+	//def("argmax_to_row",  (void (*)(Vecf&,const Mc&)) argmax_to_row<Vecf, Mc>);
+	//def("argmax_to_col",  (void (*)(Vecf&,const Mr&)) argmax_to_column<Vecf, Mr>);
+//}
 template <class M>
 void export_reductions(){
 	//typedef typename switch_value_type<M, typename M::index_type>::type::vec_type idx_vec;
 	//typedef typename switch_value_type<M, float>::type::vec_type float_vec;
 	typedef typename M::value_type value_type;
-	def("has_inf",(bool (*)(const M&)) has_inf<typename M::value_type,typename M::memory_space_type>);
-	def("has_nan",(bool (*)(const M&)) has_nan<typename M::value_type,typename M::memory_space_type>);
-	def("sum",(float (*)(const M&)) sum<typename M::value_type,typename M::memory_space_type>);
-	def("norm1",(float (*)(const M&)) norm1<typename M::value_type,typename M::memory_space_type>);
-	def("norm2",(float (*)(const M&)) norm2<typename M::value_type,typename M::memory_space_type>);
-	def("maximum",(float (*)(const M&)) maximum<typename M::value_type,typename M::memory_space_type>);
-	def("minimum",(float (*)(const M&)) minimum<typename M::value_type,typename M::memory_space_type>);
-	def("mean", (float (*)(const M&)) mean<typename M::value_type,typename M::memory_space_type>);
+	def("has_inf",(bool (*)(const typename M::tensor_type&)) has_inf<typename M::value_type,typename M::memory_space_type>);
+	def("has_nan",(bool (*)(const typename M::tensor_type&)) has_nan<typename M::value_type,typename M::memory_space_type>);
+	def("sum",(float (*)(const typename M::tensor_type&)) sum<typename M::value_type,typename M::memory_space_type>);
+	def("norm1",(float (*)(const typename M::tensor_type&)) norm1<typename M::value_type,typename M::memory_space_type>);
+	def("norm2",(float (*)(const typename M::tensor_type&)) norm2<typename M::value_type,typename M::memory_space_type>);
+	def("maximum",(float (*)(const typename M::tensor_type&)) maximum<typename M::value_type,typename M::memory_space_type>);
+	def("minimum",(float (*)(const typename M::tensor_type&)) minimum<typename M::value_type,typename M::memory_space_type>);
+	def("mean", (float (*)(const typename M::tensor_type&)) mean<typename M::value_type,typename M::memory_space_type>);
 	//def("arg_max",  (tuple(*)( M&)) matrix_arg_max<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
 	//def("arg_min",  (tuple(*)( M&)) matrix_arg_min<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
 	//def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
@@ -223,25 +213,25 @@ void export_blas2(){
 template <class M>
 void export_bitflip(){
 	typedef typename M::index_type I;
-	def("bitflip",(void(*)(M&,I))
-			bitflip<typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+	//def("bitflip",(void(*)(M&,I))
+			//bitflip<typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
 }
 template <class M>
 void export_blockview(){
 	typedef typename M::index_type I;
 	def("blockview",(M*(*)(M&,I,I,I,I))
-			blockview<typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>,return_value_policy<manage_new_object>());
+			blockview<typename M::value_type,typename M::memory_space_type, typename M::memory_layout,typename M::index_type>,return_value_policy<manage_new_object>());
 }
 
 template <class M>
 void export_learn_step(){
-	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-	def("rprop",
-			(void (*)(M&, M&, M&,M&, const float&))
-			rprop<typename M::value_type, typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>,
-			(arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("cost")=0));
-	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<M>);
-	def("rprop",(void (*)(M&, M&, M&,M&, const float&)) rprop<M,M>);
+	def("learn_step_weight_decay",(void (*)(typename M::tensor_type&, typename M::tensor_type&, const float&, const float&)) learn_step_weight_decay<typename M::tensor_type>);
+	//def("rprop",
+			//(void (*)(M&, M&, M&,M&, const float&))
+			//rprop<typename M::value_type, typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>,
+			//(arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("cost")=0));
+	//def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<M>);
+	//def("rprop",(void (*)(M&, M&, M&,M&, const float&)) rprop<M,M>);
 }
 
 template<class T>
@@ -286,7 +276,7 @@ void export_matrix_ops(){
         ;
 	typedef dense_matrix<float,dev_memory_space,column_major> fdev;
 	typedef dense_matrix<float,host_memory_space,column_major> fhost;
-	typedef dense_matrix<float,row_major,host_memory_space> fhostr;
+	typedef dense_matrix<float,host_memory_space,row_major> fhostr;
 	typedef dense_matrix<float,dev_memory_space,row_major> fdevr;
 	typedef dense_matrix<unsigned char,dev_memory_space,column_major> udev;
 	typedef dense_matrix<unsigned char,host_memory_space,column_major> uhost;
@@ -295,11 +285,11 @@ void export_matrix_ops(){
 	typedef dense_matrix<unsigned int,dev_memory_space,column_major> uidev;
 	typedef dense_matrix<unsigned int,host_memory_space,column_major> uihost;
 	typedef dense_matrix<unsigned int,dev_memory_space,row_major> uidevr;
-	typedef dense_matrix<unsigned int,row_major,host_memory_space> uihostr;
+	typedef dense_matrix<unsigned int,host_memory_space,row_major> uihostr;
 	typedef dense_matrix<unsigned char,dev_memory_space,column_major> ucdev;
 	typedef dense_matrix<unsigned char,host_memory_space,column_major> uchost;
 	typedef dense_matrix<unsigned char,dev_memory_space,row_major> ucdevr;
-	typedef dense_matrix<unsigned char,row_major,host_memory_space> uchostr;
+	typedef dense_matrix<unsigned char,host_memory_space,row_major> uchostr;
 
 	export_blas3<fdev,fdev,fdev>();
 	export_blas3<fhost,fhost,fhost>();
@@ -336,8 +326,8 @@ void export_matrix_ops(){
 	export_reductions<uchostr>();
 	export_reductions<ucdevr>();
 
-	export_argmax_vec<float,host_memory_space>();
-	export_argmax_vec<float,dev_memory_space>();
+	//export_argmax_vec<float,host_memory_space>();
+	//export_argmax_vec<float,dev_memory_space>();
 	export_learn_step<fhost>();
 	export_learn_step<fdev>();
 	export_learn_step<fhostr>();
@@ -359,8 +349,8 @@ void export_matrix_ops(){
 	export_blockview<fdevr>();
 	export_blockview<fhostr>();
 
-	export_pooling<fhostr>();
-	export_pooling<fdevr>();
+	//export_pooling<fhostr>();
+	//export_pooling<fdevr>();
 	// transpose
 	export_transpose<fhost>();
 	export_transpose<fdev>();

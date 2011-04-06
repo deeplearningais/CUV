@@ -150,9 +150,9 @@ namespace cuv{
    * 	For row major matrices, this only works with start_cols=0 and num_cols=matrix.w().
    * 	For column major matrices, this only works with start_rows=0 and num_rows=matrix.h().
    */
-  template<class __value_type, class __memory_layout, class __memory_space_type, class __index_type>
-	  dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type>* blockview(
-	  dense_matrix<__value_type,__memory_layout,__memory_space_type,__index_type> & matrix,
+  template<class __value_type, class __memory_space_type, class __memory_layout, class __index_type>
+	  dense_matrix<__value_type,__memory_space_type,__memory_layout,__index_type>* blockview(
+	  dense_matrix<__value_type,__memory_space_type,__memory_layout,__index_type> & matrix,
 			  __index_type start_rows,
 			  __index_type num_rows ,
 			  __index_type start_cols,
@@ -292,9 +292,9 @@ namespace cuv{
    * 
    */
   template<class V, class T, class I>
-  cuv::dense_matrix<V,row_major,T,I>* transposed_view(cuv::dense_matrix<V,column_major,T,I>&  src);
+  cuv::dense_matrix<V,T,row_major,I>* transposed_view(cuv::dense_matrix<V,T,column_major,I>&  src);
   template<class V, class T, class I>
-  cuv::dense_matrix<V,column_major,T,I>* transposed_view(cuv::dense_matrix<V,row_major,T,I>&  src);
+  cuv::dense_matrix<V,T,column_major,I>* transposed_view(cuv::dense_matrix<V,T,row_major,I>&  src);
 
   /** @} */ // end group blas2
 } // cuv
