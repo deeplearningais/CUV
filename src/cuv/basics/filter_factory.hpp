@@ -21,10 +21,10 @@ namespace cuv{
 			}
 
 			template<class M2>
-			dense_matrix<T,row_major,M,I>*
+			dense_matrix<T,M,row_major,I>*
 			extract_filter( const dia_matrix<T,M2>& dia, unsigned int filternumber){
-				dense_matrix<T,row_major,M,I>* mat = new dense_matrix<T,row_major,M,I>(m_fs*m_fs, m_input_maps);
-				fill(mat->vec(), (T)0);
+				dense_matrix<T,M,row_major,I>* mat = new dense_matrix<T,M,row_major,I>(m_fs*m_fs, m_input_maps);
+				fill(*mat, 0);
 				unsigned int map_size=dia.h()/m_input_maps;
 				for (unsigned int map_num = 0; map_num < m_input_maps; map_num++)
 				{
@@ -33,7 +33,7 @@ namespace cuv{
 					{
 						if(!dia.has(i+map_num*map_size,filternumber))
 							continue;
-						mat->vec().set(map_num * m_fs *m_fs + fi++,dia(i+map_num*map_size,filternumber));
+						mat[map_num * m_fs *m_fs + fi++]= dia(i+map_num*map_size,filternumber);
 						if(fi>=mat->n())
 							break;
 					}
