@@ -59,6 +59,26 @@ namespace cuv
 		void operator=(const value_type& v){
 			entry_set(ptr,(index_type)0,v,memory_space_type());
 		}
+	
+		/// assignment from reference of same type
+		reference& operator=(const reference& o)
+		{
+			if(&o == this)
+				return *this;
+			(*this) = (value_type)o;
+			return *this;
+		}
+
+		/// assignment from reference of other type
+		template<class O>
+		reference& operator=(const reference<T,O,I>& o)
+		{
+			if(&o == this)
+				return *this;
+			(*this) = (T)o;
+			return *this;
+		}
+
 		
 		pointer_type operator&(void)const{
 			return ptr;
@@ -83,7 +103,7 @@ namespace cuv
 			:ptr(&p)
 		{
 		}
-
+		
 		my_type& operator+=(const value_type& v){ *this = (value_type)(*this)+v; return *this; }
 		my_type& operator-=(const value_type& v){ *this = (value_type)(*this)-v; return *this; }
 		my_type& operator*=(const value_type& v){ *this = (value_type)(*this)*v; return *this; }
