@@ -89,10 +89,10 @@ namespace cuv{
 		}
 
 		/// deprecated! use the reference returned by (..)
-		void set(const index_type& i, const index_type& j, const value_type& val){
-			std::cout << "DEPRECATED SET"<<std::endl;
-			(*this)(i,j) = val;
-		}
+		//void set(const index_type& i, const index_type& j, const value_type& val){
+			//std::cout << "DEPRECATED SET"<<std::endl;
+			//(*this)(i,j) = val;
+		//}
 		const index_type& h()const{ return this->shape()[0]; };
 		const index_type& w()const{ return this->shape()[1]; };
 		const index_type  n()const{ return this->size(); };

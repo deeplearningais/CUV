@@ -758,7 +758,7 @@ template<>
 					}
 				*dst_ptr++ = cmax;
 				if(indices != NULL)
-					indices->set(p, r*dstSize+c, imax);
+					(*indices)(p, r*dstSize+c)=imax;
 			}
 
 		img_ptr += imgSize * imgSize;
@@ -1039,7 +1039,7 @@ template<>
 				idx 		=	y*inputSize+x;
 				idx_padded 	=	(y-padding)*stripped_width+(x-padding);
 				val = img(imgIdx, idx);
-				dst.set(imgIdx, idx_padded, val);
+				dst(imgIdx, idx_padded)=val;
 			}
 		}
 	}
@@ -1098,7 +1098,7 @@ template<>
 	fill(erg_h, 0.0f);
 	for(int idx = 0; idx < erg_h.w(); idx++ ){
 		for (int idy = 0; idy < n; idy++){
-			erg_h.set(idy,idx, *(row.ptr() + idx));
+			erg_h(idy,idx)=*(row.ptr() + idx);
 		}
 	}
 }
