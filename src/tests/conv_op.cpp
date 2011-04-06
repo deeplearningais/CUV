@@ -283,8 +283,8 @@ BOOST_AUTO_TEST_CASE( row_ncopy )
 	sequence(d_img);
 	sequence(h_img);
 
-	d_img.reshape(extents[1, d_img.w()*d_img.h()]);
-	h_img.reshape(extents[1, h_img.w()*h_img.h()]);
+	d_img.reshape(extents[1][d_img.w()*d_img.h()]);
+	h_img.reshape(extents[1][h_img.w()*h_img.h()]);
 
 	int n=128;
 
@@ -398,8 +398,8 @@ BOOST_AUTO_TEST_CASE( reverse_filters )
 	cuv::row_ncopy(filter_d, one_filter_d, c*f);
 	cuv::row_ncopy(filter_h, one_filter_h,c*f);
 
-	filter_d.reshape(extents[f, c*g*g]);
-	filter_h.reshape(extents[f, c*g*g]);
+	filter_d.reshape(extents[f][c*g*g]);
+	filter_h.reshape(extents[f][c*g*g]);
 
 	filter_rotate(erg_d,filter_d, g*g);
 	safeThreadSync();
