@@ -153,7 +153,7 @@ namespace bitflip_row_impl{
 	template<class V, class I>
 	void bitflip(dense_matrix<V,host_memory_space,column_major,I>& m, const I& row){
 		for(int i=0;i<m.w();i++)
-			m.set(row,i,(V)(1.f-m(row,i)));
+			m(row,i)=(V)(1.f-m(row,i));
 	}
 }
 // bitflip a row of a column-major matrix

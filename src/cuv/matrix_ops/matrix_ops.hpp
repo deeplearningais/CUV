@@ -424,9 +424,9 @@ namespace cuv{
           //return v;
   //}
 
-  template<class V, class M, class T, class I, class V2>
-    void fill(cuv::dense_matrix<V, M, T, I>& m, V2 v){
-	   cuvAssert(false); //not implemented!
-    }
+  //template<class V, class M, class T, class I, class V2>
+    //void fill(cuv::dense_matrix<V, M, T, I>& m, V2 v){
+	   //cuvAssert(false); //not implemented!
+    //}
   
 #endif
