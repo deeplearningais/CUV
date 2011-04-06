@@ -341,7 +341,7 @@ BOOST_AUTO_TEST_CASE( strip_padding )
 				idx_padded 	=	(y-padding)*stripped_width+(x-padding);
 
 				val = d_img(img,idx);
-				erg_h.set(img,idx_padded, val);
+				erg_h(img,idx_padded)=val;
 			}
 		}
 	}
