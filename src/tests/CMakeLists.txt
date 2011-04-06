@@ -74,7 +74,7 @@ IF(CUV_CIMG_BINDINGS)
 
 	ADD_EXECUTABLE( test_lib_sep_conv lib_sep_conv.cpp )
 	TARGET_LINK_LIBRARIES( test_lib_sep_conv cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_separable_conv cuv_cimg X11 pthread ${PNG_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} )
-        CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+        FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 ENDIF(CUV_CIMG_BINDINGS)
 
