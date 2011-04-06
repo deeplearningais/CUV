@@ -63,18 +63,16 @@ namespace cuv
 		/// assignment from reference of same type
 		reference& operator=(const reference& o)
 		{
-			if(&o == this)
+			if(&o == &(*this)) // operator & is overloaded and returns value_type*
 				return *this;
 			(*this) = (value_type)o;
 			return *this;
 		}
 
-		/// assignment from reference of other type
+		/// assignment from reference of other memory type
 		template<class O>
 		reference& operator=(const reference<T,O,I>& o)
 		{
-			if(&o == this)
-				return *this;
 			(*this) = (T)o;
 			return *this;
 		}
