@@ -52,7 +52,7 @@ namespace cuv{
 	 */
 template<class V, class M, class T, class I>
 void learn_step_weight_decay(dense_matrix<V,M,T,I>& W, dense_matrix<V,M,T,I>& dW, const float& learnrate, const float& decay){
-	learn_step_weight_decay(W.vec(),dW.vec(),learnrate,decay);
+	learn_step_weight_decay(W,dW,learnrate,decay);
 }
 
 
@@ -79,7 +79,7 @@ void rprop(dense_matrix<V,M,T,I>& W,
 		   dense_matrix<V,M,T,I>& dW, 
 		   dense_matrix<O,M,T,I>& dW_old,
 		   dense_matrix<V,M,T,I>& rate,
-		   const float& decay = 0.0f){ rprop(W.vec(),dW.vec(),dW_old.vec(), rate.vec(), decay);
+		   const float& decay = 0.0f){ rprop(W,dW,dW_old, rate, decay);
 }
 
 }
