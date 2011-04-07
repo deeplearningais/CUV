@@ -36,7 +36,7 @@
 #include <boost/python/extract.hpp>
 #include <boost/type_traits/is_same.hpp>
 
-
+#include <vector>
 #include <cuv/basics/tensor.hpp>
 #include <cuv/convert/convert.hpp>
 
@@ -52,6 +52,35 @@ long int internal_ptr(const T& t){
 	return (long int)(t.ptr());
 }
 
+namespace python_wrapping {
+    template <class T>
+    typename T::reference_type get_reference(T& tensor,const boost::python::list &ind){
+        typedef typename T::index_type ind_t;
+        int length = boost::python::len(ind);
+        if (length==1)
+            return tensor(extract<ind_t>(ind[0]));
+        else if (length==2)
+            return tensor(extract<ind_t>(ind[0]),extract<ind_t>(ind[1]));
+        else if (length==3)
+            return tensor(extract<ind_t>(ind[0]),extract<ind_t>(ind[1]),extract<ind_t>( ind[2]));
+        else if (length==4)
+            return tensor(extract<ind_t>(ind[0]),extract<ind_t>(ind[1]),extract<ind_t>( ind[2]),extract<ind_t>(ind[3]));
+        else
+            cuvAssert(false);
+            //return typename T::reference_type();
+       }
+
+    template <class T>
+    void set(T&tensor, const boost::python::list &ind, const typename T::value_type& val){
+        get_reference(tensor,ind)=val;
+    }
+    template <class T>
+    typename T::value_type get(T&tensor, const boost::python::list &ind){
+        return get_reference(tensor,ind);
+    }
+    
+};
+
 template<class T>
 void
 export_tensor_common(const char* name){
@@ -62,7 +91,7 @@ export_tensor_common(const char* name){
                 .def("__len__",&arr::size, "tensor size")
                 .def("alloc",&arr::allocate, "allocate memory")
                 .def("dealloc",&arr::dealloc, "deallocate memory")
-                //.def("set",    T::const_reference_type &arr::operator[], "set index to value")
+                .def("set",    &python_wrapping::set<T>, "set index to value")
 		//.def("at",  (value_type  (arr::*)(const typename arr::index_type&)const)(&arr::operator[]))
                 .add_property("size", &arr::size)
                 .add_property("memsize",&arr::memsize, "size of tensor in memory (bytes)")
