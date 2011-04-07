@@ -43,7 +43,6 @@
 #include <cuv/convolution_ops/convolution_ops.hpp>
 #include <cuv/tools/timing.hpp>
 #include <cuv/random/random.hpp>
-#include <cuv/matrix_ops/rprop.hpp>
 #include <cuv/basics/filter_factory.hpp>
 #include <cuv/convert/convert.hpp>
 

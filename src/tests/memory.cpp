@@ -39,7 +39,6 @@
 #include <cuv/basics/dense_matrix.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
-#include <cuv/matrix_ops/rprop.hpp>
 #include <cuv/tools/cuv_test.hpp>
 #include <cuv/random/random.hpp>
 

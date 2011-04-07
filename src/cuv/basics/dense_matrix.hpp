@@ -97,8 +97,6 @@ namespace cuv{
 		const index_type& w()const{ return this->shape()[1]; };
 		const index_type  n()const{ return this->size(); };
 
-
-
 		///// deprecated! define your stuff on tensor instead!
 		//linear_memory<value_type,memory_space_type>&
 		//vec(){

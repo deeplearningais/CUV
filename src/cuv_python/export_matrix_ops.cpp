@@ -41,7 +41,7 @@
 #include <cuv/basics/dense_matrix.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
-#include <cuv/matrix_ops/rprop.hpp>
+#include <cuv/tensor_ops/rprop.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/convolution_ops/convolution_ops.hpp>
 #include <float.h>

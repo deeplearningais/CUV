@@ -44,7 +44,6 @@
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/convolution_ops/convolution_ops.hpp>
 #include <cuv/random/random.hpp>
-#include <cuv/matrix_ops/rprop.hpp>
 #include <cuv/convert/convert.hpp>
 
 using namespace cuv;
