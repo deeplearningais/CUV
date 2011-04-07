@@ -125,8 +125,8 @@ namespace cuv{
 		}
 	}
 
-	template<class __tensor_type, class __old_tensor_type>
-	void rprop(__tensor_type& W, __tensor_type& dW, __old_tensor_type& dW_old, __tensor_type& rate, const float &decay){
+        template<class __value_type, class __memory_space_type, class S>
+	void rprop(tensor<__value_type,__memory_space_type>& W, tensor<__value_type,__memory_space_type>& dW, tensor<S,__memory_space_type>& dW_old, tensor<__value_type,__memory_space_type>& rate, const float& decay){
 		cuvAssert(dW.ptr());
 		cuvAssert(dW_old.ptr());
 		cuvAssert(rate.ptr());
@@ -150,8 +150,8 @@ namespace cuv{
 			W[i]=alpha*dW[i] + beta*W[i];
 		}
 	}
-	template<class __tensor_type>
-	void learn_step_weight_decay(__tensor_type& W,__tensor_type& dW, const float& learnrate, const float& decay){
+        template<class __value_type, class __memory_space_type>
+	void learn_step_weight_decay(tensor<__value_type,__memory_space_type>& W, tensor<__value_type,__memory_space_type>& dW, const float& learnrate, const float& decay){
 		cuvAssert(dW.ptr());
 		cuvAssert(W.ptr());
 		cuvAssert(W.size() == dW.size());

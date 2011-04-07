@@ -225,7 +225,7 @@ void export_blockview(){
 
 template <class M>
 void export_learn_step(){
-	def("learn_step_weight_decay",(void (*)(typename M::tensor_type&, typename M::tensor_type&, const float&, const float&)) learn_step_weight_decay<typename M::tensor_type>);
+	def("learn_step_weight_decay",(void (*)(typename M::tensor_type&, typename M::tensor_type&, const float&, const float&)) learn_step_weight_decay<typename M::value_type, typename M::memory_space_type>);
 	//def("rprop",
 			//(void (*)(M&, M&, M&,M&, const float&))
 			//rprop<typename M::value_type, typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>,

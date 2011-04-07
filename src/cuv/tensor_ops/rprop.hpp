@@ -56,9 +56,16 @@ namespace cuv{
 	 * 	Also rate and dW_old are updated at each step.
 	 *
 	 */
-	template<class __tensor_type, class __old_tensor_type>
-	void rprop(__tensor_type& W, __tensor_type& dW, __old_tensor_type& dW_old, __tensor_type& rate, const float& decay = 0.0f);
+        template<class __value_type, class __memory_space_type, class S>
+	void rprop(tensor<__value_type,__memory_space_type>& W, tensor<__value_type,__memory_space_type>& dW, tensor<S,__memory_space_type>& dW_old, tensor<__value_type,__memory_space_type>& rate, const float& decay = 0.0f);
 
+        // casting column major to row major since working on linear memory anyway
+        template<class __value_type, class __memory_space_type, class S>
+	void rprop(tensor<__value_type,__memory_space_type, column_major>& W, tensor<__value_type,__memory_space_type, column_major>& dW, tensor<S,__memory_space_type, column_major>& dW_old, tensor<__value_type,__memory_space_type, column_major>& rate, const float& decay = 0.0f){
+            typedef tensor<__value_type, __memory_space_type> rm_tensor;
+            typedef tensor<S, __memory_space_type> rm_tensor_S;
+            rprop(*reinterpret_cast<rm_tensor*>(&W),*reinterpret_cast<rm_tensor*>(&dW),*reinterpret_cast<rm_tensor_S*>(&dW_old),*reinterpret_cast<rm_tensor*>(&rate),decay);
+        }
 	/** 
 	 * @brief Do a step of gradient descent with optional weight decay.
 	 * 
@@ -69,8 +76,15 @@ namespace cuv{
 	 * 
 	 * Calculates W = (1-decay*learnrate) * W + learnrate * dW
 	 */
-	template<class __tensor_type>
-	void learn_step_weight_decay(__tensor_type& W, __tensor_type& dW, const float& learnrate, const float& decay = 0.0f);
+        template<class __value_type, class __memory_space_type>
+	void learn_step_weight_decay(tensor<__value_type,__memory_space_type>& W, tensor<__value_type,__memory_space_type>& dW, const float& learnrate, const float& decay = 0.0f);
+
+        // casting column major to row major since working on linear memory anyway
+        template<class __value_type, class __memory_space_type>
+	void learn_step_weight_decay(tensor<__value_type,__memory_space_type, column_major>& W, tensor<__value_type,__memory_space_type, column_major>& dW, const float& learnrate, const float& decay = 0.0f){
+            typedef tensor<__value_type, __memory_space_type> rm_tensor;
+            learn_step_weight_decay(*reinterpret_cast<rm_tensor*>(&W),*reinterpret_cast<rm_tensor*>(&dW),learnrate,decay);
+        }
 
 }
 
