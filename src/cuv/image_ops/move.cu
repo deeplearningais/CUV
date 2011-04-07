@@ -247,8 +247,8 @@ move_image_kernel(dst_pixel* dst, const pixel* src, char xshift, char yshift, un
 
 	pixel pixel1, pixel2, pixel3, pixel4;
 	pixel ipx;
-	uchar4 graypx;
-	uchar4 grayipx;
+	/*uchar4 graypx;*/
+	/*uchar4 grayipx;*/
 
 	// Fetch colors of four adjacent pixels from texture.
 	// If out of range, use default color defined above.
@@ -262,22 +262,22 @@ move_image_kernel(dst_pixel* dst, const pixel* src, char xshift, char yshift, un
 	// Calculate gray values of each of the four pixels.
 	// x y
 	// z w
-	graypx = rgb_to_y(pixel1, pixel2, pixel3, pixel4);
+	/*graypx = rgb_to_y(pixel1, pixel2, pixel3, pixel4);*/
 
 	// Interpolate color and edges for current position from the four source pixels if enlargement is enabled
 	if (enlarge)
 	{
-		const float gap = float(patwidth) / iw;
+		/*const float gap = float(patwidth) / iw;*/
 		ipx       = interpolate(pixel1, pixel2, pixel3, pixel4, patxf, patyf);
-		grayipx.x = interpolate(graypx.x, graypx.y, graypx.z, graypx.w, max(patxf-gap/2, 0.0f), max(patyf-gap/2, 0.0f));
-		grayipx.y = interpolate(graypx.x, graypx.y, graypx.z, graypx.w, min(patxf+gap/2, 1.0f), max(patyf-gap/2, 0.0f));
-		grayipx.z = interpolate(graypx.x, graypx.y, graypx.z, graypx.w, max(patxf-gap/2, 0.0f), min(patyf+gap/2, 1.0f));
-		grayipx.w = interpolate(graypx.x, graypx.y, graypx.z, graypx.w, min(patxf+gap/2, 1.0f), min(patyf+gap/2, 1.0f));
+		/*grayipx.x = interpolate(graypx.x, graypx.y, graypx.z, graypx.w, max(patxf-gap/2, 0.0f), max(patyf-gap/2, 0.0f));*/
+		/*grayipx.y = interpolate(graypx.x, graypx.y, graypx.z, graypx.w, min(patxf+gap/2, 1.0f), max(patyf-gap/2, 0.0f));*/
+		/*grayipx.z = interpolate(graypx.x, graypx.y, graypx.z, graypx.w, max(patxf-gap/2, 0.0f), min(patyf+gap/2, 1.0f));*/
+		/*grayipx.w = interpolate(graypx.x, graypx.y, graypx.z, graypx.w, min(patxf+gap/2, 1.0f), min(patyf+gap/2, 1.0f));*/
 	}
 	else
 	{
 		ipx = pixel1;
-		grayipx = graypx;
+		/*grayipx = graypx;*/
 	}
 
 	const unsigned int wholeimgsize = dst_num_maps*iw*iw;
@@ -293,7 +293,7 @@ namespace cuv
 	namespace image_move_impl
 	{
 		template<class __value_typeA, class __value_typeB>
-		void image_move(dense_matrix<__value_typeA,column_major,dev_memory_space>& dst, const dense_matrix<__value_typeB,column_major,dev_memory_space>& src, 
+		void image_move(dense_matrix<__value_typeA,dev_memory_space,column_major>& dst, const dense_matrix<__value_typeB,dev_memory_space,column_major>& src, 
 			const unsigned int& src_image_size, 
 			const unsigned int& dst_image_size,
 			const unsigned int& src_num_maps,
@@ -333,7 +333,7 @@ namespace cuv
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 		template<class __value_typeA, class __value_typeB>
-		void image_move(dense_matrix<__value_typeA,column_major,host_memory_space>& dst, const dense_matrix<__value_typeB,column_major,host_memory_space>& src, const unsigned int& image_width, const unsigned int& image_height, const unsigned int& num_maps, const char& xshift, const char& yshift){
+		void image_move(dense_matrix<__value_typeA,host_memory_space,column_major>& dst, const dense_matrix<__value_typeB,host_memory_space,column_major>& src, const unsigned int& image_width, const unsigned int& image_height, const unsigned int& num_maps, const char& xshift, const char& yshift){
 			throw std::runtime_error("not implemented");
 		}
 		
@@ -345,9 +345,9 @@ namespace cuv
 
 #define INST(A,B) \
 	template      \
-	void image_move(dense_matrix<A,column_major,dev_memory_space>&,const dense_matrix<B,column_major,dev_memory_space>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
+	void image_move(dense_matrix<A,dev_memory_space,column_major>&,const dense_matrix<B,dev_memory_space,column_major>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
 	template      \
-	void image_move(dense_matrix<A,column_major,host_memory_space>&,const dense_matrix<B,column_major,host_memory_space>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
+	void image_move(dense_matrix<A,host_memory_space,column_major>&,const dense_matrix<B,host_memory_space,column_major>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
 
 	INST(float,unsigned char);
 	INST(unsigned char,unsigned char);
