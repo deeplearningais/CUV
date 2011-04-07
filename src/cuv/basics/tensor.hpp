@@ -145,9 +145,25 @@ namespace cuv
 			}
 
 			/**
+			 * construct tensor view using int
+			 */
+			const_tensor(int _size, pointer_type ptr){
+				m_shape.push_back(_size);
+				allocate(ptr);
+			}
+
+			/**
+			 * construct tensor view using uint
+			 */
+			const_tensor(unsigned int _size, pointer_type ptr){
+				m_shape.push_back(_size);
+				allocate(ptr);
+			}
+
+			/**
 			 * construct tensor using uint
 			 */
-			explicit const_tensor(const unsigned int& _size){
+			const_tensor(unsigned int _size){
 				m_shape.push_back(_size);
 				allocate();
 			}
@@ -369,16 +385,18 @@ namespace cuv
 			}
 
 			/**
-			 * construct tensor using some collection
+			 * construct tensor using only length
 			 */
-			//template<class Collection>
-			//explicit tensor(const Collection& eg)
-			//:super_type(eg)
-			//{
-			//}
-			//
 			explicit tensor(const unsigned int& len)
 			:super_type(len)
+			{
+			}
+
+			/**
+			 * construct tensor view using only length
+			 */
+			explicit tensor(const unsigned int& len, pointer_type ptr)
+			:super_type(len,ptr)
 			{
 			}
 
