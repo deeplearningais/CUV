@@ -181,7 +181,7 @@ void export_rlcnp_stuff(){
 
 void export_convolution_ops(){
     export_convolve< dense_matrix<float,host_memory_space,row_major> >();
-    export_convolve< dense_matrix<float,row_major,dev_memory_space> >();
+    export_convolve< dense_matrix<float,dev_memory_space,row_major> >();
     export_sampling_stuff< dense_matrix<float,host_memory_space, row_major> >();
     export_sampling_stuff< dense_matrix<float,dev_memory_space, row_major>  >();
     export_padding_ops< dense_matrix<float,host_memory_space, row_major> >();

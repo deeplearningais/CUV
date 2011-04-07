@@ -45,7 +45,7 @@ using namespace cuv;
 using namespace cuv::libs::rbm;
 namespace ublas = boost::numeric::ublas;
 
-template<class V, class L, class M, class I>
+template<class V, class M, class L, class I>
 void export_libs_rbm_detail(){
 	typedef dense_matrix<V,M,L,I> mat;
 	typedef tensor<V,M> vec;
@@ -53,14 +53,14 @@ void export_libs_rbm_detail(){
 	def("sigm_temperature", sigm_temperature<mat,vec>, (arg("matrix"), arg("temperature")));
 }
 
-template<class V, class L, class M, class I>
+template<class V, class M, class L, class I>
 void export_set_local_conn(){
 	typedef dense_matrix<V,M,L,I> mat;
 	typedef tensor<V,M> vec;
 	def("set_local_connectivity_in_dense_matrix", set_local_connectivity_in_dense_matrix<mat>, (arg("matrix"),arg("patchsize"),arg("px"),arg("py"),arg("pxh"),arg("pyh"),arg("maxdist_from_main_dia"),arg("round")=false));
 }
 
-template<class V, class L, class M, class I>
+template<class V, class M, class L, class I>
 void export_copy_at_rowidx(){
 	typedef dense_matrix<V,M,L,I> mat;
 	typedef tensor<V,M> vec;

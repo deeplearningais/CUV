@@ -94,7 +94,7 @@ namespace libs{
 		cudaThreadSynchronize();
 		checkCudaError("kernel sqDiff invocation");
 	}
-typedef dense_matrix<float, row_major, dev_memory_space, unsigned int> dm_rmf;
+typedef dense_matrix<float, dev_memory_space, row_major, unsigned int> dm_rmf;
 template void pairwise_distance<dm_rmf>(dm_rmf&, const dm_rmf &, const dm_rmf&);
 
 }}}

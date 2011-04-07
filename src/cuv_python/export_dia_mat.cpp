@@ -161,14 +161,14 @@ void export_block_descriptors(const char*name){
 // forward declaration...
 template<class T, class Mfrom, class Mto_ublas, class Mto_cuv>
 pyublas::numpy_matrix<T,Mto_ublas>
-host_dense_mat2numpy(dense_matrix<T, Mfrom,host_memory_space>& m);
+host_dense_mat2numpy(dense_matrix<T,host_memory_space,Mfrom>& m);
 
 template<class T>
 pyublas::numpy_matrix<T,ublas::column_major> 
 dev_dia_mat2numpy(dia_matrix<T,dev_memory_space>&m){
 	dia_matrix<T,host_memory_space>   hostdia(m.h(),m.w(),m.num_dia(),m.stride(),m.row_fact());
 	cuv::convert(hostdia,m);
-	dense_matrix<T,column_major,host_memory_space> mdense(m.h(),m.w());
+	dense_matrix<T,host_memory_space,column_major> mdense(m.h(),m.w());
 	cuv::convert(mdense,hostdia);
 	pyublas::numpy_matrix<T,ublas::column_major> to = host_dense_mat2numpy<T,cuv::column_major,ublas::column_major,cuv::column_major>(mdense);
 	return to;
@@ -210,7 +210,7 @@ void
 export_diamat_conversion(){
 	def("convert", (void(*)(dia_matrix<T,dev_memory_space>&,const dia_matrix<T,host_memory_space>&)) cuv::convert);
 	def("convert", (void(*)(dia_matrix<T,host_memory_space>&,const dia_matrix<T,dev_memory_space>&)) cuv::convert);
-	def("convert", (void(*)(dense_matrix<T,column_major,host_memory_space>&, const dia_matrix<T,host_memory_space>&)) cuv::convert);
+	def("convert", (void(*)(dense_matrix<T,host_memory_space,column_major>&, const dia_matrix<T,host_memory_space>&)) cuv::convert);
 	def("pull",    dev_dia_mat2numpy<T>);
 }
 
@@ -225,16 +225,16 @@ void export_dia_matrix(){
 	//def("densedense_to_dia", densedense_to_dia<dia_matrix<float,host_memory_space>,host_block_descriptor<float>,host_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
 
 	def("densedense_to_dia", 
-			densedense_to_dia<dia_matrix<float,dev_memory_space>, dev_block_descriptor<float>, dense_matrix<float,column_major,dev_memory_space> >,
+			densedense_to_dia<dia_matrix<float,dev_memory_space>, dev_block_descriptor<float>, dense_matrix<float,dev_memory_space,column_major> >,
 			(arg("C"),arg("Cbd"),arg("A"),arg("B"),arg("factAB")=1.f,arg("factC")=0.f));
 			//"C <- A*B', where C is sparse");
 	def("densedense_to_dia", 
-			densedense_to_dia<dia_matrix<float,host_memory_space>,host_block_descriptor<float>,dense_matrix<float,column_major,host_memory_space> >, 
+			densedense_to_dia<dia_matrix<float,host_memory_space>,host_block_descriptor<float>,dense_matrix<float,host_memory_space,column_major> >, 
 			(arg("C"),arg("Cbd"),arg("A"),arg("B"),arg("factAB")=1.f,arg("factC")=0.f));
 			//"C <- A*B', where C is sparse");
 
-	def("prod", cuv::prod<dense_matrix<float,column_major,host_memory_space>, dia_matrix<float,host_memory_space>,dense_matrix<float,column_major,host_memory_space> >, 
+	def("prod", cuv::prod<dense_matrix<float,host_memory_space,column_major>, dia_matrix<float,host_memory_space>,dense_matrix<float,host_memory_space,column_major> >, 
 			(arg("C"),arg("A"),arg("B"),arg("transA"),arg("transB"),arg("factAB")=1.f,arg("factC")=0.f));
-	def("prod", cuv::prod<dense_matrix<float,column_major,dev_memory_space>,  dia_matrix<float,dev_memory_space>,  dense_matrix<float,column_major,dev_memory_space> >,
+	def("prod", cuv::prod<dense_matrix<float,dev_memory_space,column_major>,  dia_matrix<float,dev_memory_space>,  dense_matrix<float,dev_memory_space,column_major> >,
 			(arg("C"),arg("A"),arg("B"),arg("transA"),arg("transB"),arg("factAB")=1.f,arg("factC")=0.f));
 }

@@ -42,7 +42,7 @@ using namespace cuv;
 using namespace cuv::libs::kmeans;
 namespace ublas = boost::numeric::ublas;
 
-template<class V, class L, class M, class I>
+template<class V, class M, class L, class I>
 void export_kmeans(){
 	typedef dense_matrix<V,M,L,I> mat;
 	typedef tensor<I,M> vec;
