@@ -98,7 +98,7 @@ namespace cuv{
 				&& src.w() == m_base_width
 			){
 				//std::cout << "Copycase"<<std::endl;
-					copy(m_matrices[0].vec(),const_cast<__arg_matrix_type&>(src).vec());
+					m_matrices[0]=src;
 			}
 			else if(   interleaved_channels == 4
 					&& m_dim                == 3
@@ -190,26 +190,26 @@ namespace cuv{
  */
 template<class T,class S, class I>
 void gaussian_pyramid_downsample(
-	dense_matrix<T,row_major,S,I>& dst,
+	dense_matrix<T,S,row_major,I>& dst,
 	const cuda_array<T,S,I>& src,
 	const unsigned int interleaved_channels
 );
 template<class T,class S, class I>
 void gaussian_pyramid_upsample(
-	dense_matrix<T,row_major,S,I>& dst,
+	dense_matrix<T,S,row_major,I>& dst,
 	const cuda_array<T,S,I>& src
 );
 
 template<class TDest, class T,class S, class I>
 void get_pixel_classes(
-	dense_matrix<TDest,row_major,S,I>& dst,
+	dense_matrix<TDest,S,row_major,I>& dst,
 	const cuda_array<T,S,I>&           src,
 	float scale_fact
 );
 
 template<class T,class S, class I>
 void gaussian(
-	dense_matrix<T,row_major,S,I>& dst,
+	dense_matrix<T,S,row_major,I>& dst,
 	const cuda_array<T,S,I>& src
 );
 
