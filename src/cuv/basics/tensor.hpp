@@ -491,6 +491,9 @@ namespace cuv
 				for(unsigned long i=0;i<D;i++)
 					m_shape.push_back(eg.ranges_[i].finish());
 			}
+                        void reshape(index_type i, index_type j){
+                                reshape(extents[i][j]);
+                        }
 	};
 
       // forward declaration of fill to implement operator= for value_type	

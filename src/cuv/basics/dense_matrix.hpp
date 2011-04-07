@@ -97,9 +97,6 @@ namespace cuv{
 		const index_type& w()const{ return this->shape()[1]; };
 		const index_type  n()const{ return this->size(); };
 
-		void reshape(index_type i, index_type j){
-			tensor_type::reshape(extents[i][j]);
-		}
 
 
 		///// deprecated! define your stuff on tensor instead!
