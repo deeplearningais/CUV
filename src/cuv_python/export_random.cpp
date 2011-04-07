@@ -47,23 +47,11 @@ using namespace boost::python;
 using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
-template<class M>
-void add_rnd_normal_matrix(M&m, const float& std){ add_rnd_normal(m.vec(),std); }
-template<class M>
-void rnd_binarize_matrix(M&m){ rnd_binarize(m.vec()); }
-template<class M>
-void fill_rnd_uniform_matrix(M&m){ fill_rnd_uniform(m.vec()); }
-
 template <class T>
 void export_functions() {
-	def("add_rnd_normal",add_rnd_normal_matrix<T>,(arg("dst"),arg("std")=1));
-	def("fill_rnd_uniform",fill_rnd_uniform_matrix<T>,(arg("dst")));
-	def("rnd_binarize",rnd_binarize_matrix<T>,(arg("dst")));
-
-	typedef typename T::vec_type V;
-	def("add_rnd_normal",add_rnd_normal<V>,(arg("dst"),arg("std")=1));
-	def("fill_rnd_uniform",fill_rnd_uniform<V>,(arg("dst")));
-	def("rnd_binarize",rnd_binarize<V>,(arg("dst")));
+	def("add_rnd_normal",add_rnd_normal<typename T::value_type, typename T::memory_space_type, typename T::memory_layout_type>,(arg("dst"),arg("std")=1));
+	def("fill_rnd_uniform",fill_rnd_uniform<typename T::value_type, typename T::memory_space_type, typename T::memory_layout_type>,(arg("dst")));
+	def("rnd_binarize",rnd_binarize<typename T::value_type, typename T::memory_space_type, typename T::memory_layout_type>,(arg("dst")));
 }
 
 void export_random(){
