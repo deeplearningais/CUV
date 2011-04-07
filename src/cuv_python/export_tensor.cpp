@@ -69,7 +69,7 @@ namespace python_wrapping {
             cuvAssert(false);
             //return typename T::reference_type();
        }
-
+    
     template <class T>
     void set(T&tensor, const boost::python::list &ind, const typename T::value_type& val){
         get_reference(tensor,ind)=val;
@@ -77,6 +77,20 @@ namespace python_wrapping {
     template <class T>
     typename T::value_type get(T&tensor, const boost::python::list &ind){
         return get_reference(tensor,ind);
+    }
+    
+    template <class value_type>
+        std::vector<value_type> extract_python_list(const boost::python::list & mylist){
+            std::vector<value_type> stl_vector;
+            int n = boost::python::len(mylist);
+            for (int it=0; it < n; it++)
+                stl_vector.push_back(extract<value_type>(mylist[it]));
+            return stl_vector;
+        }
+
+    template <class T>
+    void reshape(T& tensor, const boost::python::list &shape){
+        tensor.reshape(extract_python_list<typename T::index_type>(shape));
     }
     
 };
@@ -92,6 +106,9 @@ export_tensor_common(const char* name){
                 .def("alloc",&arr::allocate, "allocate memory")
                 .def("dealloc",&arr::dealloc, "deallocate memory")
                 .def("set",    &python_wrapping::set<T>, "set index to value")
+                .def("get",    &python_wrapping::get<T>, "set index to value")
+                .def("reshape",    &python_wrapping::reshape<T>, "reshape tensor in place")
+                //.def("shape",    &python_wrapping::shape<T>, "get shape of tensor")
 		//.def("at",  (value_type  (arr::*)(const typename arr::index_type&)const)(&arr::operator[]))
                 .add_property("size", &arr::size)
                 .add_property("memsize",&arr::memsize, "size of tensor in memory (bytes)")

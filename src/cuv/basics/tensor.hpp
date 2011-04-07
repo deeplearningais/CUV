@@ -169,6 +169,16 @@ namespace cuv
 			}
 
 			/**
+			 * construct tensor using vector of sizes
+			 */
+			const_tensor(const std::vector<index_type>& _size)
+                            : m_shape(_size)
+                        {
+				//m_shape.push_back(_size);
+				allocate();
+			}
+
+			/**
 			 * construct tensor using int
 			 */
 			explicit const_tensor(const int& _size){
@@ -493,6 +503,11 @@ namespace cuv
 			}
                         void reshape(index_type i, index_type j){
                                 reshape(extents[i][j]);
+                        }
+                        void reshape(const std::vector<index_type>& new_shape){
+				index_type new_size =  std::accumulate(new_shape.begin(),new_shape.end(),(index_type)1,std::multiplies<index_type>());
+                                cuvAssert(new_size == size() );
+                                m_shape = new_shape;
                         }
 	};
 
