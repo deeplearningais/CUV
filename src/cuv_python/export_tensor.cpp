@@ -105,12 +105,18 @@ namespace python_wrapping {
     }
 
     
+    /***************************************************
+     * Constructing tensors
+     ***************************************************/
     template<class V,class M, class L>
     struct basic_tensor_constructor{
+
+	    /// construct using shape 
 	    typedef tensor<V,M,L> T;
 	    static T* construct_tensor_shape(boost::python::list python_shape){
 		    return new T(extract_python_list<typename T::index_type>(python_shape));
 	    }
+	    /// construct a vector using a single dimension
 	    static T* construct_tensor_int(unsigned int len){
 		    return new T(len);
 	    }
@@ -122,6 +128,7 @@ namespace python_wrapping {
     struct tensor_constructor<V,host_memory_space,L> : public basic_tensor_constructor<V,host_memory_space,L> { 
 	    typedef tensor<V,host_memory_space,L> T;
 
+	    /// construct from numpy, same memory
 	    static T* construct_tensor_numpy_array_view(pyublas::numpy_array<typename T::value_type> o){
 		    const unsigned int ndim = o.ndim();
 		    std::vector<unsigned int> v(ndim);
@@ -130,6 +137,7 @@ namespace python_wrapping {
 		    return new T(v,o.data());
 	    }
 
+	    /// construct from numpy, copy memory
 	    static T* construct_tensor_numpy_array_copy(pyublas::numpy_array<typename T::value_type> o){
 		    const unsigned int ndim = o.ndim();
 		    std::vector<unsigned int> v(ndim);
@@ -144,10 +152,12 @@ namespace python_wrapping {
     struct tensor_constructor<V,dev_memory_space,L> : public basic_tensor_constructor<V,dev_memory_space,L> { 
 	    typedef tensor<V,dev_memory_space,L> T;
 
+	    /// construct from numpy, same memory (invalid for device!)
 	    static T* construct_tensor_numpy_array_view(pyublas::numpy_array<typename T::value_type> o){
 		    cuvAssert(false);
 	    }
 
+	    /// construct from numpy, copy memory
 	    static T* construct_tensor_numpy_array_copy(pyublas::numpy_array<typename T::value_type> o){
 		    const unsigned int ndim = o.ndim();
 		    std::vector<unsigned int> v(ndim);
@@ -159,6 +169,9 @@ namespace python_wrapping {
     };
 
 
+    /***************************************************
+     *  Convert Tensor to Numpy
+     ***************************************************/
     template<class V,class M, class L>
     struct basic_tens2npy{};
 
@@ -168,6 +181,8 @@ namespace python_wrapping {
     template<class V, class L>
     struct tens2npy<V,host_memory_space,L> : public basic_tens2npy<V,host_memory_space,L>{
 	    typedef tensor<V,host_memory_space,L> T;
+
+	    /// copy host vector into a numpy array
 	    static pyublas::numpy_array<V> to_numpy_copy(const T& t){
 		    std::vector<npy_intp> dims(t.shape().size());
 		    std::copy(t.shape().begin(),t.shape().end(), dims.begin());
@@ -186,8 +201,10 @@ namespace python_wrapping {
     template<class V, class L>
     struct tens2npy<V,dev_memory_space,L> : public basic_tens2npy<V,dev_memory_space,L>{
 	    typedef tensor<V,dev_memory_space,L> T;
+	    
+	    /// copy device vector into a numpy array
 	    static pyublas::numpy_array<V> to_numpy_copy(const T& o){
-		    tensor<V,host_memory_space,L> t = o;
+		    tensor<V,host_memory_space,L> t = o;  // pull from device
 		    std::vector<npy_intp> dims(t.shape().size());
 		    std::copy(t.shape().begin(),t.shape().end(), dims.begin());
 
