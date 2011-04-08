@@ -32,12 +32,14 @@
 
 
 #include <string>
+#include <vector>
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
 #include <boost/type_traits/is_same.hpp>
 
-#include <vector>
+
 #include <cuv/basics/tensor.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/convert/convert.hpp>
 
 using namespace boost::python;
@@ -96,12 +98,28 @@ namespace python_wrapping {
      boost::python::list shape(T& tensor){
          boost::python::list python_shape;
          int n = tensor.shape().size();
-         for(int i=0; i<n; i++){
+         for(int i=0; i<n; i++)
              python_shape.append(tensor.shape()[i]);
-         }
-         std::cout << "AAAAAA"<<std::endl;
          return python_shape;
     }
+
+    template<class T>
+    T* construct_tensor_shape(boost::python::list python_shape){
+	    return new T(extract_python_list<typename T::index_type>(python_shape));
+    }
+    template<class T>
+    T* construct_tensor_int(unsigned int len){
+	    return new T(len);
+    }
+    //template<class T>
+    //T* construct_tensor_numpy_array_view(pyublas::numpy_array<typename T::value_type> o){
+    //        const unsigned int ndim = o.ndim();
+    //        std::vector<unsigned int> v(ndim);
+    //        for(int i=0;i<ndim;i++)
+    //                v[i]=o.dims()[i];
+    //        return new T(v,o.data());
+    //}
+    
     
 };
 
@@ -110,19 +128,42 @@ void
 export_tensor_common(const char* name){
 	typedef T arr;
 	typedef typename arr::value_type value_type;
+	typedef typename arr::memory_space_type memspace_type;
+	typedef typename arr::index_type index_type;
+	typedef typename arr::memory_layout_type memlayout_type;
 
-	class_<arr> (name, init<int>())
+	class_<arr> (name)
+		.def("__init__", make_constructor(&python_wrapping::construct_tensor_shape<T>))
+		.def("__init__", make_constructor(&python_wrapping::construct_tensor_int<T>))
+		//.def("__init__", make_constructor(&python_wrapping::construct_tensor_numpy_array_view<T>))
                 .def("__len__",&arr::size, "tensor size")
-                .def("alloc",&arr::allocate, "allocate memory")
+                //.def("alloc",&arr::allocate, "allocate memory") // should be private, actually...
                 .def("dealloc",&arr::dealloc, "deallocate memory")
                 .def("set",    &python_wrapping::set<T>, "set index to value")
                 .def("get",    &python_wrapping::get<T>, "set index to value")
                 .def("reshape",    &python_wrapping::reshape<T>, "reshape tensor in place")
-		//.def("shape",    &python_wrapping::shape<T>, "get shape of tensor",return_value_policy<manage_new_object>())
-		.def("shape",    &python_wrapping::shape<T>, "get shape of tensor")
-                //.def("shape",    &arr::shape, "get shape of tensor",return_value_policy<copy_const_reference>())
                 .add_property("size", &arr::size)
+                .add_property("shape", &python_wrapping::shape<T>, "get shape of tensor")
                 .add_property("memsize",&arr::memsize, "size of tensor in memory (bytes)")
+		
+		.def(self += value_type())
+		.def(self -= value_type())
+		.def(self *= value_type())
+		.def(self /= value_type())
+		.def(self += self)
+		.def(self -= self)
+		.def(self *= self)
+		.def(self /= self)
+
+		.def(self + self)
+		.def(self - self)
+		.def(self * self)
+		.def(self / self)
+		.def(self + value_type())
+		.def(self - value_type())
+		.def(self * value_type())
+		.def(self / value_type())
+		.def(-self)
 		;
 	def("this_ptr", this_ptr<arr>);
 	def("internal_ptr", internal_ptr<arr>);
