@@ -1,8 +1,10 @@
+# vim:sw=4:ts=4:et
 import numpy as np
+import pyublas
 from _cuv_python import *
 
 def _matstr(x,typestr):
-    return "%s: (%d,%d)[%2.1f Mb]"%(typestr,x.h,x.w,x.memsize/1024./1024.)
+    return "%s: (%d,%d)[%2.1f Mb]"%(typestr,x.shape,x.memsize/1024./1024.)
 
 def __cpy(x):
     x2 = x.__class__(x.h,x.w)
@@ -29,7 +31,17 @@ def __T(x):
 def copy(dst,src):
     apply_scalar_functor(dst.vec,src.vec,scalar_functor.COPY)
 
-def __getitem__(x,key):
+def __tensor_getitem(x,key):
+    if isinstance(key,int):
+        return x.get([key])
+    return x.get([x for x in key])
+
+def __tensor_setitem(x,key,val):
+    if isinstance(key,int):
+        return x.set([key],val)
+    x.set([x for x in key],val)
+
+def __matrix_getitem__(x,key):
     if isinstance(key,int):
         return x.vec.at(key)
     elif isinstance(key,tuple): # slicing!
@@ -71,7 +83,7 @@ def __getitem__(x,key):
         raise NotImplementedError
             
 
-def __setitem__(x,key,value):
+def __matrix_setitem__(x,key,value):
     if isinstance(key,int):
         return x.vec.set(key,value=value)
     elif isinstance(key,tuple): # slicing!
@@ -100,8 +112,8 @@ for memory_space in ["dev","host"]:
             dense_type.T = property(__T)
             dense_type.has_nan = property(lambda x:has_nan(x))
             dense_type.has_inf = property(lambda x:has_inf(x))
-            dense_type.__getitem__=__getitem__
-            dense_type.__setitem__=__setitem__
+            dense_type.__getitem__=__matrix_getitem__
+            dense_type.__setitem__=__matrix_setitem__
             dense_type.__str__=lambda x:(_matstr(x,memory_space+"_matrix_"+memory_layout+value_type))
 
     dia_type=eval(memory_space+"_dia_matrix_f")
@@ -110,3 +122,17 @@ for memory_space in ["dev","host"]:
     dia_type.copy = __cpy_dia
     dia_type.shape = property(__shape)
     dia_type.np = property(__np)
+
+for memory_space in ["dev","host"]:
+    for value_type in ["float","int","uc","uint"]:
+            dense_type=eval(memory_space+"_tensor_"+value_type)
+
+            dense_type.save = __sav_dense
+            dense_type.copy = __cpy
+            dense_type.np = property(__np)
+            dense_type.T = property(__T)
+            dense_type.has_nan = property(lambda x:has_nan(x))
+            dense_type.has_inf = property(lambda x:has_inf(x))
+            dense_type.__getitem__= __tensor_getitem
+            dense_type.__setitem__= __tensor_setitem
+            dense_type.__str__=lambda x:(_matstr(x,memory_space+"_tensor_"+value_type))
