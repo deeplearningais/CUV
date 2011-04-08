@@ -93,11 +93,11 @@ namespace python_wrapping {
         tensor.reshape(extract_python_list<typename T::index_type>(shape));
     }
     template <class T>
-     boost::python::list* shape(T& tensor){
-         boost::python::list* python_shape = new boost::python::list();
+     boost::python::list shape(T& tensor){
+         boost::python::list python_shape;
          int n = tensor.shape().size();
          for(int i=0; i<n; i++){
-             python_shape->append(tensor.shape()[i]);
+             python_shape.append(tensor.shape()[i]);
          }
          std::cout << "AAAAAA"<<std::endl;
          return python_shape;
@@ -118,7 +118,9 @@ export_tensor_common(const char* name){
                 .def("set",    &python_wrapping::set<T>, "set index to value")
                 .def("get",    &python_wrapping::get<T>, "set index to value")
                 .def("reshape",    &python_wrapping::reshape<T>, "reshape tensor in place")
-                .def("shape",    &python_wrapping::shape<T>, "get shape of tensor",return_value_policy<manage_new_object>())
+		//.def("shape",    &python_wrapping::shape<T>, "get shape of tensor",return_value_policy<manage_new_object>())
+		.def("shape",    &python_wrapping::shape<T>, "get shape of tensor")
+                //.def("shape",    &arr::shape, "get shape of tensor",return_value_policy<copy_const_reference>())
                 .add_property("size", &arr::size)
                 .add_property("memsize",&arr::memsize, "size of tensor in memory (bytes)")
 		;
