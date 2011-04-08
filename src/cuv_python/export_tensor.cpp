@@ -36,6 +36,7 @@
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
 #include <boost/type_traits/is_same.hpp>
+#include <pyublas/numpy.hpp>
 
 
 #include <cuv/basics/tensor.hpp>
@@ -103,23 +104,103 @@ namespace python_wrapping {
          return python_shape;
     }
 
-    template<class T>
-    T* construct_tensor_shape(boost::python::list python_shape){
-	    return new T(extract_python_list<typename T::index_type>(python_shape));
-    }
-    template<class T>
-    T* construct_tensor_int(unsigned int len){
-	    return new T(len);
-    }
-    //template<class T>
-    //T* construct_tensor_numpy_array_view(pyublas::numpy_array<typename T::value_type> o){
-    //        const unsigned int ndim = o.ndim();
-    //        std::vector<unsigned int> v(ndim);
-    //        for(int i=0;i<ndim;i++)
-    //                v[i]=o.dims()[i];
-    //        return new T(v,o.data());
-    //}
     
+    template<class V,class M, class L>
+    struct basic_tensor_constructor{
+	    typedef tensor<V,M,L> T;
+	    static T* construct_tensor_shape(boost::python::list python_shape){
+		    return new T(extract_python_list<typename T::index_type>(python_shape));
+	    }
+	    static T* construct_tensor_int(unsigned int len){
+		    return new T(len);
+	    }
+    };
+    template <class V,class M, class L>
+    struct tensor_constructor : public basic_tensor_constructor<V,M,L> { };
+
+    template <class V, class L>
+    struct tensor_constructor<V,host_memory_space,L> : public basic_tensor_constructor<V,host_memory_space,L> { 
+	    typedef tensor<V,host_memory_space,L> T;
+
+	    static T* construct_tensor_numpy_array_view(pyublas::numpy_array<typename T::value_type> o){
+		    const unsigned int ndim = o.ndim();
+		    std::vector<unsigned int> v(ndim);
+		    for(int i=0;i<ndim;i++)
+			    v[i]=o.dims()[i];
+		    return new T(v,o.data());
+	    }
+
+	    static T* construct_tensor_numpy_array_copy(pyublas::numpy_array<typename T::value_type> o){
+		    const unsigned int ndim = o.ndim();
+		    std::vector<unsigned int> v(ndim);
+		    for(int i=0;i<ndim;i++)
+			    v[i]=o.dims()[i];
+		    T view(v,o.data());
+		    return new T(view);
+	    }
+    };
+
+    template <class V, class L>
+    struct tensor_constructor<V,dev_memory_space,L> : public basic_tensor_constructor<V,dev_memory_space,L> { 
+	    typedef tensor<V,dev_memory_space,L> T;
+
+	    static T* construct_tensor_numpy_array_view(pyublas::numpy_array<typename T::value_type> o){
+		    cuvAssert(false);
+	    }
+
+	    static T* construct_tensor_numpy_array_copy(pyublas::numpy_array<typename T::value_type> o){
+		    const unsigned int ndim = o.ndim();
+		    std::vector<unsigned int> v(ndim);
+		    for(int i=0;i<ndim;i++)
+			    v[i]=o.dims()[i];
+		    tensor<V,host_memory_space,L> view(v,o.data());
+		    return new T(view);
+	    }
+    };
+
+
+    template<class V,class M, class L>
+    struct basic_tens2npy{};
+
+    template<class V,class M, class L>
+    struct tens2npy : public basic_tens2npy<V,M,L>{};
+
+    template<class V, class L>
+    struct tens2npy<V,host_memory_space,L> : public basic_tens2npy<V,host_memory_space,L>{
+	    typedef tensor<V,host_memory_space,L> T;
+	    static pyublas::numpy_array<V> to_numpy_copy(const T& t){
+		    std::vector<npy_intp> dims(t.shape().size());
+		    std::copy(t.shape().begin(),t.shape().end(), dims.begin());
+
+		    pyublas::numpy_array<V> v(t.shape().size(),&dims[0]);
+		    if(IsSame<L,column_major>::Result::value){
+			    v.reshape(t.shape().size(),&dims[0],NPY_FORTRANORDER);
+		    }else if(t.shape().size()==1){
+			    v.reshape(t.shape().size(),&dims[0],NPY_ANYORDER);
+		    }
+		    std::copy(t.ptr(),t.ptr()+t.size(),v.data());
+		    return v;
+	    }
+    };
+
+    template<class V, class L>
+    struct tens2npy<V,dev_memory_space,L> : public basic_tens2npy<V,dev_memory_space,L>{
+	    typedef tensor<V,dev_memory_space,L> T;
+	    static pyublas::numpy_array<V> to_numpy_copy(const T& o){
+		    tensor<V,host_memory_space,L> t = o;
+		    std::vector<npy_intp> dims(t.shape().size());
+		    std::copy(t.shape().begin(),t.shape().end(), dims.begin());
+
+		    pyublas::numpy_array<V> v(t.shape().size(),&dims[0]);
+		    if(IsSame<L,column_major>::Result::value){
+			    v.reshape(t.shape().size(),&dims[0],NPY_FORTRANORDER);
+		    }else if(t.shape().size()==1){
+			    v.reshape(t.shape().size(),&dims[0],NPY_ANYORDER);
+		    }
+		    std::copy(t.ptr(),t.ptr()+t.size(),v.data());
+		    return v;
+	    }
+    };
     
 };
 
@@ -131,40 +212,51 @@ export_tensor_common(const char* name){
 	typedef typename arr::memory_space_type memspace_type;
 	typedef typename arr::index_type index_type;
 	typedef typename arr::memory_layout_type memlayout_type;
+	boost::python::self_t s = boost::python::self;
 
-	class_<arr> (name)
-		.def("__init__", make_constructor(&python_wrapping::construct_tensor_shape<T>))
-		.def("__init__", make_constructor(&python_wrapping::construct_tensor_int<T>))
-		//.def("__init__", make_constructor(&python_wrapping::construct_tensor_numpy_array_view<T>))
+	class_<arr> c(name);
+	c
+		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_shape))
+		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_int))
+		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_numpy_array_copy))
                 .def("__len__",&arr::size, "tensor size")
-                //.def("alloc",&arr::allocate, "allocate memory") // should be private, actually...
                 .def("dealloc",&arr::dealloc, "deallocate memory")
                 .def("set",    &python_wrapping::set<T>, "set index to value")
                 .def("get",    &python_wrapping::get<T>, "set index to value")
                 .def("reshape",    &python_wrapping::reshape<T>, "reshape tensor in place")
+                .add_property("np", &python_wrapping::tens2npy<value_type,memspace_type,memlayout_type>::to_numpy_copy)
                 .add_property("size", &arr::size)
                 .add_property("shape", &python_wrapping::shape<T>, "get shape of tensor")
                 .add_property("memsize",&arr::memsize, "size of tensor in memory (bytes)")
 		
-		.def(self += value_type())
-		.def(self -= value_type())
-		.def(self *= value_type())
-		.def(self /= value_type())
-		.def(self += self)
-		.def(self -= self)
-		.def(self *= self)
-		.def(self /= self)
+		.def(s += value_type())
+		.def(s -= value_type())
+		.def(s *= value_type())
+		.def(s /= value_type())
+		.def(s += s)
+		.def(s -= s)
+		.def(s *= s)
+		.def(s /= s)
 
-		.def(self + self)
-		.def(self - self)
-		.def(self * self)
-		.def(self / self)
-		.def(self + value_type())
-		.def(self - value_type())
-		.def(self * value_type())
-		.def(self / value_type())
-		.def(-self)
+		.def("__add__", ( arr (*) (const arr&,const arr&))operator+<value_type,memspace_type,memlayout_type>)
+		.def("__sub__", ( arr (*) (const arr&,const arr&))operator-<value_type,memspace_type,memlayout_type>)
+		//.def(s + s) // incompatible with pyublas. god knows why.
+		//.def(s - s) // incompatible with pyublas. god knows why.
+		.def(s * s)
+		.def(s / s)
+		.def("__add__", ( arr (*) (const arr&,const value_type&))operator+<value_type,memspace_type,memlayout_type>)
+		.def("__sub__", ( arr (*) (const arr&,const value_type&))operator-<value_type,memspace_type,memlayout_type>)
+		//.def(s + value_type()) // incompatible with pyublas. god knows why.
+		//.def(s - value_type()) // incompatible with pyublas. god knows why.
+		.def(s * value_type())
+		.def(s / value_type())
+		.def("__neg__", ( arr (*) (const arr&))operator-<value_type,memspace_type,memlayout_type>)
+		//.def(-s) // incompatible with pyublas. god knows why.
 		;
+	if(IsSame<memspace_type,host_memory_space>::Result::value){
+		def("numpy_view",&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_numpy_array_view, return_value_policy<manage_new_object>());
+	}
+
 	def("this_ptr", this_ptr<arr>);
 	def("internal_ptr", internal_ptr<arr>);
 	
