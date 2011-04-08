@@ -271,7 +271,8 @@ export_tensor_common(const char* name){
 		//.def(-s) // incompatible with pyublas. god knows why.
 		;
 	if(IsSame<memspace_type,host_memory_space>::Result::value){
-		def("numpy_view",&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_numpy_array_view, return_value_policy<manage_new_object>());
+		def("numpy_view",&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_numpy_array_view,
+				return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 	}
 
 	def("this_ptr", this_ptr<arr>);
