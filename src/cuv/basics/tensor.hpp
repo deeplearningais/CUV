@@ -145,6 +145,14 @@ namespace cuv
 			}
 
 			/**
+			 * construct tensor view using extents object and a pointer to the wrappable memory
+			 */
+			explicit const_tensor(const std::vector<index_type> eg, pointer_type ptr){
+				m_shape=eg;
+				allocate(ptr);
+			}
+
+			/**
 			 * construct tensor view using int
 			 */
 			const_tensor(int _size, pointer_type ptr){
@@ -393,6 +401,13 @@ namespace cuv
 			:super_type(eg,ptr)
 			{
 			}
+			/**
+			 * construct tensor view using extents object and a pointer to the wrappable memory
+			 */
+			explicit tensor(const std::vector<index_type> eg, pointer_type ptr)
+			:super_type(eg,ptr)
+			{
+			}
 
 			/**
 			 * construct tensor using only length
@@ -426,6 +441,15 @@ namespace cuv
 				:super_type(o)
 			{
 			}
+
+			/**
+			 * construct tensor using vector of sizes
+			 */
+			tensor(const std::vector<index_type>& _size)
+                            : super_type(_size)
+                        {
+			}
+
 
 			/**
 			 * assignment operator
