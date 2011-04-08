@@ -620,10 +620,11 @@ namespace cuv{
   }
 
   template<class T, class V, class M>
-    cuv::tensor<T, V, M>& 
-    operator-(cuv::tensor<T, V, M>& v){
-  	cuv::apply_scalar_functor(v, cuv::SF_NEGATE);
-  	return v;
+    cuv::tensor<T, V, M>
+    operator-(const cuv::tensor<T, V, M>& v){
+        cuv::tensor<T, V, M> temp(v);
+  	cuv::apply_scalar_functor(temp, cuv::SF_NEGATE);
+  	return temp;
   }
 
 
