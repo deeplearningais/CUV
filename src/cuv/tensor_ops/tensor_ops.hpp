@@ -511,28 +511,28 @@ namespace cuv{
   
   template<class T, class V, class M>
    cuv::tensor<T, V, M> 
-    operator+ (const cuv::tensor<T, V, M>& v, const V p){
+    operator+ (const cuv::tensor<T, V, M>& v, const T& p){
         cuv::tensor<T, V, M> temp = v;
         temp+= p;
         return temp;
   }
   template<class T, class V, class M>
    cuv::tensor<T, V, M> 
-    operator- (const cuv::tensor<T, V, M>& v, const V p){
+    operator- (const cuv::tensor<T, V, M>& v, const T& p){
         cuv::tensor<T, V, M> temp = v;
         temp-= p;
         return temp;
   }
   template<class T, class V, class M>
    cuv::tensor<T, V, M> 
-    operator* (const cuv::tensor<T, V, M>& v, const V p){
+    operator* (const cuv::tensor<T, V, M>& v, const T& p){
         cuv::tensor<T, V, M> temp = v;
         temp*= p;
         return temp;
   }
   template<class T, class V, class M>
    cuv::tensor<T, V, M> 
-    operator/ (const cuv::tensor<T, V, M>& v, const V p){
+    operator/ (const cuv::tensor<T, V, M>& v, const T& p){
         cuv::tensor<T, V, M> temp = v;
         temp/= p;
         return temp;
@@ -616,6 +616,13 @@ namespace cuv{
     cuv::tensor<T, V, M>& 
     operator+=(cuv::tensor<T, V, M>& v, const T& p){
   	cuv::apply_scalar_functor(v, cuv::SF_ADD, p);
+  	return v;
+  }
+
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>& 
+    operator-(cuv::tensor<T, V, M>& v){
+  	cuv::apply_scalar_functor(v, cuv::SF_NEGATE);
   	return v;
   }
 
