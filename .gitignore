@@ -5,3 +5,5 @@ src/cscope.files
 src/cscope.out
 src/types_c.vim
 src/types_py.vim
+*.gch
+*.swp
