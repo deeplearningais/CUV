@@ -227,7 +227,6 @@ export_tensor_common(const char* name){
 	typedef T arr;
 	typedef typename arr::value_type value_type;
 	typedef typename arr::memory_space_type memspace_type;
-	typedef typename arr::index_type index_type;
 	typedef typename arr::memory_layout_type memlayout_type;
 	boost::python::self_t s = boost::python::self;
 
@@ -280,15 +279,8 @@ export_tensor_common(const char* name){
 	
 }
 
-template <class T>
-void
-export_tensor_conversion(){
-	def("convert", (void(*)(tensor<T,dev_memory_space>&,const tensor<T,host_memory_space>&)) cuv::convert);
-	def("convert", (void(*)(tensor<T,host_memory_space>&,const tensor<T,dev_memory_space>&)) cuv::convert);
-}
-
-
 void export_tensor(){
+        // row major
 	export_tensor_common<tensor<float,dev_memory_space> >("dev_tensor_float");
 	export_tensor_common<tensor<float,host_memory_space> >("host_tensor_float");
 
@@ -300,10 +292,17 @@ void export_tensor(){
 
 	export_tensor_common<tensor<unsigned int,dev_memory_space> >("dev_tensor_uint");
 	export_tensor_common<tensor<unsigned int,host_memory_space> >("host_tensor_uint");
+        //column major
+	export_tensor_common<tensor<float,dev_memory_space,column_major> >("dev_tensor_float_cm");
+	export_tensor_common<tensor<float,host_memory_space,column_major> >("host_tensor_float_cm");
 
-	export_tensor_conversion<float>();
-	export_tensor_conversion<unsigned char>();
-	export_tensor_conversion<int>();
-	export_tensor_conversion<unsigned int>();
+	export_tensor_common<tensor<unsigned char,dev_memory_space,column_major> >("dev_tensor_uc_cm");
+	export_tensor_common<tensor<unsigned char,host_memory_space,column_major> >("host_tensor_uc_cm");
+
+	export_tensor_common<tensor<int,dev_memory_space,column_major> >("dev_tensor_int_cm");
+	export_tensor_common<tensor<int,host_memory_space,column_major> >("host_tensor_int_cm");
+
+	export_tensor_common<tensor<unsigned int,dev_memory_space,column_major> >("dev_tensor_uint_cm");
+	export_tensor_common<tensor<unsigned int,host_memory_space,column_major> >("host_tensor_uint_cm");
 	}
 
