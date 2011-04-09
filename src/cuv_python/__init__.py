@@ -107,7 +107,6 @@ for memory_space in ["dev","host"]:
 
             dense_type.save = __sav_dense
             dense_type.copy = __cpy
-            dense_type.shape = property(__shape)
             dense_type.np = property(__np)
             dense_type.T = property(__T)
             dense_type.has_nan = property(lambda x:has_nan(x))
