@@ -181,23 +181,22 @@ void export_reductions(){
 	//typedef typename switch_value_type<M, typename M::index_type>::type::vec_type idx_vec;
 	//typedef typename switch_value_type<M, float>::type::vec_type float_vec;
 	typedef typename M::value_type value_type;
-	def("has_inf",(bool (*)(const typename M::tensor_type&)) has_inf<typename M::value_type,typename M::memory_space_type>);
-	def("has_nan",(bool (*)(const typename M::tensor_type&)) has_nan<typename M::value_type,typename M::memory_space_type>);
-	def("sum",(float (*)(const typename M::tensor_type&)) sum<typename M::value_type,typename M::memory_space_type>);
-	def("norm1",(float (*)(const typename M::tensor_type&)) norm1<typename M::value_type,typename M::memory_space_type>);
-	def("norm2",(float (*)(const typename M::tensor_type&)) norm2<typename M::value_type,typename M::memory_space_type>);
-	def("maximum",(float (*)(const typename M::tensor_type&)) maximum<typename M::value_type,typename M::memory_space_type>);
-	def("minimum",(float (*)(const typename M::tensor_type&)) minimum<typename M::value_type,typename M::memory_space_type>);
-	def("mean", (float (*)(const typename M::tensor_type&)) mean<typename M::value_type,typename M::memory_space_type>);
-	//def("arg_max",  (tuple(*)( M&)) matrix_arg_max<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
-	//def("arg_min",  (tuple(*)( M&)) matrix_arg_min<typename M::value_type, typename M::memory_space_type, typename M::index_type>);
-	//def("reduce_to_col", reduce_to_col<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-	//def("reduce_to_row", reduce_to_row<M,typename M::vec_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-	//def("reduce_to_col", reduce_to_col<M,idx_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-	//def("reduce_to_row", reduce_to_row<M,idx_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-
-	//def("reduce_to_col", reduce_to_col<M,float_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-	//def("reduce_to_row", reduce_to_row<M,float_vec>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	typedef typename M::memory_space_type memory_space_type;
+	typedef typename M::memory_layout_type memory_layout_type;
+	def("has_inf",(bool (*)(const typename M::tensor_type&)) has_inf<value_type,typename M::memory_space_type>);
+	def("has_nan",(bool (*)(const typename M::tensor_type&)) has_nan<value_type,typename M::memory_space_type>);
+	def("sum",(float (*)(const typename M::tensor_type&)) sum<value_type,typename M::memory_space_type>);
+	def("norm1",(float (*)(const typename M::tensor_type&)) norm1<value_type,typename M::memory_space_type>);
+	def("norm2",(float (*)(const typename M::tensor_type&)) norm2<value_type,typename M::memory_space_type>);
+	def("maximum",(float (*)(const typename M::tensor_type&)) maximum<value_type,typename M::memory_space_type>);
+	def("minimum",(float (*)(const typename M::tensor_type&)) minimum<value_type,typename M::memory_space_type>);
+	def("mean", (float (*)(const typename M::tensor_type&)) mean<value_type,typename M::memory_space_type>);
+        def("reduce_to_col", reduce_to_col<value_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+        def("reduce_to_row", reduce_to_row<value_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+        def("reduce_to_col", reduce_to_col<typename M::index_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+        def("reduce_to_row", reduce_to_row<typename M::index_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+        def("reduce_to_col", reduce_to_col<float, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+        def("reduce_to_row", reduce_to_row<float, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
 }
 
 template <class M, class V2>
