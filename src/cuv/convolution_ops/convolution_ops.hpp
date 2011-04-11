@@ -35,10 +35,7 @@
 #define __CONVOLUTION_OPS_HPP__
 
 #include <stdio.h>
-
-//#include <cuv/vector_ops/vector_ops.hpp>
-#include <cuv/basics/dense_matrix.hpp>
-
+#include <cuv/basics/tensor.hpp>
 namespace cuv{
 
 /*
@@ -62,10 +59,10 @@ namespace cuv{
  *
  *  The result is added to dst.
  */
-template<class V, class M, class T, class I>
-void convolve(dense_matrix<V,M,T,I>& dst,
-		   dense_matrix<V,M,T,I>& img,
-		   dense_matrix<V,M,T,I>& filter,
+template<class V, class M, class T>
+void convolve(tensor<V,M,T>& dst,
+		   tensor<V,M,T>& img,
+		   tensor<V,M,T>& filter,
 		   int numGroups = 1);
 
 
@@ -88,10 +85,10 @@ void convolve(dense_matrix<V,M,T,I>& dst,
  *  each column up).
  *
  */
-template<class V, class M, class T, class I>
-void convolve2(dense_matrix<V,M,T,I>& dst,
-		   dense_matrix<V,M,T,I>& img,
-		   dense_matrix<V,M,T,I>& filter,
+template<class V, class M, class T>
+void convolve2(tensor<V,M,T>& dst,
+		   tensor<V,M,T>& img,
+		   tensor<V,M,T>& filter,
 		   int numFilters,
 		   int numGroups = 1);
 
@@ -115,10 +112,10 @@ void convolve2(dense_matrix<V,M,T,I>& dst,
  *  convolutional filters. dst will then contain the backpropagated errors of
  *  the lower layer.
  */
-template<class V, class M, class T, class I>
-void convolve3(dense_matrix<V,M,T,I>& dst,
-		   dense_matrix<V,M,T,I>& img,
-		   dense_matrix<V,M,T,I>& filter,
+template<class V, class M, class T>
+void convolve3(tensor<V,M,T>& dst,
+		   tensor<V,M,T>& img,
+		   tensor<V,M,T>& filter,
 		   int numGroups = 1);
 
 
@@ -134,8 +131,8 @@ void convolve3(dense_matrix<V,M,T,I>& dst,
  * of the corresponding entry in the input matrix.
  * 
  */
-template<class V, class M, class T, class I>
-void sample_multinomial(dense_matrix<V,M,T,I>& grid);
+template<class V, class M, class T>
+void sample_multinomial(tensor<V,M,T>& grid);
 
 
 /** 
@@ -149,8 +146,8 @@ void sample_multinomial(dense_matrix<V,M,T,I>& grid);
  * In each window the entries are normalized with a soft-max with an extra "hidden" pixel with value zero.
  * If sample is true, it is sampled from the resulting multinomial as described in sample_multinomial
  */
-template<class V, class M, class T, class I>
-void prob_max_pooling(dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
+template<class V, class M, class T>
+void prob_max_pooling(tensor<V,M,T>& grid, int poolSize, bool sample);
 
 /** 
  * @brief Multinomial max-pooling as done by Lee (2009)
@@ -166,8 +163,8 @@ void prob_max_pooling(dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
  * Each window has a corresponding entry in sums. If sample is true, this entry is 1 iff any entry in the corresponding window is 1.
  * If sample is false the entry in sums is the sum of all entries in the corresponding window.
  */
-template<class V, class M, class T, class I>
-void prob_max_pooling(tensor<V,M>& sums, dense_matrix<V,M,T,I>& grid, int poolSize, bool sample);
+template<class V, class M, class T>
+void prob_max_pooling(tensor<V,M>& sums, tensor<V,M,T>& grid, int poolSize, bool sample);
 
 
 /** 
@@ -183,9 +180,9 @@ void prob_max_pooling(tensor<V,M>& sums, dense_matrix<V,M,T,I>& grid, int poolSi
  * Note: The entries in the output matrix are transposed, which shouldn't matter
  * for most purposes, e.g. reduction operations.
  */
-template<class V, class M, class T, class I>
-void grid_to_matrix(dense_matrix<V,M,T,I>& mat,
-		   dense_matrix<V,M,T,I>& grid,       
+template<class V, class M, class T>
+void grid_to_matrix(tensor<V,M,T>& mat,
+		   tensor<V,M,T>& grid,       
 		   int poolSize);
 
 
@@ -198,9 +195,9 @@ void grid_to_matrix(dense_matrix<V,M,T,I>& mat,
  * 
  * This is the inverse of grid_to_matrix. 
  */
-template<class V, class M, class T, class I>
-void matrix_to_grid(dense_matrix<V,M,T,I>& grid,
-		   dense_matrix<V,M,T,I>& mat,
+template<class V, class M, class T>
+void matrix_to_grid(tensor<V,M,T>& grid,
+		   tensor<V,M,T>& mat,
 		   int poolSize);
 
 
@@ -220,11 +217,11 @@ void matrix_to_grid(dense_matrix<V,M,T,I>& grid,
  * With the index matrix, each pixel of the original image is only assigned to
  * one of the output pixel, depending on the index.
  */
-template<class V, class M, class T, class I>
-void supersample(dense_matrix<V,M,T,I>& dst,
-		dense_matrix<V,M,T,I>& img,
+template<class V, class M, class T>
+void supersample(tensor<V,M,T>& dst,
+		tensor<V,M,T>& img,
 		int factor,
-		dense_matrix<int,M,row_major>* indices = NULL);
+		tensor<int,M,row_major>* indices = NULL);
 
 
 /**
@@ -248,8 +245,8 @@ void supersample(dense_matrix<V,M,T,I>& dst,
  *
  */
 template<class V, class M, class T>
-void subsample(dense_matrix<V,M,T>& dst,
-		dense_matrix<V,M,T>& img,
+void subsample(tensor<V,M,T>& dst,
+		tensor<V,M,T>& img,
 		int factor,
 		bool avoidBankConflicts);
 
@@ -271,13 +268,13 @@ void subsample(dense_matrix<V,M,T>& dst,
  *         B2
  *         ...
  */
-template<class __matrix_type>
-void reorder(__matrix_type& A,
+template<class V, class M, class T>
+void reorder(tensor<V,M,T>& A,
 		   int blockLength);
 
-template<class __matrix_type>
-void reorder(__matrix_type& dst,
-		__matrix_type& src,
+template<class V, class M, class T>
+void reorder(tensor<V,M,T>& dst,
+		tensor<V,M,T>& src,
 		int blockLength);
 
 
@@ -303,13 +300,13 @@ void reorder(__matrix_type& dst,
  * This function can be used to perform the backpropagation step in a max pooling
  * layer.
   */
-template<class V, class M, class T, class I>
-void super_to_max(dense_matrix<V,M,T,I>& dst,
-		dense_matrix<V,M,T,I>& img,
+template<class V, class M, class T>
+void super_to_max(tensor<V,M,T>& dst,
+		tensor<V,M,T>& img,
 		int poolSize,
 		int overlap = 0,
-		dense_matrix<int,M,row_major,I>* indices = NULL,
-		dense_matrix<V,M,T,I>* filter = NULL);
+		tensor<int,M,row_major>* indices = NULL,
+		tensor<V,M,T>* filter = NULL);
 
 
 
@@ -344,9 +341,9 @@ void super_to_max(dense_matrix<V,M,T,I>& dst,
  * You can use this function to pad a bunch of images with a border of zeros. To do this,
  * the targets matrix should be all zeros.
  */
-template<class V, class M, class T, class I>
-void copy_into(dense_matrix<V,M,T,I>& dst,
-		   dense_matrix<V,M,T,I>& img,
+template<class V, class M, class T>
+void copy_into(tensor<V,M,T>& dst,
+		   tensor<V,M,T>& img,
 		   int padding);
 
 
@@ -367,22 +364,22 @@ void copy_into(dense_matrix<V,M,T,I>& dst,
  * for backpropagation using super_to_max. Optionally, a window function (filter) can
  * be applied prior to the maximum calculation.
  */
-template<class V, class M, class T, class I>
-void max_pooling(dense_matrix<V,M,T,I>& dst,
-		dense_matrix<V,M,T,I>& img,
+template<class V, class M, class T>
+void max_pooling(tensor<V,M,T>& dst,
+		tensor<V,M,T>& img,
 		unsigned int poolSize,
 		unsigned int overlap = 0,
-		dense_matrix<int,M,row_major,I>* indices = NULL,
-		dense_matrix<V,M,T,I>* filter = NULL);
+		tensor<int,M,row_major>* indices = NULL,
+		tensor<V,M,T>* filter = NULL);
 
-template<class V, class M, class T, class I>
-void first_pooling(dense_matrix<V,M,T,I>& dst,
-		dense_matrix<V,M,T,I>& img,
+template<class V, class M, class T>
+void first_pooling(tensor<V,M,T>& dst,
+		tensor<V,M,T>& img,
 		unsigned int poolSize
 		);
 
-template<class V, class M, class T, class I>
-void first_pooling_zeros( dense_matrix<V,M,T,I>& img,
+template<class V, class M, class T>
+void first_pooling_zeros( tensor<V,M,T>& img,
 		unsigned int poolSize
 		);
 
@@ -394,9 +391,9 @@ void first_pooling_zeros( dense_matrix<V,M,T,I>& img,
  * @param padding size of the padding
  *
  */
-template<class V, class M, class T, class I>
-void strip_padding(dense_matrix<V,M,T,I>& dst,
-				   dense_matrix<V,M,T,I>& img,
+template<class V, class M, class T>
+void strip_padding(tensor<V,M,T>& dst,
+				   tensor<V,M,T>& img,
 				   unsigned int padding);
 
 
@@ -407,8 +404,8 @@ void strip_padding(dense_matrix<V,M,T,I>& dst,
  * @param n how often the row should be copied
  *
  */
-template<class V, class M, class T,  class I>
-void row_ncopy(dense_matrix<V,M,T,I>& dst,
+template<class V, class M, class T>
+void row_ncopy(tensor<V,M,T>& dst,
 			   tensor<V,M>& row,
 			   unsigned int n);
 
@@ -419,9 +416,9 @@ void row_ncopy(dense_matrix<V,M,T,I>& dst,
  * @param n how often the row should be copied
  *
  */
-template<class V, class M, class T,  class I>
-void cols_ncopy(dense_matrix<V,M,T,I>& dst,
-		dense_matrix<V,M,T,I>& col,
+template<class V, class M, class T>
+void cols_ncopy(tensor<V,M,T>& dst,
+		tensor<V,M,T>& col,
 			   unsigned int n);
 
 
@@ -433,9 +430,9 @@ void cols_ncopy(dense_matrix<V,M,T,I>& dst,
  * @param fs the filter size
  *
  */
-template<class V, class M, class T, class I>
-void filter_rotate(   dense_matrix<V,M,T,I>& dst,
-					   dense_matrix<V,M,T,I>& filter,
+template<class V, class M, class T>
+void filter_rotate(   tensor<V,M,T>& dst,
+					   tensor<V,M,T>& filter,
 					   unsigned int fs);
 
 
@@ -447,8 +444,8 @@ void filter_rotate(   dense_matrix<V,M,T,I>& dst,
  *
  */
 //template<class V, class M, class T, class I>
-//void add_maps_h(	dense_matrix<V,M,T,I>& dst,
-//					dense_matrix<V,M,T,I>& mat,
+//void add_maps_h(	tensor<V,M,T>& dst,
+//					tensor<V,M,T>& mat,
 //					unsigned int image_size);
 
 
@@ -463,10 +460,10 @@ void filter_rotate(   dense_matrix<V,M,T,I>& dst,
  *
  * For each map oder pic in img this function generates a map where the teacher is a gaussian with the corresponding coords in blob_mat as center
  */
-template<class V, class M, class T, class I>
-void calc_error_to_blob(				dense_matrix<V,M,T,I>& dst,
-							dense_matrix<V,M,T,I>& img,
-							dense_matrix<V,M,T,I>& blob_mat,
+template<class V, class M, class T>
+void calc_error_to_blob(				tensor<V,M,T>& dst,
+							tensor<V,M,T>& img,
+							tensor<V,M,T>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
 							float sigma,
@@ -484,9 +481,9 @@ void calc_error_to_blob(				dense_matrix<V,M,T,I>& dst,
  * @param num_exitatory number of exitatory filters
  */
 
-template<class V, class M, class T, class I>
+template<class V, class M, class T>
 void check_exitatory_inhibitory(
-							dense_matrix<V,M,T,I>& filter,
+							tensor<V,M,T>& filter,
 							unsigned int start_filter,
 							unsigned int filter_pixels,
 							unsigned int num_inhibitory,
@@ -502,9 +499,9 @@ void check_exitatory_inhibitory(
  * @param num_exitatory number of exitatory filters
  */
 
-template<class V, class M, class T, class I>
+template<class V, class M, class T>
 void init_exitatory_inhibitory(
-							dense_matrix<V,M,T,I>& filter,
+							tensor<V,M,T>& filter,
 							unsigned int start_filter,
 							unsigned int filter_pixels,
 							unsigned int num_inhibitory,

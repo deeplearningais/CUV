@@ -62,30 +62,30 @@ using namespace std;
 namespace cuv{
 
 template<>
-	void convolve(dense_matrix<float,dev_memory_space,row_major>& dst,
-			  dense_matrix<float,dev_memory_space,row_major>&   img,
-			  dense_matrix<float,dev_memory_space,row_major>&   filter,
+	void convolve(tensor<float,dev_memory_space,row_major>& dst,
+			  tensor<float,dev_memory_space,row_major>&   img,
+			  tensor<float,dev_memory_space,row_major>&   filter,
 			  int numGroups){
 
 	// some preliminary checks to ensure compatibility
-	int numFilters = filter.h() / numGroups;
-	cuvAssert(filter.h() == numFilters*numGroups);
-	int numImages = img.h() / numGroups;
-	cuvAssert(img.h() == numImages*numGroups);
-	int filterSize = sqrt(filter.w());
-	int imgSize = sqrt(img.w());
-	int dstSize = sqrt(dst.w()/numImages);
+	int numFilters = filter.shape()[0] / numGroups;
+	cuvAssert(filter.shape()[0] == numFilters*numGroups);
+	int numImages = img.shape()[0] / numGroups;
+	cuvAssert(img.shape()[0] == numImages*numGroups);
+	int filterSize = sqrt(filter.shape()[1]);
+	int imgSize = sqrt(img.shape()[1]);
+	int dstSize = sqrt(dst.shape()[1]/numImages);
 //	printf("imgSize = %i, dstSize = %i, filterSize = %i\n", imgSize, dstSize, filterSize);
-//	printf("(%ix%i) x (%ix%i) = (%ix%i)\n", img.h(), img.w(), filter.h(), filter.w(), dst.h(), dst.w());
+//	printf("(%ix%i) x (%ix%i) = (%ix%i)\n", img.shape()[0], img.shape()[1], filter.shape()[0], filter.shape()[1], dst.shape()[0], dst.shape()[1]);
 	cuvAssert(numFilters%2 == 0);
-	cuvAssert(filterSize*filterSize == filter.w());
-	cuvAssert(imgSize*imgSize == img.w());
+	cuvAssert(filterSize*filterSize == filter.shape()[1]);
+	cuvAssert(imgSize*imgSize == img.shape()[1]);
 	cuvAssert(dstSize == imgSize - filterSize + 1);
 
 	// make NVMatrices with this data
-	NVMatrix nv_dst(dst.ptr(), dst.h(), dst.w(), false);
-	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
-	NVMatrix nv_filter(filter.ptr(), filter.h(), filter.w(), false);
+	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], false);
+	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], false);
+	NVMatrix nv_filter(filter.ptr(), filter.shape()[0], filter.shape()[1], false);
 
 	// execute convolution
 	convolve(&nv_img, &nv_filter, &nv_dst, numGroups, false);
@@ -93,17 +93,17 @@ template<>
 	}
 
 template<>
-void convolve(dense_matrix<float,host_memory_space,row_major>& dst,
-		  dense_matrix<float,host_memory_space,row_major>&   img,
-		  dense_matrix<float,host_memory_space,row_major>&   filter,
+void convolve(tensor<float,host_memory_space,row_major>& dst,
+		  tensor<float,host_memory_space,row_major>&   img,
+		  tensor<float,host_memory_space,row_major>&   filter,
 		  int numGroups) {
 
-	int numImages = img.h() / numGroups;
-	int numFilters = filter.h() / numGroups;
+	int numImages = img.shape()[0] / numGroups;
+	int numFilters = filter.shape()[0] / numGroups;
 
-	int filterSize = sqrt(filter.w());
-	int imgSize = sqrt(img.w());
-	int dstSize = sqrt(dst.w()/numImages);
+	int filterSize = sqrt(filter.shape()[1]);
+	int imgSize = sqrt(img.shape()[1]);
+	int dstSize = sqrt(dst.shape()[1]/numImages);
 
 	int dstPixels = dstSize * dstSize;
 
@@ -125,39 +125,39 @@ void convolve(dense_matrix<float,host_memory_space,row_major>& dst,
 						}
 						targets[i*dstPixels + r*dstSize + c] += sum;
 					}
-				images += img.w();
+				images += img.shape()[1];
 			}
-			targets += dst.w();
-			filters += filter.w();
+			targets += dst.shape()[1];
+			filters += filter.shape()[1];
 		}
 	}
 }
 
 
 template<>
-	void convolve2(dense_matrix<float,dev_memory_space,row_major>& dst,
-			  dense_matrix<float,dev_memory_space,row_major>&   img,
-			  dense_matrix<float,dev_memory_space,row_major>&   filter,
+	void convolve2(tensor<float,dev_memory_space,row_major>& dst,
+			  tensor<float,dev_memory_space,row_major>&   img,
+			  tensor<float,dev_memory_space,row_major>&   filter,
 			  int numFilters,
 			  int numGroups) {
-	int imgSize = sqrt(img.w());
-	int numImages = img.h() / numGroups;
-	int filterSize = sqrt(filter.w()/numImages);
-	int dstSize = sqrt(dst.w()/numFilters);
+	int imgSize = sqrt(img.shape()[1]);
+	int numImages = img.shape()[0] / numGroups;
+	int filterSize = sqrt(filter.shape()[1]/numImages);
+	int dstSize = sqrt(dst.shape()[1]/numFilters);
 
 	// some preliminary checks to ensure compatibility
-	cuvAssert(filter.h() == numFilters*numGroups);
+	cuvAssert(filter.shape()[0] == numFilters*numGroups);
 	cuvAssert(numFilters%2 == 0);
-	cuvAssert(numImages*filterSize*filterSize == filter.w());
-	cuvAssert(imgSize*imgSize == img.w());
+	cuvAssert(numImages*filterSize*filterSize == filter.shape()[1]);
+	cuvAssert(imgSize*imgSize == img.shape()[1]);
 	if (!(dstSize == (imgSize - filterSize + 1)))
 		std::cout << "destSize should be " << imgSize - filterSize + 1 << " but is " << dstSize;
 	cuvAssert(dstSize == imgSize - filterSize + 1);
 
 	// make NVMatrices with this data
-	NVMatrix nv_dst(dst.ptr(), dst.h(), dst.w(), false);
-	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
-	NVMatrix nv_filter(filter.ptr(), filter.h(), filter.w(), false);
+	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], false);
+	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], false);
+	NVMatrix nv_filter(filter.ptr(), filter.shape()[0], filter.shape()[1], false);
 
 	// execute convolution
     convolve2(&nv_img, &nv_filter, &nv_dst, filterSize, numGroups, false);
@@ -165,37 +165,37 @@ template<>
 }
 
 template<>
-void convolve2(dense_matrix<float,host_memory_space,row_major>& dst,
-		  dense_matrix<float,host_memory_space,row_major>&   img,
-		  dense_matrix<float,host_memory_space,row_major>&   filter,
+void convolve2(tensor<float,host_memory_space,row_major>& dst,
+		  tensor<float,host_memory_space,row_major>&   img,
+		  tensor<float,host_memory_space,row_major>&   filter,
 		  int numFilters,
 		  int numGroups) {
-	int imgSize = sqrt(img.w());
-	int numImages = img.h();
-	int filterSize = sqrt(filter.w()/numImages);
-	int dstSize = sqrt(dst.w()/numFilters);
+	int imgSize = sqrt(img.shape()[1]);
+	int numImages = img.shape()[0];
+	int filterSize = sqrt(filter.shape()[1]/numImages);
+	int dstSize = sqrt(dst.shape()[1]/numFilters);
 
 	conv2CPU(img.ptr(), filter.ptr(), dst.ptr(), imgSize, filterSize, numImages, numFilters, numGroups);
 }
 
 // images --> blocks
 template<>
-void grid_to_matrix(dense_matrix<float,dev_memory_space,row_major>& mat,
-		  dense_matrix<float,dev_memory_space,row_major>&   grid,
+void grid_to_matrix(tensor<float,dev_memory_space,row_major>& mat,
+		  tensor<float,dev_memory_space,row_major>&   grid,
 		  int poolSize) {
-	int numImages = grid.h();
-	int imgPixels = grid.w();
+	int numImages = grid.shape()[0];
+	int imgPixels = grid.shape()[1];
 	int regionsPerImage = imgPixels / (poolSize * poolSize);
-	int imgSize = sqrt(grid.w());
+	int imgSize = sqrt(grid.shape()[1]);
 
 	// some preliminary checks
-	cuvAssert(imgSize*imgSize == grid.w());
-	cuvAssert(mat.h() == numImages*regionsPerImage);
-	cuvAssert(mat.w() == poolSize*poolSize);
+	cuvAssert(imgSize*imgSize == grid.shape()[1]);
+	cuvAssert(mat.shape()[0] == numImages*regionsPerImage);
+	cuvAssert(mat.shape()[1] == poolSize*poolSize);
 
 	// make nvMatrices with this data
-	NVMatrix nv_mat(mat.ptr(), mat.h(), mat.w(), false);
-	NVMatrix nv_grid(grid.ptr(), grid.h(), grid.w(), false);
+	NVMatrix nv_mat(mat.ptr(), mat.shape()[0], mat.shape()[1], false);
+	NVMatrix nv_grid(grid.ptr(), grid.shape()[0], grid.shape()[1], false);
 	fill(mat,0);
 
 	gridToMatrix(&nv_grid, &nv_mat, poolSize, true);
@@ -204,22 +204,22 @@ void grid_to_matrix(dense_matrix<float,dev_memory_space,row_major>& mat,
 }
 
 template<>
-void matrix_to_grid(dense_matrix<float,dev_memory_space,row_major>& grid,
-		  dense_matrix<float,dev_memory_space,row_major>&   mat,
+void matrix_to_grid(tensor<float,dev_memory_space,row_major>& grid,
+		  tensor<float,dev_memory_space,row_major>&   mat,
 		  int poolSize) {
-	int numImages = grid.h();
-	int imgPixels = grid.w();
+	int numImages = grid.shape()[0];
+	int imgPixels = grid.shape()[1];
 	int regionsPerImage = imgPixels / (poolSize * poolSize);
-	int imgSize = sqrt(grid.w());
+	int imgSize = sqrt(grid.shape()[1]);
 
 	// some preliminary checks
-	cuvAssert(imgSize*imgSize == grid.w());
-	cuvAssert(mat.h() == numImages*regionsPerImage);
-	cuvAssert(mat.w() == poolSize*poolSize);
+	cuvAssert(imgSize*imgSize == grid.shape()[1]);
+	cuvAssert(mat.shape()[0] == numImages*regionsPerImage);
+	cuvAssert(mat.shape()[1] == poolSize*poolSize);
 
 	// make nvMatrices with this data
-	NVMatrix nv_mat(mat.ptr(), mat.h(), mat.w(), false);
-	NVMatrix nv_grid(grid.ptr(), grid.h(), grid.w(), false);
+	NVMatrix nv_mat(mat.ptr(), mat.shape()[0], mat.shape()[1], false);
+	NVMatrix nv_grid(grid.ptr(), grid.shape()[0], grid.shape()[1], false);
 	fill(grid,0);
 
 	// transform and calculate maximum
@@ -229,16 +229,16 @@ void matrix_to_grid(dense_matrix<float,dev_memory_space,row_major>& grid,
 }
 
 template<>
-void sample_multinomial(dense_matrix<float,dev_memory_space,row_major>& grid){
-   /*dense_matrix<float,dev_memory_space,row_major> tmp(grid.h(),grid.w());*/
+void sample_multinomial(tensor<float,dev_memory_space,row_major>& grid){
+   /*dense_matrix<float,dev_memory_space,row_major> tmp(grid.shape()[0],grid.shape()[1]);*/
    /*apply_binary_functor(tmp,grid,BF_COPY);*/
 
-   dense_matrix<float,dev_memory_space,row_major> rnd(grid.h(),1);
+   tensor<float,dev_memory_space,row_major> rnd(grid.shape()[0]);
    fill_rnd_uniform(rnd);
 
-   NVMatrix nv_grid(grid.ptr(),grid.h(),grid.w(),false);
-   NVMatrix nv_rnd(rnd.ptr(),rnd.h(),rnd.w(),false);
-   /*NVMatrix nv_tmp(tmp.ptr(),tmp.h(),tmp.w(),false);*/
+   NVMatrix nv_grid(grid.ptr(),grid.shape()[0],grid.shape()[1],false);
+   NVMatrix nv_rnd(rnd.ptr(),rnd.shape()[0],rnd.shape()[1],false);
+   /*NVMatrix nv_tmp(tmp.ptr(),tmp.shape()[0],tmp.shape()[1],false);*/
 
    /*sampleMultinomial(&nv_tmp,&nv_rnd,&nv_grid); */
    sampleMultinomial(&nv_grid,&nv_rnd,&nv_grid); 
@@ -246,12 +246,12 @@ void sample_multinomial(dense_matrix<float,dev_memory_space,row_major>& grid){
 }
 
 template<>
-void prob_max_pooling(tensor<float,dev_memory_space>& sums,dense_matrix<float,dev_memory_space,row_major>& grid, int poolSize, bool sample){
-	int numImages = grid.h();
-	int imgPixels = grid.w();
+void prob_max_pooling(tensor<float,dev_memory_space>& sums,tensor<float,dev_memory_space,row_major>& grid, int poolSize, bool sample){
+	int numImages = grid.shape()[0];
+	int imgPixels = grid.shape()[1];
 	int regionsPerImage = imgPixels / (poolSize * poolSize);
 
-	dense_matrix<float,dev_memory_space,row_major> mat(numImages*regionsPerImage, poolSize*poolSize);
+	tensor<float,dev_memory_space,row_major> mat(extents[numImages*regionsPerImage][poolSize*poolSize]);
 	grid_to_matrix(mat,grid,poolSize);
 
 	// normalize rows
@@ -271,9 +271,9 @@ void prob_max_pooling(tensor<float,dev_memory_space>& sums,dense_matrix<float,de
 }
 
 template<>
-void prob_max_pooling(dense_matrix<float,dev_memory_space,row_major>& grid, int poolSize, bool sample){
-	int numImages = grid.h();
-	int imgPixels = grid.w();
+void prob_max_pooling(tensor<float,dev_memory_space,row_major>& grid, int poolSize, bool sample){
+	int numImages = grid.shape()[0];
+	int imgPixels = grid.shape()[1];
 	int regionsPerImage = imgPixels / (poolSize * poolSize);
 
 	tensor<float,dev_memory_space> sums(numImages*regionsPerImage);
@@ -282,21 +282,21 @@ void prob_max_pooling(dense_matrix<float,dev_memory_space,row_major>& grid, int 
 
 
 template<>
-	void convolve3(dense_matrix<float,dev_memory_space,row_major>& dst,
-			  dense_matrix<float,dev_memory_space,row_major>&   img,
-			  dense_matrix<float,dev_memory_space,row_major>&   filter,
+	void convolve3(tensor<float,dev_memory_space,row_major>& dst,
+			  tensor<float,dev_memory_space,row_major>&   img,
+			  tensor<float,dev_memory_space,row_major>&   filter,
 			  int numGroups) {
 
-	int numFilters = filter.h();
-	int smallSize = sqrt(img.w()/numFilters);
-	int filterSize = sqrt(filter.w());
-	int bigSize = sqrt(dst.w());
-	int numImages = img.h();
+	int numFilters = filter.shape()[0];
+	int smallSize = sqrt(img.shape()[1]/numFilters);
+	int filterSize = sqrt(filter.shape()[1]);
+	int bigSize = sqrt(dst.shape()[1]);
+	int numImages = img.shape()[0];
 
 	// make NVMatrices with this data
-	NVMatrix nv_dst(dst.ptr(), dst.h(), dst.w(), false);
-	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
-	NVMatrix nv_filter(filter.ptr(), filter.h(), filter.w(), false);
+	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], false);
+	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], false);
+	NVMatrix nv_filter(filter.ptr(), filter.shape()[0], filter.shape()[1], false);
 
 	// execute convolution
 	convolve3(&nv_img, &nv_filter, &nv_dst, numGroups, false);
@@ -304,9 +304,9 @@ template<>
 }
 
 template<>
-void convolve3(dense_matrix<float,host_memory_space,row_major>& dst,
-		  dense_matrix<float,host_memory_space,row_major>&   img,
-		  dense_matrix<float,host_memory_space,row_major>&   filter,
+void convolve3(tensor<float,host_memory_space,row_major>& dst,
+		  tensor<float,host_memory_space,row_major>&   img,
+		  tensor<float,host_memory_space,row_major>&   filter,
 		  int numGroups) {
 	// TODO
 	printf("convolve3 NYI on host!\n");
@@ -326,11 +326,11 @@ void reorder_kernel(float*dst, float* src, int len) {
 }
 
 template<class V>
-void reorder_impl(dense_matrix<V,dev_memory_space,row_major>& dst,
-				  dense_matrix<V,dev_memory_space,row_major>& src,
+void reorder_impl(tensor<V,dev_memory_space,row_major>& dst,
+				  tensor<V,dev_memory_space,row_major>& src,
 		  		  int blockLength) {
-	int patternCount = src.h();
-	int imgCount = src.w()/blockLength;
+	int patternCount = src.shape()[0];
+	int imgCount = src.shape()[1]/blockLength;
 
 	dim3 grid(imgCount, patternCount);
 	dim3 threads(min(blockLength, 512));
@@ -344,11 +344,11 @@ void reorder_impl(dense_matrix<V,dev_memory_space,row_major>& dst,
 }
 
 template<class V>
-void reorder_impl(dense_matrix<V,host_memory_space,row_major>& dst,
-		dense_matrix<V,host_memory_space,row_major>& src,
+void reorder_impl(tensor<V,host_memory_space,row_major>& dst,
+		tensor<V,host_memory_space,row_major>& src,
 		int blockLength) {
-	int patternCount = src.h();
-	int imgCount = src.w()/blockLength;
+	int patternCount = src.shape()[0];
+	int imgCount = src.shape()[1]/blockLength;
 
 	float* dst_ptr = dst.ptr();
 	float* src_ptr = src.ptr();
@@ -365,63 +365,60 @@ void reorder_impl(dense_matrix<V,host_memory_space,row_major>& dst,
 	dst.reshape(extents[patternCount*imgCount][blockLength]);
 }
 
-template<class __matrix_type>
-void reorder(__matrix_type& M,
+template<class V, class M, class T>
+void reorder(tensor<V,M,T>& m,
 		int blockLength) {
 	// create temporary destination matrix
-	__matrix_type tmp(M.h(), M.w());
+	tensor<V,M,T> tmp(m.shape());
 
 	// perform reorder
-	reorder_impl(tmp, M, blockLength);
+	reorder_impl(tmp, m, blockLength);
 
 	// change pointer to temp matrix / copy
-	if(M.is_view())
-		copy(M, tmp);
-	else
-		M = tmp;
+        m = tmp;
 }
 
-template<class __matrix_type>
-void reorder(__matrix_type& dst,
-		__matrix_type& src,
+template<class V, class M, class T>
+void reorder(tensor<V,M,T>& dst,
+		tensor<V,M,T>& src,
 		int blockLength) {
 	reorder_impl(dst, src, blockLength);
 }
 
 #define REORDER_INSTANTIATE(V) \
-	template void reorder( dense_matrix<V,host_memory_space,row_major>&, int); \
-	template void reorder( dense_matrix<V,host_memory_space,row_major>&, dense_matrix<V,host_memory_space,row_major>&, int); \
-	template void reorder( dense_matrix<V,dev_memory_space,row_major>&, int); \
-	template void reorder( dense_matrix<V,dev_memory_space,row_major>&, dense_matrix<V,dev_memory_space,row_major>&, int);
+	template void reorder( tensor<V,host_memory_space,row_major>&, int); \
+	template void reorder( tensor<V,host_memory_space,row_major>&, tensor<V,host_memory_space,row_major>&, int); \
+	template void reorder( tensor<V,dev_memory_space,row_major>&, int); \
+	template void reorder( tensor<V,dev_memory_space,row_major>&, tensor<V,dev_memory_space,row_major>&, int);
 
 REORDER_INSTANTIATE(float);
 
 template<>
-	void subsample(dense_matrix<float,dev_memory_space,row_major>& dst,
-			  dense_matrix<float,dev_memory_space,row_major>&   img,
+	void subsample(tensor<float,dev_memory_space,row_major>& dst,
+			  tensor<float,dev_memory_space,row_major>&   img,
 			  int factor,
 			  bool avoidBankConflicts) {
 	// make NVMatrices with this data
-	NVMatrix nv_dst(dst.ptr(), dst.h(), dst.w(), false);
-	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
+	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], false);
+	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], false);
 
-	if (dst.w()*dst.h() != img.w()* img.h() / (factor*factor)){
-		std::cout << dst.w() << "*" << dst.h() << "==" << img.w() << "*" << img.h() << "/" << factor << "*" << factor << "==" << dst.w()*dst.h() << "!=" << img.w()* img.h() / (factor*factor);
+	if (dst.shape()[1]*dst.shape()[0] != img.shape()[1]* img.shape()[0] / (factor*factor)){
+		std::cout << dst.shape()[1] << "*" << dst.shape()[0] << "==" << img.shape()[1] << "*" << img.shape()[0] << "/" << factor << "*" << factor << "==" << dst.shape()[1]*dst.shape()[0] << "!=" << img.shape()[1]* img.shape()[0] / (factor*factor);
 	}
 
-	cuvAssert(dst.w()*dst.h() == img.w()* img.h() / (factor*factor));
+	cuvAssert(dst.shape()[1]*dst.shape()[0] == img.shape()[1]* img.shape()[0] / (factor*factor));
 	// execute convolution
     subsample(&nv_img, &nv_dst, factor, avoidBankConflicts);
 	cuvSafeCall(cudaThreadSynchronize());
 }
 
 template<>
-	void subsample(dense_matrix<float,host_memory_space,row_major>& dst,
-			  dense_matrix<float,host_memory_space,row_major>&   img,
+	void subsample(tensor<float,host_memory_space,row_major>& dst,
+			  tensor<float,host_memory_space,row_major>&   img,
 			  int factor,
 			  bool avoidBankConflicts) {
-	int imgSize = sqrt(img.w());
-	int numImg = img.h();
+	int imgSize = sqrt(img.shape()[1]);
+	int numImg = img.shape()[0];
 
 	// execute convolution
     subsampleCPU(img.ptr(), dst.ptr(), imgSize, factor, numImg);
@@ -446,20 +443,20 @@ void supersample_kernel(float*dst, float* src, int* indices, int len, int factor
 }
 
 template<>
-void supersample(dense_matrix<float,dev_memory_space,row_major>& dst,
-		dense_matrix<float,dev_memory_space,row_major>& img,
+void supersample(tensor<float,dev_memory_space,row_major>& dst,
+		tensor<float,dev_memory_space,row_major>& img,
 		int factor,
-		dense_matrix<int,dev_memory_space,row_major>* indices) {
-	int numImages = img.h();
-	int imgPixels = img.w();
+		tensor<int,dev_memory_space,row_major>* indices) {
+	int numImages = img.shape()[0];
+	int imgPixels = img.shape()[1];
 	int dstPixels = imgPixels * (factor * factor);
-	int imgSize = sqrt(img.w());
+	int imgSize = sqrt(img.shape()[1]);
 	int dstSize = imgSize * factor;
 	
 	cuvAssert(dstSize / factor == imgSize);
 	
-	cuvAssert(img.w()  *factor * factor == dst.w());
-	cuvAssert(img.h()== dst.h());
+	cuvAssert(img.shape()[1]  *factor * factor == dst.shape()[1]);
+	cuvAssert(img.shape()[0]== dst.shape()[0]);
 
 	NVMatrix nv_img(img.ptr(), numImages, imgPixels, false);
 	NVMatrix nv_dst(dst.ptr(), numImages, dstPixels, false);
@@ -470,7 +467,7 @@ void supersample(dense_matrix<float,dev_memory_space,row_major>& dst,
 		assert(imgSize < 512);
 		fill(dst, 0.0f);
 
-		dim3 grid(imgSize, img.h());
+		dim3 grid(imgSize, img.shape()[0]);
 		dim3 threads(min(imgSize, 512));
 		supersample_kernel<<<grid,threads>>>(dst.ptr(), img.ptr(), indices->ptr(), dstSize, factor, imgSize);
 	}
@@ -479,16 +476,16 @@ void supersample(dense_matrix<float,dev_memory_space,row_major>& dst,
 }
 
 template<>
-void supersample(dense_matrix<float,host_memory_space,row_major>& dst,
-		dense_matrix<float,host_memory_space,row_major>& img,
+void supersample(tensor<float,host_memory_space,row_major>& dst,
+		tensor<float,host_memory_space,row_major>& img,
 		int factor,
-		dense_matrix<int,host_memory_space,row_major>* indices) {
-	int numImages = img.h();
-	int imgSize = sqrt(img.w());
+		tensor<int,host_memory_space,row_major>* indices) {
+	int numImages = img.shape()[0];
+	int imgSize = sqrt(img.shape()[1]);
 	int dstSize = imgSize * factor;
 
-	cuvAssert(img.w()  *factor * factor == dst.w());
-	cuvAssert(img.h()== dst.h());
+	cuvAssert(img.shape()[1]  *factor * factor == dst.shape()[1]);
+	cuvAssert(img.shape()[0]== dst.shape()[0]);
 	cuvAssert(dstSize / factor == imgSize);
 
 	float* image = img.ptr();
@@ -503,8 +500,8 @@ void supersample(dense_matrix<float,host_memory_space,row_major>& dst,
 					int col = idx / factor;
 					target[(r*factor+row)*dstSize + c*factor+col] = image[r*imgSize + c];
 				}
-			target += dst.w();
-			image += img.w();
+			target += dst.shape()[1];
+			image += img.shape()[1];
 		}
 	} else {
 		for(int i = 0; i < numImages; i++) {
@@ -513,7 +510,7 @@ void supersample(dense_matrix<float,host_memory_space,row_major>& dst,
 					target[0] = image[(r/factor)*imgSize+c/factor];
 					target++;
 				}
-			image += img.w();
+			image += img.shape()[1];
 		}
 	}
 
@@ -565,28 +562,28 @@ void super_to_max_kernel(float*dst, float* src, int* indices, int imgSize, int d
 }
 
 template<>
-void super_to_max(dense_matrix<float,dev_memory_space,row_major>& dst,
-		dense_matrix<float,dev_memory_space,row_major>& img,
+void super_to_max(tensor<float,dev_memory_space,row_major>& dst,
+		tensor<float,dev_memory_space,row_major>& img,
 		int poolSize,
 		int overlap,
-		dense_matrix<int,dev_memory_space,row_major>* indices,
-		dense_matrix<float,dev_memory_space,row_major>* filter) {
-	cuvAssert(indices->w() == img.w());
-	cuvAssert(indices->h() == img.h());
+		tensor<int,dev_memory_space,row_major>* indices,
+		tensor<float,dev_memory_space,row_major>* filter) {
+	cuvAssert(indices->shape()[1] == img.shape()[1]);
+	cuvAssert(indices->shape()[0] == img.shape()[0]);
 	cuvAssert(poolSize > overlap);
-	int numImages = dst.h();
-	cuvAssert(numImages == img.h());
-	int imgSize = sqrt(img.w());
-	if(imgSize * imgSize != img.w()){
-			cout << std::endl<<"Error: imgSize x imgSize (" <<imgSize<<")²="<< imgSize*imgSize<<" should be img.w = "<<img.w()<<std::endl;
+	int numImages = dst.shape()[0];
+	cuvAssert(numImages == img.shape()[0]);
+	int imgSize = sqrt(img.shape()[1]);
+	if(imgSize * imgSize != img.shape()[1]){
+			cout << std::endl<<"Error: imgSize x imgSize (" <<imgSize<<")²="<< imgSize*imgSize<<" should be img.w = "<<img.shape()[1]<<std::endl;
 		}
-	cuvAssert(imgSize * imgSize == img.w());
+	cuvAssert(imgSize * imgSize == img.shape()[1]);
 	int stepSize = poolSize - overlap;
 	int dstSize = (imgSize - 1) * stepSize + poolSize;
-	if(dstSize * dstSize != dst.w()){
-				cout << std::endl<<"Error: dstSize x dstSize (" <<dstSize<<")²="<< dstSize*dstSize<<" should be dst.w = "<<dst.w()<<std::endl;
+	if(dstSize * dstSize != dst.shape()[1]){
+				cout << std::endl<<"Error: dstSize x dstSize (" <<dstSize<<")²="<< dstSize*dstSize<<" should be dst.w = "<<dst.shape()[1]<<std::endl;
 			}
-	cuvAssert(dstSize * dstSize == dst.w());
+	cuvAssert(dstSize * dstSize == dst.shape()[1]);
 	cuvAssert((dstSize-poolSize)/stepSize + 1 == imgSize);
 
 	// we have to split the small image into disjoint "patches", in order to
@@ -600,10 +597,10 @@ void super_to_max(dense_matrix<float,dev_memory_space,row_major>& dst,
 	}
 
 	if(filter!=NULL) {
-		cuvAssert(filter->w() == poolSize);
-		cuvAssert(filter->h() == poolSize);
-		cuvAssert(sizeof(float) * filter->n() <= CONST_SIZE);
-		cuvSafeCall( cudaMemcpyToSymbol(c_filter, filter->ptr(), sizeof(float) * filter->n(), 0, cudaMemcpyDeviceToDevice) );
+		cuvAssert(filter->shape()[1] == poolSize);
+		cuvAssert(filter->shape()[0] == poolSize);
+		cuvAssert(sizeof(float) * filter->size() <= CONST_SIZE);
+		cuvSafeCall( cudaMemcpyToSymbol(c_filter, filter->ptr(), sizeof(float) * filter->size(), 0, cudaMemcpyDeviceToDevice) );
 	}
 
 	fill(dst, 0.0f);
@@ -624,20 +621,20 @@ void super_to_max(dense_matrix<float,dev_memory_space,row_major>& dst,
 }
 
 template<>
-void super_to_max(dense_matrix<float,host_memory_space,row_major>& dst,
-		dense_matrix<float,host_memory_space,row_major>& img,
+void super_to_max(tensor<float,host_memory_space,row_major>& dst,
+		tensor<float,host_memory_space,row_major>& img,
 		int poolSize,
 		int overlap,
-		dense_matrix<int,host_memory_space,row_major>* indices,
-		dense_matrix<float,host_memory_space,row_major>* filter) {
+		tensor<int,host_memory_space,row_major>* indices,
+		tensor<float,host_memory_space,row_major>* filter) {
 	cuvAssert(poolSize > overlap);
-	int numImages = dst.h();
-	cuvAssert(numImages == img.h());
-	int imgSize = sqrt(img.w());
-	cuvAssert(imgSize * imgSize == img.w());
+	int numImages = dst.shape()[0];
+	cuvAssert(numImages == img.shape()[0]);
+	int imgSize = sqrt(img.shape()[1]);
+	cuvAssert(imgSize * imgSize == img.shape()[1]);
 	int stepSize = poolSize - overlap;
 	int dstSize = (imgSize - 1) * stepSize + poolSize;
-	cuvAssert(dstSize * dstSize == dst.w());
+	cuvAssert(dstSize * dstSize == dst.shape()[1]);
 	cuvAssert((dstSize-poolSize)/stepSize + 1 == imgSize);
 
 	fill(dst, 0.0f);
@@ -667,37 +664,37 @@ void super_to_max(dense_matrix<float,host_memory_space,row_major>& dst,
 }
 
 template<>
-	void copy_into(dense_matrix<float,dev_memory_space,row_major>& dst,
-			  dense_matrix<float,dev_memory_space,row_major>&   img,
+	void copy_into(tensor<float,dev_memory_space,row_major>& dst,
+			  tensor<float,dev_memory_space,row_major>&   img,
 			  int padding) {
-	int inputSize = sqrt(img.w());
-	int outputSize = sqrt(dst.w());
-	cuvAssert(inputSize * inputSize == img.w());
-	cuvAssert(outputSize * outputSize == dst.w());
+	int inputSize = sqrt(img.shape()[1]);
+	int outputSize = sqrt(dst.shape()[1]);
+	cuvAssert(inputSize * inputSize == img.shape()[1]);
+	cuvAssert(outputSize * outputSize == dst.shape()[1]);
 	cuvAssert(inputSize + 2 * padding == outputSize);
-	cuvAssert(img.h() == dst.h());
+	cuvAssert(img.shape()[0] == dst.shape()[0]);
 
 	// make NVMatrices with this data
-	NVMatrix nv_dst(dst.ptr(), dst.h(), dst.w(), false);
-	NVMatrix nv_img(img.ptr(), img.h(), img.w(), false);
+	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], false);
+	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], false);
 
 	copyInto(&nv_img, &nv_dst, padding, false);
 }
 
 template<>
-	void copy_into(dense_matrix<float,host_memory_space,row_major>& dst,
-			  dense_matrix<float,host_memory_space,row_major>&   img,
+	void copy_into(tensor<float,host_memory_space,row_major>& dst,
+			  tensor<float,host_memory_space,row_major>&   img,
 			  int padding) {
-	int inputSize = sqrt(img.w());
-	int outputSize = sqrt(dst.w());
-	cuvAssert(inputSize * inputSize == img.w());
-	cuvAssert(outputSize * outputSize == dst.w());
+	int inputSize = sqrt(img.shape()[1]);
+	int outputSize = sqrt(dst.shape()[1]);
+	cuvAssert(inputSize * inputSize == img.shape()[1]);
+	cuvAssert(outputSize * outputSize == dst.shape()[1]);
 	cuvAssert(inputSize + 2 * padding == outputSize);
-	cuvAssert(img.h() == dst.h());
+	cuvAssert(img.shape()[0] == dst.shape()[0]);
 
 	float* img_ptr = img.ptr();
 	float* dst_ptr = dst.ptr();
-	for(int i=0; i<img.h(); i++) {
+	for(int i=0; i<img.shape()[0]; i++) {
 		dst_ptr += outputSize * padding;
 		for(int j=0; j<inputSize;j++) {
 			dst_ptr += padding;
@@ -711,29 +708,29 @@ template<>
 }
 
 template<>
-	void max_pooling(dense_matrix<float,host_memory_space,row_major>& dst,
-			dense_matrix<float,host_memory_space,row_major>& img,
+	void max_pooling(tensor<float,host_memory_space,row_major>& dst,
+			tensor<float,host_memory_space,row_major>& img,
 			unsigned int poolSize,
 			unsigned int overlap,
-			dense_matrix<int,host_memory_space,row_major>* indices,
-			dense_matrix<float,host_memory_space,row_major>* filter) {
+			tensor<int,host_memory_space,row_major>* indices,
+			tensor<float,host_memory_space,row_major>* filter) {
 	if (indices!=NULL) {
-		cuvAssert(indices->w() == dst.w());
-		cuvAssert(indices->h() == dst.h());
+		cuvAssert(indices->shape()[1] == dst.shape()[1]);
+		cuvAssert(indices->shape()[0] == dst.shape()[0]);
 	}
 
 	cuvAssert(poolSize > overlap);
-	int numImages = dst.h();
-	cuvAssert(numImages == img.h());
-	int imgSize = sqrt(img.w());
-	cuvAssert(imgSize * imgSize == img.w());
+	int numImages = dst.shape()[0];
+	cuvAssert(numImages == img.shape()[0]);
+	int imgSize = sqrt(img.shape()[1]);
+	cuvAssert(imgSize * imgSize == img.shape()[1]);
 	int stepSize = poolSize - overlap;
 	int dstSize = (imgSize - poolSize)/stepSize + 1;
-	cuvAssert(dstSize * dstSize == dst.w());
+	cuvAssert(dstSize * dstSize == dst.shape()[1]);
 	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
 	if(filter!=NULL) {
-		cuvAssert(filter->w() == poolSize);
-		cuvAssert(filter->h() == poolSize);
+		cuvAssert(filter->shape()[1] == poolSize);
+		cuvAssert(filter->shape()[0] == poolSize);
 	}
 
 	float* img_ptr = img.ptr();
@@ -835,13 +832,13 @@ void first_pooling_zeros_kernel(float* img, int imgSize, int stepSize) {
 }
 
 template<>
-	void first_pooling_zeros(dense_matrix<float,dev_memory_space,row_major>& img,
+	void first_pooling_zeros(tensor<float,dev_memory_space,row_major>& img,
 			unsigned int poolSize
 			) {
 
-	int numImages = img.h();
-	int imgSize = sqrt(img.w());
-	cuvAssert(imgSize * imgSize == img.w());
+	int numImages = img.shape()[0];
+	int imgSize = sqrt(img.shape()[1]);
+	cuvAssert(imgSize * imgSize == img.shape()[1]);
 	int stepSize = poolSize;
 	int dstSize = (imgSize - poolSize)/stepSize + 1;
 	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
@@ -877,18 +874,18 @@ void first_pooling_kernel(float* dst, float* img, int imgSize, int dstSize, int 
 }
 
 template<>
-	void first_pooling(dense_matrix<float,dev_memory_space,row_major>& dst,
-			dense_matrix<float,dev_memory_space,row_major>& img,
+	void first_pooling(tensor<float,dev_memory_space,row_major>& dst,
+			tensor<float,dev_memory_space,row_major>& img,
 			unsigned int poolSize
 			) {
 
-	int numImages = dst.h();
-	cuvAssert(numImages == img.h());
-	int imgSize = sqrt(img.w());
-	cuvAssert(imgSize * imgSize == img.w());
+	int numImages = dst.shape()[0];
+	cuvAssert(numImages == img.shape()[0]);
+	int imgSize = sqrt(img.shape()[1]);
+	cuvAssert(imgSize * imgSize == img.shape()[1]);
 	int stepSize = poolSize;
 	int dstSize = (imgSize - poolSize)/stepSize + 1;
-	cuvAssert(dstSize * dstSize == dst.w());
+	cuvAssert(dstSize * dstSize == dst.shape()[1]);
 	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
 
 	int numThreads = 256;
@@ -903,25 +900,25 @@ template<>
 }
 
 template<>
-	void max_pooling(dense_matrix<float,dev_memory_space,row_major>& dst,
-			dense_matrix<float,dev_memory_space,row_major>& img,
+	void max_pooling(tensor<float,dev_memory_space,row_major>& dst,
+			tensor<float,dev_memory_space,row_major>& img,
 			unsigned int poolSize,
 			unsigned int overlap,
-			dense_matrix<int,dev_memory_space,row_major>* indices,
-			dense_matrix<float,dev_memory_space,row_major>* filter) {
+			tensor<int,dev_memory_space,row_major>* indices,
+			tensor<float,dev_memory_space,row_major>* filter) {
 
 	if (indices!=NULL) {
-		cuvAssert(indices->w() == dst.w());
-		cuvAssert(indices->h() == dst.h());
+		cuvAssert(indices->shape()[1] == dst.shape()[1]);
+		cuvAssert(indices->shape()[0] == dst.shape()[0]);
 	}
 	cuvAssert(poolSize > overlap);
-	int numImages = dst.h();
-	cuvAssert(numImages == img.h());
-	int imgSize = sqrt(img.w());
-	cuvAssert(imgSize * imgSize == img.w());
+	int numImages = dst.shape()[0];
+	cuvAssert(numImages == img.shape()[0]);
+	int imgSize = sqrt(img.shape()[1]);
+	cuvAssert(imgSize * imgSize == img.shape()[1]);
 	int stepSize = poolSize - overlap;
 	int dstSize = (imgSize - poolSize)/stepSize + 1;
-	cuvAssert(dstSize * dstSize == dst.w());
+	cuvAssert(dstSize * dstSize == dst.shape()[1]);
 	cuvAssert((dstSize-1)*stepSize + poolSize == imgSize);
 
 	int numThreads = 256;
@@ -929,10 +926,10 @@ template<>
 	int numBlocksY = ceil((float) (dstSize * dstSize)/numThreads);
 
 	if(filter!=NULL) {
-		cuvAssert(filter->w() == poolSize);
-		cuvAssert(filter->h() == poolSize);
-		cuvAssert(sizeof(float) * filter->n() <= CONST_SIZE);
-		cuvSafeCall( cudaMemcpyToSymbol(c_filter, filter->ptr(), sizeof(float) * filter->n(), 0, cudaMemcpyDeviceToDevice) );
+		cuvAssert(filter->shape()[1] == poolSize);
+		cuvAssert(filter->shape()[0] == poolSize);
+		cuvAssert(sizeof(float) * filter->size() <= CONST_SIZE);
+		cuvSafeCall( cudaMemcpyToSymbol(c_filter, filter->ptr(), sizeof(float) * filter->size(), 0, cudaMemcpyDeviceToDevice) );
 	}
 	cuvSafeCall(cudaThreadSynchronize());
 
@@ -990,17 +987,17 @@ __global__ void strip_padding_kernel(float* targets, float* images, const int im
  *
  */
 template<>
-	void strip_padding(dense_matrix<float,dev_memory_space,row_major>& dst,
-					   dense_matrix<float,dev_memory_space,row_major>& img,
+	void strip_padding(tensor<float,dev_memory_space,row_major>& dst,
+					   tensor<float,dev_memory_space,row_major>& img,
 					   unsigned int padding) {
-	int inputSize = sqrt(img.w());
+	int inputSize = sqrt(img.shape()[1]);
 	int imgWidth = inputSize;
-	int outputSize = sqrt(dst.w());
-	int numImages = img.h();
-	cuvAssert(inputSize * inputSize == img.w());
-	cuvAssert(outputSize * outputSize == dst.w());
+	int outputSize = sqrt(dst.shape()[1]);
+	int numImages = img.shape()[0];
+	cuvAssert(inputSize * inputSize == img.shape()[1]);
+	cuvAssert(outputSize * outputSize == dst.shape()[1]);
 	cuvAssert(inputSize - 2 * padding == outputSize);
-	cuvAssert(img.h() == dst.h());
+	cuvAssert(img.shape()[0] == dst.shape()[0]);
 	int numThreads = 256;
 	int numBlocksX = ceil((float) (imgWidth * imgWidth)/numThreads);
 	int numBlocksY = numImages;
@@ -1011,17 +1008,17 @@ template<>
 }
 
 template<>
-	void strip_padding(dense_matrix<float,host_memory_space,row_major>& dst,
-					   dense_matrix<float,host_memory_space,row_major>& img,
+	void strip_padding(tensor<float,host_memory_space,row_major>& dst,
+					   tensor<float,host_memory_space,row_major>& img,
 					   unsigned int padding) {
-	int inputSize = sqrt(img.w());
+	int inputSize = sqrt(img.shape()[1]);
 	int imgWidth = inputSize;
-	int outputSize = sqrt(dst.w());
-	int numImages = img.h();
-	cuvAssert(inputSize * inputSize == img.w());
-	cuvAssert(outputSize * outputSize == dst.w());
+	int outputSize = sqrt(dst.shape()[1]);
+	int numImages = img.shape()[0];
+	cuvAssert(inputSize * inputSize == img.shape()[1]);
+	cuvAssert(outputSize * outputSize == dst.shape()[1]);
 	cuvAssert(inputSize - 2 * padding == outputSize);
-	cuvAssert(img.h() == dst.h());
+	cuvAssert(img.shape()[0] == dst.shape()[0]);
 	fill(dst, 0.0f);
 
 
@@ -1029,8 +1026,8 @@ template<>
 	float val;
 	int stripped_width = imgWidth - 2 * padding;
 
-	for (int imgIdx = 0; imgIdx < img.h(); imgIdx++){
-		for(int px = 0; px < img.w(); px++){
+	for (int imgIdx = 0; imgIdx < img.shape()[0]; imgIdx++){
+		for(int px = 0; px < img.shape()[1]; px++){
 			x = px % inputSize;
 			y = px / inputSize;
 			if ( x >=padding && x < padding+stripped_width &&
@@ -1068,11 +1065,11 @@ __global__ void row_ncopy_kernel(float* targets, float* row, const int imgSize, 
  */
 
 template<>
-	void row_ncopy(dense_matrix<float,dev_memory_space,row_major>& dst,
+	void row_ncopy(tensor<float,dev_memory_space,row_major>& dst,
 				   tensor<float,dev_memory_space>& row,
 				   unsigned int n) {
 	int inputSize = row.size();
-	cuvAssert(n == dst.h());
+	cuvAssert(n == dst.shape()[0]);
 	cuvAssert(n <= 4096);
 	fill(dst, 0.0f);
 
@@ -1087,16 +1084,16 @@ template<>
 
 
 template<>
-	void row_ncopy(dense_matrix<float,host_memory_space,row_major>& erg_h,
+	void row_ncopy(tensor<float,host_memory_space,row_major>& erg_h,
 				   tensor<float,host_memory_space>& row,
 				   unsigned int n) {
 
-	cuvAssert(n == erg_h.h());
+	cuvAssert(n == erg_h.shape()[0]);
 	cuvAssert(n <= 4096);
 	fill(erg_h, 0.0f);
 
 	fill(erg_h, 0.0f);
-	for(int idx = 0; idx < erg_h.w(); idx++ ){
+	for(int idx = 0; idx < erg_h.shape()[1]; idx++ ){
 		for (int idy = 0; idy < n; idy++){
 			erg_h(idy,idx)=row[idx];
 		}
@@ -1121,18 +1118,18 @@ __global__ void cols_ncopy_kernel(float* targets, float* cols, const int rowSize
 
 
 template<>
-void cols_ncopy(	dense_matrix<float, dev_memory_space, row_major>& dst,
-			dense_matrix<float, dev_memory_space, row_major>& col,
+void cols_ncopy(	tensor<float, dev_memory_space, row_major>& dst,
+			tensor<float, dev_memory_space, row_major>& col,
 			unsigned int n){
-	int inputSize 	= col.w()*col.h();
-	int row_size 	= col.w();
+	int inputSize 	= col.shape()[1]*col.shape()[0];
+	int row_size 	= col.shape()[1];
 	
 	cuvAssert(n <= 4096);
-	cuvAssert(dst.w() == row_size*n)
+	cuvAssert(dst.shape()[1] == row_size*n)
 	fill(dst, 0.0f);
 	int numThreads = 512;
 	int numBlocksX = ceil((float)row_size/numThreads);
-	int numBlocksY = col.h();
+	int numBlocksY = col.shape()[0];
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 dimBlock(numThreads,1);
 	cols_ncopy_kernel<<<grid,dimBlock>>>(dst.ptr(), col.ptr(), row_size, n);
@@ -1142,16 +1139,16 @@ void cols_ncopy(	dense_matrix<float, dev_memory_space, row_major>& dst,
 
 
 template<>
-void cols_ncopy(dense_matrix<float, host_memory_space, row_major>& dst,
-		dense_matrix<float, host_memory_space, row_major>& col,
+void cols_ncopy(tensor<float, host_memory_space, row_major>& dst,
+		tensor<float, host_memory_space, row_major>& col,
 		unsigned int n){
-	int inputSize 	= col.w()*col.h();
-	int row_size 	= col.w();
+	int inputSize 	= col.shape()[1]*col.shape()[0];
+	int row_size 	= col.shape()[1];
 	cuvAssert(n <= 4096);
-	cuvAssert(dst.w() == row_size*n)
+	cuvAssert(dst.shape()[1] == row_size*n)
 	fill(dst, 0.0f);
-	for(int r = 0; r < col.h(); r++){
-		for(int c = 0; c < col.w(); c++){
+	for(int r = 0; r < col.shape()[0]; r++){
+		for(int c = 0; c < col.shape()[1]; c++){
 			for(int j = 0; j < n; j++){		
 				*(dst.ptr() 	+ r * row_size * n  // shift to correct row using new row width
 						+ c 		    // shift by column
@@ -1165,14 +1162,14 @@ void cols_ncopy(dense_matrix<float, host_memory_space, row_major>& dst,
 
 
 template<>
-	void filter_rotate(dense_matrix<float,host_memory_space,row_major>& dst,
-					    dense_matrix<float,host_memory_space,row_major>& filter,
+	void filter_rotate(tensor<float,host_memory_space,row_major>& dst,
+					    tensor<float,host_memory_space,row_major>& filter,
 					    unsigned int fs){
-		int f = filter.w() / fs;
+		int f = filter.shape()[1] / fs;
 		float* f_h_ptr = filter.ptr();
 		int row_offset=0;
-		int f_h_w = filter.w();
-		int numCases = filter.h();
+		int f_h_w = filter.shape()[1];
+		int numCases = filter.shape()[0];
 
 		// iterate on every filter in a row
 		for(int filter = 0; filter < f*fs; filter = filter+fs){
@@ -1224,23 +1221,23 @@ __global__ void filter_rotate_kernel(float* dst, float* src, const int h, const 
 }
 
 template<>
-void filter_rotate(	dense_matrix<float,dev_memory_space,row_major>& dst,
-					dense_matrix<float,dev_memory_space,row_major>& filter,
+void filter_rotate(	tensor<float,dev_memory_space,row_major>& dst,
+					tensor<float,dev_memory_space,row_major>& filter,
 					unsigned int fs){
-		cuvAssert(dst.h() == filter.h())
-		cuvAssert(dst.w() == filter.w())
+		cuvAssert(dst.shape()[0] == filter.shape()[0])
+		cuvAssert(dst.shape()[1] == filter.shape()[1])
 
-		int num_filter = filter.w() / fs;
+		int num_filter = filter.shape()[1] / fs;
 		cuvAssert(sqrt(fs) <= 22)
 
 		float* f_h_ptr = filter.ptr();
-		int f_h_w = filter.w();
-		int numCases = filter.h();
+		int f_h_w = filter.shape()[1];
+		int numCases = filter.shape()[0];
 
 		// we put as many filter in a row of width 512 as possible
 		int numFiltersPerRow = 512 / fs;
-		int numRows = ceil((float)(num_filter*filter.h()) / numFiltersPerRow);
-		//std::cout << "resizing from " << num_filter << "x" << filter.h() << " to " << numFiltersPerRow << " x " << numRows << std::endl;
+		int numRows = ceil((float)(num_filter*filter.shape()[0]) / numFiltersPerRow);
+		//std::cout << "resizing from " << num_filter << "x" << filter.shape()[0] << " to " << numFiltersPerRow << " x " << numRows << std::endl;
 		int _h = numRows;
 		int _w = numFiltersPerRow*fs;
 
@@ -1250,8 +1247,8 @@ void filter_rotate(	dense_matrix<float,dev_memory_space,row_major>& dst,
 		dim3 grid(numBlocksX, numBlocksY);
 		dim3 dimBlock(numThreads,1);
 
-//		std::cout << "filter.h =  " << filter.h() << std::endl;
-		filter_rotate_kernel<<<grid,dimBlock>>>(dst.ptr(), filter.ptr(), _h, _w, fs, filter.h()*filter.w());
+//		std::cout << "filter.h =  " << filter.shape()[0] << std::endl;
+		filter_rotate_kernel<<<grid,dimBlock>>>(dst.ptr(), filter.ptr(), _h, _w, fs, filter.shape()[0]*filter.shape()[1]);
 		cuvSafeCall(cudaThreadSynchronize());
 
 }
@@ -1281,18 +1278,18 @@ void filter_rotate(	dense_matrix<float,dev_memory_space,row_major>& dst,
 //					dense_matrix<float,dev_memory_space,row_major>& mat,
 //					unsigned int image_size){
 //
-//		int num_images = mat.w() / image_size;
-//		cuvAssert(dst.w() == image_size);
-//		cuvAssert(dst.h() == mat.h());
-//		cuvAssert(num_images * image_size == mat.w());
+//		int num_images = mat.shape()[1] / image_size;
+//		cuvAssert(dst.shape()[1] == image_size);
+//		cuvAssert(dst.shape()[0] == mat.shape()[0]);
+//		cuvAssert(num_images * image_size == mat.shape()[1]);
 //
 //		int numThreads = 512;
-//		int numBlocksX = ceil((float)mat.w()/numThreads);
-//		int numBlocksY = mat.h();
+//		int numBlocksX = ceil((float)mat.shape()[1]/numThreads);
+//		int numBlocksY = mat.shape()[0];
 //		dim3 grid(numBlocksX, numBlocksY);
 //		dim3 dimBlock(numThreads,1);
 //
-//		add_maps_h_kernel<<<grid,dimBlock>>>(dst.ptr(), mat.ptr(), mat.w(), image_size);
+//		add_maps_h_kernel<<<grid,dimBlock>>>(dst.ptr(), mat.ptr(), mat.shape()[1], image_size);
 //		cuvSafeCall(cudaThreadSynchronize());
 //}
 //
@@ -1301,19 +1298,19 @@ void filter_rotate(	dense_matrix<float,dev_memory_space,row_major>& dst,
 //					dense_matrix<float,host_memory_space,row_major>& mat,
 //					unsigned int image_size){
 //
-//		int num_images = mat.w() / image_size;
-//		cuvAssert(dst.w() == image_size);
-//		cuvAssert(dst.h() == mat.h());
-//		cuvAssert(num_images * image_size == mat.w());
+//		int num_images = mat.shape()[1] / image_size;
+//		cuvAssert(dst.shape()[1] == image_size);
+//		cuvAssert(dst.shape()[0] == mat.shape()[0]);
+//		cuvAssert(num_images * image_size == mat.shape()[1]);
 //
 //		float* e_ptr = dst.ptr();
 //		float* i_ptr = mat.ptr();
 //
 //		// host solution
-//		for (int row = 0; row<mat.h(); row++){
+//		for (int row = 0; row<mat.shape()[0]; row++){
 //			for(int px = 0; px < image_size; px++){
 //				for(int img = 0; img < num_images; img++){
-//					*(e_ptr + row*dst.w() + px) += *(i_ptr + row * dst.w()  // move to right row
+//					*(e_ptr + row*dst.shape()[1] + px) += *(i_ptr + row * dst.shape()[1]  // move to right row
 //															 + img * image_size // move to img
 //															 + px);				// move to pixel in img
 //				}
@@ -1369,9 +1366,9 @@ __global__ void calc_error_to_blob_kernel(float* img,
 
 
 template<>
-void calc_error_to_blob(	dense_matrix<float,dev_memory_space,row_major>& dst,
-							dense_matrix<float,dev_memory_space,row_major>& img,
-							dense_matrix<float,dev_memory_space,row_major>& blob_mat,
+void calc_error_to_blob(	tensor<float,dev_memory_space,row_major>& dst,
+							tensor<float,dev_memory_space,row_major>& img,
+							tensor<float,dev_memory_space,row_major>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
 							float sigma,
@@ -1379,14 +1376,14 @@ void calc_error_to_blob(	dense_matrix<float,dev_memory_space,row_major>& dst,
 							float interval_size,
 							float interval_offset,
 							unsigned int window_radius){
-	cuvAssert(dst.h() == img.h());
-	cuvAssert(dst.w() == img.w());
+	cuvAssert(dst.shape()[0] == img.shape()[0]);
+	cuvAssert(dst.shape()[1] == img.shape()[1]);
 
 	int numThreads = 512;
-	int numBlocksX = ceil((float)img.w()/numThreads);
-	int numBlocksY = dst.h();
+	int numBlocksX = ceil((float)img.shape()[1]/numThreads);
+	int numBlocksY = dst.shape()[0];
 
-	int numTeacherMaps = blob_mat.h();
+	int numTeacherMaps = blob_mat.shape()[0];
 
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 dimBlock(numThreads,1);
@@ -1406,9 +1403,9 @@ void calc_error_to_blob(	dense_matrix<float,dev_memory_space,row_major>& dst,
 };
 
 template<>
-void calc_error_to_blob(	dense_matrix<float,host_memory_space,row_major>& dst,
-							dense_matrix<float,host_memory_space,row_major>& img,
-							dense_matrix<float,host_memory_space,row_major>& blob_mat,
+void calc_error_to_blob(	tensor<float,host_memory_space,row_major>& dst,
+							tensor<float,host_memory_space,row_major>& img,
+							tensor<float,host_memory_space,row_major>& blob_mat,
 							unsigned int image_w,
 							unsigned int image_h,
 							float sigma,
@@ -1416,8 +1413,8 @@ void calc_error_to_blob(	dense_matrix<float,host_memory_space,row_major>& dst,
 							float interval_size,
 							float interval_offset,
 							unsigned int window_radius){
-	cuvAssert(dst.h() == img.h());
-	cuvAssert(dst.w() == img.w());
+	cuvAssert(dst.shape()[0] == img.shape()[0]);
+	cuvAssert(dst.shape()[1] == img.shape()[1]);
 
 	float center_x 		= 0;
 	float center_y	 	= 0;
@@ -1430,7 +1427,7 @@ void calc_error_to_blob(	dense_matrix<float,host_memory_space,row_major>& dst,
 
 	for(int y=0; y < image_h; y++){
 		for(int x=0; x < image_w; x++){
-			for(int map = 0; map < blob_mat.h(); map++){
+			for(int map = 0; map < blob_mat.shape()[0]; map++){
 				center_x = *(blob_mat.ptr()+map*2);
 				center_y = *(blob_mat.ptr()+map*2+1);
 
@@ -1478,28 +1475,28 @@ __global__ void check_exitatory_inhibitory_kernel(float* filter,
 }
 
 template<>
-void check_exitatory_inhibitory(dense_matrix<float,dev_memory_space,row_major>& filter,
+void check_exitatory_inhibitory(tensor<float,dev_memory_space,row_major>& filter,
 								unsigned int start_filter,
 								unsigned int filter_pixels,
 								unsigned int num_inhibitory,
 								unsigned int num_exitatory){
 
-	int row_size = filter.w();
+	int row_size = filter.shape()[1];
 	int inhib_start_col 	= start_filter * filter_pixels;
 	int inhib_end_col 		= inhib_start_col + num_inhibitory * filter_pixels - 1;
 	int exit_start_col		= inhib_end_col + 1;
 	int exit_end_col		= exit_start_col + num_exitatory * filter_pixels - 1;
-//	std::cout << "filter.h: " << filter.h() << " cols ges: "<< filter.w() <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
+//	std::cout << "filter.h: " << filter.shape()[0] << " cols ges: "<< filter.shape()[1] <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
 	int numThreads = 512;
 	int numBlocksX = ceil((float)(exit_end_col-inhib_start_col)/numThreads);
- 	int numBlocksY = filter.h();
-// 	std::cout << "launching " << numBlocksX << "x" << numBlocksY << "x512 Threads for " << (exit_end_col-inhib_start_col)*filter.h() <<" elements"<<std::endl;
+ 	int numBlocksY = filter.shape()[0];
+// 	std::cout << "launching " << numBlocksX << "x" << numBlocksY << "x512 Threads for " << (exit_end_col-inhib_start_col)*filter.shape()[0] <<" elements"<<std::endl;
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 dimBlock(numThreads,1);
 
 	check_exitatory_inhibitory_kernel<<<grid,dimBlock>>>( filter.ptr(),
-														  filter.w(),
-														  filter.h(),
+														  filter.shape()[1],
+														  filter.shape()[0],
 														  start_filter,
 														  filter_pixels,
 														  num_inhibitory,
@@ -1509,23 +1506,23 @@ void check_exitatory_inhibitory(dense_matrix<float,dev_memory_space,row_major>& 
 };
 
 template<>
-void check_exitatory_inhibitory(dense_matrix<float,host_memory_space,row_major>& filter,
+void check_exitatory_inhibitory(tensor<float,host_memory_space,row_major>& filter,
 								unsigned int start_filter,
 								unsigned int filter_pixels,
 								unsigned int num_inhibitory,
 								unsigned int num_exitatory){
 
-	int row_size = filter.w();
+	int row_size = filter.shape()[1];
 	int inhib_start_col 	= start_filter * filter_pixels;
 	int inhib_end_col 		= inhib_start_col + num_inhibitory * filter_pixels-1;
 	int exit_start_col		= inhib_end_col+1;
 	int exit_end_col		= exit_start_col + num_exitatory * filter_pixels-1;
-	std::cout << "filter.h: " << filter.h() << " cols ges: "<< filter.w() <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
+	std::cout << "filter.h: " << filter.shape()[0] << " cols ges: "<< filter.shape()[1] <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
 
 	// horizontal direction
 	for(int c = inhib_start_col; c < inhib_end_col; c = c + 1 ){
 		// vertical direction
-		for(int r = 0; r < filter.h(); r++){
+		for(int r = 0; r < filter.shape()[0]; r++){
 			if(*(filter.ptr()+c+(r*row_size)) > 0)
 				*(filter.ptr()+c+(r*row_size)) = 0;
 		}
@@ -1533,7 +1530,7 @@ void check_exitatory_inhibitory(dense_matrix<float,host_memory_space,row_major>&
 
 	for(int c = exit_start_col; c <= exit_end_col; c = c + 1 ){
 		// vertical direction
-		for(int r = 0; r < filter.h(); r++){
+		for(int r = 0; r < filter.shape()[0]; r++){
 			if(*(filter.ptr()+c+(r*row_size)) < 0)
 				*(filter.ptr()+c+(r*row_size)) = 0;
 		}
@@ -1571,28 +1568,28 @@ __global__ void init_exitatory_inhibitory_kernel(float* filter,
 }
 
 template<>
-void init_exitatory_inhibitory(dense_matrix<float,dev_memory_space,row_major>& filter,
+void init_exitatory_inhibitory(tensor<float,dev_memory_space,row_major>& filter,
 								unsigned int start_filter,
 								unsigned int filter_pixels,
 								unsigned int num_inhibitory,
 								unsigned int num_exitatory){
 
-	int row_size = filter.w();
+	int row_size = filter.shape()[1];
 	int inhib_start_col 	= start_filter * filter_pixels;
 	int inhib_end_col 		= inhib_start_col + num_inhibitory * filter_pixels - 1;
 	int exit_start_col		= inhib_end_col + 1;
 	int exit_end_col		= exit_start_col + num_exitatory * filter_pixels - 1;
-//	std::cout << "filter.h: " << filter.h() << " cols ges: "<< filter.w() <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
+//	std::cout << "filter.h: " << filter.shape()[0] << " cols ges: "<< filter.shape()[1] <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
 	int numThreads = 512;
 	int numBlocksX = ceil((float)(exit_end_col-inhib_start_col)/numThreads);
- 	int numBlocksY = filter.h();
-// 	std::cout << "launching " << numBlocksX << "x" << numBlocksY << "x512 Threads for " << (exit_end_col-inhib_start_col)*filter.h() <<" elements"<<std::endl;
+ 	int numBlocksY = filter.shape()[0];
+// 	std::cout << "launching " << numBlocksX << "x" << numBlocksY << "x512 Threads for " << (exit_end_col-inhib_start_col)*filter.shape()[0] <<" elements"<<std::endl;
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 dimBlock(numThreads,1);
 
 	check_exitatory_inhibitory_kernel<<<grid,dimBlock>>>( filter.ptr(),
-														  filter.w(),
-														  filter.h(),
+														  filter.shape()[1],
+														  filter.shape()[0],
 														  start_filter,
 														  filter_pixels,
 														  num_inhibitory,
@@ -1602,23 +1599,23 @@ void init_exitatory_inhibitory(dense_matrix<float,dev_memory_space,row_major>& f
 };
 
 template<>
-void init_exitatory_inhibitory(dense_matrix<float,host_memory_space,row_major>& filter,
+void init_exitatory_inhibitory(tensor<float,host_memory_space,row_major>& filter,
 								unsigned int start_filter,
 								unsigned int filter_pixels,
 								unsigned int num_inhibitory,
 								unsigned int num_exitatory){
 
-	int row_size = filter.w();
+	int row_size = filter.shape()[1];
 	int inhib_start_col 	= start_filter * filter_pixels;
 	int inhib_end_col 		= inhib_start_col + num_inhibitory * filter_pixels-1;
 	int exit_start_col		= inhib_end_col+1;
 	int exit_end_col		= exit_start_col + num_exitatory * filter_pixels-1;
-	std::cout << "filter.h: " << filter.h() << " cols ges: "<< filter.w() <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
+	std::cout << "filter.h: " << filter.shape()[0] << " cols ges: "<< filter.shape()[1] <<"inhib_start: " << inhib_start_col << " inhib_end: " << inhib_end_col << " exhib_start: "<< exit_start_col << " exit_end: "<< exit_end_col<< std::endl;
 
 	// horizontal direction
 	for(int c = inhib_start_col; c < inhib_end_col; c = c + 1 ){
 		// vertical direction
-		for(int r = 0; r < filter.h(); r++){
+		for(int r = 0; r < filter.shape()[0]; r++){
 			if(*(filter.ptr()+c+(r*row_size)) > 0)
 				*(filter.ptr()+c+(r*row_size)) = -1 * *(filter.ptr()+c+(r*row_size));
 		}
@@ -1626,7 +1623,7 @@ void init_exitatory_inhibitory(dense_matrix<float,host_memory_space,row_major>& 
 
 	for(int c = exit_start_col; c <= exit_end_col; c = c + 1 ){
 		// vertical direction
-		for(int r = 0; r < filter.h(); r++){
+		for(int r = 0; r < filter.shape()[0]; r++){
 			if(*(filter.ptr()+c+(r*row_size)) < 0)
 				*(filter.ptr()+c+(r*row_size)) = -1 * *(filter.ptr()+c+(r*row_size));
 		}

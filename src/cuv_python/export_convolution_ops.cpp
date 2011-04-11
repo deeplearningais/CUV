@@ -69,20 +69,20 @@ namespace ublas = boost::numeric::ublas;
 
 template <class M>
 void export_convolve(){
-    def("convolve",(void (*)(M&,M&, M&, int))convolve<typename M::value_type,typename M::memory_space_type, typename M::memory_layout,typename M::index_type>, (
+    def("convolve",(void (*)(M&,M&, M&, int))convolve<typename M::value_type,typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("img"),
                 arg("filter"),
                 arg("nGroups"))
        );
-    def("convolve2",(void (*)(M&,M&, M&, int, int))convolve2<typename M::value_type,typename M::memory_space_type, typename M::memory_layout,typename M::index_type>, (
+    def("convolve2",(void (*)(M&,M&, M&, int, int))convolve2<typename M::value_type,typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("img"),
                 arg("filter"),
                 arg("numFilters"),
                 arg("nGroups"))
        );
-    def("convolve3",(void (*)(M&,M&, M&, int))convolve3<typename M::value_type,typename M::memory_space_type, typename M::memory_layout,typename M::index_type>, (
+    def("convolve3",(void (*)(M&,M&, M&, int))convolve3<typename M::value_type,typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("img"),
                 arg("filter"),
@@ -93,7 +93,7 @@ void export_convolve(){
 template <class M>
 void export_sampling_stuff(){
     typedef typename switch_value_type<M,int>::type Mint;
-    //def("super_to_max",(void (*)(M&,M&, int, int, Mint*,M*))super_to_max<typename M::value_type, typename M::memory_space_type, typename M::memory_layout, typename M::index_type>, (
+    //def("super_to_max",(void (*)(M&,M&, int, int, Mint*,M*))super_to_max<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type, typename M::index_type>, (
                 //arg("dst"),
                 //arg("img"),
                 //arg("poolsize"),
@@ -101,17 +101,17 @@ void export_sampling_stuff(){
                 //arg("indices")=object(),
                 //arg("filter")=object())
        //);
-    def("subsample",(void (*)(M&,M&, int, bool))subsample<typename M::value_type, typename M::memory_space_type, typename M::memory_layout>, (
+    def("subsample",(void (*)(M&,M&, int, bool))subsample<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("img"),
                 arg("factor"),
                 arg("avoidBankConflicts"))
        );
-    def("reorder_cpy",(void (*)(M&, M&, int))reorder<M>, (
+    def("reorder_cpy",(void (*)(M&, M&, int))reorder<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst_matrix"),
                 arg("src_matrix"),
                 arg("block_length")));
-    def("reorder",(void (*)(M&, M&, int))reorder<M>, (
+    def("reorder",(void (*)(M&, M&, int))reorder<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst_matrix"),
                 arg("src_matrix"),
                 arg("block_length")));
@@ -122,13 +122,13 @@ void export_sampling_stuff(){
 
 template <class M>
 void export_padding_ops(){
-    def("copy_into",(void (*)(M&,M&, int))copy_into<typename M::value_type, typename M::memory_space_type, typename M::memory_layout, typename M::index_type>, (
+    def("copy_into",(void (*)(M&,M&, int))copy_into<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("img"),
                 arg("padding"))
        );
 
-    def("strip_padding",(void (*)(M&,M&, unsigned int))strip_padding<typename M::value_type, typename M::memory_space_type, typename M::memory_layout, typename M::index_type>, (
+    def("strip_padding",(void (*)(M&,M&, unsigned int))strip_padding<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("img"),
                 arg("padding"))
@@ -137,24 +137,24 @@ void export_padding_ops(){
 
 template <class M, class N, class V>
 void export_rlcnp_stuff(){
-    def("row_ncopy",(void (*)(M&,V&, unsigned int))row_ncopy<typename M::value_type, typename M::memory_space_type, typename M::memory_layout, typename M::index_type>, (
+    def("row_ncopy",(void (*)(M&,V&, unsigned int))row_ncopy<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("img"),
                 arg("rows")));
-    def("cols_ncopy",(void (*)(M&,M&, unsigned int))cols_ncopy<typename M::value_type, typename M::memory_space_type, typename M::memory_layout, typename M::index_type>, (
+    def("cols_ncopy",(void (*)(M&,M&, unsigned int))cols_ncopy<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("img"),
                 arg("factor")));
-    def("filter_rotate",(void (*)(M&,M&, unsigned int))filter_rotate<typename M::value_type, typename M::memory_space_type, typename M::memory_layout,typename M::index_type>, (
+    def("filter_rotate",(void (*)(M&,M&, unsigned int))filter_rotate<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("filter"),
                 arg("fs")));
 
-    //      def("add_maps_h",(void (*)(M&,M&, unsigned int))add_maps_h<typename M::value_type, typename M::memory_space_type, typename M::memory_layout,typename M::index_type>, (
+    //      def("add_maps_h",(void (*)(M&,M&, unsigned int))add_maps_h<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type,typename M::index_type>, (
     //                                                                                                                      arg("dst"),
     //                                                                                                                      arg("map_matrix"),
     //                                                                                                                      arg("map_size")));
-    def("calc_error_to_blob",(void (*)(M&,M&, M&, unsigned int, unsigned int, float,float, float, float, unsigned int))calc_error_to_blob<typename M::value_type, typename M::memory_space_type, typename M::memory_layout,typename M::index_type>, (
+    def("calc_error_to_blob",(void (*)(M&,M&, M&, unsigned int, unsigned int, float,float, float, float, unsigned int))calc_error_to_blob<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("img"),
                 arg("blob_mat"),
@@ -165,13 +165,13 @@ void export_rlcnp_stuff(){
                 arg("interval_size"),
                 arg("interval_offset"),
                 arg("window_size")));
-    def("check_exitatory_inhibitory",(void (*)(M&, unsigned int, unsigned int, unsigned int, unsigned int))check_exitatory_inhibitory<typename M::value_type, typename M::memory_space_type, typename M::memory_layout,typename M::index_type>, (
+    def("check_exitatory_inhibitory",(void (*)(M&, unsigned int, unsigned int, unsigned int, unsigned int))check_exitatory_inhibitory<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("start_filter"),
                 arg("filter_pixels"),
                 arg("num_exitatory"),
                 arg("num_inhibitory")));
-    def("init_exitatory_inhibitory",(void (*)(M&, unsigned int, unsigned int, unsigned int, unsigned int))check_exitatory_inhibitory<typename M::value_type, typename M::memory_space_type, typename M::memory_layout,typename M::index_type>, (
+    def("init_exitatory_inhibitory",(void (*)(M&, unsigned int, unsigned int, unsigned int, unsigned int))check_exitatory_inhibitory<typename M::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (
                 arg("dst"),
                 arg("start_filter"),
                 arg("filter_pixels"),
@@ -180,15 +180,15 @@ void export_rlcnp_stuff(){
 }
 
 void export_convolution_ops(){
-    export_convolve< dense_matrix<float,host_memory_space,row_major> >();
-    export_convolve< dense_matrix<float,dev_memory_space,row_major> >();
-    export_sampling_stuff< dense_matrix<float,host_memory_space, row_major> >();
-    export_sampling_stuff< dense_matrix<float,dev_memory_space, row_major>  >();
-    export_padding_ops< dense_matrix<float,host_memory_space, row_major> >();
-    export_padding_ops< dense_matrix<float,host_memory_space, row_major>  >();
-    export_padding_ops< dense_matrix<float,dev_memory_space, row_major>  >();
-    export_rlcnp_stuff< dense_matrix<float,dev_memory_space, row_major>, dense_matrix<int,dev_memory_space, row_major>, tensor<float,dev_memory_space>  >();
-    export_rlcnp_stuff< dense_matrix<float,host_memory_space, row_major>, dense_matrix<int,host_memory_space, row_major>, tensor<float,host_memory_space>  >();
+    export_convolve< tensor<float,host_memory_space,row_major> >();
+    export_convolve< tensor<float,dev_memory_space,row_major> >();
+    export_sampling_stuff< tensor<float,host_memory_space, row_major> >();
+    export_sampling_stuff< tensor<float,dev_memory_space, row_major>  >();
+    export_padding_ops< tensor<float,host_memory_space, row_major> >();
+    export_padding_ops< tensor<float,host_memory_space, row_major>  >();
+    export_padding_ops< tensor<float,dev_memory_space, row_major>  >();
+    export_rlcnp_stuff< tensor<float,dev_memory_space, row_major>, tensor<int,dev_memory_space, row_major>, tensor<float,dev_memory_space>  >();
+    export_rlcnp_stuff< tensor<float,host_memory_space, row_major>, tensor<int,host_memory_space, row_major>, tensor<float,host_memory_space>  >();
 }
 
 
