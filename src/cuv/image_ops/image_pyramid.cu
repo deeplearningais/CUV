@@ -175,6 +175,7 @@ namespace cuv{
 		void gaussian(
 				tensor<V,S,row_major>& dst,
 				const cuda_array<V,S,I>& src){
+                        cuvAssert(dst.shape().size()==2);
 
 			typedef typename texref<V>::type textype;
 			textype& tex = texref<V>::get();
@@ -205,6 +206,7 @@ namespace cuv{
 				tensor<V,S,row_major>& dst,
 				const cuda_array<V,S,I>& src,
 				const unsigned int interleaved_channels){
+                        cuvAssert(dst.shape().size()==2);
 
 
 			typedef typename single_to_4<V>::type V4;
@@ -273,6 +275,7 @@ namespace cuv{
 		void gaussian_pyramid_upsample(
 				tensor<V,S,row_major>& dst,
 				const cuda_array<V,S,I>& src){
+                        cuvAssert(dst.shape().size()==2);
 			cuvAssert(dst.shape()[1] > src.w());
 			cuvAssert(dst.shape()[0] > src.h());
 
@@ -382,6 +385,7 @@ namespace cuv{
 			const cuda_array<V,S,I>&             src_smooth,
 			float scale_fact
 		){
+                        cuvAssert(dst.shape().size()==2);
 			dim3 grid(iDivUp(dst.shape()[1], CB_TILE_W), iDivUp(dst.shape()[0], CB_TILE_H));
 			dim3 threads(CB_TILE_W, CB_TILE_H);
 
