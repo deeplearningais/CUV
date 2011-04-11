@@ -199,12 +199,6 @@ void export_blas2(){
 }
 
 template <class M>
-void export_bitflip(){
-	typedef typename M::index_type I;
-	//def("bitflip",(void(*)(M&,I))
-			//bitflip<typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
-}
-template <class M>
 void export_blockview(){
 	typedef typename M::index_type I;
 	def("blockview",(M*(*)(M&,I,I,I,I))
@@ -329,8 +323,6 @@ void export_matrix_ops(){
 	export_blas2<fhostr,unsigned char>();
 	export_blas2<fdevr,unsigned char>();
 
-	export_bitflip<fdev>();
-	export_bitflip<fhost>();
 
 	export_blockview<fdev>();
 	export_blockview<fhost>();

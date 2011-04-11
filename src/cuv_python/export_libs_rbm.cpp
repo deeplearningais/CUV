@@ -68,9 +68,19 @@ void export_copy_at_rowidx(){
 	def("copy_redblack", copy_redblack<mat>, (arg("dst"), arg("src"),arg("num_maps"), arg("color")));
 }
 
+template <class M>
+void export_bitflip(){
+	typedef typename M::index_type I;
+	//def("bitflip",(void(*)(M&,I))
+			//bitflip<typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>);
+}
 void export_libs_rbm(){
 	export_libs_rbm_detail<float,host_memory_space,column_major,unsigned int>();
 	export_libs_rbm_detail<float,dev_memory_space,column_major,unsigned int>();
 	export_set_local_conn<float,dev_memory_space,column_major,unsigned int>();
 	export_copy_at_rowidx<float,dev_memory_space,column_major,unsigned int>();
+	typedef tensor<float,dev_memory_space,column_major> fdev;
+	typedef tensor<float,host_memory_space,column_major> fhost;
+	export_bitflip<fdev>();
+	export_bitflip<fhost>();
 }

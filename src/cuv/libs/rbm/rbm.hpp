@@ -1,6 +1,7 @@
 #ifndef __RBM__HPP__
 #define __RBM__HPP__
 
+#include<cuv/basics/tensor.hpp>
 
 namespace cuv{
 namespace libs{
@@ -76,6 +77,19 @@ namespace rbm{
 	template<class __matrix_type>
 	void copy_redblack(__matrix_type& dst, const __matrix_type&  src, const unsigned int num_maps, const unsigned int color);
 
+      /** 
+       * @brief Bit-Flip a row of a column-major matrix
+       * 
+       * @param matrix Matrix to apply functor on
+       * @param row	   row to flip
+       * 
+       * changes the matrix such that its m-th row is now (1-original mth row)
+       *
+       */
+      template<class __value_type, class __memory_layout, class __memory_space_type>
+              void bitflip(
+              tensor<__value_type,__memory_layout,__memory_space_type> & matrix,
+                              typename tensor<__value_type,__memory_layout,__memory_space_type>::index_type row);
 } } }
 
 

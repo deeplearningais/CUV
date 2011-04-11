@@ -227,7 +227,36 @@ namespace rbm{
 			copy_at_rowidx_kernel<<<grid,block>>>(dst.ptr(), src.ptr(), rowidx.ptr(), dst.h(), dst.w(), (bool)color);
 			cuvSafeCall(cudaThreadSynchronize());
 		}
+        __global__ void bitflip_kernel(float* M, int height, int row, int n) {
+                const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+            int off = blockDim.x * gridDim.x;
+            for (unsigned int i = idx; i < n; i += off){
+                        M[i * height + row] = 1 - M[i * height + row];
+                }
+
+        }
+	template<class V, class I>
+	void bitflip(tensor<V,dev_memory_space,column_major>& m, const I& row){
+		int num_threads = (int) min(512.f, ceil((float)sqrt(m.shape()[1])));
+		int num_blocks  = (int) ceil((float)m.shape()[1]/num_threads);
+		bitflip_kernel<<<num_blocks,num_threads>>>(m.ptr(),m.shape()[0],row, m.shape()[1]);
+		cuvSafeCall(cudaThreadSynchronize());
 	}
+	template<class V, class I>
+	void bitflip(tensor<V,host_memory_space,column_major>& m, const I& row){
+		for(int i=0;i<m.shape()[1];i++)
+			m(row,i)=(V)(1.f-m(row,i));
+	}
+}
+// bitflip a row of a column-major matrix
+template<class __value_type, class __memory_layout, class __memory_space_type>
+void bitflip(tensor<__value_type,__memory_layout,__memory_space_type>& matrix,
+		typename tensor<__value_type,__memory_layout,__memory_space_type>::index_type row){
+                cuvAssert(matrix.shape().size()==2);
+		cuvAssert(row<matrix.shape()[0]);
+		cuvAssert(matrix.ptr());
+		detail::bitflip(matrix,row);
+}
 
 template<class __matrix_type>
 void set_binary_sequence(__matrix_type& m, const int& start){
@@ -265,6 +294,8 @@ void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<float,dev_memory_s
 template
 void copy_redblack(cuv::dense_matrix<float,dev_memory_space,column_major>&, const cuv::dense_matrix<float,dev_memory_space,column_major>&, const unsigned int num_maps, const unsigned int);
 
+template void bitflip(tensor<float,host_memory_space,column_major>&, unsigned int);
+template void bitflip(tensor<float,dev_memory_space,column_major>&, unsigned int);
 }
 }
 }
