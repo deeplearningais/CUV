@@ -197,11 +197,11 @@ namespace reduce_impl {
 	template<>
 	struct reduce<1, dev_memory_space>{
                 template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
-	       	void operator()(tensor<__value_type,dev_memory_space> &v,const  dense_matrix<__value_type2,dev_memory_space,__memory_layout_type> &m,const  S & factNew,const  S & factOld, RF rf)const{
+	       	void operator()(tensor<__value_type,dev_memory_space> &v,const  tensor<__value_type2,dev_memory_space,__memory_layout_type> &m,const  S & factNew,const  S & factOld, RF rf)const{
                     cuvAssert(m.ptr() != NULL);
-                    cuvAssert(m.h() == v.size());
+                    cuvAssert(m.shape()[0] == v.size());
                     static const int BLOCK_DIM = 16;
-                    const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM));
+                    const int blocks_needed = ceil((float)m.shape()[0]/(BLOCK_DIM));
                     int grid_x =0, grid_y=0;
 
                     // how to handle grid dimension constraint
@@ -222,18 +222,18 @@ namespace reduce_impl {
                     typedef reduce_functor_traits<typename RF::result_value_functor_type> traits_type;
                     if(traits_type::returns_index)
                             mem += sizeof(vecval_t)*BLOCK_DIM*BLOCK_DIM;
-                    reduce_to_col_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
+                    reduce_to_col_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.shape()[1],m.shape()[0],__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
                     cuvSafeCall(cudaThreadSynchronize());
 	}};
 
 	template<>
 	struct reduce<0, dev_memory_space>{
                 template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
-	       	void operator()(tensor<__value_type,dev_memory_space> &v,const  dense_matrix<__value_type2,dev_memory_space,__memory_layout_type> &m,const S & factNew,const  S & factOld, RF rf)const{
+	       	void operator()(tensor<__value_type,dev_memory_space> &v,const  tensor<__value_type2,dev_memory_space,__memory_layout_type> &m,const S & factNew,const  S & factOld, RF rf)const{
 		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.w() == v.size());
+		cuvAssert(m.shape()[1] == v.size());
 		static const int BLOCK_DIM = 16;
-		dim3 grid(1, m.w());
+		dim3 grid(1, m.shape()[1]);
 		dim3 threads(BLOCK_DIM*BLOCK_DIM,1);
 
 		typedef __value_type matval_t;
@@ -243,24 +243,24 @@ namespace reduce_impl {
 		if(traits_type::returns_index)
 			mem += sizeof(vecval_t)*threads.x*threads.y;
 
-                reduce_to_row_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.w(),m.h(),__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
+                reduce_to_row_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.shape()[1],m.shape()[0],__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
 	template<int dim>
 	struct reduce<dim, host_memory_space>{
                 template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
-	       	void operator()(tensor<__value_type,host_memory_space> &v,const  dense_matrix<__value_type2,host_memory_space,__memory_layout_type> &m,const S & factNew,const S & factOld, RF rf)const{
+	       	void operator()(tensor<__value_type,host_memory_space> &v,const  tensor<__value_type2,host_memory_space,__memory_layout_type> &m,const S & factNew,const S & factOld, RF rf)const{
 		typedef __value_type2 V;
-		typedef typename tensor<__value_type,host_memory_space>::value_type V2;
-		typedef typename dense_matrix<__value_type,host_memory_space,__memory_layout_type>::index_type I;
+		typedef __value_type V2;
+		typedef typename tensor<__value_type,host_memory_space,__memory_layout_type>::index_type I;
 		typedef typename unconst<V>::type unconstV;
 		typedef cuv::reduce_functor_traits<typename RF::result_value_functor_type> functor_traits;
 
 		cuvAssert(m.ptr() != NULL);
 		// assert that vector has correct length
-		if (dim==0) cuvAssert(v.size()==m.w());
-		if (dim==1) cuvAssert(v.size()==m.h());
+		if (dim==0) cuvAssert(v.size()==m.shape()[1]);
+		if (dim==1) cuvAssert(v.size()==m.shape()[0]);
 
 		const __value_type2 * A_ptr                         = m.ptr();
 
@@ -286,13 +286,13 @@ namespace reduce_impl {
 		if (dim==0){
 			// apply reduce functor along columns
 			for(;values_ptr!=values_end; values_ptr++, indices_ptr++) {
-				for(unsigned int j=0; j<m.h(); j++, A_ptr++)
+				for(unsigned int j=0; j<m.shape()[0]; j++, A_ptr++)
 					rf.rv(*values_ptr,*indices_ptr,*A_ptr,j);
 			}
 		}
 		else if(dim==1){
 			// apply reduce functor along rows
-			for(I i=0;i<m.w();i++) {
+			for(I i=0;i<m.shape()[1];i++) {
 				values_ptr  = values.ptr();
 				indices_ptr = indices_begin;
 				for(; values_ptr!=values_end;A_ptr++,values_ptr++,indices_ptr++) 
@@ -324,11 +324,11 @@ namespace reduce_impl {
 	}};
 
         template<int dimension, class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class S>
-	void reduce_switch(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const S& factNew, const S& factOld) {
+	void reduce_switch(tensor<__value_type,__memory_space_type>&v, const tensor<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const S& factNew, const S& factOld) {
 		typedef __value_type2 const_mat_val;
-		typedef typename dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>::index_type mat_ind;
-		typedef typename dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>::memory_space_type mat_mem;
-		typedef typename tensor<__value_type,__memory_space_type>::value_type vec_val;
+		typedef typename tensor<__value_type2,__memory_space_type,__memory_layout_type>::index_type mat_ind;
+		typedef __memory_space_type mat_mem;
+		typedef __value_type vec_val;
 		typedef typename tensor<__value_type,__memory_space_type>::index_type vec_ind;
 		typedef typename unconst<const_mat_val>::type mat_val;
 		switch(rf) {
@@ -369,15 +369,16 @@ namespace reduce_impl {
 
 }//namespace reduce_imp
 
-// TODO: make sure this is actually called with a matrix type!
-//
 template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
-void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const __value_type2& factNew, const __value_type2& factOld) {
-	if (IsSame<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::memory_layout,row_major>::Result::value){
+void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const tensor<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const __value_type2& factNew, const __value_type2& factOld) {
+        // Assert that v is vector, m matrix
+        cuvAssert(v.shape().size()==1);
+        cuvAssert(m.shape().size()==2);
+	if (IsSame<__memory_layout_type,row_major>::Result::value){
 		//matrix is row major
-		//create column major view and call reduce_to_row for column major
+                //create column major view and call reduce_to_row for column major
 		// downstream from here everything is column major
-		const dense_matrix<const __value_type2,typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::memory_space_type,column_major,typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::index_type> cm_view(m.w(),m.h(),m.ptr());
+		const tensor<const __value_type2,__memory_space_type,__memory_layout_type> cm_view(extents[m.shape()[1]][m.shape()[0]],m.ptr());
 		reduce_impl::reduce_switch<0>(v,cm_view,rf,factNew,factOld); // 0 means zeroth dimension is summed out - meaning summing over the columns in a column major matrix.
 	}
 	else {
@@ -386,12 +387,15 @@ void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const dense_matri
 }
 
 template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
-void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const dense_matrix<__value_type2,__memory_space_type,__memory_layout_type>& m,reduce_functor rf, const __value_type2& factNew, const __value_type2& factOld) {
-	if (IsSame<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::memory_layout,row_major>::Result::value){
+void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const tensor<__value_type2,__memory_space_type,__memory_layout_type>& m,reduce_functor rf, const __value_type2& factNew, const __value_type2& factOld) {
+        // Assert that v is vector, m matrix
+        cuvAssert(v.shape().size()==1);
+        cuvAssert(m.shape().size()==2);
+	if (IsSame<__memory_layout_type,row_major>::Result::value){
 		//matrix is row major
 		//create column major view and call reduce_to_row for column major
 		// downstream from here everything is column major
-		const dense_matrix<const __value_type2,__memory_space_type,column_major> cm_view(m.w(),m.h(),m.ptr());
+		const tensor<const __value_type2,__memory_space_type,column_major> cm_view(extents[m.shape()[1]][m.shape()[0]],m.ptr());
 		reduce_impl::reduce_switch<1>(v,cm_view,rf,factNew,factOld); // 1 means first (we start counting at zero) dimension is summed out - meaning summing over the rows in a column major matrix.
 	}
 	else {
@@ -404,35 +408,35 @@ void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const dense_matri
 	/*template<class V, class V2, class I>*/
 	/*void argmax_to_row(tensor<V2,dev_memory_space>&v, const dense_matrix<V, dev_memory_space,column_major, I>& m) {*/
 		/*cuvAssert(m.ptr() != NULL);*/
-		/*cuvAssert(m.w() == v.size());*/
-		/*const unsigned int u = min(m.w(), MAX_GRID_SIZE);*/
-		/*dim3 grid(u, ceil(m.w()/(float)u));*/
+		/*cuvAssert(m.shape()[1] == v.size());*/
+		/*const unsigned int u = min(m.shape()[1], MAX_GRID_SIZE);*/
+		/*dim3 grid(u, ceil(m.shape()[1]/(float)u));*/
 		/*static const unsigned int BLOCK_DIM = 256;*/
-		/*argmax_row_kernel<BLOCK_DIM><<<grid,BLOCK_DIM>>>(v.ptr(),m.ptr(),m.w(),m.h());*/
+		/*argmax_row_kernel<BLOCK_DIM><<<grid,BLOCK_DIM>>>(v.ptr(),m.ptr(),m.shape()[1],m.shape()[0]);*/
 		/*cuvSafeCall(cudaThreadSynchronize());*/
 	/*}*/
 
 	/*template<class V, class V2, class I>*/
 	/*void argmax_to_column(tensor<V2,dev_memory_space>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m) {*/
 		/*cuvAssert(m.ptr() != NULL);*/
-		/*cuvAssert(m.h() == v.size());*/
-		/*const unsigned int u = min(m.h(), MAX_GRID_SIZE);*/
-		/*dim3 grid(u, ceil(m.h()/(float)u));*/
+		/*cuvAssert(m.shape()[0] == v.size());*/
+		/*const unsigned int u = min(m.shape()[0], MAX_GRID_SIZE);*/
+		/*dim3 grid(u, ceil(m.shape()[0]/(float)u));*/
 		/*static const unsigned int BLOCK_DIM = 256;*/
-		/*argmax_row_kernel<BLOCK_DIM><<<grid,BLOCK_DIM>>>(v.ptr(),m.ptr(),m.h(),m.w());*/
+		/*argmax_row_kernel<BLOCK_DIM><<<grid,BLOCK_DIM>>>(v.ptr(),m.ptr(),m.shape()[0],m.shape()[1]);*/
 		/*cuvSafeCall(cudaThreadSynchronize());*/
 	/*}*/
 
 	/*template<class V, class V2, class I>*/
 	/*void argmax_to_row(tensor<V2,host_memory_space>&v, const dense_matrix<V, host_memory_space,column_major,I>& m) {*/
 		/*cuvAssert(m.ptr() != NULL);*/
-		/*cuvAssert(m.w() == v.size());*/
+		/*cuvAssert(m.shape()[1] == v.size());*/
 		/*const V* ptr = m.ptr();*/
 		/*V2* res = v.ptr();*/
-		/*for(int i=0; i<m.w();i++) {*/
+		/*for(int i=0; i<m.shape()[1];i++) {*/
 			/*int idx = 0;*/
 			/*V val = *ptr;*/
-			/*for(int j=0; j<m.h();j++) {*/
+			/*for(int j=0; j<m.shape()[0];j++) {*/
 				/*if(*ptr > val) {*/
 					/*val = *ptr;*/
 					/*idx = j;*/
@@ -446,13 +450,13 @@ void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const dense_matri
 	/*template<class V, class V2, class I>*/
 	/*void argmax_to_column(tensor<V2,host_memory_space>&v, const dense_matrix<V,row_major,host_memory_space,I>& m) {*/
 		/*cuvAssert(m.ptr() != NULL);*/
-		/*cuvAssert(m.h() == v.size());*/
+		/*cuvAssert(m.shape()[0] == v.size());*/
 		/*const V* ptr = m.ptr();*/
 		/*V2* res = v.ptr();*/
-		/*for(int i=0; i<m.h();i++) {*/
+		/*for(int i=0; i<m.shape()[0];i++) {*/
 			/*int idx = 0;*/
 			/*V val = *ptr;*/
-			/*for(int j=0; j<m.w();j++) {*/
+			/*for(int j=0; j<m.shape()[1];j++) {*/
 				/*if(*ptr > val) {*/
 					/*val = *ptr;*/
 					/*idx = j;*/
@@ -486,10 +490,10 @@ void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const dense_matri
   /*template void argmax_to_column(tensor<float,host_memory_space>&,const dense_matrix<V,host_memory_space,M,I>&);   */
 
 #define INSTANTIATE_RED(V,V2,M) \
-  template void reduce_to_row(tensor<V2,dev_memory_space>&, const dense_matrix<V,dev_memory_space,M>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(tensor<V2,dev_memory_space>&, const dense_matrix<V,dev_memory_space,M>&, reduce_functor, const V&,const V&); \
-  template void reduce_to_row(tensor<V2,host_memory_space>&, const dense_matrix<V,host_memory_space,M>&, reduce_functor,  const V&,const V&); \
-  template void reduce_to_col(tensor<V2,host_memory_space>&, const dense_matrix<V,host_memory_space,M>&,reduce_functor,  const V&,const V&);
+  template void reduce_to_row(tensor<V2,dev_memory_space>&, const tensor<V,dev_memory_space,M>&, reduce_functor,  const V&,const V&); \
+  template void reduce_to_col(tensor<V2,dev_memory_space>&, const tensor<V,dev_memory_space,M>&, reduce_functor, const V&,const V&); \
+  template void reduce_to_row(tensor<V2,host_memory_space>&, const tensor<V,host_memory_space,M>&, reduce_functor,  const V&,const V&); \
+  template void reduce_to_col(tensor<V2,host_memory_space>&, const tensor<V,host_memory_space,M>&,reduce_functor,  const V&,const V&);
 
 
 /*INSTANTIATE_ARGMAX_TO_COL(float,row_major,unsigned int);*/

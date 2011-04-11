@@ -77,7 +77,7 @@ namespace cuv{
    *	 By default, the reduce functor is RF_ADD so that rf(src) is the sum over all columns of src.
    */
   template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
-	  void reduce_to_col(tensor<__value_type, __memory_space_type>& dst, const dense_matrix<__value_type2, __memory_space_type, __memory_layout_type>& src, reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f);
+	  void reduce_to_col(tensor<__value_type, __memory_space_type>& dst, const tensor<__value_type2, __memory_space_type, __memory_layout_type>& src, reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f);
 
   /** 
    * @brief Reduce a matrix to one row using specified reduce functor (or add them up by default)
@@ -93,7 +93,7 @@ namespace cuv{
    *	 By default, the reduce functor is RF_ADD so that rf(src) is the sum over all rows of src.
    */
   template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
-	  void reduce_to_row(tensor<__value_type, __memory_space_type>& dst, const dense_matrix<__value_type2, __memory_space_type, __memory_layout_type>& src, reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f);
+	  void reduce_to_row(tensor<__value_type, __memory_space_type>& dst, const tensor<__value_type2, __memory_space_type, __memory_layout_type>& src, reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f);
 
   /** 
    * @brief Write the index of the maximum for each column of a matrix into a vector
