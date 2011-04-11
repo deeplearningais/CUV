@@ -191,7 +191,7 @@ namespace cuv{
    * 
    */
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_plus_col(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+	  void matrix_plus_col(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Multiply each column of a matrix A pointwise with a vector v.
@@ -201,7 +201,7 @@ namespace cuv{
    * 
    */
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_times_col(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+	  void matrix_times_col(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Devide each column of a matrix A pointwise by a vector v.
@@ -211,7 +211,7 @@ namespace cuv{
    * 
    */
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_divide_col(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+	  void matrix_divide_col(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Add a vector to each row of a matrix A.
@@ -221,7 +221,7 @@ namespace cuv{
    * 
    */
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_plus_row(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+	  void matrix_plus_row(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Multiply each row of a matrix A pointwise with a vector v.
@@ -231,7 +231,7 @@ namespace cuv{
    * 
    */
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_times_row(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+	  void matrix_times_row(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Devide each row of a matrix A pointwise by a vector v.
@@ -241,7 +241,7 @@ namespace cuv{
    * 
    */
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_divide_row(dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+	  void matrix_divide_row(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
 
   /** 
    * @brief Transpose a matrix
@@ -264,9 +264,19 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& d
    * 
    */
   template<class V, class T>
-  cuv::tensor<V,T,row_major>* transposed_view(cuv::tensor<V,T,column_major>&  src);
+  cuv::tensor<V,T,row_major> * transposed_view_p(cuv::tensor<V,T,column_major>&  src);
   template<class V, class T>
-  cuv::tensor<V,T,column_major>* transposed_view(cuv::tensor<V,T,row_major>&  src);
+  cuv::tensor<V,T,column_major> * transposed_view_p(cuv::tensor<V,T,row_major>&  src);
+
+  template<class V, class T>
+  std::auto_ptr<cuv::tensor<V,T,row_major> > transposed_view(cuv::tensor<V,T,column_major>&  src){
+	return std::auto_ptr<cuv::tensor<V,T,row_major> > (transposed_view_p(src));
+  }
+  template<class V, class T>
+  std::auto_ptr<cuv::tensor<V,T,column_major> > transposed_view(cuv::tensor<V,T,row_major>&  src){
+	return std::auto_ptr<cuv::tensor<V,T,column_major> >(transposed_view_p(src));
+  }
+        
 
   /** @} */ // end group blas2
 } // cuv

@@ -227,8 +227,8 @@ void
 export_transposed_view(){
 	typedef tensor<V,T,row_major> M;
 	typedef tensor<V,T,column_major> N;
-	def("transposed_view", (M*(*)(N&))transposed_view<V,T>,return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
-	def("transposed_view", (N*(*)(M&))transposed_view<V,T>,return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
+	def("transposed_view", (M*(*)(N&))transposed_view_p<V,T>,return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
+	def("transposed_view", (N*(*)(M&))transposed_view_p<V,T>,return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 }
 
 //template<class M>

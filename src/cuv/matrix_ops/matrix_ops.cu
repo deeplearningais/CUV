@@ -304,24 +304,24 @@ void matrix_plus_vector_kernel_row_major (V *A, V2* v, I h, I w, OP op) {
 }
 
 namespace matrix_plus_vector_impl {
-	template<class V, class I, class V2, class OP>
-	void matrix_plus_col(dense_matrix<V,dev_memory_space,row_major,I>& A, const tensor<V2,dev_memory_space>& v, const OP& op) {
+	template<class V, class V2, class OP>
+	void matrix_plus_col(tensor<V,dev_memory_space,row_major>& A, const tensor<V2,dev_memory_space>& v, const OP& op) {
 		cuvAssert(A.shape()[0] == v.size());
 		const unsigned int num_threads = min(512,A.shape()[1]);
 		const unsigned int num_blocks  = min(1024,A.shape()[0]);
 		matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.shape()[0], A.shape()[1], op);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
-	template<class V, class I, class V2, class OP>
-	void matrix_plus_col(dense_matrix<V,dev_memory_space,column_major,I>& A, const tensor<V2,dev_memory_space>& v, const OP& op) {
+	template<class V, class V2, class OP>
+	void matrix_plus_col(tensor<V,dev_memory_space,column_major>& A, const tensor<V2,dev_memory_space>& v, const OP& op) {
 		cuvAssert(A.shape()[0] == v.size());
 		const unsigned int num_threads = 512;
-		const unsigned int num_blocks  = min(512,(int)ceil((float)A.n() / num_threads));
+		const unsigned int num_blocks  = min(512,(int)ceil((float)A.size() / num_threads));
 		matrix_plus_vector_kernel_column_major2<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.shape()[0], A.shape()[1], op);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
-	template<class V, class I, class V2, class OP>
-	void matrix_plus_col(dense_matrix<V,host_memory_space,column_major,I>& A, const tensor<V2,host_memory_space>& v, const OP& op) {
+	template<class V, class V2, class OP>
+	void matrix_plus_col(tensor<V,host_memory_space,column_major>& A, const tensor<V2,host_memory_space>& v, const OP& op) {
 		cuvAssert(A.shape()[0] == v.size());
 		const V2* v_ptr = v.ptr();
 		V * A_ptr = A.ptr();
@@ -331,8 +331,8 @@ namespace matrix_plus_vector_impl {
 			*A_ptr = op(*A_ptr,*v_ptr);
 		}
 	}
-	template<class V, class I, class V2, class OP>
-	void matrix_plus_col(dense_matrix<V,host_memory_space,row_major,I>& A, const tensor<V2,host_memory_space>& v, const OP& op) {
+	template<class V, class V2, class OP>
+	void matrix_plus_col(tensor<V,host_memory_space,row_major>& A, const tensor<V2,host_memory_space>& v, const OP& op) {
 		cuvAssert(A.shape()[0] == v.size());
 		const V2* v_ptr = v.ptr();
 		V * A_ptr = A.ptr();
@@ -342,61 +342,38 @@ namespace matrix_plus_vector_impl {
 		}
 	}
 	// ====================  row ======================
-	template<class V, class I, class V2, class OP>
-	void matrix_plus_row(dense_matrix<V,dev_memory_space,column_major,I>& A, const tensor<V2,dev_memory_space>& v, const OP& op) {
+	template<class V, class V2, class T, class M, class OP>
+	void matrix_plus_row(tensor<V,T,M>& A, const tensor<V2,T>& v, const OP& op) {
 		cuvAssert(A.shape()[1] == v.size());
-		typedef dense_matrix<V,dev_memory_space,row_major, I> other;
-		other o(A.shape()[1], A.shape()[0], A.ptr(), true);
-		matrix_plus_col(o,v,op);
-	}
-	template<class V, class I, class V2, class OP>
-	void matrix_plus_row(dense_matrix<V,dev_memory_space,row_major,I>& A, const tensor<V2,dev_memory_space>& v, const OP& op) {
-		cuvAssert(A.shape()[1] == v.size());
-		typedef dense_matrix<V,dev_memory_space,column_major, I> other;
-		other o(A.shape()[1], A.shape()[0], A.ptr(), true);
-		matrix_plus_col(o,v,op);
-	}
-	template<class V, class I, class V2, class OP>
-	void matrix_plus_row(dense_matrix<V,host_memory_space,row_major,I>& A, const tensor<V2,host_memory_space>& v, const OP& op) {
-		cuvAssert(A.shape()[1] == v.size());
-		typedef dense_matrix<V,host_memory_space,column_major, I> other;
-		other o(A.shape()[1], A.shape()[0], A.ptr(), true);
-		matrix_plus_col(o,v,op);
-	}
-	template<class V, class I, class V2, class OP>
-	void matrix_plus_row(dense_matrix<V,host_memory_space,column_major,I>& A, const tensor<V2,host_memory_space>& v, const OP& op) {
-		cuvAssert(A.shape()[1] == v.size());
-		typedef dense_matrix<V,host_memory_space,row_major, I> other;
-		other o(A.shape()[1], A.shape()[0], A.ptr(), true);
-		matrix_plus_col(o,v,op);
+		matrix_plus_col(*(transposed_view(A)),v,op);
 	}
 }
 
 // ====================  col ======================
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
-void matrix_plus_col(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::plus<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
+void matrix_plus_col(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::plus<__value_type>());
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
-void matrix_times_col(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
+void matrix_times_col(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<__value_type>());
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
-void matrix_divide_col(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::divides<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
+void matrix_divide_col(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::divides<__value_type>());
 }
 // ====================  row ======================
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
-void matrix_plus_row(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::plus<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
+void matrix_plus_row(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::plus<__value_type>());
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
-void matrix_times_row(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::multiplies<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
+void matrix_times_row(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::multiplies<__value_type>());
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
-void matrix_divide_row(dense_matrix<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::divides<typename dense_matrix<__value_type,__memory_space_type,__memory_layout_type>::value_type>());
+void matrix_divide_row(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
+	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::divides<__value_type>());
 }
 
 namespace transpose_impl{
@@ -479,30 +456,30 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& d
 }
 
 template<class V, class T>
-cuv::tensor<V,T,row_major>* transposed_view(cuv::tensor<V,T,column_major>&  src){
+cuv::tensor<V,T,row_major> * transposed_view_p(cuv::tensor<V,T,column_major>&  src){
         cuvAssert(src.shape().size()==2);
 	return new tensor<V,T,row_major>(extents[src.shape()[1]][src.shape()[0]],src.ptr());
 }
 
 template<class V, class T>
-cuv::tensor<V,T,column_major>* transposed_view(cuv::tensor<V,T,row_major>&  src){
+cuv::tensor<V,T,column_major> * transposed_view_p(cuv::tensor<V,T,row_major>&  src){
         cuvAssert(src.shape().size()==2);
 	return new tensor<V,T,column_major>(extents[src.shape()[1]][src.shape()[0]],src.ptr());
 }
 
 #define INSTANTIATE_MV(V1,V2,M) \
-  template void matrix_plus_col(dense_matrix<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);   \
-  template void matrix_plus_col(dense_matrix<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&); \
-  template void matrix_times_col(dense_matrix<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);  \
-  template void matrix_times_col(dense_matrix<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&); \
-  template void matrix_divide_col(dense_matrix<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);  \
-  template void matrix_divide_col(dense_matrix<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&); \
-  template void matrix_plus_row(dense_matrix<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);   \
-  template void matrix_plus_row(dense_matrix<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&); \
-  template void matrix_times_row(dense_matrix<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);  \
-  template void matrix_times_row(dense_matrix<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&); \
-  template void matrix_divide_row(dense_matrix<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);  \
-  template void matrix_divide_row(dense_matrix<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&);
+  template void matrix_plus_col(tensor<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);   \
+  template void matrix_plus_col(tensor<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&); \
+  template void matrix_times_col(tensor<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);  \
+  template void matrix_times_col(tensor<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&); \
+  template void matrix_divide_col(tensor<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);  \
+  template void matrix_divide_col(tensor<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&); \
+  template void matrix_plus_row(tensor<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);   \
+  template void matrix_plus_row(tensor<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&); \
+  template void matrix_times_row(tensor<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);  \
+  template void matrix_times_row(tensor<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&); \
+  template void matrix_divide_row(tensor<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);  \
+  template void matrix_divide_row(tensor<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&);
 
 
 #define INSTANTIATE_BLOCKVIEW(V,M,I) \
@@ -514,10 +491,10 @@ cuv::tensor<V,T,column_major>* transposed_view(cuv::tensor<V,T,row_major>&  src)
   template void transpose(tensor<V,dev_memory_space,M>&,const tensor<V,dev_memory_space,M>&); 
 
 #define INSTANTIATE_TRANSPOSED_VIEW(V,I) \
-  template tensor<V,host_memory_space,row_major>* transposed_view(tensor<V,host_memory_space,column_major>&);\
-  template tensor<V,host_memory_space,column_major>* transposed_view(tensor<V,host_memory_space,row_major>&);\
-  template tensor<V,dev_memory_space,row_major>* transposed_view(tensor<V,dev_memory_space,column_major>&);\
-  template tensor<V,dev_memory_space,column_major>* transposed_view(tensor<V,dev_memory_space,row_major>&);
+  template std::auto_ptr<tensor<V,host_memory_space,row_major> > transposed_view(tensor<V,host_memory_space,column_major>&);\
+  template std::auto_ptr<tensor<V,host_memory_space,column_major> > transposed_view(tensor<V,host_memory_space,row_major>&);\
+  template std::auto_ptr<tensor<V,dev_memory_space,row_major> > transposed_view(tensor<V,dev_memory_space,column_major>&);\
+  template std::auto_ptr<tensor<V,dev_memory_space,column_major> > transposed_view(tensor<V,dev_memory_space,row_major>&);
 
 INSTANTIATE_TRANSPOSE(float,column_major,unsigned int);
 INSTANTIATE_TRANSPOSE(float,row_major,unsigned int);
