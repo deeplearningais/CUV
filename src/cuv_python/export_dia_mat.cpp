@@ -233,8 +233,8 @@ void export_dia_matrix(){
 			(arg("C"),arg("Cbd"),arg("A"),arg("B"),arg("factAB")=1.f,arg("factC")=0.f));
 			//"C <- A*B', where C is sparse");
 
-	def("prod", cuv::prod<dense_matrix<float,host_memory_space,column_major>, dia_matrix<float,host_memory_space>,dense_matrix<float,host_memory_space,column_major> >, 
+	def("prod", (void (*)(tensor<float,host_memory_space,column_major>&,const dia_matrix<float,host_memory_space>&,const tensor<float,host_memory_space,column_major>&,char, char, const float&, const float& ))cuv::prod<float,host_memory_space,column_major>, 
 			(arg("C"),arg("A"),arg("B"),arg("transA"),arg("transB"),arg("factAB")=1.f,arg("factC")=0.f));
-	def("prod", cuv::prod<dense_matrix<float,dev_memory_space,column_major>,  dia_matrix<float,dev_memory_space>,  dense_matrix<float,dev_memory_space,column_major> >,
+	def("prod", (void (*)(tensor<float,dev_memory_space,column_major>&,const dia_matrix<float,dev_memory_space>&,const tensor<float,dev_memory_space,column_major>&,char, char, const float&, const float& ))cuv::prod<float,dev_memory_space,column_major>,
 			(arg("C"),arg("A"),arg("B"),arg("transA"),arg("transB"),arg("factAB")=1.f,arg("factC")=0.f));
 }

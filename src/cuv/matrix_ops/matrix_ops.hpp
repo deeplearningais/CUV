@@ -151,8 +151,8 @@ namespace cuv{
    * 	For column major matrices, this only works with start_rows=0 and num_rows=matrix.h().
    */
   template<class __value_type, class __memory_space_type, class __memory_layout, class __index_type>
-	  dense_matrix<__value_type,__memory_space_type,__memory_layout,__index_type>* blockview(
-	  dense_matrix<__value_type,__memory_space_type,__memory_layout,__index_type> & matrix,
+	  tensor<__value_type,__memory_space_type,__memory_layout>* blockview(
+	  tensor<__value_type,__memory_space_type,__memory_layout> & matrix,
 			  __index_type start_rows,
 			  __index_type num_rows ,
 			  __index_type start_cols,
@@ -182,8 +182,10 @@ namespace cuv{
    * In the above transA(A)*transB(B) is the matrix product and all other operations are pointwise.
    * This is a thin wrapper of CUBLAS.
    */
-  template<class __matrix_type, class __matrix_type1, class __matrix_type2>
-	  void prod(__matrix_type& C, __matrix_type1& A, __matrix_type2& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const dia_matrix<__value_type,__memory_space_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
 
   /** @} */ // end group blas3
 
@@ -210,7 +212,7 @@ namespace cuv{
    *	transA(A)*v is the matrix-vector product and all other operations are pointwise.
    */
   template<class __value_type, class __memory_space_type>
-	  void spmv(tensor<__value_type, __memory_space_type>& dst, dia_matrix<__value_type, __memory_space_type>& A, tensor<__value_type, __memory_space_type>& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
+	  void spmv(tensor<__value_type, __memory_space_type>& dst, const dia_matrix<__value_type, __memory_space_type>& A, const tensor<__value_type, __memory_space_type>& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
   
   /** 
    * @brief Add a vector to each column of a matrix A.
@@ -279,7 +281,8 @@ namespace cuv{
    * @param src Source matrix 
    * 
    */
-  template<class __matrix_type > void transpose(__matrix_type&  dst, const __matrix_type&  src);
+template<class __value_type, class __memory_space_type, class __memory_layout_type>
+void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& dst, const tensor<__value_type,__memory_space_type, __memory_layout_type>& src);
 
   /** 
    * @brief Transpose a matrix by creating a view with different storage

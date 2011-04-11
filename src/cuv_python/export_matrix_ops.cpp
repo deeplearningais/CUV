@@ -73,7 +73,7 @@ boost::python::tuple matrix_arg_min(dense_matrix<VT, MST, column_major, IT>& mat
 
 template<class R, class S, class T>
 void export_blas3() {
-	def("prod",&prod<R,S,T>, (
+	def("prod",(void (*)(R&,const S&,const T&,char, char, const float&, const float& ))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
 				arg("C"), arg("A"), arg("B"), arg("transA")='n', arg("transB")='n', arg("factAB")=1.f, arg("factC")=0.f
 				));
 }
@@ -81,25 +81,25 @@ void export_blas3() {
 template<class M>
 void export_nullary_functor() {
 	def("apply_nullary_functor",
-	   (void (*)(typename M::tensor_type&,const NullaryFunctor&)) 
+	   (void (*)(M&,const NullaryFunctor&)) 
 	   apply_0ary_functor< typename M::value_type, typename M::memory_space_type>);
 	def("apply_nullary_functor",
-	   (void (*)(typename M::tensor_type&,const NullaryFunctor&, const typename M::value_type&)) 
+	   (void (*)(M&,const NullaryFunctor&, const typename M::value_type&)) 
 	   apply_0ary_functor< typename M::value_type, typename M::memory_space_type, typename M::value_type>);
 
 	// convenience wrappers
-	def("sequence", (void (*)(typename M::tensor_type&)) sequence);
-	def("fill",     (void (*)(typename M::tensor_type&,const typename M::value_type&)) fill);
+	def("sequence", (void (*)(M&)) sequence);
+	def("fill",     (void (*)(M&,const typename M::value_type&)) fill);
 }
 
 template<class M>
 void export_scalar_functor() {
 	// in place
 	//def("apply_scalar_functor",
-	   //(void (*)(typename M::tensor_type&,const ScalarFunctor&)) 
+	   //(void (*)(M&,const ScalarFunctor&)) 
 	   //apply_scalar_functor< typename M::value_type, typename M::memory_space_type >);
 	//def("apply_scalar_functor",
-	   //(void (*)(typename M::tensor_type&,const ScalarFunctor&, const typename M::value_type&)) 
+	   //(void (*)(M&,const ScalarFunctor&, const typename M::value_type&)) 
 	   //apply_scalar_functor< typename M::value_type, typename M::memory_space_type, typename M::value_type>);
         def("apply_scalar_functor",
            (void (*)(M&,const ScalarFunctor&)) 
@@ -183,14 +183,14 @@ void export_reductions(){
 	typedef typename M::value_type value_type;
 	typedef typename M::memory_space_type memory_space_type;
 	typedef typename M::memory_layout_type memory_layout_type;
-	def("has_inf",(bool (*)(const typename M::tensor_type&)) has_inf<value_type,typename M::memory_space_type>);
-	def("has_nan",(bool (*)(const typename M::tensor_type&)) has_nan<value_type,typename M::memory_space_type>);
-	def("sum",(float (*)(const typename M::tensor_type&)) sum<value_type,typename M::memory_space_type>);
-	def("norm1",(float (*)(const typename M::tensor_type&)) norm1<value_type,typename M::memory_space_type>);
-	def("norm2",(float (*)(const typename M::tensor_type&)) norm2<value_type,typename M::memory_space_type>);
-	def("maximum",(float (*)(const typename M::tensor_type&)) maximum<value_type,typename M::memory_space_type>);
-	def("minimum",(float (*)(const typename M::tensor_type&)) minimum<value_type,typename M::memory_space_type>);
-	def("mean", (float (*)(const typename M::tensor_type&)) mean<value_type,typename M::memory_space_type>);
+	def("has_inf",(bool (*)(const M&)) has_inf<value_type,typename M::memory_space_type>);
+	def("has_nan",(bool (*)(const M&)) has_nan<value_type,typename M::memory_space_type>);
+	def("sum",(float (*)(const M&)) sum<value_type,typename M::memory_space_type>);
+	def("norm1",(float (*)(const M&)) norm1<value_type,typename M::memory_space_type>);
+	def("norm2",(float (*)(const M&)) norm2<value_type,typename M::memory_space_type>);
+	def("maximum",(float (*)(const M&)) maximum<value_type,typename M::memory_space_type>);
+	def("minimum",(float (*)(const M&)) minimum<value_type,typename M::memory_space_type>);
+	def("mean", (float (*)(const M&)) mean<value_type,typename M::memory_space_type>);
         def("reduce_to_col", reduce_to_col<value_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
         def("reduce_to_row", reduce_to_row<value_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
         def("reduce_to_col", reduce_to_col<typename M::index_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
@@ -219,12 +219,12 @@ template <class M>
 void export_blockview(){
 	typedef typename M::index_type I;
 	def("blockview",(M*(*)(M&,I,I,I,I))
-			blockview<typename M::value_type,typename M::memory_space_type, typename M::memory_layout,typename M::index_type>,return_value_policy<manage_new_object>());
+			blockview<typename M::value_type,typename M::memory_space_type, typename M::memory_layout_type,typename M::index_type>,return_value_policy<manage_new_object>());
 }
 
 template <class M>
 void export_learn_step(){
-	def("learn_step_weight_decay",(void (*)(typename M::tensor_type&, typename M::tensor_type&, const float&, const float&)) learn_step_weight_decay<typename M::value_type, typename M::memory_space_type>);
+	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<typename M::value_type, typename M::memory_space_type>);
 	//def("rprop",
 			//(void (*)(M&, M&, M&,M&, const float&))
 			//rprop<typename M::value_type, typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>,
@@ -273,22 +273,22 @@ void export_matrix_ops(){
         .value("ADDEXP", RF_ADDEXP)
         .value("MULT", RF_MULT)
         ;
-	typedef dense_matrix<float,dev_memory_space,column_major> fdev;
-	typedef dense_matrix<float,host_memory_space,column_major> fhost;
-	typedef dense_matrix<float,host_memory_space,row_major> fhostr;
-	typedef dense_matrix<float,dev_memory_space,row_major> fdevr;
-	typedef dense_matrix<unsigned char,dev_memory_space,column_major> udev;
-	typedef dense_matrix<unsigned char,host_memory_space,column_major> uhost;
-	typedef dense_matrix<int,dev_memory_space,column_major> idev;
-	typedef dense_matrix<int,host_memory_space,column_major> ihost;
-	typedef dense_matrix<unsigned int,dev_memory_space,column_major> uidev;
-	typedef dense_matrix<unsigned int,host_memory_space,column_major> uihost;
-	typedef dense_matrix<unsigned int,dev_memory_space,row_major> uidevr;
-	typedef dense_matrix<unsigned int,host_memory_space,row_major> uihostr;
-	typedef dense_matrix<unsigned char,dev_memory_space,column_major> ucdev;
-	typedef dense_matrix<unsigned char,host_memory_space,column_major> uchost;
-	typedef dense_matrix<unsigned char,dev_memory_space,row_major> ucdevr;
-	typedef dense_matrix<unsigned char,host_memory_space,row_major> uchostr;
+	typedef tensor<float,dev_memory_space,column_major> fdev;
+	typedef tensor<float,host_memory_space,column_major> fhost;
+	typedef tensor<float,host_memory_space,row_major> fhostr;
+	typedef tensor<float,dev_memory_space,row_major> fdevr;
+	typedef tensor<unsigned char,dev_memory_space,column_major> udev;
+	typedef tensor<unsigned char,host_memory_space,column_major> uhost;
+	typedef tensor<int,dev_memory_space,column_major> idev;
+	typedef tensor<int,host_memory_space,column_major> ihost;
+	typedef tensor<unsigned int,dev_memory_space,column_major> uidev;
+	typedef tensor<unsigned int,host_memory_space,column_major> uihost;
+	typedef tensor<unsigned int,dev_memory_space,row_major> uidevr;
+	typedef tensor<unsigned int,host_memory_space,row_major> uihostr;
+	typedef tensor<unsigned char,dev_memory_space,column_major> ucdev;
+	typedef tensor<unsigned char,host_memory_space,column_major> uchost;
+	typedef tensor<unsigned char,dev_memory_space,row_major> ucdevr;
+	typedef tensor<unsigned char,host_memory_space,row_major> uchostr;
 
 	export_blas3<fdev,fdev,fdev>();
 	export_blas3<fhost,fhost,fhost>();

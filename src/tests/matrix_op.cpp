@@ -85,11 +85,11 @@ test_reduce(
 	dense_matrix<VT,dev_memory_space,ML,I>&   d_mat,
 	cuv::reduce_functor rf
 ){
-	dense_matrix<VT,host_memory_space,ML> h_mat(d_mat.h(), d_mat.w());
+	dense_matrix<VT,host_memory_space,ML> h_mat(d_mat.shape()[0], d_mat.shape()[1]);
 	convert(h_mat,d_mat);
 
-	unsigned int len = d_mat.h();
-	if(dim==0) len = d_mat.w();
+	unsigned int len = d_mat.shape()[0];
+	if(dim==0) len = d_mat.shape()[1];
 	tensor<VT2,host_memory_space>* v_host1= new tensor<VT2,host_memory_space> (len);
 	tensor<VT2,host_memory_space>* v_host2= new tensor<VT2,host_memory_space> (len);
 	tensor<VT2,dev_memory_space>   v_dev(len);
@@ -230,10 +230,10 @@ BOOST_AUTO_TEST_CASE( mat_op_mm )
 	prod(u,v,w,'n','t');
 	prod(r,x,z,'n','t');
 
-	dense_matrix<float,host_memory_space,column_major> u2(u.h(), u.w());
+	dense_matrix<float,host_memory_space,column_major> u2(u.shape()[0], u.shape()[1]);
 	convert(u2,u);
-	for(int i=0;i<u2.h();i++){
-		for(int j=0;j<u2.h();j++){
+	for(int i=0;i<u2.shape()[0];i++){
+		for(int j=0;j<u2.shape()[0];j++){
 			BOOST_CHECK_CLOSE( (float)u2(i,j), (float)r(i,j), 0.01 );
 		}
 	}
@@ -264,7 +264,7 @@ BOOST_AUTO_TEST_CASE( mat_op_rm_prod )
 	prod(hC,hA,hB,'n','n');
 	prod(dC,dA,dB,'n','n');
 
-	dense_matrix<float,host_memory_space,row_major> c2(dC.h(), dC.w());
+	dense_matrix<float,host_memory_space,row_major> c2(dC.shape()[0], dC.shape()[1]);
 	convert(c2,dC);
 
 	for(int i=0;i<m;i++){
@@ -283,12 +283,12 @@ BOOST_AUTO_TEST_CASE( mat_op_mmdim1 )
 	prod(b,a,w,'n','t');
 	prod(t,s,z,'n','t');
 
-	dense_matrix<float,host_memory_space,column_major> b2(b.h(), b.w());
+	dense_matrix<float,host_memory_space,column_major> b2(b.shape()[0], b.shape()[1]);
 	convert(b2,b);
 
-	for(int i=0;i<z.h();i++) {
+	for(int i=0;i<z.shape()[0];i++) {
 		float val = 0.0f;
-		for(int j=0;j<z.w();j++) {
+		for(int j=0;j<z.shape()[1];j++) {
 			val += s(0,j) * z(i,j);
 		}
 		BOOST_CHECK_CLOSE( (float)b2(0,i), (float)val, 0.01 );
@@ -333,10 +333,10 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_col )
 
 BOOST_AUTO_TEST_CASE( mat_op_mat_plus_vec_row_major )
 {
-	dense_matrix<float,dev_memory_space,row_major> V(v.h(),v.w()); sequence(V);
-	dense_matrix<float,host_memory_space,row_major> X(x.h(),x.w()); sequence(X);
-	dense_matrix<float,dev_memory_space,row_major> W(v.h(),v.w()); sequence(W);
-	dense_matrix<float,host_memory_space,row_major> Z(x.h(),x.w()); sequence(Z);
+	dense_matrix<float,dev_memory_space,row_major> V(v.shape()[0],v.shape()[1]); sequence(V);
+	dense_matrix<float,host_memory_space,row_major> X(x.shape()[0],x.shape()[1]); sequence(X);
+	dense_matrix<float,dev_memory_space,row_major> W(v.shape()[0],v.shape()[1]); sequence(W);
+	dense_matrix<float,host_memory_space,row_major> Z(x.shape()[0],x.shape()[1]); sequence(Z);
 	tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
 	tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
 	matrix_plus_col(V,v_vec);
@@ -418,14 +418,14 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_big_rm_to_row )
 
 BOOST_AUTO_TEST_CASE( mat_op_view )
 {
-	dense_matrix<float,host_memory_space,column_major>* h2 = blockview(x,(unsigned int)0,(unsigned int)n,(unsigned int)1,(unsigned int)2);
-	dense_matrix<float,dev_memory_space,column_major>*  d2 = blockview(v,(unsigned int)0,(unsigned int)n,(unsigned int)1,(unsigned int)2);
+	tensor<float,host_memory_space,column_major>* h2 = blockview(x,(unsigned int)0,(unsigned int)n,(unsigned int)1,(unsigned int)2);
+	tensor<float,dev_memory_space,column_major>*  d2 = blockview(v,(unsigned int)0,(unsigned int)n,(unsigned int)1,(unsigned int)2);
 	sequence(x);
 	sequence(v);
-	BOOST_CHECK_EQUAL(h2->h(), x.h());
-	BOOST_CHECK_EQUAL(d2->h(), x.h());
-	BOOST_CHECK_EQUAL(h2->w(), 2);
-	BOOST_CHECK_EQUAL(d2->w(), 2);
+	BOOST_CHECK_EQUAL(h2->shape()[0], x.shape()[0]);
+	BOOST_CHECK_EQUAL(d2->shape()[0], x.shape()[0]);
+	BOOST_CHECK_EQUAL(h2->shape()[1], 2);
+	BOOST_CHECK_EQUAL(d2->shape()[1], 2);
 	for(int i=0;i<n;i++)
 		for(int j=0;j<2;j++){
 			BOOST_CHECK_CLOSE((float)(*h2)(i,j),(float)(*d2)(i,j),0.01);
@@ -452,8 +452,8 @@ BOOST_AUTO_TEST_CASE( mat_op_transpose )
 	transpose(hC, hD);
 	transpose(dC, dD);
 
-	dense_matrix<float,host_memory_space,column_major> h2A(dA.w(), dA.h()); convert(h2A, dA);
-	dense_matrix<float,host_memory_space,row_major> h2C(dC.w(), dC.h()); convert(h2C, dC);
+	dense_matrix<float,host_memory_space,column_major> h2A(dA.shape()[1], dA.shape()[0]); convert(h2A, dA);
+	dense_matrix<float,host_memory_space,row_major> h2C(dC.shape()[1], dC.shape()[0]); convert(h2C, dC);
 
 	for(int i=0;i<n;i++)
 		for(int j=0;j<m;j++){
