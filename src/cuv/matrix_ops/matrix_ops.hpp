@@ -294,10 +294,10 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& d
    * Does not actually modify the content of the memory.
    * 
    */
-  template<class V, class T, class I>
-  cuv::dense_matrix<V,T,row_major,I>* transposed_view(cuv::dense_matrix<V,T,column_major,I>&  src);
-  template<class V, class T, class I>
-  cuv::dense_matrix<V,T,column_major,I>* transposed_view(cuv::dense_matrix<V,T,row_major,I>&  src);
+  template<class V, class T>
+  cuv::tensor<V,T,row_major>* transposed_view(cuv::tensor<V,T,column_major>&  src);
+  template<class V, class T>
+  cuv::tensor<V,T,column_major>* transposed_view(cuv::tensor<V,T,row_major>&  src);
 
   /** @} */ // end group blas2
 } // cuv

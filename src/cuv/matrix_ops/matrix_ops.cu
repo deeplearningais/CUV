@@ -508,14 +508,16 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& d
 	transpose_impl::transpose(dst,src);
 }
 
-template<class V, class T, class I>
-cuv::dense_matrix<V,T,row_major,I>* transposed_view(cuv::dense_matrix<V,T,column_major,I>&  src){
-	return new dense_matrix<V,T,row_major,I>(src.shape()[1],src.shape()[0],src.ptr(),true);
+template<class V, class T>
+cuv::tensor<V,T,row_major>* transposed_view(cuv::tensor<V,T,column_major>&  src){
+        cuvAssert(src.shape().size()==2);
+	return new tensor<V,T,row_major>(extents[src.shape()[1]][src.shape()[0]],src.ptr());
 }
 
-template<class V, class T, class I>
-cuv::dense_matrix<V,T,column_major,I>* transposed_view(cuv::dense_matrix<V,T,row_major,I>&  src){
-	return new dense_matrix<V,T,column_major,I>(src.shape()[1],src.shape()[0],src.ptr(),true);
+template<class V, class T>
+cuv::tensor<V,T,column_major>* transposed_view(cuv::tensor<V,T,row_major>&  src){
+        cuvAssert(src.shape().size()==2);
+	return new tensor<V,T,column_major>(extents[src.shape()[1]][src.shape()[0]],src.ptr());
 }
 
 #define INSTANTIATE_MV(V1,V2,M) \
@@ -542,10 +544,10 @@ cuv::dense_matrix<V,T,column_major,I>* transposed_view(cuv::dense_matrix<V,T,row
   template void transpose(tensor<V,dev_memory_space,M>&,const tensor<V,dev_memory_space,M>&); 
 
 #define INSTANTIATE_TRANSPOSED_VIEW(V,I) \
-  template dense_matrix<V,host_memory_space,row_major,I>* transposed_view(dense_matrix<V,host_memory_space,column_major,I>&);\
-  template dense_matrix<V,host_memory_space,column_major,I>* transposed_view(dense_matrix<V,host_memory_space,row_major,I>&);\
-  template dense_matrix<V,dev_memory_space,row_major,I>* transposed_view(dense_matrix<V,dev_memory_space,column_major,I>&);\
-  template dense_matrix<V,dev_memory_space,column_major,I>* transposed_view(dense_matrix<V,dev_memory_space,row_major,I>&);
+  template tensor<V,host_memory_space,row_major>* transposed_view(tensor<V,host_memory_space,column_major>&);\
+  template tensor<V,host_memory_space,column_major>* transposed_view(tensor<V,host_memory_space,row_major>&);\
+  template tensor<V,dev_memory_space,row_major>* transposed_view(tensor<V,dev_memory_space,column_major>&);\
+  template tensor<V,dev_memory_space,column_major>* transposed_view(tensor<V,dev_memory_space,row_major>&);
 
 INSTANTIATE_TRANSPOSE(float,column_major,unsigned int);
 INSTANTIATE_TRANSPOSE(float,row_major,unsigned int);
