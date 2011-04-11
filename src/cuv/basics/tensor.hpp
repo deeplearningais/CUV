@@ -551,6 +551,18 @@ namespace cuv
           return *this;
       }
       
+	template<class Mat, class NewVT>
+		struct switch_value_type{
+			typedef tensor<NewVT, typename Mat::memory_space_type, typename Mat::memory_layout_type> type;
+		};
+	template<class Mat, class NewML>
+		struct switch_memory_layout_type{
+			typedef tensor<typename Mat::value_type, typename Mat::memory_space_type, NewML> type;
+		};
+	template<class Mat, class NewMS>
+		struct switch_memory_space_type{
+			typedef tensor<typename Mat::value_type, NewMS, typename Mat::memory_layout_type> type;
+		};
 }
 
 
