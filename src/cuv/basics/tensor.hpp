@@ -125,10 +125,10 @@ namespace cuv
 			/**
 			 * construct tensor using extents object
 			 */
-			template<unsigned long D>
+			template<std::size_t D>
 			explicit const_tensor(const extent_gen<D>& eg){
 				m_shape.reserve(D);
-				for(unsigned long i=0;i<D;i++)
+				for(std::size_t i=0;i<D;i++)
 					m_shape.push_back(eg.ranges_[i].finish());
 				allocate();
 			}
@@ -136,10 +136,10 @@ namespace cuv
 			/**
 			 * construct tensor view using extents object and a pointer to the wrappable memory
 			 */
-			template<unsigned long D>
+			template<std::size_t D>
 			explicit const_tensor(const extent_gen<D>& eg, pointer_type ptr){
 				m_shape.reserve(D);
-				for(unsigned long i=0;i<D;i++)
+				for(std::size_t i=0;i<D;i++)
 					m_shape.push_back(eg.ranges_[i].finish());
 				allocate(ptr);
 			}
@@ -258,7 +258,7 @@ namespace cuv
 			/**
 			 * returns the index in linear memory of a point 
 			 */
-			template<unsigned long D>
+			template<std::size_t D>
 			index_type
 			index_of(const extent_gen<D>& eg)const{
 				index_type point[D];
@@ -387,7 +387,7 @@ namespace cuv
 			/**
 			 * construct tensor using extents object
 			 */
-			template<unsigned long D>
+			template<std::size_t D>
 			explicit tensor(const extent_gen<D>& eg)
 			:super_type(eg)
 			{
@@ -396,7 +396,7 @@ namespace cuv
 			/**
 			 * construct tensor view using extents object and a pointer to the wrappable memory
 			 */
-			template<unsigned long D>
+			template<std::size_t D>
 			explicit tensor(const extent_gen<D>& eg, pointer_type ptr)
 			:super_type(eg,ptr)
 			{
@@ -513,16 +513,16 @@ namespace cuv
 				return m_data[idx];
 			}
 			
-			template<unsigned long D>
+			template<std::size_t D>
 			void reshape(const extent_gen<D>& eg){
-				unsigned long new_size=1;	
+				std::size_t new_size=1;	
 				for(int i=0; i<D; i++)
 					new_size *= eg.ranges_[i].finish();
 
 				cuvAssert(size() == new_size);
 				m_shape.clear();
 				m_shape.reserve(D);
-				for(unsigned long i=0;i<D;i++)
+				for(std::size_t i=0;i<D;i++)
 					m_shape.push_back(eg.ranges_[i].finish());
 			}
                         void reshape(index_type i, index_type j){
