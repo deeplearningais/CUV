@@ -92,6 +92,34 @@ BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( vec_ops_scalar_mask )
+{
+	typedef dev_memory_space ms_type;
+	typedef tensor<float,ms_type> tensor_type;
+	tensor_type v(N);
+	sequence(v);
+	tensor<unsigned char,ms_type> mask(v.size());
+	apply_scalar_functor(mask,v,SF_LT,10.f); // mark all values in v which are less than 10 as "1"
+
+	// check mask outcome
+	for(int i=0;i<10;i++){
+		BOOST_CHECK_EQUAL((bool)mask[i], true );
+	}
+	for(int i=10;i<N;i++){
+		BOOST_CHECK_EQUAL((bool)mask[i], false );
+	}
+
+
+	apply_scalar_functor(v,SF_SQUARE, &mask); // square marked values
+	// check masked operation outcome
+	for(int i=0;i<10;i++){
+		BOOST_CHECK_EQUAL(v[i], i*i );
+	}
+	for(int i=10;i<N;i++){
+		BOOST_CHECK_EQUAL(v[i], i );
+	}
+}
+
 BOOST_AUTO_TEST_CASE( vec_ops_binary2 )
 {
 	apply_binary_functor(v,w, BF_AXPY, 2.f);

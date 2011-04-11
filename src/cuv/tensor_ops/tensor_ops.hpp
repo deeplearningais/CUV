@@ -233,55 +233,55 @@ namespace cuv{
    */
   namespace detail{
 	  template<class V1, class V2, class M, class S1, class S2>
-	  void apply_scalar_functor(tensor<V1, M>&, const tensor<V2, M>&, const ScalarFunctor& sf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2());
+	  void apply_scalar_functor(tensor<V1, M>&, const tensor<V2, M>&, const ScalarFunctor& sf, const int& numparams=0, const tensor<unsigned char,M>* mask=NULL,const S1& p=S1(), const S2& p2=S2());
 
 	  template<class V1, class V2, class M, class S1, class S2>
-          void apply_scalar_functor(tensor<V1, M, column_major>& dst, const tensor<V2, M, column_major>& src, const ScalarFunctor& sf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2()){
-              apply_scalar_functor(*reinterpret_cast<tensor<V1, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V2, M, row_major>*>(&src), sf, numparams, p, p2); 
+          void apply_scalar_functor(tensor<V1, M, column_major>& dst, const tensor<V2, M, column_major>& src, const ScalarFunctor& sf, const int& numparams=0, const tensor<unsigned char,M,column_major>* mask=NULL, const S1& p=S1(), const S2& p2=S2()){
+              apply_scalar_functor(*reinterpret_cast<tensor<V1, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V2, M, row_major>*>(&src), sf, numparams,reinterpret_cast<const tensor<unsigned char, M, row_major>*>(mask), p, p2); 
           }
   }
 
   /// @brief in-place, no parameters
   template<class D>
   void
-  apply_scalar_functor(D& v, const ScalarFunctor& sf){
+  apply_scalar_functor(D& v, const ScalarFunctor& sf, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>* mask=NULL){
 	  typedef typename D::value_type V;
-	  detail::apply_scalar_functor(v,v,sf,0,V(),V());
+	  detail::apply_scalar_functor(v,v,sf,0,mask,V(),V());
   }
   /// @brief no parameters
   template<class D, class S>
   void
-  apply_scalar_functor(D& dst, const S& src, const ScalarFunctor& sf){
+  apply_scalar_functor(D& dst, const S& src, const ScalarFunctor& sf, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
 	  typedef typename S::value_type V;
-	  detail::apply_scalar_functor(dst,src,sf,0,V(),V());
+	  detail::apply_scalar_functor(dst,src,sf,0,mask,V(),V());
   }
 
   /// @brief in-place, one parameter
   template<class D>
   void
-  apply_scalar_functor(D& dst,const ScalarFunctor& sf, const typename D::value_type& p){
+  apply_scalar_functor(D& dst,const ScalarFunctor& sf, const typename D::value_type& p, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
 	  typedef typename D::value_type V;
-	  detail::apply_scalar_functor(dst,dst,sf,1,p,V());
+	  detail::apply_scalar_functor(dst,dst,sf,1,mask,p,V());
   }
   /// @brief one parameter
   template<class D, class S>
   void
-  apply_scalar_functor(D& dst,const S& src, const ScalarFunctor& sf, const typename S::value_type& p){
+  apply_scalar_functor(D& dst,const S& src, const ScalarFunctor& sf, const typename S::value_type& p,const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
 	  typedef typename S::value_type V;
-	  detail::apply_scalar_functor(dst,src,sf,1,p,V());
+	  detail::apply_scalar_functor(dst,src,sf,1,mask,p,V());
   }
   
   /// @brief in-place, two parameters
   template<class D>
   void
-  apply_scalar_functor(D& dst, const ScalarFunctor& sf, const typename D::value_type& p, const typename D::value_type& p2){
-	  detail::apply_scalar_functor(dst,dst,sf,2,p,p2);
+  apply_scalar_functor(D& dst, const ScalarFunctor& sf, const typename D::value_type& p, const typename D::value_type& p2, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
+	  detail::apply_scalar_functor(dst,dst,sf,2,mask,p,p2);
   }
   /// @brief two parameters
   template<class D, class S>
   void
-  apply_scalar_functor(D& dst, const S& src, const ScalarFunctor& sf, const typename S::value_type& p, const typename S::value_type& p2){
-	  detail::apply_scalar_functor(dst,src,sf,2,p,p2);
+  apply_scalar_functor(D& dst, const S& src, const ScalarFunctor& sf, const typename S::value_type& p, const typename S::value_type& p2, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
+	  detail::apply_scalar_functor(dst,src,sf,2,mask,p,p2);
   }
 
   /// @}

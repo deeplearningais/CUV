@@ -18,7 +18,7 @@ def apply_0ary_functor(types):
 
 def apply_scalar_functor(types):
 	for t in types:
-		yield "namespace detail{{ template void apply_scalar_functor<{0}::value_type,{1}::value_type,{0}::memory_space_type,{2},{2}>({0}&,const {1}&, const ScalarFunctor&,const int&, const {2}&, const {2}&);}}".format(t[0], t[1], t[2])
+		yield "namespace detail{{ template void apply_scalar_functor<{0}::value_type,{1}::value_type,{0}::memory_space_type,{2},{2}>({0}&,const {1}&, const ScalarFunctor&,const int&, const tensor<unsigned char, {0}::memory_space_type>*, const {2}&, const {2}&);}}".format(t[0], t[1], t[2])
 
 def apply_binary_functor(types):
 	for t in types:

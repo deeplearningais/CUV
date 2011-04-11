@@ -94,6 +94,7 @@ void export_nullary_functor() {
 
 template<class M>
 void export_scalar_functor() {
+	typedef tensor<unsigned char, typename M::memory_space_type, typename M::memory_layout_type> mask_t;
 	// in place
 	//def("apply_scalar_functor",
 	   //(void (*)(M&,const ScalarFunctor&)) 
@@ -102,17 +103,17 @@ void export_scalar_functor() {
 	   //(void (*)(M&,const ScalarFunctor&, const typename M::value_type&)) 
 	   //apply_scalar_functor< typename M::value_type, typename M::memory_space_type, typename M::value_type>);
         def("apply_scalar_functor",
-           (void (*)(M&,const ScalarFunctor&)) 
-           apply_scalar_functor<M>);
+           (void (*)(M&,const ScalarFunctor&, const mask_t*)) 
+           apply_scalar_functor<M>, (arg("src/dst"),arg("functor"),arg("mask")=object()));
         def("apply_scalar_functor",
-           (void (*)(M&,const ScalarFunctor&, const typename M::value_type&)) 
-           apply_scalar_functor<M>);
+           (void (*)(M&,const ScalarFunctor&, const typename M::value_type&, const mask_t*)) 
+           apply_scalar_functor<M>, (arg("src/dst"),arg("functor"),arg("functor argument"),arg("mask")=object()));
         // not in place
         def("apply_scalar_functor",
-           (void (*)(M&, const M&, const ScalarFunctor&)) 
-           apply_scalar_functor<M>);
+           (void (*)(M&, const M&, const ScalarFunctor&, const mask_t*)) 
+           apply_scalar_functor<M>, (arg("dst"),arg("src"),arg("functor"),arg("mask")=object()));
         def("apply_scalar_functor",
-           (void (*)(M&,const M&,const ScalarFunctor&, const typename M::value_type&)) 
+           (void (*)(M&,const M&,const ScalarFunctor&, const typename M::value_type&, const mask_t*)) 
            apply_scalar_functor<M>);
 }
 
