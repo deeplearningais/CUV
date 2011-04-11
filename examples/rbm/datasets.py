@@ -1,4 +1,3 @@
-from scipy.io.numpyio import fwrite, fread
 #from scipy.cluster.vq import whiten
 #import mdp
 import base as pyrbm
@@ -104,12 +103,12 @@ class MNISTPadded(DataSet):
 
         # load training labels
         with open(os.path.join(path,'train-labels.idx1-ubyte')) as fd:
-            fread(fd,8,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=8)
             data_labels = np.fromfile(file=fd, dtype=np.uint8).reshape( (60000,1) )
         self.teacher = self.prepare_teacher(data_labels,10,cfg)
         # load test labels
         with open(os.path.join(path,'t10k-labels.idx1-ubyte')) as fd:
-            fread(fd,8,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=8)
             test_labels = np.fromfile(file=fd, dtype=np.uint8).reshape( (10000,1) )
         self.test_teacher = self.prepare_teacher(test_labels,10,cfg)
 
@@ -156,21 +155,21 @@ class MNISTData(DataSet):
             cfg.batchsize=16*25
         # load training data
         with open(os.path.join(path,'train-images.idx3-ubyte')) as fd:
-            fread(fd,16,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=16)
             self.data = np.fromfile(file=fd, dtype=np.uint8).reshape( (60000,784) ).T
         # load test data
         with open(os.path.join(path, 't10k-images.idx3-ubyte')) as fd:
-            fread(fd,16,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=16)
             self.test_data = np.fromfile(file=fd, dtype=np.uint8).reshape( (10000,784) ).T
 
         # load training labels
         with open(os.path.join(path,'train-labels.idx1-ubyte')) as fd:
-            fread(fd,8,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=8)
             data_labels = np.fromfile(file=fd, dtype=np.uint8).reshape( (60000,1) )
         self.teacher = self.prepare_teacher(data_labels,10,cfg)
         # load test labels
         with open(os.path.join(path,'t10k-labels.idx1-ubyte')) as fd:
-            fread(fd,8,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=8)
             test_labels = np.fromfile(file=fd, dtype=np.uint8).reshape( (10000,1) )
         self.test_teacher = self.prepare_teacher(test_labels,10,cfg)
 
@@ -185,20 +184,20 @@ class MNISTOneMinusData(DataSet):
             cfg.batchsize=16*25
         # load training data
         with open(os.path.join(path,'train-images.idx3-ubyte')) as fd:
-            fread(fd,16,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=16)
             self.data = (255-np.fromfile(file=fd, dtype=np.uint8).reshape( (60000,784) ).T).astype(np.uint8)
         # load test data
         with open(os.path.join(path, 't10k-images.idx3-ubyte')) as fd:
-            fread(fd,16,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=16)
             self.test_data = (255 - np.fromfile(file=fd, dtype=np.uint8).reshape( (10000,784) ).T).astype(np.uint8)
         # load training labels
         with open(os.path.join(path,'train-labels.idx1-ubyte')) as fd:
-            fread(fd,8,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=8)
             data_labels = np.fromfile(file=fd, dtype=np.uint8).reshape( (60000,1) )
         self.teacher = self.prepare_teacher(data_labels,10,cfg)
         # load test labels
         with open(os.path.join(path,'t10k-labels.idx1-ubyte')) as fd:
-            fread(fd,8,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=8)
             test_labels = np.fromfile(file=fd, dtype=np.uint8).reshape( (10000,1) )
         self.test_teacher = self.prepare_teacher(test_labels,10,cfg)
 
@@ -209,17 +208,17 @@ class MNISTTwiceData(DataSet):
         if cfg.batchsize==-1:
             cfg.batchsize=16*25
         with open(os.path.join(path,'train-images.idx3-ubyte')) as fd:
-            fread(fd,16,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=16)
             data = np.fromfile(file=fd, dtype=np.uint8).reshape( (60000,784)).T
             self.data = np.vstack((data,data))
         # load training labels
         with open(os.path.join(path,'train-labels.idx1-ubyte')) as fd:
-            fread(fd,8,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=8)
             data_labels = np.fromfile(file=fd, dtype=np.uint8).reshape( (60000,1) )
         self.teacher = self.prepare_teacher(data_labels,10,cfg)
         # load test labels
         with open(os.path.join(path,'t10k-labels.idx1-ubyte')) as fd:
-            fread(fd,8,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=8)
             test_labels = np.fromfile(file=fd, dtype=np.uint8).reshape( (10000,1) )
         self.test_teacher = self.prepare_teacher(test_labels,10,cfg)
 
@@ -229,7 +228,7 @@ class MNISTTestData(DataSet):
         if cfg.batchsize==-1:
             cfg.batchsize=16*25
         with open(os.getenv("HOME")+'/MNIST/t10k-images.idx3-ubyte') as fd:
-            fread(fd,16,'c')
+            np.fromfile(file=fd, dtype=np.uint8, count=16)
             data = np.fromfile(file=fd, dtype=np.uint8).reshape( (10000,784) )
 
 class ImagePatchesData(DataSet):
