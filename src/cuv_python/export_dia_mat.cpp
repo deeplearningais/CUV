@@ -224,14 +224,14 @@ void export_dia_matrix(){
 	//def("densedense_to_dia", densedense_to_dia<dia_matrix<float,dev_memory_space>, dev_block_descriptor<float>, dev_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
 	//def("densedense_to_dia", densedense_to_dia<dia_matrix<float,host_memory_space>,host_block_descriptor<float>,host_dense_matrix<float,column_major> >, "C <- A*B', where C is sparse");
 
-	def("densedense_to_dia", 
-			densedense_to_dia<dia_matrix<float,dev_memory_space>, dev_block_descriptor<float>, dense_matrix<float,dev_memory_space,column_major> >,
-			(arg("C"),arg("Cbd"),arg("A"),arg("B"),arg("factAB")=1.f,arg("factC")=0.f));
+	//def("densedense_to_dia", 
+			//densedense_to_dia<float,column_major, unsigned int>,
+			//(arg("C"),arg("Cbd"),arg("A"),arg("B"),arg("factAB")=1.f,arg("factC")=0.f));
 			//"C <- A*B', where C is sparse");
-	def("densedense_to_dia", 
-			densedense_to_dia<dia_matrix<float,host_memory_space>,host_block_descriptor<float>,dense_matrix<float,host_memory_space,column_major> >, 
-			(arg("C"),arg("Cbd"),arg("A"),arg("B"),arg("factAB")=1.f,arg("factC")=0.f));
-			//"C <- A*B', where C is sparse");
+	//def("densedense_to_dia", 
+			//densedense_to_dia<float,host_memory_space,column_major,unsigned int>, 
+			//(arg("C"),arg("Cbd"),arg("A"),arg("B"),arg("factAB")=1.f,arg("factC")=0.f));
+			////"C <- A*B', where C is sparse");
 
 	def("prod", (void (*)(tensor<float,host_memory_space,column_major>&,const dia_matrix<float,host_memory_space>&,const tensor<float,host_memory_space,column_major>&,char, char, const float&, const float& ))cuv::prod<float,host_memory_space,column_major>, 
 			(arg("C"),arg("A"),arg("B"),arg("transA"),arg("transB"),arg("factAB")=1.f,arg("factC")=0.f));

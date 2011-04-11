@@ -120,14 +120,24 @@ namespace cuv{
 	 * @param factAB the result of A*B is multiplied with this factAB and then added to factC*C
 	 * @param factC the result of A*B is multiplied with this factAB and then added to factC*C
 	 */
-	template<class __dia_type, class __bd_type, class __dense_type >
+        // dev_block_descriptor and host_block_descriptor explicit... UGLY...
+	template<class __value_type, class __memory_layout_type, class __index_type >
 	void densedense_to_dia(
-		   __dia_type&           C,
-		   const __bd_type&      Cbd,
-		   const __dense_type&   A,
-		   const __dense_type&   B,
-		   const typename __dia_type::value_type& factAB=1.f,
-		   const typename __dia_type::value_type& factC =0.f);
+		   dia_matrix<__value_type,dev_memory_space,__index_type>&           C,
+		   const dev_block_descriptor<__value_type, __index_type>&      Cbd,
+		   const tensor<__value_type, dev_memory_space, __memory_layout_type>&   A,
+		   const tensor<__value_type, dev_memory_space, __memory_layout_type>&   B,
+		   const __value_type& factAB=1.f,
+		   const __value_type& factC =0.f);
+
+	template<class __value_type, class __memory_layout_type, class __index_type >
+	void densedense_to_dia(
+		   dia_matrix<__value_type,host_memory_space,__index_type>&           C,
+		   const host_block_descriptor<__value_type, __index_type>&      Cbd,
+		   const tensor<__value_type, host_memory_space, __memory_layout_type>&   A,
+		   const tensor<__value_type, host_memory_space, __memory_layout_type>&   B,
+		   const __value_type& factAB=1.f,
+		   const __value_type& factC =0.f);
 
 	
 } // cuv

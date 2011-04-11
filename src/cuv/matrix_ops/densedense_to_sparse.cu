@@ -32,7 +32,7 @@
 #include <iostream>
 #include <thrust/device_ptr.h>
 #include <thrust/host_vector.h>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/matrix_ops/densedense_to_sparse.hpp>
 
 // stuff from NVIDIA SDK
@@ -205,15 +205,17 @@ namespace cuv{
 			void densedense_to_dia(
 					dia_matrix<value_type,host_memory_space,index_type>& dst,
 					const host_block_descriptor<value_type,index_type>& bd,
-					const dense_matrix<value_type,cuv::host_memory_space,column_major,index_type>& A,
-					const dense_matrix<value_type,cuv::host_memory_space,column_major,index_type>& B,
+					const tensor<value_type,cuv::host_memory_space,column_major>& A,
+					const tensor<value_type,cuv::host_memory_space,column_major>& B,
 					const value_type& factAB,
 					const value_type& factC){
-				cuvAssert(dst.w() == B.h());
-				cuvAssert(dst.h() == A.h());
-				cuvAssert(A.w()   == B.w());
+                                cuvAssert(A.shape().size()==2);
+                                cuvAssert(B.shape().size()==2);
+				cuvAssert(dst.w() == B.shape()[0]);
+				cuvAssert(dst.h() == A.shape()[0]);
+				cuvAssert(A.shape()[1]   == B.shape()[1]);
 				value_type *dst_diabase = dst.vec().ptr();
-				const index_type Ah = A.h(), Aw = A.w(), Bh = B.h(), Bw = B.w(), Ch = dst.h(), Cw = dst.w();
+				const index_type Ah = A.shape()[0], Aw = A.shape()[1], Bh = B.shape()[0], Bw = B.shape()[1], Ch = dst.h(), Cw = dst.w();
 				const int rf = dst.row_fact();
 				for(int dia=0;dia<dst.num_dia();dia++, dst_diabase += dst.stride()){
 						const int k = dst.get_offset(dia);  //diagonal offset
@@ -252,11 +254,13 @@ namespace cuv{
 			void densedense_to_dia(
 					dia_matrix<value_type,dev_memory_space,index_type>& dst,
 					const dev_block_descriptor<value_type,index_type>& bd,
-					const dense_matrix<value_type,cuv::dev_memory_space,column_major,index_type>& A,
-					const dense_matrix<value_type,cuv::dev_memory_space,column_major,index_type>& B,
+					const tensor<value_type,cuv::dev_memory_space,column_major>& A,
+					const tensor<value_type,cuv::dev_memory_space,column_major>& B,
 					const value_type& factAB,
 					const value_type& factC
 					){
+                                cuvAssert(A.shape().size()==2);
+                                cuvAssert(B.shape().size()==2);
 				dim3 block(SPARSE_DIA_BLOCK_SIZE, SPARSE_DIA_BLOCK_SIZE);
 				dim3 grid; 
 				if(bd.blocks().len < 4096)
@@ -269,10 +273,10 @@ namespace cuv{
 				}
 
 				cuvAssert(bd.blocks().ptr);
-				cuvAssert(dst.w() == B.h());
-				cuvAssert(dst.h() == A.h());
-				cuvAssert(A.w()   == B.w());
-				/*cuvAssert(A.w() % SPARSE_DIA_BLOCK_SIZE  == 0);*/
+				cuvAssert(dst.w() == B.shape()[0]);
+				cuvAssert(dst.h() == A.shape()[0]);
+				cuvAssert(A.shape()[1]   == B.shape()[1]);
+				/*cuvAssert(A.shape()[1] % SPARSE_DIA_BLOCK_SIZE  == 0);*/
 				/*cout << "dMultiplyAdd: block:" << block.x << ", "<<block.y<<"; grid: "<<grid.x<<endl;*/
 #ifndef NDEBUG
 				/*float theoret_speedup = (dst.n()/(SPARSE_DIA_BLOCK_SIZE*SPARSE_DIA_BLOCK_SIZE)) / (float)(bd.blocks().len);*/
@@ -280,28 +284,38 @@ namespace cuv{
 #endif
 				if(0);
 				else if(factAB==1.f && factC==0.f)
-					dense2dia_mm<false,false,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
+					dense2dia_mm<false,false,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.shape()[1], A.shape()[0], B.shape()[0], bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 				else if(factAB==1.f && factC!=0.f)
-					dense2dia_mm<false,true,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
+					dense2dia_mm<false,true,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.shape()[1], A.shape()[0], B.shape()[0], bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 				else if(factAB!=1.f && factC==0.f)
-					dense2dia_mm<true,false,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
+					dense2dia_mm<true,false,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.shape()[1], A.shape()[0], B.shape()[0], bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 				else if(factAB!=1.f && factC!=0.f)
-					dense2dia_mm<true,true,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.w(), A.h(), B.h(), bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
+					dense2dia_mm<true,true,value_type><<<grid,block>>>(dst.ptr(), A.ptr(), B.ptr(), A.shape()[1], A.shape()[0], B.shape()[0], bd.blocks().ptr, dst.stride(),factAB,factC,dst.row_fact());
 
 				cuvSafeCall(cudaThreadSynchronize());
 			}
 	}
 
-	template<class __dia_type, class __bd_type, class __dense_type >
+	template<class __value_type, class __memory_layout_type, class __index_type >
 	void densedense_to_dia(
-		   __dia_type&dst,
-		   const __bd_type&bd,
-		   const __dense_type&A,
-		   const __dense_type&B,
-		   const typename __dia_type::value_type& factAB,
-		   const typename __dia_type::value_type& factC
-		   ){
-		densedense_to_dia_impl::densedense_to_dia(dst,bd,A,B,factAB,factC);
+		   dia_matrix<__value_type,dev_memory_space,__index_type>&           C,
+		   const dev_block_descriptor<__value_type, __index_type>&      Cbd,
+		   const tensor<__value_type, dev_memory_space, __memory_layout_type>&   A,
+		   const tensor<__value_type, dev_memory_space, __memory_layout_type>&   B,
+		   const __value_type& factAB,
+		   const __value_type& factC){
+		densedense_to_dia_impl::densedense_to_dia(C,Cbd,A,B,factAB,factC);
+	}
+
+	template<class __value_type, class __memory_layout_type, class __index_type >
+	void densedense_to_dia(
+		   dia_matrix<__value_type,host_memory_space,__index_type>&           C,
+		   const host_block_descriptor<__value_type, __index_type>&      Cbd,
+		   const tensor<__value_type, host_memory_space, __memory_layout_type>&   A,
+		   const tensor<__value_type, host_memory_space, __memory_layout_type>&   B,
+		   const __value_type& factAB,
+		   const __value_type& factC){
+		densedense_to_dia_impl::densedense_to_dia(C,Cbd,A,B,factAB,factC);
 	}
 
 	/*
@@ -311,14 +325,14 @@ namespace cuv{
 	template void densedense_to_dia(                                \
 			dia_matrix<V,dev_memory_space>& ,                                  \
 			const dev_block_descriptor<V>& ,                      \
-			const dense_matrix<V,cuv::dev_memory_space,column_major>& ,        \
-			const dense_matrix<V,cuv::dev_memory_space,column_major>&,         \
+			const tensor<V,cuv::dev_memory_space,column_major>& ,        \
+			const tensor<V,cuv::dev_memory_space,column_major>&,         \
 			const V&,const V&);       \
 	template void densedense_to_dia(                                \
 			dia_matrix<V,host_memory_space>& ,                                  \
 			const host_block_descriptor<V>& ,                      \
-			const dense_matrix<V,cuv::host_memory_space,column_major>& ,        \
-			const dense_matrix<V,cuv::host_memory_space,column_major>&,         \
+			const tensor<V,cuv::host_memory_space,column_major>& ,        \
+			const tensor<V,cuv::host_memory_space,column_major>&,         \
 			const V&,const V&);       
 
 INST_DD2DIA(float);
