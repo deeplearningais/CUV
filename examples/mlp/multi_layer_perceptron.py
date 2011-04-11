@@ -58,13 +58,11 @@ class MLP:
                     self.weight_layer[i].forward()
 
                 # calculate error at output layer
-                cp.apply_binary_functor(self.neuron_layer[-1].deltas,
-                    teachbatch, cp.binary_functor.COPY)
+                cp.copy(self.neuron_layer[-1].deltas, teachbatch)
                 cp.apply_binary_functor(self.neuron_layer[-1].deltas,
                     self.neuron_layer[-1].activations,
                         cp.binary_functor.SUBTRACT)
-                cp.apply_binary_functor(squared_errors, self.neuron_layer[-1].deltas,
-                    cp.binary_functor.COPY)
+                cp.copy(squared_errors, self.neuron_layer[-1].deltas)
                 cp.apply_scalar_functor(squared_errors, cp.scalar_functor.SQUARE)
                 mse += cp.sum(squared_errors)
 
@@ -102,8 +100,7 @@ class MLP:
                 index_begin:index_end].astype('float32').copy('F'))
             for i in xrange(self.number_of_layers):
                 self.weight_layer[i].forward()
-            cp.apply_binary_functor(squared_errors, self.neuron_layer[-1].deltas,
-                cp.binary_functor.COPY)
+            cp.copy(squared_errors, self.neuron_layer[-1].deltas)
             cp.apply_scalar_functor(squared_errors, cp.scalar_functor.SQUARE)
             mse += cp.sum(squared_errors)
             teachbatch.dealloc()
