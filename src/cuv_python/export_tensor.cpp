@@ -134,6 +134,9 @@ namespace python_wrapping {
 		    std::vector<unsigned int> v(ndim);
 		    for(int i=0;i<ndim;i++)
 			    v[i]=o.dims()[i];
+		    bool is_f_contiguous = ((PyArrayObject *)o.handle().get())->flags & NPY_F_CONTIGUOUS;
+		    if(IsSame<L,column_major>::Result::value != is_f_contiguous)
+			    std::reverse(v.begin(),v.end());
 		    return new T(v,o.data());
 	    }
 
@@ -143,6 +146,9 @@ namespace python_wrapping {
 		    std::vector<unsigned int> v(ndim);
 		    for(int i=0;i<ndim;i++)
 			    v[i]=o.dims()[i];
+		    bool is_f_contiguous = ((PyArrayObject *)o.handle().get())->flags & NPY_F_CONTIGUOUS;
+		    if(IsSame<L,column_major>::Result::value != is_f_contiguous)
+			    std::reverse(v.begin(),v.end());
 		    T view(v,o.data());
 		    return new T(view);
 	    }
@@ -163,6 +169,9 @@ namespace python_wrapping {
 		    std::vector<unsigned int> v(ndim);
 		    for(int i=0;i<ndim;i++)
 			    v[i]=o.dims()[i];
+		    bool is_f_contiguous = ((PyArrayObject *)o.handle().get())->flags & NPY_F_CONTIGUOUS;
+		    if(IsSame<L,column_major>::Result::value != is_f_contiguous)
+			    std::reverse(v.begin(),v.end());
 		    tensor<V,host_memory_space,L> view(v,o.data());
 		    return new T(view);
 	    }
@@ -186,12 +195,20 @@ namespace python_wrapping {
 	    static pyublas::numpy_array<V> to_numpy_copy(const T& t){
 		    std::vector<npy_intp> dims(t.shape().size());
 		    std::copy(t.shape().begin(),t.shape().end(), dims.begin());
+		    if(IsSame<L,column_major>::Result::value)
+			    std::reverse(dims.begin(),dims.end());
 
 		    pyublas::numpy_array<V> v(t.shape().size(),&dims[0]);
+
 		    if(IsSame<L,column_major>::Result::value){
-			    v.reshape(t.shape().size(),&dims[0],NPY_FORTRANORDER);
+			    ((PyArrayObject *)v.to_python().get())->flags &= ~NPY_C_CONTIGUOUS;
+			    ((PyArrayObject *)v.to_python().get())->flags |=  NPY_F_CONTIGUOUS;
 		    }else if(t.shape().size()==1){
-			    v.reshape(t.shape().size(),&dims[0],NPY_ANYORDER);
+			    ((PyArrayObject *)v.to_python().get())->flags |= NPY_C_CONTIGUOUS;
+			    ((PyArrayObject *)v.to_python().get())->flags |= NPY_F_CONTIGUOUS;
+		    }else{
+			    ((PyArrayObject *)v.to_python().get())->flags |= NPY_C_CONTIGUOUS;
+			    ((PyArrayObject *)v.to_python().get())->flags &=~NPY_F_CONTIGUOUS;
 		    }
 		    std::copy(t.ptr(),t.ptr()+t.size(),v.data());
 		    return v;
@@ -205,17 +222,7 @@ namespace python_wrapping {
 	    /// copy device vector into a numpy array
 	    static pyublas::numpy_array<V> to_numpy_copy(const T& o){
 		    tensor<V,host_memory_space,L> t = o;  // pull from device
-		    std::vector<npy_intp> dims(t.shape().size());
-		    std::copy(t.shape().begin(),t.shape().end(), dims.begin());
-
-		    pyublas::numpy_array<V> v(t.shape().size(),&dims[0]);
-		    if(IsSame<L,column_major>::Result::value){
-			    v.reshape(t.shape().size(),&dims[0],NPY_FORTRANORDER);
-		    }else if(t.shape().size()==1){
-			    v.reshape(t.shape().size(),&dims[0],NPY_ANYORDER);
-		    }
-		    std::copy(t.ptr(),t.ptr()+t.size(),v.data());
-		    return v;
+		    return tens2npy<V,host_memory_space,L>::to_numpy_copy(t);
 	    }
     };
     
