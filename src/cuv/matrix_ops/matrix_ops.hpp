@@ -34,7 +34,6 @@
 #ifndef __MATRIX_OPS_HPP__
 #define __MATRIX_OPS_HPP__
 
-#include <cuv/basics/dense_matrix.hpp>
 #include <cuv/basics/dia_matrix.hpp>
 
 namespace cuv{
