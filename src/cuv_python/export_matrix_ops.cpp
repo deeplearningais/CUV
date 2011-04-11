@@ -165,17 +165,6 @@ void export_binary_functor() {
 	//def("supersample",(void (*)(M&,M&,int,Mint*))supersample<typename M::value_type,typename M::memory_layout,typename M::memory_space_type,typename M::index_type>,(arg("dst"),arg("img"),arg("factor"),arg("optional_indices")=object()));
 //}
 
-//template <class V, class MS>
-//void export_argmax_vec(){
-	//typedef dense_matrix<V,MS,column_major> Mc;
-	//typedef dense_matrix<V,MS,row_major> Mr;
-	//typedef tensor<int,MS> Vecint;
-	//def("argmax_to_row",  (void (*)(Vecint&,const Mc&)) argmax_to_row<Vecint, Mc>);
-	//def("argmax_to_col",  (void (*)(Vecint&,const Mr&)) argmax_to_column<Vecint, Mr>);
-	//typedef tensor<float,MS> Vecf;
-	//def("argmax_to_row",  (void (*)(Vecf&,const Mc&)) argmax_to_row<Vecf, Mc>);
-	//def("argmax_to_col",  (void (*)(Vecf&,const Mr&)) argmax_to_column<Vecf, Mr>);
-//}
 template <class M>
 void export_reductions(){
 	//typedef typename switch_value_type<M, typename M::index_type>::type::vec_type idx_vec;

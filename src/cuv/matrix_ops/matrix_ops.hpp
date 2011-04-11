@@ -95,24 +95,6 @@ namespace cuv{
   template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
 	  void reduce_to_row(tensor<__value_type, __memory_space_type>& dst, const tensor<__value_type2, __memory_space_type, __memory_layout_type>& src, reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f);
 
-  /** 
-   * @brief Write the index of the maximum for each column of a matrix into a vector
-   * 
-   * @param dst Destination vector, dst.size = src.h()
-   * @param src Source matrix 
-   */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void argmax_to_row(tensor<__value_type, __memory_space_type>& dst, const dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& src);
-
-  /** 
-   * @brief Write the index of the maximum for each row of a matrix into a vector
-   * 
-   * @param dst Destination vector, dst.size = src.w() 
-   * @param src Source matrix
-   * 
-   */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void argmax_to_column(tensor<__value_type, __memory_space_type>& dst, const dense_matrix<__value_type, __memory_space_type, __memory_layout_type>& src);
 
  /** @} */ // end of group reductions
 

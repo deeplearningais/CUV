@@ -146,48 +146,6 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	}
 }
 
-template<unsigned int BLOCK_DIM, class I, class T>
-__global__
-void argmax_row_kernel(I* vector, const T* matrix, unsigned int nCols, unsigned int nRows) {
-	__shared__ I shIdx[BLOCK_DIM]; // index of the maximum
-	__shared__ T shVal[BLOCK_DIM]; // value
-
-	const unsigned int tx = threadIdx.x;
-	const unsigned int by = blockIdx.x + gridDim.x*blockIdx.y;
-	if (by >= nCols)
-	   return;
-	const unsigned int off = blockDim.x;
-
-	unsigned int idx = by * nRows + tx;
-	shVal[tx] = (tx<nRows) ? matrix[idx] : (T) INT_MIN;
-	shIdx[tx] = (tx<nRows) ? tx          : 0;
-
-	for (unsigned int my = tx + off; my < nRows; my += off) {
-	   idx += off;
-	   T f = matrix[idx];
-
-	   if (f > shVal[tx]) {
-		  shVal[tx] = f;
-		  shIdx[tx] = my;
-	   }
-	}
-	__syncthreads();
-
-	for (unsigned int offset = BLOCK_DIM/2 ; offset > 0; offset/=2) {
-	   if (tx < offset) {
-		   const unsigned int v = tx+offset;
-		   if (shVal[tx] < shVal[v]) {
-			   shVal[tx] = shVal[v];
-			   shIdx[tx] = shIdx[v];
-		   }
-	   }
-	}
-	__syncthreads();
-
-	if (tx == 0)
-	   vector[by] = shIdx[0];
-}
-
 namespace cuv {
 
 namespace reduce_impl {
@@ -404,90 +362,6 @@ void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const tensor<__va
 	
 }
 
-/*namespace argmax_to_XXX_impl{*/
-	/*template<class V, class V2, class I>*/
-	/*void argmax_to_row(tensor<V2,dev_memory_space>&v, const dense_matrix<V, dev_memory_space,column_major, I>& m) {*/
-		/*cuvAssert(m.ptr() != NULL);*/
-		/*cuvAssert(m.shape()[1] == v.size());*/
-		/*const unsigned int u = min(m.shape()[1], MAX_GRID_SIZE);*/
-		/*dim3 grid(u, ceil(m.shape()[1]/(float)u));*/
-		/*static const unsigned int BLOCK_DIM = 256;*/
-		/*argmax_row_kernel<BLOCK_DIM><<<grid,BLOCK_DIM>>>(v.ptr(),m.ptr(),m.shape()[1],m.shape()[0]);*/
-		/*cuvSafeCall(cudaThreadSynchronize());*/
-	/*}*/
-
-	/*template<class V, class V2, class I>*/
-	/*void argmax_to_column(tensor<V2,dev_memory_space>&v, const dense_matrix<V,row_major,dev_memory_space,I>& m) {*/
-		/*cuvAssert(m.ptr() != NULL);*/
-		/*cuvAssert(m.shape()[0] == v.size());*/
-		/*const unsigned int u = min(m.shape()[0], MAX_GRID_SIZE);*/
-		/*dim3 grid(u, ceil(m.shape()[0]/(float)u));*/
-		/*static const unsigned int BLOCK_DIM = 256;*/
-		/*argmax_row_kernel<BLOCK_DIM><<<grid,BLOCK_DIM>>>(v.ptr(),m.ptr(),m.shape()[0],m.shape()[1]);*/
-		/*cuvSafeCall(cudaThreadSynchronize());*/
-	/*}*/
-
-	/*template<class V, class V2, class I>*/
-	/*void argmax_to_row(tensor<V2,host_memory_space>&v, const dense_matrix<V, host_memory_space,column_major,I>& m) {*/
-		/*cuvAssert(m.ptr() != NULL);*/
-		/*cuvAssert(m.shape()[1] == v.size());*/
-		/*const V* ptr = m.ptr();*/
-		/*V2* res = v.ptr();*/
-		/*for(int i=0; i<m.shape()[1];i++) {*/
-			/*int idx = 0;*/
-			/*V val = *ptr;*/
-			/*for(int j=0; j<m.shape()[0];j++) {*/
-				/*if(*ptr > val) {*/
-					/*val = *ptr;*/
-					/*idx = j;*/
-				/*}*/
-				/*ptr++;*/
-			/*}*/
-			/**res++ = idx;*/
-		/*}*/
-	/*}*/
-
-	/*template<class V, class V2, class I>*/
-	/*void argmax_to_column(tensor<V2,host_memory_space>&v, const dense_matrix<V,row_major,host_memory_space,I>& m) {*/
-		/*cuvAssert(m.ptr() != NULL);*/
-		/*cuvAssert(m.shape()[0] == v.size());*/
-		/*const V* ptr = m.ptr();*/
-		/*V2* res = v.ptr();*/
-		/*for(int i=0; i<m.shape()[0];i++) {*/
-			/*int idx = 0;*/
-			/*V val = *ptr;*/
-			/*for(int j=0; j<m.shape()[1];j++) {*/
-				/*if(*ptr > val) {*/
-					/*val = *ptr;*/
-					/*idx = j;*/
-				/*}*/
-				/*ptr++;*/
-			/*}*/
-			/**res++ = idx;*/
-		/*}*/
-	/*}*/
-
-/*}// namespace argmax_to_xxx*/
-/*template<class V, class M>*/
-/*void argmax_to_column(V&v, const M& m) {*/
-	/*argmax_to_XXX_impl::argmax_to_column(v,m);*/
-/*}*/
-
-/*template<class V, class M>*/
-/*void argmax_to_row(V&v, const M& m) {*/
-	/*argmax_to_XXX_impl::argmax_to_row(v,m);*/
-/*}*/
-
-/*#define INSTANTIATE_ARGMAX_TO_ROW(V,M,I) \*/
-  /*template void argmax_to_row(tensor<int,dev_memory_space>&,const dense_matrix<V,dev_memory_space,M,I>&);   \*/
-  /*template void argmax_to_row(tensor<int,host_memory_space>&,const dense_matrix<V,host_memory_space,M,I>&);  \*/
-  /*template void argmax_to_row(tensor<float,dev_memory_space>&,const dense_matrix<V,dev_memory_space,M,I>&);   \*/
-  /*template void argmax_to_row(tensor<float,host_memory_space>&,const dense_matrix<V,host_memory_space,M,I>&);  */
-/*#define INSTANTIATE_ARGMAX_TO_COL(V,M,I) \*/
-  /*template void argmax_to_column(tensor<int,dev_memory_space>&,const dense_matrix<V,dev_memory_space,M,I>&);   \*/
-  /*template void argmax_to_column(tensor<int,host_memory_space>&,const dense_matrix<V,host_memory_space,M,I>&); \*/
-  /*template void argmax_to_column(tensor<float,dev_memory_space>&,const dense_matrix<V,dev_memory_space,M,I>&);   \*/
-  /*template void argmax_to_column(tensor<float,host_memory_space>&,const dense_matrix<V,host_memory_space,M,I>&);   */
 
 #define INSTANTIATE_RED(V,V2,M) \
   template void reduce_to_row(tensor<V2,dev_memory_space>&, const tensor<V,dev_memory_space,M>&, reduce_functor,  const V&,const V&); \
