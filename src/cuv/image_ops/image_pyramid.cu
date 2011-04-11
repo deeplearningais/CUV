@@ -173,7 +173,7 @@ namespace cuv{
 	template<>        struct single_to_4<unsigned char>{typedef uchar4 type;};
 	template<class V,class S, class I>
 		void gaussian(
-				dense_matrix<V,S,row_major,I>& dst,
+				tensor<V,S,row_major>& dst,
 				const cuda_array<V,S,I>& src){
 
 			typedef typename texref<V>::type textype;
@@ -184,17 +184,17 @@ namespace cuv{
 			tex.addressMode[1] = cudaAddressModeClamp;
 
 			dim3 grid,threads;
-			grid = dim3 (iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h(), CB_TILE_H));
+			grid = dim3 (iDivUp(dst.shape()[1], CB_TILE_W), iDivUp(dst.shape()[0], CB_TILE_H));
 			threads = dim3 (CB_TILE_W, CB_TILE_H);
-			cuvAssert(dst.w() == src.w());
-			cuvAssert(dst.h() == src.h());
+			cuvAssert(dst.shape()[1] == src.w());
+			cuvAssert(dst.shape()[0] == src.h());
 			cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<V>();
 			cudaBindTextureToArray(tex, src.ptr(), channelDesc);
 			checkCudaError("cudaBindTextureToArray");
 			gaussian_kernel<<<grid,threads>>>(dst.ptr(),
-					dst.w(),
-					dst.w(),
-					dst.h());
+					dst.shape()[1],
+					dst.shape()[1],
+					dst.shape()[0]);
 			cuvSafeCall(cudaThreadSynchronize());
 			cudaUnbindTexture(tex);
 			checkCudaError("cudaUnbindTexture");
@@ -202,7 +202,7 @@ namespace cuv{
 		}
 	template<class V,class S, class I>
 		void gaussian_pyramid_downsample(
-				dense_matrix<V,S,row_major,I>& dst,
+				tensor<V,S,row_major>& dst,
 				const cuda_array<V,S,I>& src,
 				const unsigned int interleaved_channels){
 
@@ -228,35 +228,35 @@ namespace cuv{
 			dim3 grid,threads;
 			switch(interleaved_channels){
 				case 1: // deals with a single channel
-					grid = dim3 (iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h(), CB_TILE_H));
+					grid = dim3 (iDivUp(dst.shape()[1], CB_TILE_W), iDivUp(dst.shape()[0], CB_TILE_H));
 					threads = dim3 (CB_TILE_W, CB_TILE_H);
-					cuvAssert(dst.w() < src.w());
-					cuvAssert(dst.h() < src.h());
+					cuvAssert(dst.shape()[1] < src.w());
+					cuvAssert(dst.shape()[0] < src.h());
 					cudaBindTextureToArray(tex, src.ptr(), channelDesc);
 					checkCudaError("cudaBindTextureToArray");
 					gaussian_pyramid_downsample_kernel<<<grid,threads>>>(dst.ptr(),
-							dst.w(),
-							dst.w(),
-							dst.h());
+							dst.shape()[1],
+							dst.shape()[1],
+							dst.shape()[0]);
 					cuvSafeCall(cudaThreadSynchronize());
 					cudaUnbindTexture(tex);
 					checkCudaError("cudaUnbindTexture");
 					break;
 				case 4: // deals with 4 interleaved channels (and writes to 3(!))
-					cuvAssert(dst.w()   < src.w());
-					cuvAssert(dst.h() / 3 < src.h()); 
-					cuvAssert(dst.h() % 3 == 0); // three channels in destination (non-interleaved)
+					cuvAssert(dst.shape()[1]   < src.w());
+					cuvAssert(dst.shape()[0] / 3 < src.h()); 
+					cuvAssert(dst.shape()[0] % 3 == 0); // three channels in destination (non-interleaved)
 					cuvAssert(src.dim()==4);
-					grid    = dim3(iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h()/3, CB_TILE_H));
+					grid    = dim3(iDivUp(dst.shape()[1], CB_TILE_W), iDivUp(dst.shape()[0]/3, CB_TILE_H));
 					threads = dim3(CB_TILE_W, CB_TILE_H);
 					fill(dst, (V)0);
 					cudaBindTextureToArray(tex4, src.ptr(), channelDesc4);
 					checkCudaError("cudaBindTextureToArray");
 					gaussian_pyramid_downsample_kernel4val<V4,V><<<grid,threads>>>(
 							dst.ptr(),
-							dst.w(),
-							dst.w(),
-							dst.h()/3);
+							dst.shape()[1],
+							dst.shape()[1],
+							dst.shape()[0]/3);
 					cuvSafeCall(cudaThreadSynchronize());
 					cudaUnbindTexture(tex4);
 					checkCudaError("cudaUnbindTexture");
@@ -271,12 +271,12 @@ namespace cuv{
 	// Upsampling with hardware linear interpolation
 	template<class V,class S, class I>
 		void gaussian_pyramid_upsample(
-				dense_matrix<V,S,row_major,I>& dst,
+				tensor<V,S,row_major>& dst,
 				const cuda_array<V,S,I>& src){
-			cuvAssert(dst.w() > src.w());
-			cuvAssert(dst.h() > src.h());
+			cuvAssert(dst.shape()[1] > src.w());
+			cuvAssert(dst.shape()[0] > src.h());
 
-			dim3 grid(iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h(), CB_TILE_H));
+			dim3 grid(iDivUp(dst.shape()[1], CB_TILE_W), iDivUp(dst.shape()[0], CB_TILE_H));
 			dim3 threads(CB_TILE_W, CB_TILE_H);
 
 			typedef typename texref<V>::type textype;
@@ -290,9 +290,9 @@ namespace cuv{
 			checkCudaError("cudaBindTextureToArray");
 
 			gaussian_pyramid_upsample_kernel<<<grid,threads>>>(dst.ptr(),
-					dst.w(),
-					dst.w(),
-					dst.h());
+					dst.shape()[1],
+					dst.shape()[1],
+					dst.shape()[0]);
 			cuvSafeCall(cudaThreadSynchronize());
 
 			cudaUnbindTexture(tex);
@@ -378,11 +378,11 @@ namespace cuv{
 	// smoothly and according to detail level in the image
 	template<class VDest, class V, class S, class I>
 		void get_pixel_classes(
-			dense_matrix<VDest,S,row_major,I>& dst,
+			tensor<VDest,S,row_major>& dst,
 			const cuda_array<V,S,I>&             src_smooth,
 			float scale_fact
 		){
-			dim3 grid(iDivUp(dst.w(), CB_TILE_W), iDivUp(dst.h(), CB_TILE_H));
+			dim3 grid(iDivUp(dst.shape()[1], CB_TILE_W), iDivUp(dst.shape()[0], CB_TILE_H));
 			dim3 threads(CB_TILE_W, CB_TILE_H);
 
 			typedef typename texref<V>::type textype;
@@ -396,11 +396,11 @@ namespace cuv{
 			checkCudaError("cudaBindTextureToArray");
 
 			cuvAssert(src_smooth.h() % 3 == 0);
-			cuvAssert(dst.w() % 4 == 0); // float4!
+			cuvAssert(dst.shape()[1] % 4 == 0); // float4!
 			float offset = src_smooth.h()/3;
 			offset=0;
 			get_pixel_classes_kernel<float><<<grid,threads>>>((uchar4*)dst.ptr(),
-					dst.w()/4, dst.w()/4, dst.h(),
+					dst.shape()[1]/4, dst.shape()[1]/4, dst.shape()[0],
 					offset,
 					scale_fact
 					);
@@ -412,37 +412,37 @@ namespace cuv{
 
 	// explicit instantiation
 	template void gaussian(
-			dense_matrix<float,dev_memory_space,row_major,unsigned int>& dst,
+			tensor<float,dev_memory_space,row_major>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src);
 	template void gaussian(
-			dense_matrix<unsigned char,dev_memory_space,row_major,unsigned int>& dst,
+			tensor<unsigned char,dev_memory_space,row_major>& dst,
 			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src);
 
 	template void gaussian_pyramid_downsample(
-			dense_matrix<float,dev_memory_space,row_major,unsigned int>& dst,
+			tensor<float,dev_memory_space,row_major>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src,
 			const unsigned int);
 	template void gaussian_pyramid_downsample(
-			dense_matrix<unsigned char,dev_memory_space,row_major,unsigned int>& dst,
+			tensor<unsigned char,dev_memory_space,row_major>& dst,
 			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src,
 			const unsigned int);
 	template void gaussian_pyramid_upsample(
-			dense_matrix<float,dev_memory_space,row_major,unsigned int>& dst,
+			tensor<float,dev_memory_space,row_major>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src);
 	template void gaussian_pyramid_upsample(
-			dense_matrix<unsigned char,dev_memory_space,row_major,unsigned int>& dst,
+			tensor<unsigned char,dev_memory_space,row_major>& dst,
 			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src);
 
 	template void get_pixel_classes(
-			dense_matrix<unsigned char,dev_memory_space,row_major,unsigned int>& dst,
+			tensor<unsigned char,dev_memory_space,row_major>& dst,
 			const cuda_array<unsigned char,dev_memory_space,unsigned int>& src,
 			float scale_fact);
 	template void get_pixel_classes(
-			dense_matrix<float,dev_memory_space,row_major,unsigned int>& dst,
+			tensor<float,dev_memory_space,row_major>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src,
 			float scale_fact);
 	template void get_pixel_classes(
-			dense_matrix<unsigned char,dev_memory_space,row_major,unsigned int>& dst,
+			tensor<unsigned char,dev_memory_space,row_major>& dst,
 			const cuda_array<float,dev_memory_space,unsigned int>& src,
 			float scale_fact);
 }

@@ -57,20 +57,20 @@ void export_move(){
 template<class V, class S, class I>
 void export_image_pyramid_functions(){
 	def("gaussian",
-			(void(*)(dense_matrix<V,S,row_major,I>&dst, const cuda_array<V,S,I>& src))
+			(void(*)(tensor<V,S,row_major>&dst, const cuda_array<V,S,I>& src))
 			gaussian<V,S,I>, (arg("dst"),arg("src")));
 	def("gaussian_pyramid_downsample",
-			(void(*)(dense_matrix<V,S,row_major,I>&dst, const cuda_array<V,S,I>& src, const unsigned int))
+			(void(*)(tensor<V,S,row_major>&dst, const cuda_array<V,S,I>& src, const unsigned int))
 			gaussian_pyramid_downsample<V,S,I>, (arg("dst"),arg("src"),arg("interleaved_channels")));
 	def("gaussian_pyramid_upsample",
-			(void(*)(dense_matrix<V,S,row_major,I>&dst, const cuda_array<V,S,I>& src))
+			(void(*)(tensor<V,S,row_major>&dst, const cuda_array<V,S,I>& src))
 			gaussian_pyramid_upsample<V,S,I>, (arg("dst"),arg("src")));
 }
 
 template<class VDest, class V, class S, class I>
 void export_pixel_classes(){
 	def("get_pixel_classes",
-			(void(*)(dense_matrix<VDest,S,row_major,I>&dst, 
+			(void(*)(tensor<VDest,S,row_major>&dst, 
 					 const cuda_array<V,S,I>& src, 
 					 float))
 			get_pixel_classes<VDest,V,S,I>, (arg("dst"),arg("src"),arg("scale_fact")));

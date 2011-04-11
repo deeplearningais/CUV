@@ -40,7 +40,6 @@
 
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
-#include <cuv/basics/dense_matrix.hpp>
 #include <cuv/basics/cuda_array.hpp>
 
 namespace cuv{
@@ -190,26 +189,26 @@ namespace cuv{
  */
 template<class T,class S, class I>
 void gaussian_pyramid_downsample(
-	dense_matrix<T,S,row_major,I>& dst,
+	tensor<T,S,row_major>& dst,
 	const cuda_array<T,S,I>& src,
 	const unsigned int interleaved_channels
 );
 template<class T,class S, class I>
 void gaussian_pyramid_upsample(
-	dense_matrix<T,S,row_major,I>& dst,
+	tensor<T,S,row_major>& dst,
 	const cuda_array<T,S,I>& src
 );
 
 template<class TDest, class T,class S, class I>
 void get_pixel_classes(
-	dense_matrix<TDest,S,row_major,I>& dst,
+	tensor<TDest,S,row_major>& dst,
 	const cuda_array<T,S,I>&           src,
 	float scale_fact
 );
 
 template<class T,class S, class I>
 void gaussian(
-	dense_matrix<T,S,row_major,I>& dst,
+	tensor<T,S,row_major>& dst,
 	const cuda_array<T,S,I>& src
 );
 
