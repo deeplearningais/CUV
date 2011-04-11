@@ -159,8 +159,8 @@ namespace cuv{
 	}
 
 #define RPROP_INSTANTIATE(V,S) \
-	template void rprop( tensor<V,host_memory_space>&, tensor<V,host_memory_space>&, tensor<S,host_memory_space>&, tensor<V,host_memory_space>&m, const float&); \
-	template void rprop( tensor<V,dev_memory_space>&,  tensor<V,dev_memory_space>&, tensor<S,dev_memory_space>&, tensor<V,dev_memory_space>&, const float&);
+	template void rprop<V,host_memory_space,S>( tensor<V,host_memory_space>&, tensor<V,host_memory_space>&, tensor<S,host_memory_space>&, tensor<V,host_memory_space>&m, const float&); \
+	template void rprop<V,dev_memory_space,S>( tensor<V,dev_memory_space>&,  tensor<V,dev_memory_space>&, tensor<S,dev_memory_space>&, tensor<V,dev_memory_space>&, const float&);
 #define LSWD_INSTANTIATE(V) \
 	template void learn_step_weight_decay( tensor<V,host_memory_space>&, tensor<V,host_memory_space>&, const float&,const float&); \
 	template void learn_step_weight_decay( tensor<V,dev_memory_space>&,  tensor<V,dev_memory_space>&, const float&,const float&);
