@@ -13,8 +13,8 @@ def kmeans(dataset,num_clusters,iters):
     cp.reduce_to_row(norms,dataset_dev,cp.reduce_functor.ADD_SQUARED)
 
     norms_clusters=cp.dev_tensor_float(num_clusters)
-    dists  = cp.dev_tensor_float(dataset_dev.shape[1], num_clusters)
-    nearest= cp.dev_tensor_float_ui(dataset_dev.shape[1])
+    dists  = cp.dev_tensor_float([dataset_dev.shape[1], num_clusters])
+    nearest= cp.dev_tensor_uint(dataset_dev.shape[1])
     nearest_dist= cp.dev_tensor_float(dataset_dev.shape[1])
 
     for i in xrange(iters):
