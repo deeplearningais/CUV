@@ -36,7 +36,7 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/basics/cuda_array.hpp>
 
 #include <cuv/image_ops/move.hpp>
@@ -51,7 +51,7 @@ template<class M, class N>
 void export_move(){
 	def("image_move",
 			(void(*)(M&, const N&, const unsigned int&,const unsigned int&,const unsigned int&, const int&, const int&))
-			image_move<M,N>, (arg("dst"),arg("src"),arg("image_w"),arg("image_h"),arg("num_maps"),arg("xshift"),arg("yshift")));
+			image_move<typename M::value_type,typename N::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (arg("dst"),arg("src"),arg("image_w"),arg("image_h"),arg("num_maps"),arg("xshift"),arg("yshift")));
 }
 
 template<class V, class S, class I>
@@ -91,8 +91,8 @@ void export_image_pyramid(std::string name){
 }
 
 void export_image_ops(){
-	export_move<dense_matrix<float,dev_memory_space,column_major>,dense_matrix<unsigned char,dev_memory_space,column_major> >();
-	export_move<dense_matrix<unsigned char,dev_memory_space,column_major>,dense_matrix<unsigned char,dev_memory_space,column_major> >();
+	export_move<tensor<float,dev_memory_space,column_major>,tensor<unsigned char,dev_memory_space,column_major> >();
+	export_move<tensor<unsigned char,dev_memory_space,column_major>,tensor<unsigned char,dev_memory_space,column_major> >();
 	export_image_pyramid_functions<float,dev_memory_space,unsigned int>();
 	export_image_pyramid_functions<unsigned char,dev_memory_space,unsigned int>();
 	
@@ -100,6 +100,6 @@ void export_image_ops(){
 	export_pixel_classes<unsigned char, float,dev_memory_space,unsigned int>();
 	export_pixel_classes<float, float,  dev_memory_space,unsigned int>();
 
-	export_image_pyramid<dense_matrix<float, dev_memory_space,row_major, unsigned int> >("dev_image_pyramid_f");
-	export_image_pyramid<dense_matrix<unsigned char, dev_memory_space,row_major, unsigned int> >("dev_image_pyramid_uc");
+	export_image_pyramid<tensor<float, dev_memory_space,row_major> >("dev_image_pyramid_f");
+	export_image_pyramid<tensor<unsigned char, dev_memory_space,row_major> >("dev_image_pyramid_uc");
 }

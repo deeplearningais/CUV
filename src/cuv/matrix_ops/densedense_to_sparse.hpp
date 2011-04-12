@@ -35,7 +35,6 @@
 #define __DENSEDENSE_TO_SPARSE_HPP__
 
 
-#include <cuv/basics/dense_matrix.hpp>
 #include <cuv/basics/dia_matrix.hpp>
 
 #define SPARSE_DIA_BLOCK_SIZE 16

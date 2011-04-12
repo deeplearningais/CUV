@@ -1,4 +1,4 @@
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/basics/cuda_array.hpp>
 
 texture<float,         2, cudaReadModeElementType> cuda_array_tex_float; 
@@ -76,18 +76,20 @@ void cuda_array<V,S,I>::dealloc(){
 
 #define CA cuda_array<V,S,I>
 template<class V,class S, class I>
-void cuda_array<V,S,I>::assign(const dense_matrix<V, host_memory_space, row_major, I>& src){
+void cuda_array<V,S,I>::assign(const tensor<V, host_memory_space, row_major>& src){
+        cuvAssert(src.shape().size()==2);
 	cuvAssert(src.ptr()!=NULL);
-	cuvAssert(src.w()/m_dim == m_width);
-	cuvAssert(src.h()       == m_height);
+	cuvAssert(src.shape()[1]/m_dim == m_width);
+	cuvAssert(src.shape()[0]       == m_height);
 	cudaMemcpyToArray(ptr(), 0, 0, src.ptr(), src.memsize(), cudaMemcpyHostToDevice);
 	checkCudaError("cudaMemcpyToArray");
 }
 template<class V,class S, class I>
-void cuda_array<V,S,I>::assign(const dense_matrix<V,dev_memory_space,row_major,I>& src){
+void cuda_array<V,S,I>::assign(const tensor<V,dev_memory_space,row_major>& src){
+        cuvAssert(src.shape().size()==2);
 	cuvAssert(src.ptr()!=NULL);
-	cuvAssert(src.w()/m_dim  == m_width);
-	cuvAssert(src.h()        == m_height);
+	cuvAssert(src.shape()[1]/m_dim  == m_width);
+	cuvAssert(src.shape()[0]        == m_height);
 	cudaMemcpyToArray(ptr(), 0, 0, src.ptr(), src.memsize(), cudaMemcpyDeviceToDevice);
 	checkCudaError("cudaMemcpyToArray");
 }
@@ -104,8 +106,8 @@ cuda_array<V,S,I>::operator()(const I& i, const I& j)const{
 #define INST(V,M,I) \
 	template void cuda_array<V,M,I>::alloc();   \
 	template void cuda_array<V,M,I>::dealloc();   \
-	template void cuda_array<V,M,I>::assign(const dense_matrix<V,host_memory_space,row_major,I>&);   \
-	template void cuda_array<V,M,I>::assign(const dense_matrix<V,dev_memory_space,row_major,I>&);    \
+	template void cuda_array<V,M,I>::assign(const tensor<V,host_memory_space,row_major>&);   \
+	template void cuda_array<V,M,I>::assign(const tensor<V,dev_memory_space,row_major>&);    \
 	template V cuda_array<V,M,I>::operator()(const I&, const I&)const;   
 
 INST(float,dev_memory_space,unsigned int);

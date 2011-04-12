@@ -33,6 +33,7 @@
 
 #ifndef MOVE_HPP_
 #define MOVE_HPP_
+#include<cuv/basics/tensor.hpp>
 
 namespace cuv
 {
@@ -63,13 +64,8 @@ namespace cuv
 	 * @param xshift how much to shift right
 	 * @param yshift how much to shift down
 	 */
-	template<class __matrix_typeA, class __matrix_typeB>
-	void image_move(__matrix_typeA& dst, const __matrix_typeB& src, 
-			const unsigned int& src_image_size, 
-			const unsigned int& dst_image_size, 
-			const unsigned int& src_num_maps,
-			const int& xshift, 
-			const int& yshift);
+	template<class __value_typeA, class __value_typeB, class __memory_space_type, class __memory_layout_type>
+	void image_move(tensor<__value_typeA,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_typeB,__memory_space_type,__memory_layout_type>& src, const unsigned int& image_width, const unsigned int& image_height, const unsigned int& num_maps, const int& xshift, const int& yshift);
 };
 
 

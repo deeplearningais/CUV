@@ -37,7 +37,7 @@
 #include <stdexcept>
 #include <cuv/tools/cuv_general.hpp>
 
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 
 #include <cuv/image_ops/move.hpp>
 using namespace std;
@@ -293,29 +293,31 @@ namespace cuv
 	namespace image_move_impl
 	{
 		template<class __value_typeA, class __value_typeB>
-		void image_move(dense_matrix<__value_typeA,dev_memory_space,column_major>& dst, const dense_matrix<__value_typeB,dev_memory_space,column_major>& src, 
+		void image_move(tensor<__value_typeA,dev_memory_space,column_major>& dst, const tensor<__value_typeB,dev_memory_space,column_major>& src, 
 			const unsigned int& src_image_size, 
 			const unsigned int& dst_image_size,
 			const unsigned int& src_num_maps,
 			const char& xshift, 
 			const char& yshift){
 
+                        cuvAssert(dst.shape().size()==2);
+                        cuvAssert(src.shape().size()==2);
 
 			const unsigned char dst_num_maps = src_num_maps == 4 ? 3 : 1;
 
-			cuvAssert(src.w() == dst.w());
-			cuvAssert(src.h() % (src_image_size*src_num_maps) == 0);
-			cuvAssert(dst.h() % (dst_image_size*dst_num_maps) == 0);
+			cuvAssert(src.shape()[1] == dst.shape()[1]);
+			cuvAssert(src.shape()[0] % (src_image_size*src_num_maps) == 0);
+			cuvAssert(dst.shape()[0] % (dst_image_size*dst_num_maps) == 0);
 
 			dim3 blockDim(dst_image_size);
-			dim3 gridDim (dst_image_size,src.w());
+			dim3 gridDim (dst_image_size,src.shape()[1]);
 			static const bool UseCache = true;
 			const bool enlarge = dst_image_size != src_image_size;
 			if(src_num_maps == 4){
 				typedef uchar4 T;
 				const T* src_ptr = reinterpret_cast<const T*>(src.ptr());
 				if(UseCache)
-					bind_x(src_ptr, src.n()/src_num_maps);
+					bind_x(src_ptr, src.size()/src_num_maps);
 				move_image_kernel<UseCache><<<gridDim,blockDim>>>(dst.ptr(),src_ptr,xshift,yshift,src_image_size,dst_num_maps,enlarge); 
 				if(UseCache)
 					unbind_x(src_ptr);
@@ -323,7 +325,7 @@ namespace cuv
 				typedef uchar1 T;
 				const T* src_ptr = reinterpret_cast<const T*>(src.ptr());
 				if(UseCache)
-					bind_x(src_ptr, src.n());
+					bind_x(src_ptr, src.size());
 				move_image_kernel<UseCache><<<gridDim,blockDim>>>(dst.ptr(),src_ptr,xshift,yshift,src_image_size,dst_num_maps,enlarge);
 				if(UseCache)
 					unbind_x(src_ptr);
@@ -333,21 +335,23 @@ namespace cuv
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 		template<class __value_typeA, class __value_typeB>
-		void image_move(dense_matrix<__value_typeA,host_memory_space,column_major>& dst, const dense_matrix<__value_typeB,host_memory_space,column_major>& src, const unsigned int& image_width, const unsigned int& image_height, const unsigned int& num_maps, const char& xshift, const char& yshift){
+		void image_move(tensor<__value_typeA,host_memory_space,column_major>& dst, const tensor<__value_typeB,host_memory_space,column_major>& src, const unsigned int& image_width, const unsigned int& image_height, const unsigned int& num_maps, const char& xshift, const char& yshift){
 			throw std::runtime_error("not implemented");
 		}
 		
 	};
-	template<class __matrix_typeA, class __matrix_typeB>
-	void image_move(__matrix_typeA& dst, const __matrix_typeB& src, const unsigned int& image_width, const unsigned int& image_height, const unsigned int& num_maps, const int& xshift, const int& yshift){
+	template<class __value_typeA, class __value_typeB, class __memory_space_type, class __memory_layout_type>
+	void image_move(tensor<__value_typeA,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_typeB,__memory_space_type,__memory_layout_type>& src, const unsigned int& image_width, const unsigned int& image_height, const unsigned int& num_maps, const int& xshift, const int& yshift){
+                cuvAssert(dst.shape().size()==2);
+                cuvAssert(src.shape().size()==2);
 		image_move_impl::image_move(dst,src,image_width,image_height,num_maps,(char)xshift,(char)yshift);
 	}
 
 #define INST(A,B) \
 	template      \
-	void image_move(dense_matrix<A,dev_memory_space,column_major>&,const dense_matrix<B,dev_memory_space,column_major>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
+	void image_move(tensor<A,dev_memory_space,column_major>&,const tensor<B,dev_memory_space,column_major>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
 	template      \
-	void image_move(dense_matrix<A,host_memory_space,column_major>&,const dense_matrix<B,host_memory_space,column_major>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
+	void image_move(tensor<A,host_memory_space,column_major>&,const tensor<B,host_memory_space,column_major>&, const unsigned int&, const unsigned int&, const unsigned int&, const int&, const int&); \
 
 	INST(float,unsigned char);
 	INST(unsigned char,unsigned char);

@@ -53,7 +53,7 @@ namespace cuv{
 	public:
 		typedef __matrix_type              matrix_type;            ///< the type of the contained matrices
 		typedef typename matrix_type::value_type    value_type;    ///< the type of one value in the matrix
-		typedef typename matrix_type::memory_layout memory_layout; ///< the memory layout (assumed to be row_major!)
+		typedef typename matrix_type::memory_layout_type memory_layout; ///< the memory layout (assumed to be row_major!)
 		typedef typename matrix_type::index_type    index_type;    ///< the index_type
 
 		/**
@@ -93,8 +93,8 @@ namespace cuv{
 			/////////////
 			// create base image at level 0
 			////////////
-			if(    src.h() == m_base_height*m_dim // the image dimensions match the input --> just copy.
-				&& src.w() == m_base_width
+			if(    src.shape()[0] == m_base_height*m_dim // the image dimensions match the input --> just copy.
+				&& src.shape()[1] == m_base_width
 			){
 				//std::cout << "Copycase"<<std::endl;
 					m_matrices[0]=src;
@@ -107,12 +107,12 @@ namespace cuv{
 					matrix_type& dst = m_matrices[0];
 					gaussian_pyramid_downsample(dst, cpy, interleaved_channels);
 			}
-			else if(src.h() > m_base_height*m_dim  // the image dimensions are too large: downsample to 1st level of pyramid
-				&&  src.w() > m_base_width
+			else if(src.shape()[0] > m_base_height*m_dim  // the image dimensions are too large: downsample to 1st level of pyramid
+				&&  src.shape()[1] > m_base_width
 			){
 				//std::cout << "Multichannel case"<<std::endl;
 				for(int i=0;i<m_dim;i++){
-					const __arg_matrix_type view(src.h()/m_dim, src.w(),(argval_type*)src.ptr(),true);
+					const __arg_matrix_type view(extents[src.shape()[0]/m_dim][src.shape()[1]],(argval_type*)src.ptr());
 					argca_type cpy(view);
 					matrix_type* dstview = get(0,i);
 					gaussian_pyramid_downsample(*dstview, cpy,1);
@@ -150,10 +150,10 @@ namespace cuv{
 		cuvAssert(depth   < m_matrices.size());
 		cuvAssert(channel < m_dim);
 		matrix_type& mat = m_matrices[depth];
-		//std::cout << "asking for channel "<<channel<<" in matrix of size "<<mat.h()<<"x"<<mat.w()<<std::endl;
-		unsigned int w = mat.w();
-		unsigned int h = mat.h();
-		return new matrix_type(h/m_dim,w,mat.ptr()+channel*w*h/m_dim,true);
+		//std::cout << "asking for channel "<<channel<<" in matrix of size "<<mat.shape()[0]<<"x"<<mat.shape()[1]<<std::endl;
+		unsigned int w = mat.shape()[1];
+		unsigned int h = mat.shape()[0];
+		return new matrix_type(extents[h/m_dim][w],mat.ptr()+channel*w*h/m_dim);
 	}
 
 	template <class __matrix_type>
@@ -173,7 +173,7 @@ namespace cuv{
 		m_matrices.clear();
 		for(unsigned int i=0; i<depth;i++){
 			//std::cout << "Creating Pyramid Level: "<< img_h<<"*"<<m_dim<<"x"<<img_w<<std::endl;
-			m_matrices.push_back(new matrix_type(img_h*m_dim, img_w));
+			m_matrices.push_back(new matrix_type(extents[img_h*m_dim][img_w]));
 			img_h=ceil(img_h/2.f);
 			img_w=ceil(img_w/2.f);
 		}

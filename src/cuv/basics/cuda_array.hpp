@@ -38,7 +38,7 @@
 #ifndef __CUDA_ARRAY_HPP__
 #define __CUDA_ARRAY_HPP__
 
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/basics/matrix.hpp>
 
 class cudaArray; // forward declaration of cudaArray so we do not need to include cuda headers here
@@ -91,8 +91,8 @@ namespace cuv
 		   * when type is float and dim=4 then the cudaArray is float4
 		   */
 		  template<class S>
-		  cuda_array(const dense_matrix<value_type,S,row_major,index_type>& src, const unsigned int dim=1) ///< construct by copying a dense matrix
-		  : base_type(src.h(), src.w()/dim)
+		  cuda_array(const tensor<value_type,S,row_major>& src, const unsigned int dim=1) ///< construct by copying a dense matrix
+		  : base_type(src.shape()[0], src.shape()[1]/dim)
 		  , m_ptr(NULL)
 		  , m_dim(dim)
 		  {
@@ -117,7 +117,7 @@ namespace cuv
 		   *
 		   * src.h() should be the same as this->h()
 		   */
-		  void assign(const dense_matrix<__value_type,dev_memory_space,row_major,__index_type>& src);  
+		  void assign(const tensor<__value_type,dev_memory_space,row_major>& src);  
 		  /**
 		   * @brief assign memory
 		   *
@@ -125,7 +125,7 @@ namespace cuv
 		   *
 		   * src.h() should be the same as this->h()
 		   */
-		  void assign(const dense_matrix<__value_type,host_memory_space,row_major,__index_type>& src);
+		  void assign(const tensor<__value_type,host_memory_space,row_major>& src);
 
 		  /**
 		   * broken/useless.
