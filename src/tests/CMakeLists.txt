@@ -27,6 +27,9 @@ TARGET_LINK_LIBRARIES( test_tensor_op cuv_basics cuv_tools cuv_convert cuv_tenso
 ADD_EXECUTABLE( test_tensor_op_speed tensor_op_speed.cpp )
 TARGET_LINK_LIBRARIES( test_tensor_op_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random )
 
+ADD_EXECUTABLE( test_optimize optimize.cpp )
+TARGET_LINK_LIBRARIES( test_optimize cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random )
+
 ADD_EXECUTABLE( test_mat_op matrix_op.cpp )
 TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
 
@@ -81,6 +84,7 @@ ENDIF(CUV_CIMG_BINDINGS)
 ADD_TEST( basics  "${CMAKE_BINARY_DIR}/src/tests/test_basic" )
 ADD_TEST( convert "${CMAKE_BINARY_DIR}/src/tests/test_convert" )
 ADD_TEST( tensor_op "${CMAKE_BINARY_DIR}/src/tests/test_tensor_op" )
+ADD_TEST( optimize "${CMAKE_BINARY_DIR}/src/tests/test_optimize" )
 ADD_TEST( matrix_op "${CMAKE_BINARY_DIR}/src/tests/test_mat_op" )
 ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/src/tests/test_dia_mat" )
 ADD_TEST( spmv "${CMAKE_BINARY_DIR}/src/tests/test_spmv" )
