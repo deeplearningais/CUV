@@ -18,8 +18,8 @@ namespace rbm{
 	 * @param m      the target matrix
 	 * @param start  the value of the first column
 	 */
-	template<class __matrix_type>
-	void set_binary_sequence(__matrix_type& m, const int& start);
+	template <class __value_type, class __memory_space_type, class __memory_layout_type>
+	void set_binary_sequence(tensor<__value_type,__memory_space_type,__memory_layout_type>& m, const int& start);
 
 	/**
 	 * apply sigmoid column-wise with the temperature specified for each column
@@ -27,8 +27,8 @@ namespace rbm{
 	 * @param m    source and target matrix
 	 * @param temp the temperature (one value per column)
 	 */
-	template<class __matrix_type,class __vector_type>
-	void sigm_temperature(__matrix_type& m, const __vector_type& temp);
+	template <class __value_type, class __memory_space_type, class __memory_layout_type>
+	void sigm_temperature(tensor<__value_type,__memory_space_type,__memory_layout_type>& m, const tensor<__value_type,__memory_space_type>& temp);
 
 	/**
 	 * simulate a local connectivity pattern.
@@ -49,8 +49,8 @@ namespace rbm{
 	 * @param maxdist_from_main_dia reset everything further than this many maps away from central diagonal
 	 * @param round
 	 */
-	template<class __matrix_type>
-	void set_local_connectivity_in_dense_matrix(__matrix_type& m, int patchsize, int vx, int vy, int hx, int hy, int maxdist_from_main_dia=1E6, bool round=false);
+	template <class __value_type, class __memory_space_type, class __memory_layout_type>
+	void set_local_connectivity_in_dense_matrix(tensor<__value_type,__memory_space_type,__memory_layout_type>& m, int patchsize, int vx, int vy, int hx, int hy, int maxdist_from_main_dia=1E6, bool round=false);
 
 
 
@@ -71,11 +71,11 @@ namespace rbm{
 	 * rowidx must be set to indices which are at most as large as the mapsize (<offset, that is).
 	 * note that for at least _some_ consecutive read operations, rowidx is somewhat "transposed".
 	 */
-	template<class __matrix_type,class __matrix_type2>
-	void copy_at_rowidx(__matrix_type& dst, const __matrix_type&  src, const __matrix_type2& rowidx, const unsigned int offset);
+	template <class __value_type, class __memory_space_type, class __memory_layout_type>
+	void copy_at_rowidx(tensor<__value_type,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_type,__memory_space_type,__memory_layout_type>&  src, const tensor<typename tensor<__value_type,__memory_space_type,__memory_layout_type>::index_type,__memory_space_type,__memory_layout_type>& rowidx, const unsigned int offset);
 
-	template<class __matrix_type>
-	void copy_redblack(__matrix_type& dst, const __matrix_type&  src, const unsigned int num_maps, const unsigned int color);
+	template <class __value_type, class __memory_space_type, class __memory_layout_type>
+	void copy_redblack(tensor<__value_type,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_type,__memory_space_type,__memory_layout_type>&  src, const unsigned int num_maps, const unsigned int color);
 
       /** 
        * @brief Bit-Flip a row of a column-major matrix

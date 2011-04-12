@@ -1,5 +1,5 @@
 #include <iostream>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/libs/rbm/rbm.hpp>
 
 namespace cuv{
@@ -11,17 +11,17 @@ namespace rbm{
 		/* ****************************
 		   column_major
 	     * ****************************/
-		template<class V, class I>
-		void set_binary_sequence(cuv::dense_matrix<V,host_memory_space,column_major,I>& m, const int& start){
-			const int len = m.h();
+		template<class V>
+		void set_binary_sequence(cuv::tensor<V,host_memory_space,column_major>& m, const int& start){
+			const int len = m.shape()[0];
 			V* ptr  = m.ptr();
-			for(unsigned int i=start; i<m.w()+start; i++){
+			for(unsigned int i=start; i<m.shape()[1]+start; i++){
 				for(unsigned int j=0;j<len;j++){
 					*ptr++ = (i & (1 << (len-1-j))) ? 1 : 0;
 				}
 			}
 		}
-		template<class value_type,class index_type>
+		template<class value_type, class index_type>
 		__global__
 		void set_binary_sequence_kernel(value_type* dst, index_type h, index_type w, int start){
 			// for column-major matrices of size (h x w)
@@ -31,28 +31,28 @@ namespace rbm{
 			if(x>=w) return;
 			dst[x*h+y] = ((start+x) & (1 << (h-1-y))) ? 1 : 0;
 		}
-		template<class V, class I>
-		void set_binary_sequence(cuv::dense_matrix<V,dev_memory_space,column_major,I>& m, const int& start){
+		template<class V>
+		void set_binary_sequence(cuv::tensor<V,dev_memory_space,column_major>& m, const int& start){
 			dim3 threads(16,16);
-			dim3 grid(ceil(m.h()/float(threads.x)), ceil(m.w()/float(threads.y)));
-			set_binary_sequence_kernel<<<grid,threads>>>(m.ptr(),m.h(),m.w(),start);
+			dim3 grid(ceil(m.shape()[0]/float(threads.x)), ceil(m.shape()[1]/float(threads.y)));
+			set_binary_sequence_kernel<<<grid,threads>>>(m.ptr(),m.shape()[0],m.shape()[1],start);
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 
-		template<class V, class I>
-		void sigm_temperature(cuv::dense_matrix<V,host_memory_space,column_major,I>& m, const cuv::tensor<V,host_memory_space>& temp){
-			cuvAssert(m.w() == temp.size())
+		template<class V>
+		void sigm_temperature(cuv::tensor<V,host_memory_space,column_major>& m, const cuv::tensor<V,host_memory_space>& temp){
+			cuvAssert(m.shape()[1] == temp.size())
 			V* mptr = m.ptr();
-			for(unsigned int col=0;col<m.w();col++){
+			for(unsigned int col=0;col<m.shape()[1];col++){
 				const V T = temp[col];
-				const V* end  = mptr + m.h();
+				const V* end  = mptr + m.shape()[0];
 				while(mptr < end){
 					*mptr = 1.0/(1.0+exp(-*mptr / T));
 					mptr++; 
 				}
 			}
 		}
-		template<class value_type,class index_type>
+		template<class value_type, class index_type>
 		__global__
 		void sigm_temperature_kernel(value_type* dst, const value_type* src, const value_type* temp, index_type h, index_type w){
 			// for column-major matrices of size (h x w)
@@ -63,32 +63,32 @@ namespace rbm{
 			if(x>=w) return;
 			dst[x*h+y] = (value_type) (1.0/(1.0 + expf(-src[x*h+y] / T)));
 		}
-		template<class V, class I>
-		void sigm_temperature(cuv::dense_matrix<V,dev_memory_space,column_major,I>& m, const cuv::tensor<V,dev_memory_space>& temp){
+		template<class V>
+		void sigm_temperature(cuv::tensor<V,dev_memory_space,column_major>& m, const cuv::tensor<V,dev_memory_space>& temp){
 			dim3 threads(16,16);
-			dim3 grid(ceil(m.h()/float(threads.x)), ceil(m.w()/float(threads.y)));
-			sigm_temperature_kernel<<<grid,threads>>>(m.ptr(),m.ptr(),temp.ptr(),m.h(),m.w());
+			dim3 grid(ceil(m.shape()[0]/float(threads.x)), ceil(m.shape()[1]/float(threads.y)));
+			sigm_temperature_kernel<<<grid,threads>>>(m.ptr(),m.ptr(),temp.ptr(),m.shape()[0],m.shape()[1]);
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 
 		/* ****************************
 		   row_major
 	     * ****************************/
-		template<class V, class I>
-		void set_binary_sequence(cuv::dense_matrix<V,host_memory_space,row_major,I>& m, const int& start){
+		template<class V>
+		void set_binary_sequence(cuv::tensor<V,host_memory_space,row_major>& m, const int& start){
 			// TODO: make column-major view, then call again
 		}
-		template<class V, class I>
-		void set_binary_sequence(cuv::dense_matrix<V,dev_memory_space,row_major,I>& m, const int& start){
+		template<class V>
+		void set_binary_sequence(cuv::tensor<V,dev_memory_space,row_major>& m, const int& start){
 			// TODO: make column-major view, then call again
 		}
 
-		template<class V, class I>
-		void sigm_temperature(cuv::dense_matrix<V,host_memory_space,row_major,I>& m, const cuv::tensor<V,host_memory_space>& temp){
+		template<class V>
+		void sigm_temperature(cuv::tensor<V,host_memory_space,row_major>& m, const cuv::tensor<V,host_memory_space>& temp){
 			// TODO: make column-major view, then call again
 		}
-		template<class V, class I>
-		void sigm_temperature(cuv::dense_matrix<V,dev_memory_space,row_major,I>& m, const cuv::tensor<V,dev_memory_space>& temp){
+		template<class V>
+		void sigm_temperature(cuv::tensor<V,dev_memory_space,row_major>& m, const cuv::tensor<V,dev_memory_space>& temp){
 			// TODO: make column-major view, then call again
 		}
 
@@ -136,26 +136,26 @@ namespace rbm{
 						mat[(hidx*pix_h+j)*h + vidx*pix_v+i]=(T)0; // reset this value
 		}
 
-		template<class V, class I>
-		void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<V,dev_memory_space,column_major,I>& m, int patchsize, int px, int py, int pxh, int pyh, int maxdist_from_main_dia, bool round){
+		template<class V>
+		void set_local_connectivity_in_dense_matrix(cuv::tensor<V,dev_memory_space,column_major>& m, int patchsize, int px, int py, int pxh, int pyh, int maxdist_from_main_dia, bool round){
 			cuvAssert(m.ptr());
-			cuvAssert(m.h()%(px*py) == 0);
-			cuvAssert(m.w()%(pxh*pyh) == 0);
+			cuvAssert(m.shape()[0]%(px*py) == 0);
+			cuvAssert(m.shape()[1]%(pxh*pyh) == 0);
 			cuvAssert(px/(float)pxh - py/(float)pyh < 0.00001)
 			int pix_v = px*py;
 			int pix_h = pxh*pyh;
 			static const int bs = 16;
 			dim3 blocks(ceil(pix_v/(float)bs),ceil(pix_h/(float)bs));
 			dim3 threads(bs,bs);
-			int num_maps_v = (m.h()) / pix_v;
-			int num_maps_h = (m.w()) / pix_h;
+			int num_maps_v = (m.shape()[0]) / pix_v;
+			int num_maps_h = (m.shape()[1]) / pix_h;
 			float ratio  = px/(float)pxh;
 /*#define V(X) #X << "="<<(X)<<", "*/
-			/*std::cout << V(num_maps_h) << V(num_maps_v)<< V(pix_v)<<V(pix_h)<<V(patchsize)<<V(px)<<V(py)<<V(m.h())<<V(m.w())<<std::endl;*/
+			/*std::cout << V(num_maps_h) << V(num_maps_v)<< V(pix_v)<<V(pix_h)<<V(patchsize)<<V(px)<<V(py)<<V(m.shape()[0])<<V(m.shape()[1])<<std::endl;*/
 			if(round)
-				local_connectivity_kernel_round<<<blocks,threads>>>(m.ptr(),m.h(),m.w(),pix_v,pix_h,num_maps_h,num_maps_v,patchsize,px,ratio,maxdist_from_main_dia);
+				local_connectivity_kernel_round<<<blocks,threads>>>(m.ptr(),m.shape()[0],m.shape()[1],pix_v,pix_h,num_maps_h,num_maps_v,patchsize,px,ratio,maxdist_from_main_dia);
 			else
-				local_connectivity_kernel_square<<<blocks,threads>>>(m.ptr(),m.h(),m.w(),pix_v,pix_h,num_maps_h,num_maps_v,patchsize,px,ratio,maxdist_from_main_dia);
+				local_connectivity_kernel_square<<<blocks,threads>>>(m.ptr(),m.shape()[0],m.shape()[1],pix_v,pix_h,num_maps_h,num_maps_v,patchsize,px,ratio,maxdist_from_main_dia);
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 
@@ -177,17 +177,17 @@ namespace rbm{
 			if(need_update)
 				dst[tidx*h+tidy] = src[tidx*h+tidy];
 		}
-		template<class VM, class I>
-		void copy_redblack(cuv::dense_matrix<VM,dev_memory_space,column_major,I>& dst, const cuv::dense_matrix<VM,dev_memory_space,column_major,I>& src, const unsigned int num_maps, const unsigned int color){
-			cuvAssert(dst.w() == src.w());
-			cuvAssert(dst.h() == src.h());
-			/*cuvAssert(rowidx.h() == src.w());*/
+		template<class VM>
+		void copy_redblack(cuv::tensor<VM,dev_memory_space,column_major>& dst, const cuv::tensor<VM,dev_memory_space,column_major>& src, const unsigned int num_maps, const unsigned int color){
+			cuvAssert(dst.shape()[1] == src.shape()[1]);
+			cuvAssert(dst.shape()[0] == src.shape()[0]);
+			/*cuvAssert(rowidx.shape()[0] == src.shape()[1]);*/
 			dim3 block(16,16);
-			dim3 grid(ceil(dst.h()/float(block.y)),
-					  ceil(dst.w()/float(block.x)));
+			dim3 grid(ceil(dst.shape()[0]/float(block.y)),
+					  ceil(dst.shape()[1]/float(block.x)));
 
-			const unsigned int px = sqrt(dst.h() / num_maps);
-			copy_redblack_kernel<<<grid,block>>>(dst.ptr(), src.ptr(), dst.h(), dst.w(), px, (bool)color);
+			const unsigned int px = sqrt(dst.shape()[0] / num_maps);
+			copy_redblack_kernel<<<grid,block>>>(dst.ptr(), src.ptr(), dst.shape()[0], dst.shape()[1], px, (bool)color);
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 		/**********************************
@@ -215,16 +215,16 @@ namespace rbm{
 			if(need_update)
 				dst[tidx*h+tidy] = src[tidx*h+tidy];
 		}
-		template<class VM, class VV, class I>
-		void copy_at_rowidx(cuv::dense_matrix<VM,dev_memory_space,column_major,I>& dst, const cuv::dense_matrix<VM,dev_memory_space,column_major,I>& src, const cuv::dense_matrix<VV,dev_memory_space,column_major,I>& rowidx, const unsigned int color){
-			cuvAssert(dst.w() == src.w());
-			cuvAssert(dst.h() == src.h());
-			/*cuvAssert(rowidx.h() == src.w());*/
+		template<class VM, class VV>
+		void copy_at_rowidx(cuv::tensor<VM,dev_memory_space,column_major>& dst, const cuv::tensor<VM,dev_memory_space,column_major>& src, const cuv::tensor<VV,dev_memory_space,column_major>& rowidx, const unsigned int color){
+			cuvAssert(dst.shape()[1] == src.shape()[1]);
+			cuvAssert(dst.shape()[0] == src.shape()[0]);
+			/*cuvAssert(rowidx.shape()[0] == src.shape()[1]);*/
 			dim3 block(16,16);
-			dim3 grid(ceil(dst.h()/float(block.y)),
-					  ceil(dst.w()/float(block.x)));
+			dim3 grid(ceil(dst.shape()[0]/float(block.y)),
+					  ceil(dst.shape()[1]/float(block.x)));
 
-			copy_at_rowidx_kernel<<<grid,block>>>(dst.ptr(), src.ptr(), rowidx.ptr(), dst.h(), dst.w(), (bool)color);
+			copy_at_rowidx_kernel<<<grid,block>>>(dst.ptr(), src.ptr(), rowidx.ptr(), dst.shape()[0], dst.shape()[1], (bool)color);
 			cuvSafeCall(cudaThreadSynchronize());
 		}
         __global__ void bitflip_kernel(float* M, int height, int row, int n) {
@@ -252,48 +252,47 @@ namespace rbm{
 template<class __value_type, class __memory_layout, class __memory_space_type>
 void bitflip(tensor<__value_type,__memory_layout,__memory_space_type>& matrix,
 		typename tensor<__value_type,__memory_layout,__memory_space_type>::index_type row){
-                cuvAssert(matrix.shape().size()==2);
+                cuvAssert(matrix.ndim()==2);
 		cuvAssert(row<matrix.shape()[0]);
 		cuvAssert(matrix.ptr());
 		detail::bitflip(matrix,row);
 }
 
-template<class __matrix_type>
-void set_binary_sequence(__matrix_type& m, const int& start){
+template <class __value_type, class __memory_space_type, class __memory_layout_type>
+void set_binary_sequence(tensor<__value_type,__memory_space_type,__memory_layout_type>& m, const int& start){
 	detail::set_binary_sequence(m,start);
 }
-template<class __matrix_type,class __vector_type>
-void sigm_temperature(__matrix_type& m, const __vector_type& temp){
+
+template <class __value_type, class __memory_space_type, class __memory_layout_type>
+void sigm_temperature(tensor<__value_type,__memory_space_type,__memory_layout_type>& m, const tensor<__value_type,__memory_space_type>& temp){
 	detail::sigm_temperature(m,temp);
 }
-template<class __matrix_type>
-void set_local_connectivity_in_dense_matrix(__matrix_type& m, int patchsize, int px, int py, int pxh, int pyh, int maxdist_from_main_dia, bool round){
-	detail::set_local_connectivity_in_dense_matrix(m,patchsize, px, py, pxh, pyh, maxdist_from_main_dia, round);
+template <class __value_type, class __memory_space_type, class __memory_layout_type>
+void set_local_connectivity_in_dense_matrix(tensor<__value_type,__memory_space_type,__memory_layout_type>& m, int patchsize, int vx, int vy, int hx, int hy, int maxdist_from_main_dia, bool round){
+	detail::set_local_connectivity_in_dense_matrix(m,patchsize, vx, vy, hx, hy, maxdist_from_main_dia, round);
 }
-template<class __matrix_type,class __matrix_type2>
-void copy_at_rowidx(__matrix_type& dst, const __matrix_type&  src, const __matrix_type2& rowidx, const unsigned int offset){
+template <class __value_type, class __memory_space_type, class __memory_layout_type>
+void copy_at_rowidx(tensor<__value_type,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_type,__memory_space_type,__memory_layout_type>&  src, const tensor<typename tensor<__value_type,__memory_space_type,__memory_layout_type>::index_type,__memory_space_type, __memory_layout_type>& rowidx, const unsigned int offset){
 	detail::copy_at_rowidx(dst,src,rowidx, offset);
 }
-template<class __matrix_type>
-void copy_redblack(__matrix_type& dst, const __matrix_type&  src, const unsigned int num_maps, const unsigned int color){
+template <class __value_type, class __memory_space_type, class __memory_layout_type>
+void copy_redblack(tensor<__value_type,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_type,__memory_space_type,__memory_layout_type>&  src, const unsigned int num_maps, const unsigned int color){
 	detail::copy_redblack(dst,src, num_maps, color);
 }
-template
-void copy_at_rowidx(cuv::dense_matrix<float,dev_memory_space,column_major>&, const cuv::dense_matrix<float,dev_memory_space,column_major>&, const cuv::dense_matrix<float,dev_memory_space,column_major>&, const unsigned int);
-
 
 #define INST(V,L,M,I) \
-  template void set_binary_sequence(cuv::dense_matrix<V,L,M,I>& m, const int&); \
-  template void sigm_temperature(cuv::dense_matrix<V,L,M,I>& m, const cuv::tensor<V,L>&); \
+  template void set_binary_sequence(cuv::tensor<V,L,M>& m, const int&); \
+  template void sigm_temperature(cuv::tensor<V,L,M>& m, const cuv::tensor<V,L>&); \
 
 INST(float,host_memory_space,column_major,unsigned int);
 INST(float,dev_memory_space,column_major,unsigned int);
 
 template
-void set_local_connectivity_in_dense_matrix(cuv::dense_matrix<float,dev_memory_space,column_major>& m, int patchsize, int px, int py, int,int,int, bool);
+void set_local_connectivity_in_dense_matrix(cuv::tensor<float,dev_memory_space,column_major>& m, int patchsize, int px, int py, int,int,int, bool);
 template
-void copy_redblack(cuv::dense_matrix<float,dev_memory_space,column_major>&, const cuv::dense_matrix<float,dev_memory_space,column_major>&, const unsigned int num_maps, const unsigned int);
-
+void copy_redblack(cuv::tensor<float,dev_memory_space,column_major>&, const cuv::tensor<float,dev_memory_space,column_major>&, const unsigned int num_maps, const unsigned int);
+template
+void copy_at_rowidx(cuv::tensor<float,dev_memory_space,column_major>&, const cuv::tensor<float,dev_memory_space,column_major>&, const cuv::tensor<unsigned int,dev_memory_space,column_major>&, const unsigned int);
 template void bitflip(tensor<float,host_memory_space,column_major>&, unsigned int);
 template void bitflip(tensor<float,dev_memory_space,column_major>&, unsigned int);
 }
