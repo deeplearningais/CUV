@@ -81,7 +81,6 @@ def __matrix_getitem__(x,key):
     else:
         print("This slicing is not supported")
         raise NotImplementedError
-            
 
 def __matrix_setitem__(x,key,value):
     if isinstance(key,int):
@@ -101,20 +100,6 @@ def __matrix_setitem__(x,key,value):
 # For all types add convenience functions
 
 for memory_space in ["dev","host"]:
-    for value_type in ["f","sc","uc","i", "ui"]:
-        for memory_layout in ["rm","cm"]:
-            dense_type=eval(memory_space+"_matrix_"+memory_layout+value_type)
-
-            dense_type.save = __sav_dense
-            dense_type.copy = __cpy
-            dense_type.np = property(__np)
-            dense_type.T = property(__T)
-            dense_type.has_nan = property(lambda x:has_nan(x))
-            dense_type.has_inf = property(lambda x:has_inf(x))
-            dense_type.__getitem__=__matrix_getitem__
-            dense_type.__setitem__=__matrix_setitem__
-            dense_type.__str__=lambda x:(_matstr(x,memory_space+"_matrix_"+memory_layout+value_type))
-
     dia_type=eval(memory_space+"_dia_matrix_f")
     #dia_type.__str__=lambda x:(_matstr(x,memory_space+"_matrix_"+memory_layout+value_type))
 
@@ -124,7 +109,8 @@ for memory_space in ["dev","host"]:
 
 for memory_space in ["dev","host"]:
     for value_type in ["float","int","uc","uint"]:
-            dense_type=eval(memory_space+"_tensor_"+value_type)
+        for memory_layout in ["","_cm"]:
+            dense_type=eval(memory_space+"_tensor_"+value_type+memory_layout)
 
             dense_type.save = __sav_dense
             dense_type.copy = __cpy
