@@ -343,6 +343,12 @@ namespace cuv
 				return m_shape;
 			}
 			/**
+			 * returns a vector whose values represent the number of dimensions of the tensor
+			 */
+			index_type ndim()const{
+				return m_shape.size();
+			}
+			/**
 			 * Whether we do not own the memory. Delegates to contained linear memory
 			 */
 			bool is_view ()const{return m_data.is_view();}
