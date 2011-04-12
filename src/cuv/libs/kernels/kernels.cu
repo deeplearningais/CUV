@@ -72,29 +72,39 @@ pairwise_distance_kernel( __distance_type* C,const  __value_type* A, const __val
 namespace cuv{
 namespace libs{	
 	namespace kernels{
-	template <class __matrix_type>
-	void 
-	pairwise_distance(__matrix_type& result, const __matrix_type& A, const __matrix_type& B){
-		/*cuvAssert(A.w() == B.w());*/
-		/*cuvAssert(A.h() == result.h());*/
-		/*cuvAssert(B.h() == result.w());*/
-
+            namespace detail{
+                template <class V>
+                void pairwise_distance_impl(tensor<V,dev_memory_space,row_major>& result, const tensor<V,dev_memory_space,row_major>& A, const tensor<V,dev_memory_space,row_major>& B){
 		const int BLOCK_DIM = 32;
 		dim3 threads(BLOCK_DIM, BLOCK_DIM);
-		dim3 grid(B.h() / threads.x, A.h() / threads.y);
+		dim3 grid(B.shape()[0] / threads.x, A.shape()[0] / threads.y);
 
-		/*cuvAssert(B.w()%threads.x == 0);*/
-		/*cuvAssert(A.h()%threads.y == 0);*/
-		/*cuvAssert(B.h()%threads.x == 0);*/
-		/*cuvAssert(A.w()%threads.y == 0);*/
+		/*cuvAssert(B.shape()[1]%threads.x == 0);*/
+		/*cuvAssert(A.shape()[0]%threads.y == 0);*/
+		/*cuvAssert(B.shape()[0]%threads.x == 0);*/
+		/*cuvAssert(A.shape()[1]%threads.y == 0);*/
 
 		cuvAssert(grid.x > 0);
 		cuvAssert(grid.y > 0);
-		pairwise_distance_kernel<BLOCK_DIM><<< grid,threads >>>(result.ptr(),A.ptr(),B.ptr(),A.w(),B.h());
+		pairwise_distance_kernel<BLOCK_DIM><<< grid,threads >>>(result.ptr(),A.ptr(),B.ptr(),A.shape()[1],B.shape()[0]);
 		cudaThreadSynchronize();
 		checkCudaError("kernel sqDiff invocation");
+                   
+               }
+            }
+        template <class __value_type, class __memory_space_type, class __memory_layout_type>
+        void pairwise_distance(tensor<__value_type,__memory_space_type,__memory_layout_type>& result, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B){
+                cuvAssert(result.ndim() ==2);
+                cuvAssert(A.ndim() ==2);
+                cuvAssert(B.ndim() ==2);
+                cuvAssert(A.shape()[1] == B.shape()[1]);
+                cuvAssert(A.shape()[0] == result.shape()[0]);
+                cuvAssert(B.shape()[0] == result.shape()[1]);
+
+                detail::pairwise_distance_impl(result,A,B);
 	}
-typedef dense_matrix<float, dev_memory_space, row_major, unsigned int> dm_rmf;
-template void pairwise_distance<dm_rmf>(dm_rmf&, const dm_rmf &, const dm_rmf&);
+typedef tensor<float, dev_memory_space, row_major> t_rmf;
+
+template void pairwise_distance<float, dev_memory_space, row_major>(t_rmf&, const t_rmf &, const t_rmf&);
 
 }}}
