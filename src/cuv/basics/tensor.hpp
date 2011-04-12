@@ -422,6 +422,13 @@ namespace cuv
 			:super_type(len)
 			{
 			}
+			/**
+			 * construct tensor using only height and with
+			 */
+			explicit tensor(const unsigned int& h, const unsigned int& w)
+			:super_type(extents[h][w])
+			{
+			}
 
 			/**
 			 * construct tensor view using only length
