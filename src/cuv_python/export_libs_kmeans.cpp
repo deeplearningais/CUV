@@ -33,7 +33,7 @@
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
 
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/libs/kmeans/kmeans.hpp>
 
 //using namespace std;
@@ -44,7 +44,7 @@ namespace ublas = boost::numeric::ublas;
 
 template<class V, class M, class L, class I>
 void export_kmeans(){
-	typedef dense_matrix<V,M,L,I> mat;
+	typedef tensor<V,M,L> mat;
 	typedef tensor<I,M> vec;
 	def("compute_clusters",compute_clusters<mat,vec>, (arg("clusters"),arg("data"),arg("indices")));
 }
