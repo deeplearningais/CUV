@@ -1,5 +1,5 @@
 #include <iostream>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/tools/meta_programming.hpp>
 #include <cuv/libs/kmeans/kmeans.hpp>
@@ -7,7 +7,6 @@
 using cuv::column_major;
 using cuv::dev_memory_space;
 using cuv::host_memory_space;
-using cuv::dense_matrix;
 using cuv::tensor;
 
 
@@ -75,12 +74,12 @@ void compute_clusters_kernel(const T* matrix, T* centers, const V* indices, cons
 }
 
 template<class V, class I>
-void compute_clusters_impl(dense_matrix<V,dev_memory_space,column_major,I>& centers,
-		const dense_matrix<V,dev_memory_space,column_major,I>& m,
+void compute_clusters_impl(tensor<V,dev_memory_space,column_major>& centers,
+		const tensor<V,dev_memory_space,column_major>& m,
 		const cuv::tensor<I,dev_memory_space>& indices){
 
 		static const int BLOCK_DIM = 16;
-		const int blocks_needed = ceil((float)m.h()/(BLOCK_DIM));
+		const int blocks_needed = ceil((float)m.shape()[0]/(BLOCK_DIM));
 		int grid_x =0, grid_y=0;
 
 		// how to handle grid dimension constraint
@@ -99,26 +98,26 @@ void compute_clusters_impl(dense_matrix<V,dev_memory_space,column_major,I>& cent
 		/*unsigned int mem = sizeof(V) * BLOCK_DIM*(BLOCK_DIM+1) *num_clusters;//+1 to count clusters!*/
 		unsigned int mem = sizeof(V) * (BLOCK_DIM+1) *num_clusters;//+1 to count clusters!
 
-		compute_clusters_kernel<BLOCK_DIM,V,I><<<grid,threads,mem>>>(m.ptr(),centers.ptr(),indices.ptr(), m.w(),m.h(), num_clusters);
+		compute_clusters_kernel<BLOCK_DIM,V,I><<<grid,threads,mem>>>(m.ptr(),centers.ptr(),indices.ptr(), m.shape()[1],m.shape()[0], num_clusters);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
 
 template<class V, class I>
-void compute_clusters_impl(dense_matrix<V,host_memory_space,column_major,I>& clusters,
-		const dense_matrix<V,host_memory_space,column_major,I>& data,
+void compute_clusters_impl(tensor<V,host_memory_space,column_major>& clusters,
+		const tensor<V,host_memory_space,column_major>& data,
 		const tensor<I,host_memory_space>& indices){
-	const int data_length=data.h();
-	int* points_in_cluster=new int[clusters.w()];
-	for (int i=0; i <clusters.w(); i++)
+	const int data_length=data.shape()[0];
+	int* points_in_cluster=new int[clusters.shape()[1]];
+	for (int i=0; i <clusters.shape()[1]; i++)
 		points_in_cluster[i]=0;
 	
 	// accumulate vectors:
 	V* clusters_ptr = clusters.ptr();
 	const V* data_ptr = data.ptr();
-	for(int i=0; i<data.w(); i++){
+	for(int i=0; i<data.shape()[1]; i++){
 		const int this_cluster=indices[i];
-		for(int j=0; j<data.h(); j++){
+		for(int j=0; j<data.shape()[0]; j++){
 			clusters_ptr[this_cluster*data_length+j]+=data_ptr[i*data_length+j];
 		}
 			points_in_cluster[this_cluster]++;
@@ -126,8 +125,8 @@ void compute_clusters_impl(dense_matrix<V,host_memory_space,column_major,I>& clu
 
 	// devide by number of vectors in cluster
 
-	for (int i=0; i<clusters.w(); i++)
-		for(int j=0; j<clusters.h(); j++)
+	for (int i=0; i<clusters.shape()[1]; i++)
+		for(int j=0; j<clusters.shape()[0]; j++)
 			clusters_ptr[i*data_length+j]/=max(points_in_cluster[i],1);
 }
 
@@ -137,12 +136,15 @@ namespace kmeans{
 
 template<class __data_matrix_type, class __index_vector_type>
 void compute_clusters(__data_matrix_type& clusters, const __data_matrix_type& data, const __index_vector_type& indices){
-	cuvAssert(data.w()==indices.size());
-	cuvAssert(cuv::maximum(indices)<clusters.w()); // indices start with 0.
+        cuvAssert(clusters.shape().size()==2);
+        cuvAssert(data.shape().size()==2);
+        cuvAssert(indices.shape().size()==1);
+	cuvAssert(data.shape()[1]==indices.size());
+	cuvAssert(cuv::maximum(indices)<clusters.shape()[1]); // indices start with 0.
 	compute_clusters_impl(clusters,data,indices);
 	}
 
-template void compute_clusters<dense_matrix<float, host_memory_space, column_major, unsigned int>, tensor<unsigned int, host_memory_space> >(dense_matrix<float, host_memory_space, column_major, unsigned int>&, const dense_matrix<float, host_memory_space, column_major, unsigned int>&,const tensor<unsigned int, host_memory_space>&);
-template void compute_clusters<dense_matrix<float, dev_memory_space, column_major, unsigned int>, tensor<unsigned int, dev_memory_space> >(dense_matrix<float, dev_memory_space, column_major, unsigned int>&, const dense_matrix<float, dev_memory_space, column_major, unsigned int>&,const tensor<unsigned int, dev_memory_space>&);
+template void compute_clusters<tensor<float, host_memory_space, column_major>, tensor<unsigned int, host_memory_space> >(tensor<float, host_memory_space, column_major>&, const tensor<float, host_memory_space, column_major>&,const tensor<unsigned int, host_memory_space>&);
+template void compute_clusters<tensor<float, dev_memory_space, column_major>, tensor<unsigned int, dev_memory_space> >(tensor<float, dev_memory_space, column_major>&, const tensor<float, dev_memory_space, column_major>&,const tensor<unsigned int, dev_memory_space>&);
 
 } } }
