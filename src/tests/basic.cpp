@@ -41,7 +41,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/basics/cuda_array.hpp>
 #include <cuv/convert/convert.hpp>
 
@@ -83,7 +83,7 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
  */
 BOOST_AUTO_TEST_CASE( create_dev_plain )
 {
-	dense_matrix<float,dev_memory_space,column_major> m(16,16);
+	tensor<float,dev_memory_space,column_major> m(16,16);
 }
 
 /** 
@@ -92,8 +92,8 @@ BOOST_AUTO_TEST_CASE( create_dev_plain )
  */
 BOOST_AUTO_TEST_CASE( create_dev_view )
 {
-	dense_matrix<float,dev_memory_space,column_major> m(16,16);
-	//dense_matrix<float,column_major,dev_memory_space> m2(16,16,new linear_memory<float,dev_memory_space>(m.n(), m.ptr(), true));
+	tensor<float,dev_memory_space,column_major> m(16,16);
+	//tensor<float,column_major,dev_memory_space> m2(16,16,new linear_memory<float,dev_memory_space>(m.n(), m.ptr(), true));
 }
 
 /** 
@@ -102,8 +102,8 @@ BOOST_AUTO_TEST_CASE( create_dev_view )
  */
 BOOST_AUTO_TEST_CASE( create_dev_from_mat )
 {
-	dense_matrix<float,dev_memory_space,column_major> m(16,16);
-	//dense_matrix<float,column_major,dev_memory_space> m2(&m);
+	tensor<float,dev_memory_space,column_major> m(16,16);
+	//tensor<float,column_major,dev_memory_space> m2(&m);
 }
 
 /** 
@@ -112,8 +112,8 @@ BOOST_AUTO_TEST_CASE( create_dev_from_mat )
  */
 BOOST_AUTO_TEST_CASE( create_host )
 {
-	dense_matrix<float,host_memory_space,column_major> m(16,16);
-	//dense_matrix<float,column_major,host_memory_space> m2(16,16,new vector<float,host_memory_space>(m.n(),m.ptr(),true));
+	tensor<float,host_memory_space,column_major> m(16,16);
+	//tensor<float,column_major,host_memory_space> m2(16,16,new vector<float,host_memory_space>(m.n(),m.ptr(),true));
 }
 
 /** 
@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE( cuda_array_alloc )
 BOOST_AUTO_TEST_CASE( cuda_array_assign )
 {
 	cuda_array<float,dev_memory_space> ca(1024,768);
-	dense_matrix<float,dev_memory_space,row_major> dm(1024,768);
+	tensor<float,dev_memory_space,row_major> dm(1024,768);
 	ca.assign(dm);
 }
 
