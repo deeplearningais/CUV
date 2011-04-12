@@ -36,7 +36,7 @@
 #include <boost/test/floating_point_comparison.hpp>
 
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/tools/cuv_test.hpp>
@@ -67,8 +67,8 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 BOOST_AUTO_TEST_CASE( mem_dealloc )
 {
 	for(int i=0; i<100000000; i++) {
-		dense_matrix<float, host_memory_space, row_major> c(1000, 100000);
-		dense_matrix<float, dev_memory_space, row_major> d(1000, 100000);
+		tensor<float, host_memory_space, row_major> c(1000, 100000);
+		tensor<float, dev_memory_space, row_major> d(1000, 100000);
 	}
 }
 

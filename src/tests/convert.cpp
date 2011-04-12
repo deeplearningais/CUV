@@ -37,7 +37,7 @@
 #include <boost/test/floating_point_comparison.hpp>
 
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/basics/dia_matrix.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/convert/convert.hpp>
@@ -69,10 +69,10 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( convert_pushpull )
 {
-	dense_matrix<float,dev_memory_space,column_major> dfc(32,16);
-	dense_matrix<float,host_memory_space,row_major>  hfr(16,32);
-	dense_matrix<float,dev_memory_space,row_major> dfr(32,16);
-	dense_matrix<float,host_memory_space,column_major>  hfc(16,32);
+	tensor<float,dev_memory_space,column_major> dfc(extents[32][16]);
+	tensor<float,host_memory_space,row_major>  hfr(extents[16][32]);
+	tensor<float,dev_memory_space,row_major> dfr(extents[32][16]);
+	tensor<float,host_memory_space,column_major>  hfc(extents[16][32]);
 
 	// dfc <--> hfr
 	convert(dfc, hfr);
@@ -85,28 +85,28 @@ BOOST_AUTO_TEST_CASE( convert_pushpull )
 
 BOOST_AUTO_TEST_CASE( create_dev_plain2 )
 {
-	dense_matrix<float,dev_memory_space,column_major> dfc(16,16); // "wrong" size
-	dense_matrix<float,host_memory_space,row_major>  hfr(16,32);
+	tensor<float,dev_memory_space,column_major> dfc(extents[16][16]); // "wrong" size
+	tensor<float,host_memory_space,row_major>  hfr(extents[16][32]);
 	convert(dfc, hfr);                               // should make dfc correct size
 	convert(hfr, dfc);
-	BOOST_CHECK( hfr.w() == dfc.h());
-	BOOST_CHECK( hfr.h() == dfc.w());
+	BOOST_CHECK( hfr.shape()[1] == dfc.shape()[0]);
+	BOOST_CHECK( hfr.shape()[0] == dfc.shape()[1]);
 }
 
 BOOST_AUTO_TEST_CASE( create_dev_plain3 )
 {
-	dense_matrix<float,dev_memory_space,column_major> dfc(32,16); 
-	dense_matrix<float,host_memory_space,row_major>  hfr(16,16);  // "wrong" size
+	tensor<float,dev_memory_space,column_major> dfc(extents[32][16]); 
+	tensor<float,host_memory_space,row_major>  hfr(extents[16][16]);  // "wrong" size
 	convert(hfr, dfc);
 	convert(dfc, hfr);                               // should make dfc correct size
-	BOOST_CHECK( hfr.w() == dfc.h());
-	BOOST_CHECK( hfr.h() == dfc.w());
+	BOOST_CHECK( hfr.shape()[1] == dfc.shape()[0]);
+	BOOST_CHECK( hfr.shape()[0] == dfc.shape()[1]);
 }
 
 BOOST_AUTO_TEST_CASE( dia2host )
 {
 	dia_matrix<float,host_memory_space>                 hdia(32,32,3,32);
-	dense_matrix<float,host_memory_space,column_major>  hdns(32,32);
+	tensor<float,host_memory_space,column_major>  hdns(extents[32][32]);
 	std::vector<int> off;
 	off.push_back(0);
 	off.push_back(1);
@@ -115,8 +115,8 @@ BOOST_AUTO_TEST_CASE( dia2host )
 	hdia.set_offsets(off);
 	//hdia.transpose(); // works, too
 	convert(hdns,hdia);
-	for(int i=0;i<hdns.h();i++){
-		for(int j=0; j<hdns.w();j++){
+	for(int i=0;i<hdns.shape()[0];i++){
+		for(int j=0; j<hdns.shape()[1];j++){
 			cout << hdns(i,j) << " ";
 			BOOST_CHECK_CLOSE((float)hdns(i,j),(float)hdia(i,j),0.01);
 		}

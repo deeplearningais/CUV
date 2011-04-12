@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE( spmv_uninit )
 BOOST_AUTO_TEST_CASE( spmv_dia2dense )
 {
 	// hostdia->hostdense
-	dense_matrix<float,host_memory_space,column_major> w2(n,m);
+	tensor<float,host_memory_space,column_major> w2(extents[n][m]);
 	fill(w2,-1);
 	convert(w2,w);
 	MAT_CMP(w,w2,0.1);

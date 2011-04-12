@@ -37,7 +37,7 @@
 #include <cuv/tools/cuv_test.hpp>
 
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/basics/dia_matrix.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
@@ -64,9 +64,9 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	dia_matrix<float,host_memory_space>   A;
-	dense_matrix<float,host_memory_space,column_major> A_;
-	dense_matrix<float,host_memory_space,column_major> B,B_;
-	dense_matrix<float,host_memory_space,column_major> C,C_;
+	tensor<float,host_memory_space,column_major> A_;
+	tensor<float,host_memory_space,column_major> B,B_;
+	tensor<float,host_memory_space,column_major> C,C_;
 	Fix()
 	:   A(n,m,7,max(n,m),rf)
 	,   A_(n,m)
@@ -105,9 +105,9 @@ BOOST_AUTO_TEST_CASE( spmv_dev_correctness_trans )
 	sequence(C);
 	dia_matrix<float,dev_memory_space> A2(n,m,A.num_dia(),A.stride(),rf);
 	convert(A2,A);
-	dense_matrix<float,dev_memory_space,column_major> C2(C.h(),C.w());
+	tensor<float,dev_memory_space,column_major> C2(C.shape());
 	convert(C2,C);
-	dense_matrix<float,dev_memory_space,column_major> B2(B.h(),B.w());
+	tensor<float,dev_memory_space,column_major> B2(B.shape());
 	convert(B2,B);
 	prod(B ,A, C, 't','n');
 	prod(B2,A2,C2,'t','n');
@@ -117,9 +117,9 @@ BOOST_AUTO_TEST_CASE( spmv_dev_correctness )
 {
  dia_matrix<float,dev_memory_space> A2(n,m,A.num_dia(),A.stride(),rf);
  convert(A2,A);
- dense_matrix<float,dev_memory_space,column_major> C2(C.h(),C.w());
+ tensor<float,dev_memory_space,column_major> C2(C.shape());
  convert(C2,C);
- dense_matrix<float,dev_memory_space,column_major> B2(B.h(),B.w());
+ tensor<float,dev_memory_space,column_major> B2(B.shape());
  convert(B2,B);
 
  float factAv = 2.f, factC = 1.3f;

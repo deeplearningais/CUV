@@ -37,7 +37,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/convolution_ops/convolution_ops.hpp>
@@ -90,8 +90,8 @@ BOOST_AUTO_TEST_CASE( reorder_speed )
 	int x = 10;
 	int y = 16;
 
-	dense_matrix<float, host_memory_space, row_major> A(y,x*size);
-	dense_matrix<float, dev_memory_space, row_major> dev_A(y,x*size);
+	tensor<float, host_memory_space, row_major> A(y,x*size);
+	tensor<float, dev_memory_space, row_major> dev_A(y,x*size);
 
 	sequence(A);
 	sequence(dev_A);
@@ -112,13 +112,13 @@ void conv_speed_test(int inputSize, int filterSize, int numFilters, int numImage
 	printf("Convolving %i images of size %ix%i with %i filters of size %ix%i.\n", c, n,n, f, g,g);
 	printf("Result are %i*%i images of size %ix%i\n", c,f, k,k);
 
-	dense_matrix<float, dev_memory_space, row_major>  img_dev(c, n*n);
-	dense_matrix<float, dev_memory_space, row_major>  filter_dev(f, g*g);
-	dense_matrix<float, dev_memory_space, row_major>  dst_dev(c, f*k*k);
+	tensor<float, dev_memory_space, row_major>  img_dev(c, n*n);
+	tensor<float, dev_memory_space, row_major>  filter_dev(f, g*g);
+	tensor<float, dev_memory_space, row_major>  dst_dev(c, f*k*k);
 
-	dense_matrix<float, host_memory_space, row_major>  img_host(c, n*n);
-	dense_matrix<float, host_memory_space, row_major>  filter_host(f, g*g);
-	dense_matrix<float, host_memory_space, row_major>  dst_host(c, f*k*k);
+	tensor<float, host_memory_space, row_major>  img_host(c, n*n);
+	tensor<float, host_memory_space, row_major>  filter_host(f, g*g);
+	tensor<float, host_memory_space, row_major>  dst_host(c, f*k*k);
 
 	fill(dst_dev, 0.0f);
 	sequence(img_dev);    apply_scalar_functor(img_dev,   SF_MULT,0.001f);
@@ -136,9 +136,9 @@ void conv_speed_test(int inputSize, int filterSize, int numFilters, int numImage
 
 
 template<class ms_type>
-void conv_rlcnp(dense_matrix<float, ms_type, row_major>& dst,
-				dense_matrix<float, ms_type, row_major>& img,
-				dense_matrix<float, ms_type, row_major>& filter,
+void conv_rlcnp(tensor<float, ms_type, row_major>& dst,
+				tensor<float, ms_type, row_major>& img,
+				tensor<float, ms_type, row_major>& filter,
 				int numImages,
 				int inputSize,
 				int numFilter,
@@ -147,7 +147,7 @@ void conv_rlcnp(dense_matrix<float, ms_type, row_major>& dst,
 	int c = inputSize;
 	int k = inputSize - filterSize + 1;
 	int f = numFilter;
-	dense_matrix<float, ms_type, row_major>  helper(c, f*k*k);
+	tensor<float, ms_type, row_major>  helper(c, f*k*k);
 
 	convolve2(helper, img, filter, numFilter);
 	reduce_to_row(dst, helper, RF_ADD);
@@ -165,13 +165,13 @@ void conv_rlcnp_test(int inputSize, int filterSize, int numFilters, int numImage
 	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i using convolve2().\n", c, n,n, f, g,g);
 	printf("Result are %i*%i images of size %ix%i\n", c,f, k,k);
 
-	dense_matrix<float, dev_memory_space, row_major>  img_dev(c, n*n);
-	dense_matrix<float, dev_memory_space, row_major>  filter_dev(c, f*g*g);
-	dense_matrix<float, dev_memory_space, row_major>  dst_dev(c, k*k);
+	tensor<float, dev_memory_space, row_major>  img_dev(c, n*n);
+	tensor<float, dev_memory_space, row_major>  filter_dev(c, f*g*g);
+	tensor<float, dev_memory_space, row_major>  dst_dev(c, k*k);
 
-	dense_matrix<float, host_memory_space, row_major>  img_host(c, n*n);
-	dense_matrix<float, host_memory_space, row_major>  filter_host(c, f*g*g);
-	dense_matrix<float, host_memory_space, row_major>  dst_host(c, k*k);
+	tensor<float, host_memory_space, row_major>  img_host(c, n*n);
+	tensor<float, host_memory_space, row_major>  filter_host(c, f*g*g);
+	tensor<float, host_memory_space, row_major>  dst_host(c, k*k);
 
 	fill(dst_dev, 0.0f);
 	sequence(img_dev);    apply_scalar_functor(img_dev,   SF_MULT,0.001f);
@@ -201,13 +201,13 @@ void conv2_speed_test(int inputSize, int filterSize, int numFilters, int numImag
 	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i using convolve2().\n", c, n,n, f, g,g);
 	printf("Result are %i*%i images of size %ix%i\n", c,f, k,k);
 
-	dense_matrix<float, dev_memory_space, row_major>  img_dev(c, n*n);
-	dense_matrix<float, dev_memory_space, row_major>  filter_dev(c, f*g*g);
-	dense_matrix<float, dev_memory_space, row_major>  dst_dev(c, f*k*k);
+	tensor<float, dev_memory_space, row_major>  img_dev(c, n*n);
+	tensor<float, dev_memory_space, row_major>  filter_dev(c, f*g*g);
+	tensor<float, dev_memory_space, row_major>  dst_dev(c, f*k*k);
 
-	dense_matrix<float, host_memory_space, row_major>  img_host(c, n*n);
-	dense_matrix<float, host_memory_space, row_major>  filter_host(c, f*g*g);
-	dense_matrix<float, host_memory_space, row_major>  dst_host(c, f*k*k);
+	tensor<float, host_memory_space, row_major>  img_host(c, n*n);
+	tensor<float, host_memory_space, row_major>  filter_host(c, f*g*g);
+	tensor<float, host_memory_space, row_major>  dst_host(c, f*k*k);
 
 	fill(dst_dev, 0.0f);
 	sequence(img_dev);    apply_scalar_functor(img_dev,   SF_MULT,0.001f);
@@ -224,39 +224,39 @@ void conv2_speed_test(int inputSize, int filterSize, int numFilters, int numImag
 }
 
 
-void conv1_iter(dense_matrix<float, dev_memory_space, row_major>& img_dev,
-		dense_matrix<float, dev_memory_space, row_major>& filter_dev,
-		dense_matrix<float, dev_memory_space, row_major>& dst_dev,
+void conv1_iter(tensor<float, dev_memory_space, row_major>& img_dev,
+		tensor<float, dev_memory_space, row_major>& filter_dev,
+		tensor<float, dev_memory_space, row_major>& dst_dev,
 		int numInputMaps) {
 	fill(dst_dev, 0.0f);
 	for(int i = 0; i < numInputMaps; i++)
 		convolve(dst_dev, img_dev, filter_dev);
 }
 
-void conv1_pass(dense_matrix<float, dev_memory_space, row_major>& img_dev,
-		dense_matrix<float, dev_memory_space, row_major>& filter_dev,
-		dense_matrix<float, dev_memory_space, row_major>& dst_dev,
-		dense_matrix<float, dev_memory_space, row_major>& temp_dev,
+void conv1_pass(tensor<float, dev_memory_space, row_major>& img_dev,
+		tensor<float, dev_memory_space, row_major>& filter_dev,
+		tensor<float, dev_memory_space, row_major>& dst_dev,
+		tensor<float, dev_memory_space, row_major>& temp_dev,
 		int numInputMaps) {
 	fill(dst_dev, 0.0f);
-	int numFilters = dst_dev.h();
+	int numFilters = dst_dev.shape()[0];
 	convolve(temp_dev, img_dev, filter_dev, numInputMaps);
-	temp_dev.reshape(extents[temp_dev.h()/numFilters][temp_dev.w()*numFilters]);
+	temp_dev.reshape(extents[temp_dev.shape()[0]/numFilters][temp_dev.shape()[1]*numFilters]);
 	reduce_to_row(dst_dev, temp_dev);
-	temp_dev.reshape(extents[temp_dev.h()*numFilters][temp_dev.w()/numFilters]);
+	temp_dev.reshape(extents[temp_dev.shape()[0]*numFilters][temp_dev.shape()[1]/numFilters]);
 }
 
-void conv2_pass(dense_matrix<float, dev_memory_space, row_major>& img_dev,
-		dense_matrix<float, dev_memory_space, row_major>& filter_dev,
-		dense_matrix<float, dev_memory_space, row_major>& dst_dev,
-		dense_matrix<float, dev_memory_space, row_major>& temp_dev,
+void conv2_pass(tensor<float, dev_memory_space, row_major>& img_dev,
+		tensor<float, dev_memory_space, row_major>& filter_dev,
+		tensor<float, dev_memory_space, row_major>& dst_dev,
+		tensor<float, dev_memory_space, row_major>& temp_dev,
 		int numPatterns) {
 	fill(temp_dev, 0.0f);
-	convolve2(temp_dev, img_dev, filter_dev, filter_dev.h());
+	convolve2(temp_dev, img_dev, filter_dev, filter_dev.shape()[0]);
 	// note: this is not the correct summation! but it's at least as computationally intense
-	temp_dev.reshape(extents[temp_dev.h()/numPatterns][temp_dev.w()*numPatterns]);
+	temp_dev.reshape(extents[temp_dev.shape()[0]/numPatterns][temp_dev.shape()[1]*numPatterns]);
 	reduce_to_row(dst_dev, temp_dev);
-	temp_dev.reshape(extents[temp_dev.h()*numPatterns][temp_dev.w()/numPatterns]);
+	temp_dev.reshape(extents[temp_dev.shape()[0]*numPatterns][temp_dev.shape()[1]/numPatterns]);
 }
 
 // compare whether iterating over conv() or calling conv2() and accumulating is faster
@@ -273,17 +273,17 @@ void conv_vs_conv2_speed(int inputSize, int numInputMaps, int filterSize, int nu
 	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i (for %i patterns)\n", k, n,n, f, g,g, p);
 	printf("Result are %i*%i images of size %ix%i.\n", f,f, k,k);
 
-	dense_matrix<float, dev_memory_space, row_major>  img1_dev(p, n*n);
-	dense_matrix<float, dev_memory_space, row_major>  filter1_dev(f, g*g);
-	dense_matrix<float, dev_memory_space, row_major>  dst1_dev(f, p*m*m);
+	tensor<float, dev_memory_space, row_major>  img1_dev(p, n*n);
+	tensor<float, dev_memory_space, row_major>  filter1_dev(f, g*g);
+	tensor<float, dev_memory_space, row_major>  dst1_dev(f, p*m*m);
 
 	sequence(img1_dev);    apply_scalar_functor(img1_dev,   SF_MULT,0.001f);
 	sequence(filter1_dev); apply_scalar_functor(filter1_dev,SF_MULT,0.001f);
 
-	dense_matrix<float, dev_memory_space, row_major>  img2_dev(k*p, n*n);
-	dense_matrix<float, dev_memory_space, row_major>  filter2_dev(f, k*p*g*g);
-	dense_matrix<float, dev_memory_space, row_major>  temp_dev(k*p, f*m*m);
-	dense_matrix<float, dev_memory_space, row_major>  dst2_dev(f, p*m*m);
+	tensor<float, dev_memory_space, row_major>  img2_dev(k*p, n*n);
+	tensor<float, dev_memory_space, row_major>  filter2_dev(f, k*p*g*g);
+	tensor<float, dev_memory_space, row_major>  temp_dev(k*p, f*m*m);
+	tensor<float, dev_memory_space, row_major>  dst2_dev(f, p*m*m);
 
 	sequence(img2_dev);    apply_scalar_functor(img2_dev,   SF_MULT,0.001f);
 	sequence(filter2_dev); apply_scalar_functor(filter2_dev,SF_MULT,0.001f);
@@ -313,17 +313,17 @@ void conv_vs_conv_speed(int inputSize, int numInputMaps, int filterSize, int num
 	printf("Convolving %i images of size %ix%i each with %i filters of size %ix%i (for %i patterns)\n", k, n,n, f, g,g, p);
 	printf("Result are %i*%i images of size %ix%i.\n", f,f, k,k);
 
-	dense_matrix<float, dev_memory_space, row_major>  img1_dev(p, n*n);
-	dense_matrix<float, dev_memory_space, row_major>  filter1_dev(f, g*g);
-	dense_matrix<float, dev_memory_space, row_major>  dst1_dev(f, p*m*m);
+	tensor<float, dev_memory_space, row_major>  img1_dev(p, n*n);
+	tensor<float, dev_memory_space, row_major>  filter1_dev(f, g*g);
+	tensor<float, dev_memory_space, row_major>  dst1_dev(f, p*m*m);
 
 	sequence(img1_dev);    apply_scalar_functor(img1_dev,   SF_MULT,0.001f);
 	sequence(filter1_dev); apply_scalar_functor(filter1_dev,SF_MULT,0.001f);
 
-	dense_matrix<float, dev_memory_space, row_major>  img2_dev(k*p, n*n);
-	dense_matrix<float, dev_memory_space, row_major>  filter2_dev(k*f, g*g);
-	dense_matrix<float, dev_memory_space, row_major>  temp_dev(k*f, p*m*m);
-	dense_matrix<float, dev_memory_space, row_major>  dst2_dev(f, p*m*m);
+	tensor<float, dev_memory_space, row_major>  img2_dev(k*p, n*n);
+	tensor<float, dev_memory_space, row_major>  filter2_dev(k*f, g*g);
+	tensor<float, dev_memory_space, row_major>  temp_dev(k*f, p*m*m);
+	tensor<float, dev_memory_space, row_major>  dst2_dev(f, p*m*m);
 
 	sequence(img2_dev);    apply_scalar_functor(img2_dev,   SF_MULT,0.001f);
 	sequence(filter2_dev); apply_scalar_functor(filter2_dev,SF_MULT,0.001f);
@@ -361,10 +361,10 @@ BOOST_AUTO_TEST_CASE( supersampling_speed )
 	int imgs = 20;
 	int factor = 8;
 
-	dense_matrix<float, host_memory_space, row_major> A(imgs,size*size);
-	dense_matrix<float, host_memory_space, row_major> B(imgs,size*size*factor*factor);
-	dense_matrix<float, dev_memory_space, row_major> dev_A(imgs,size*size);
-	dense_matrix<float, dev_memory_space, row_major> dev_B(imgs,size*size*factor*factor);
+	tensor<float, host_memory_space, row_major> A(imgs,size*size);
+	tensor<float, host_memory_space, row_major> B(imgs,size*size*factor*factor);
+	tensor<float, dev_memory_space, row_major> dev_A(imgs,size*size);
+	tensor<float, dev_memory_space, row_major> dev_B(imgs,size*size*factor*factor);
 
 	sequence(A);
 	sequence(dev_A);
@@ -381,12 +381,12 @@ BOOST_AUTO_TEST_CASE( maxima_plus_index_speed )
 	const int p = 4;
 	const int o = n/p;
 
-	dense_matrix<float,host_memory_space, row_major> img_host(c,n*n);
-	dense_matrix<float,host_memory_space, row_major> img_dev(c,n*n);
-	dense_matrix<float,host_memory_space, row_major> pooled_host(c,o*o);
-	dense_matrix<float,host_memory_space, row_major> pooled_dev(c,o*o);
-	dense_matrix<int,host_memory_space, row_major> indices_host(c,o*o);
-	dense_matrix<int,host_memory_space, row_major> indices_dev(c,o*o);
+	tensor<float,host_memory_space, row_major> img_host(c,n*n);
+	tensor<float,host_memory_space, row_major> img_dev(c,n*n);
+	tensor<float,host_memory_space, row_major> pooled_host(c,o*o);
+	tensor<float,host_memory_space, row_major> pooled_dev(c,o*o);
+	tensor<int,host_memory_space, row_major> indices_host(c,o*o);
+	tensor<int,host_memory_space, row_major> indices_dev(c,o*o);
 
 
 	initialize_mersenne_twister_seeds();
@@ -422,13 +422,13 @@ BOOST_AUTO_TEST_CASE( max_pool_with_overlap )
 	const int m = (n-p)/(p-l)+1; // resulting image size
 	const int c = 100;
 
-	dense_matrix<float,host_memory_space, row_major> img_host(c,n*n);
-	dense_matrix<float,host_memory_space, row_major> dst_host(c,m*m);
-	dense_matrix<int,host_memory_space, row_major> indices_host(c,m*m);
+	tensor<float,host_memory_space, row_major> img_host(c,n*n);
+	tensor<float,host_memory_space, row_major> dst_host(c,m*m);
+	tensor<int,host_memory_space, row_major> indices_host(c,m*m);
 
-	dense_matrix<float,host_memory_space, row_major> img_dev(c,n*n);
-	dense_matrix<float,host_memory_space, row_major> dst_dev(c,m*m);
-	dense_matrix<int,host_memory_space, row_major> indices_dev(c,m*m);
+	tensor<float,host_memory_space, row_major> img_dev(c,n*n);
+	tensor<float,host_memory_space, row_major> dst_dev(c,m*m);
+	tensor<int,host_memory_space, row_major> indices_dev(c,m*m);
 
 	sequence(img_host);
 	sequence(img_dev);

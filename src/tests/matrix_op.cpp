@@ -39,7 +39,7 @@
 using namespace boost::assign;
 
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/tensor_ops/rprop.hpp>
@@ -64,11 +64,11 @@ struct Fix{
 	static const int n;
 	static const int N;
 	static const int big_images = 384*384*2;
-	dense_matrix<float,dev_memory_space,column_major> a,b,u,v,w,d_reduce_big;
-	dense_matrix<float,host_memory_space,column_major> s,t,r,x,z,h_reduce_big;
+	tensor<float,dev_memory_space,column_major> a,b,u,v,w,d_reduce_big;
+	tensor<float,host_memory_space,column_major> s,t,r,x,z,h_reduce_big;
 	Fix()
-	:   a(1,n),b(1,n),u(n,n),v(n,n),w(n,n), d_reduce_big(32,big_images)
-	,   s(1,n),t(1,n),r(n,n),x(n,n),z(n,n), h_reduce_big(32,big_images)
+	:   a(1,n),b(1,n),u(extents[n][n]),v(extents[n][n]),w(extents[n][n]), d_reduce_big(extents[32][big_images])
+	,   s(1,n),t(1,n),r(extents[n][n]),x(extents[n][n]),z(extents[n][n]), h_reduce_big(extents[32][big_images])
 	{
 	}
 	~Fix(){
@@ -77,15 +77,15 @@ struct Fix{
 
 const int Fix::n=128;
 const int Fix::N=Fix::n * Fix::n;
-template<class VT2, class VT, class ML, class I>
+template<class VT2, class VT, class ML>
 std::pair<tensor<VT2,host_memory_space>*,    // host result
 	 tensor<VT2,host_memory_space>*>   // dev  result
 test_reduce(
 	int dim,
-	dense_matrix<VT,dev_memory_space,ML,I>&   d_mat,
+	tensor<VT,dev_memory_space,ML>&   d_mat,
 	cuv::reduce_functor rf
 ){
-	dense_matrix<VT,host_memory_space,ML> h_mat(d_mat.shape()[0], d_mat.shape()[1]);
+	tensor<VT,host_memory_space,ML> h_mat(d_mat.shape());
 	convert(h_mat,d_mat);
 
 	unsigned int len = d_mat.shape()[0];
@@ -118,11 +118,11 @@ BOOST_AUTO_TEST_CASE( vec_ops_unary1 )
 
 BOOST_AUTO_TEST_CASE( binary_operators )
 {
-  dense_matrix<float,dev_memory_space,column_major> j(32,32);
-  dense_matrix<float,dev_memory_space,column_major> k(32,32);
+  tensor<float,dev_memory_space,column_major> j(extents[32][32]);
+  tensor<float,dev_memory_space,column_major> k(extents[32][32]);
   j = k = 1.f;
-  const dense_matrix<float,dev_memory_space,column_major>& j_ = j;
-  const dense_matrix<float,dev_memory_space,column_major>& k_ = k;
+  const tensor<float,dev_memory_space,column_major>& j_ = j;
+  const tensor<float,dev_memory_space,column_major>& k_ = k;
   const tensor<float,dev_memory_space,column_major> l = j_+k_;
   for(int i=0;i<32*32;i++){
 	  BOOST_CHECK_EQUAL(l[i], 2.f);
@@ -230,7 +230,7 @@ BOOST_AUTO_TEST_CASE( mat_op_mm )
 	prod(u,v,w,'n','t');
 	prod(r,x,z,'n','t');
 
-	dense_matrix<float,host_memory_space,column_major> u2(u.shape()[0], u.shape()[1]);
+	tensor<float,host_memory_space,column_major> u2(u.shape());
 	convert(u2,u);
 	for(int i=0;i<u2.shape()[0];i++){
 		for(int j=0;j<u2.shape()[0];j++){
@@ -245,13 +245,13 @@ BOOST_AUTO_TEST_CASE( mat_op_rm_prod )
 	int n = 314;
 	int k = 413;
 
-	dense_matrix<float,host_memory_space,row_major> hA(m, k);
-	dense_matrix<float,host_memory_space,row_major> hB(k, n);
-	dense_matrix<float,host_memory_space,row_major> hC(m, n);
+	tensor<float,host_memory_space,row_major> hA(extents[m][k]);
+	tensor<float,host_memory_space,row_major> hB(extents[k][n]);
+	tensor<float,host_memory_space,row_major> hC(extents[m][n]);
 
-	dense_matrix<float,dev_memory_space,row_major> dA(m, k);
-	dense_matrix<float,dev_memory_space,row_major> dB(k, n);
-	dense_matrix<float,dev_memory_space,row_major> dC(m, n);
+	tensor<float,dev_memory_space,row_major> dA(extents[m][k]);
+	tensor<float,dev_memory_space,row_major> dB(extents[k][n]);
+	tensor<float,dev_memory_space,row_major> dC(extents[m][n]);
 
 	sequence(hA);     apply_scalar_functor(hA, SF_MULT, 0.01f);
 	sequence(hB);     apply_scalar_functor(hB, SF_MULT, 0.01f);
@@ -264,7 +264,7 @@ BOOST_AUTO_TEST_CASE( mat_op_rm_prod )
 	prod(hC,hA,hB,'n','n');
 	prod(dC,dA,dB,'n','n');
 
-	dense_matrix<float,host_memory_space,row_major> c2(dC.shape()[0], dC.shape()[1]);
+	tensor<float,host_memory_space,row_major> c2(dC.shape());
 	convert(c2,dC);
 
 	for(int i=0;i<m;i++){
@@ -283,7 +283,7 @@ BOOST_AUTO_TEST_CASE( mat_op_mmdim1 )
 	prod(b,a,w,'n','t');
 	prod(t,s,z,'n','t');
 
-	dense_matrix<float,host_memory_space,column_major> b2(b.shape()[0], b.shape()[1]);
+	tensor<float,host_memory_space,column_major> b2(b.shape());
 	convert(b2,b);
 
 	for(int i=0;i<z.shape()[0];i++) {
@@ -333,10 +333,10 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_col )
 
 BOOST_AUTO_TEST_CASE( mat_op_mat_plus_vec_row_major )
 {
-	dense_matrix<float,dev_memory_space,row_major> V(v.shape()[0],v.shape()[1]); sequence(V);
-	dense_matrix<float,host_memory_space,row_major> X(x.shape()[0],x.shape()[1]); sequence(X);
-	dense_matrix<float,dev_memory_space,row_major> W(v.shape()[0],v.shape()[1]); sequence(W);
-	dense_matrix<float,host_memory_space,row_major> Z(x.shape()[0],x.shape()[1]); sequence(Z);
+	tensor<float,dev_memory_space,row_major> V(v.shape()); sequence(V);
+	tensor<float,host_memory_space,row_major> X(x.shape()); sequence(X);
+	tensor<float,dev_memory_space,row_major> W(v.shape()); sequence(W);
+	tensor<float,host_memory_space,row_major> Z(x.shape()); sequence(Z);
 	tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
 	tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
 	matrix_plus_col(V,v_vec);
@@ -393,9 +393,9 @@ BOOST_AUTO_TEST_CASE( mat_op_divide_col )
 /*
 BOOST_AUTO_TEST_CASE( mat_op_reduce_big_rm_to_row )
 {
-	dense_matrix<float,dev_memory_space,row_major> dA(32, 1179648);
+	tensor<float,dev_memory_space,row_major> dA(32, 1179648);
 	tensor<float,dev_memory_space> dV(1179648);
-	dense_matrix<float,host_memory_space,row_major> hA(32, 1179648);
+	tensor<float,host_memory_space,row_major> hA(32, 1179648);
 	tensor<float,host_memory_space> hV(1179648);
 
 	sequence(dA);
@@ -439,10 +439,10 @@ BOOST_AUTO_TEST_CASE( mat_op_transpose )
 	const int n = 8;
 	const int m = 3;
 
-	dense_matrix<float,host_memory_space,column_major> hA(n, m), hB(m, n);
-	dense_matrix<float,dev_memory_space,column_major>  dA(n, m), dB(m, n);
-	dense_matrix<float,host_memory_space,row_major> hC(n, m), hD(m, n);
-	dense_matrix<float,dev_memory_space,row_major>  dC(n, m), dD(m, n);
+	tensor<float,host_memory_space,column_major> hA(extents[n][m]), hB(extents[m][n]);
+	tensor<float,dev_memory_space,column_major>  dA(extents[n][m]), dB(extents[m][n]);
+	tensor<float,host_memory_space,row_major> hC(extents[n][m]), hD(extents[m][n]);
+	tensor<float,dev_memory_space,row_major>  dC(extents[n][m]), dD(extents[m][n]);
 
 	sequence(hB); sequence(dB);
 	sequence(hD); sequence(dD);
@@ -452,8 +452,8 @@ BOOST_AUTO_TEST_CASE( mat_op_transpose )
 	transpose(hC, hD);
 	transpose(dC, dD);
 
-	dense_matrix<float,host_memory_space,column_major> h2A(dA.shape()[1], dA.shape()[0]); convert(h2A, dA);
-	dense_matrix<float,host_memory_space,row_major> h2C(dC.shape()[1], dC.shape()[0]); convert(h2C, dC);
+	tensor<float,host_memory_space,column_major> h2A(dA.shape()); convert(h2A, dA);
+	tensor<float,host_memory_space,row_major> h2C(dC.shape()); convert(h2C, dC);
 
 	for(int i=0;i<n;i++)
 		for(int j=0;j<m;j++){
@@ -480,7 +480,7 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 	for(int dim=0;dim<2;dim++){ 
 	if(1){ // column-major
 		std::cout << "Column Major"<<std::endl;
-		dense_matrix<float,dev_memory_space,column_major>  dA(n, m);
+		tensor<float,dev_memory_space,column_major>  dA(extents[n][m]);
 		fill_rnd_uniform(dA);
 		dA *= 2.f;
 
@@ -506,7 +506,7 @@ BOOST_AUTO_TEST_CASE( all_reduce )
 	}
 	if(1){ // row-major
 		std::cout << "Row Major"<<std::endl;
-		dense_matrix<float,dev_memory_space,row_major>  dA(n, m);
+		tensor<float,dev_memory_space,row_major>  dA(extents[n][m]);
 		fill_rnd_uniform(dA);
 		dA *= 2.f;
 

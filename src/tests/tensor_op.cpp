@@ -37,7 +37,6 @@
 #include <limits>
 
 #include <cuv/tools/cuv_general.hpp>
-//#include <cuv/basics/dense_matrix.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/tensor_ops/rprop.hpp>
 

@@ -39,7 +39,7 @@
 #include <cuv/tools/cuv_test.hpp>
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/tools/timing.hpp>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/convolution_ops/convolution_ops.hpp>
@@ -68,8 +68,8 @@ struct Fix{
 	static const int g = 8;    // filter size
 	static const int k = n-g+1;// target image size
 	static const int o = n/p;  // pooling output size
-	dense_matrix<float, dev_memory_space, row_major>  d_img,d_filter,d_dst,d_pooled;
-	dense_matrix<float, host_memory_space, row_major> h_img,h_filter,h_dst,h_pooled;
+	tensor<float, dev_memory_space, row_major>  d_img,d_filter,d_dst,d_pooled;
+	tensor<float, host_memory_space, row_major> h_img,h_filter,h_dst,h_pooled;
 	Fix()
 	:   d_img(c,n*n), d_filter(f,g*g), d_dst(f,c*k*k), d_pooled(c,o*o)
 	,   h_img(c,n*n), h_filter(f,g*g), h_dst(f,c*k*k), h_pooled(c,o*o)
@@ -108,11 +108,11 @@ BOOST_AUTO_TEST_CASE( convolution )
 	convolve(d_dst,d_img,d_filter);
 	convolve(h_dst,h_img,h_filter);
 
-	dense_matrix<float, host_memory_space, row_major> dst2(d_dst.h(), d_dst.w());
+	tensor<float, host_memory_space, row_major> dst2(d_dst.shape()[0], d_dst.shape()[1]);
 	convert(dst2,d_dst);
 
-	for(int i=0;i<d_dst.h();i++){
-		for(int j=0;j<d_dst.w();j++){
+	for(int i=0;i<d_dst.shape()[0];i++){
+		for(int j=0;j<d_dst.shape()[1];j++){
 			BOOST_CHECK_CLOSE( (float)dst2(i,j), (float)h_dst(i,j), 0.001 );
 		}
 	}
@@ -130,11 +130,11 @@ BOOST_AUTO_TEST_CASE( local_maxima )
 	max_pooling(h_pooled, h_img, p);
 	max_pooling(d_pooled, d_img, p);
 
-	dense_matrix<float, host_memory_space, row_major> pooled2(d_pooled.h(), d_pooled.w());
+	tensor<float, host_memory_space, row_major> pooled2(d_pooled.shape()[0], d_pooled.shape()[1]);
 	convert(pooled2,d_pooled);
 
-	for(int i=0;i<d_pooled.h();i++){
-		for(int j=0;j<d_pooled.w();j++){
+	for(int i=0;i<d_pooled.shape()[0];i++){
+		for(int j=0;j<d_pooled.shape()[1];j++){
 			BOOST_CHECK_CLOSE( (float)pooled2(i,j), (float)h_pooled(i,j), 0.001 );
 		}
 	}
@@ -151,7 +151,7 @@ BOOST_AUTO_TEST_CASE( supersampling )
 	supersample(h_img, h_pooled, p);
 	supersample(d_img, d_pooled, p);
 
-	dense_matrix<float, host_memory_space,row_major> img2(d_img.h(), d_img.w());
+	tensor<float, host_memory_space,row_major> img2(d_img.shape()[0], d_img.shape()[1]);
 	convert(img2, d_img);
 
 	MAT_CMP(img2, h_img, 0.001);
@@ -165,7 +165,7 @@ BOOST_AUTO_TEST_CASE( reorder_matrix )
 	reorder(d_dst, k*k);
 	reorder(h_dst, k*k);
 
-	dense_matrix<float, host_memory_space, row_major> dst2(d_dst.h(), d_dst.w());
+	tensor<float, host_memory_space, row_major> dst2(d_dst.shape()[0], d_dst.shape()[1]);
 	convert(dst2, d_dst);
 
 	MAT_CMP(dst2, h_dst, 0.1);
@@ -176,8 +176,8 @@ BOOST_AUTO_TEST_CASE( copy_into_matrix )
 	const int padding = 5;
 	const int size = n + 2 * padding;
 
-	dense_matrix<float, host_memory_space, row_major> h_pad(h_img.h(), size * size);
-	dense_matrix<float, dev_memory_space, row_major> d_pad(d_img.h(), size * size);
+	tensor<float, host_memory_space, row_major> h_pad(h_img.shape()[0], size * size);
+	tensor<float, dev_memory_space, row_major> d_pad(d_img.shape()[0], size * size);
 
 	sequence(d_img); apply_scalar_functor(d_img, SF_MULT,0.001f);
 	sequence(h_img); apply_scalar_functor(h_img, SF_MULT,0.001f);
@@ -198,17 +198,17 @@ BOOST_AUTO_TEST_CASE( local_maxima_index )
 	fill_rnd_uniform(d_img);
 	convert(h_img, d_img);
 
-	dense_matrix<int,host_memory_space,row_major> h_indices(c,o*o);
-	dense_matrix<int,dev_memory_space,row_major> d_indices(c,o*o);
+	tensor<int,host_memory_space,row_major> h_indices(c,o*o);
+	tensor<int,dev_memory_space,row_major> d_indices(c,o*o);
 
 	max_pooling(h_pooled, h_img, p, 0, &h_indices);
 	max_pooling(d_pooled, d_img, p, 0, &d_indices);
 
-	dense_matrix<int, host_memory_space, row_major> indices2(d_indices.h(), d_indices.w());
+	tensor<int, host_memory_space, row_major> indices2(d_indices.shape()[0], d_indices.shape()[1]);
 	convert(indices2,d_indices);
 
-	for(int i=0;i<d_indices.h();i++){
-		for(int j=0;j<d_indices.w();j++){
+	for(int i=0;i<d_indices.shape()[0];i++){
+		for(int j=0;j<d_indices.shape()[1];j++){
 			BOOST_CHECK_EQUAL( indices2(i,j), h_indices(i,j) );
 		}
 	}
@@ -236,13 +236,13 @@ BOOST_AUTO_TEST_CASE( max_pool_res )
 	const int m = (n-p)/(p-l)+1; // resulting image size
 	const int c = 6;
 
-	dense_matrix<float,host_memory_space,row_major> h_img(c,n*n);
-	dense_matrix<float,host_memory_space,row_major> h_dst(c,m*m);
-	dense_matrix<int,host_memory_space,row_major> h_indices(c,m*m);
+	tensor<float,host_memory_space,row_major> h_img(c,n*n);
+	tensor<float,host_memory_space,row_major> h_dst(c,m*m);
+	tensor<int,host_memory_space,row_major> h_indices(c,m*m);
 
-	dense_matrix<float,dev_memory_space,row_major> d_img(c,n*n);
-	dense_matrix<float,dev_memory_space,row_major> d_dst(c,m*m);
-	dense_matrix<int,dev_memory_space,row_major> d_indices(c,m*m);
+	tensor<float,dev_memory_space,row_major> d_img(c,n*n);
+	tensor<float,dev_memory_space,row_major> d_dst(c,m*m);
+	tensor<int,dev_memory_space,row_major> d_indices(c,m*m);
 
 	fill_rnd_uniform(h_img);
 	convert(d_img, h_img);
@@ -282,16 +282,16 @@ BOOST_AUTO_TEST_CASE( row_ncopy )
 	sequence(d_img);
 	sequence(h_img);
 
-	d_img.reshape(extents[1][d_img.w()*d_img.h()]);
-	h_img.reshape(extents[1][h_img.w()*h_img.h()]);
+	d_img.reshape(extents[1][d_img.shape()[1]*d_img.shape()[0]]);
+	h_img.reshape(extents[1][h_img.shape()[1]*h_img.shape()[0]]);
 
 	int n=128;
 
-	dense_matrix<float, host_memory_space, row_major> erg_h(n, h_img.w());
-	dense_matrix<float, dev_memory_space, row_major> erg_d(n, d_img.w());
+	tensor<float, host_memory_space, row_major> erg_h(n, h_img.shape()[1]);
+	tensor<float, dev_memory_space, row_major> erg_d(n, d_img.shape()[1]);
 	fill(erg_d, 0.0f);
 	fill(erg_h, 0.0f);
-	for(int idx = 0; idx < erg_h.w(); idx++ ){
+	for(int idx = 0; idx < erg_h.shape()[1]; idx++ ){
 		for (int idy = 0; idy < n; idy++){
 			erg_h(idy,idx)=*(h_img.ptr() + idx);
 		}
@@ -300,8 +300,8 @@ BOOST_AUTO_TEST_CASE( row_ncopy )
 
 	cuv::row_ncopy(erg_d, d_img, n);
 
-	for(int i=0;i<erg_h.h();i++){
-		for(int j=0;j<erg_h.w();j++){
+	for(int i=0;i<erg_h.shape()[0];i++){
+		for(int j=0;j<erg_h.shape()[1];j++){
 			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
 			if (i>1){
 				BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_d(i-1,j), 0.001 );
@@ -319,10 +319,10 @@ BOOST_AUTO_TEST_CASE( strip_padding )
 
 	int padding=2;
 
-	int img_width 		= sqrt(d_img.w());
+	int img_width 		= sqrt(d_img.shape()[1]);
 	int stripped_width  = img_width-2*padding;
-	dense_matrix<float, host_memory_space, row_major> erg_h(d_img.h(), stripped_width*stripped_width);
-	dense_matrix<float, dev_memory_space, row_major> erg_d(d_img.h(), stripped_width*stripped_width);
+	tensor<float, host_memory_space, row_major> erg_h(d_img.shape()[0], stripped_width*stripped_width);
+	tensor<float, dev_memory_space, row_major> erg_d(d_img.shape()[0], stripped_width*stripped_width);
 	fill(erg_d, 0.0f);
 	fill(erg_h, 0.0f);
 
@@ -330,8 +330,8 @@ BOOST_AUTO_TEST_CASE( strip_padding )
 
 	int x,y, idx, idx_padded;
 	float val;
-	for (int img=0; img<d_img.h(); img++){
-		for(int px=0; px<d_img.w(); px++){
+	for (int img=0; img<d_img.shape()[0]; img++){
+		for(int px=0; px<d_img.shape()[1]; px++){
 			x = px % img_width;
 			y = px / img_width;
 			if ( x >=padding && x < padding+stripped_width &&
@@ -346,8 +346,8 @@ BOOST_AUTO_TEST_CASE( strip_padding )
 	}
 	//std::cout << h_img ;
 
-	for(int i=0;i<erg_h.h();i++){
-		for(int j=0;j<erg_h.w();j++){
+	for(int i=0;i<erg_h.shape()[0];i++){
+		for(int j=0;j<erg_h.shape()[1];j++){
 			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
 		}
 	}
@@ -355,8 +355,8 @@ BOOST_AUTO_TEST_CASE( strip_padding )
 
 BOOST_AUTO_TEST_CASE( check_exitatory_inhibitory )
 {
-	dense_matrix<float, host_memory_space, row_major> filter_h(f, c*g*g);
-	dense_matrix<float, dev_memory_space, row_major> filter_d(f, c*g*g);
+	tensor<float, host_memory_space, row_major> filter_h(f, c*g*g);
+	tensor<float, dev_memory_space, row_major> filter_d(f, c*g*g);
 
 	sequence(filter_h);
 	sequence(filter_d);
@@ -372,8 +372,8 @@ BOOST_AUTO_TEST_CASE( check_exitatory_inhibitory )
 
 //	std::cout << filter_d ;
 
-	for(int i=0;i<filter_h.h();i++){
-		for(int j=0;j<filter_h.w();j++){
+	for(int i=0;i<filter_h.shape()[0];i++){
+		for(int j=0;j<filter_h.shape()[1];j++){
 			BOOST_CHECK_CLOSE( (float)filter_d(i,j), (float)filter_h(i,j), 0.001 );
 		}
 	}
@@ -381,11 +381,11 @@ BOOST_AUTO_TEST_CASE( check_exitatory_inhibitory )
 
 BOOST_AUTO_TEST_CASE( reverse_filters )
 {
-	dense_matrix<float, host_memory_space, row_major> filter_h(f*c, g*g);
-	dense_matrix<float, dev_memory_space, row_major> filter_d(f*c, g*g);
+	tensor<float, host_memory_space, row_major> filter_h(f*c, g*g);
+	tensor<float, dev_memory_space, row_major> filter_d(f*c, g*g);
 
-	dense_matrix<float, host_memory_space, row_major> erg_h(f, c*g*g);
-	dense_matrix<float, dev_memory_space, row_major> erg_d(f, c*g*g);
+	tensor<float, host_memory_space, row_major> erg_h(f, c*g*g);
+	tensor<float, dev_memory_space, row_major> erg_d(f, c*g*g);
 
 	fill(filter_h, 0.0f);fill(filter_d, 0.0f);
 	fill(erg_h, 0.0f);fill(erg_d, 0.0f);
@@ -407,8 +407,8 @@ BOOST_AUTO_TEST_CASE( reverse_filters )
 //	std::cout << filter_d << std::endl << std::endl;
 //	std::cout << erg_d ;
 
-	for(int i=0;i<erg_h.h();i++){
-		for(int j=0;j<erg_h.w();j++){
+	for(int i=0;i<erg_h.shape()[0];i++){
+		for(int j=0;j<erg_h.shape()[1];j++){
 			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
 		}
 	}
@@ -422,8 +422,8 @@ BOOST_AUTO_TEST_CASE( reverse_filters )
 //	sequence(d_img);
 //
 //	// contains a map in each row where the summed pixels are stored
-//	dense_matrix<float, host_memory_space, row_major> erg_h(c, n);
-//	dense_matrix<float, dev_memory_space, row_major> erg_d(c, n);
+//	tensor<float, host_memory_space, row_major> erg_h(c, n);
+//	tensor<float, dev_memory_space, row_major> erg_d(c, n);
 //
 //	fill(erg_h, 0.0f);
 //	fill(erg_d, 0.0f);
@@ -437,7 +437,7 @@ BOOST_AUTO_TEST_CASE( reverse_filters )
 //	for (int row = 0; row<c; row++){
 //		for(int px = 0; px < n; px++){
 //			for(int img = 0; img < n; img++){
-//				*(e_ptr + row*erg_h.w() + px) += *(i_ptr + row*erg_h.w()    // mv to correct row in matrix
+//				*(e_ptr + row*erg_h.shape()[1] + px) += *(i_ptr + row*erg_h.shape()[1]    // mv to correct row in matrix
 //														 + img * imagesize  // iterate on image/delta maps
 //														 + px);				// iterate on pixels of destination map
 //			}
@@ -448,8 +448,8 @@ BOOST_AUTO_TEST_CASE( reverse_filters )
 //
 ////	std::cout << erg_d ;
 //
-//	for(int i=0;i<erg_h.h();i++){
-//		for(int j=0;j<erg_h.w();j++){
+//	for(int i=0;i<erg_h.shape()[0];i++){
+//		for(int j=0;j<erg_h.shape()[1];j++){
 //			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
 //		}
 //	}

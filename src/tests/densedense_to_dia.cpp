@@ -37,7 +37,7 @@
 
 #include <cuv/tools/cuv_test.hpp>
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/basics/dia_matrix.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
@@ -65,9 +65,9 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	dia_matrix<float,dev_memory_space>   C;
-	dense_matrix<float,dev_memory_space,column_major> C_;
-	dense_matrix<float,dev_memory_space,column_major> A,A_;
-	dense_matrix<float,dev_memory_space,column_major> B,B_;
+	tensor<float,dev_memory_space,column_major> C_;
+	tensor<float,dev_memory_space,column_major> A,A_;
+	tensor<float,dev_memory_space,column_major> B,B_;
 	Fix()
 	:   C(n,m,7,max(n,m),rf)
 	,   C_(n,m)
@@ -92,8 +92,8 @@ struct Fix{
 		sequence(B_);
 
 		sequence(C.vec());
-		dia_matrix<float,host_memory_space> C2(C.h(),C.w(),C.num_dia(),C.stride(),rf);
-		dense_matrix<float,host_memory_space,column_major> C_2(C.h(),C.w());
+		dia_matrix<float,host_memory_space> C2(C.shape()[0],C.shape()[1],C.num_dia(),C.stride(),rf);
+		tensor<float,host_memory_space,column_major> C_2(C.shape()[0],C.shape()[1]);
 		convert(C2,C);  // dev->host
 		convert(C_2,C2); // dia->dense
 		convert(C_,C_2); // host->dev
@@ -115,20 +115,20 @@ BOOST_AUTO_TEST_CASE( dd2s_correctness_dev )
 	densedense_to_dia(C,bd,A,B);
 	prod(C_,A,B,'n','t');
 	//cout << "Dense: "<<endl;
-	//for(int i=0;i<C.h();i++){
-	//   for(int j=0;j<C.w();j++){
+	//for(int i=0;i<C.shape()[0];i++){
+	//   for(int j=0;j<C.shape()[1];j++){
 	//           cout << C_(i,j)<<" ";
 	//   }
 	//   cout <<endl;
 	//}
 	//cout <<"Dia: "<<endl;
-	//for(int i=0;i<C.h();i++){
-	//   for(int j=0;j<C.w();j++)
+	//for(int i=0;i<C.shape()[0];i++){
+	//   for(int j=0;j<C.shape()[1];j++)
 	//           cout << C(i,j)<<" ";
 	//   cout <<endl;
 	//}
-	for(int i=0;i<C.h();i++){
-		for(int j=0;j<C.w();j++){
+	for(int i=0;i<C.shape()[0];i++){
+		for(int j=0;j<C.shape()[1];j++){
 			if(C(i,j) != 0){
 				BOOST_CHECK_CLOSE( (float)C(i,j), (float)C_(i,j), 0.01 );
 			}
@@ -142,10 +142,10 @@ BOOST_AUTO_TEST_CASE( dd2s_correctness_host )
 	sequence(A);
 	sequence(B);
 
-	dense_matrix<float,host_memory_space,column_major> Chdense(C.h(),C.w());
-	dia_matrix<float,host_memory_space>   Chdia(C.h(),C.w(),C.num_dia(),C.stride(),rf);
-	dense_matrix<float,host_memory_space,column_major> Ah(A.h(),A.w());
-	dense_matrix<float,host_memory_space,column_major> Bh(B.h(),B.w());
+	tensor<float,host_memory_space,column_major> Chdense(C.shape()[0],C.shape()[1]);
+	dia_matrix<float,host_memory_space>   Chdia(C.shape()[0],C.shape()[1],C.num_dia(),C.stride(),rf);
+	tensor<float,host_memory_space,column_major> Ah(A.shape());
+	tensor<float,host_memory_space,column_major> Bh(B.shape());
 	convert(Chdia,C);
 	convert(Chdense,Chdia);
 	convert(Ah,A);
@@ -154,8 +154,8 @@ BOOST_AUTO_TEST_CASE( dd2s_correctness_host )
 	host_block_descriptor<float> bdh(Chdia);
 	densedense_to_dia(Chdia,bdh,Ah,Bh);
 	prod(Chdense,Ah,Bh,'n','t');
-	for(int i=0;i<C.h();i++){
-		for(int j=0;j<C.w();j++){
+	for(int i=0;i<C.shape()[0];i++){
+		for(int j=0;j<C.shape()[1];j++){
 			if(Chdia(i,j) != 0){
 				BOOST_CHECK_CLOSE( (float)Chdia(i,j), (float)Chdense(i,j), 0.01 );
 			}
@@ -169,9 +169,9 @@ BOOST_AUTO_TEST_CASE( dd2s_cmp_dev_host )
 	sequence(A);
 	sequence(B);
 
-	dia_matrix<float,host_memory_space> C2(C.h(),C.w(),C.num_dia(),C.stride(),rf);
-	dense_matrix<float,host_memory_space,column_major> A2(A.h(),A.w());
-	dense_matrix<float,host_memory_space,column_major> B2(B.h(),B.w());
+	dia_matrix<float,host_memory_space> C2(C.shape()[0],C.shape()[1],C.num_dia(),C.stride(),rf);
+	tensor<float,host_memory_space,column_major> A2(A.shape());
+	tensor<float,host_memory_space,column_major> B2(B.shape());
 	convert(C2,C);
 	convert(A2,A);
 	convert(B2,B);
@@ -182,14 +182,14 @@ BOOST_AUTO_TEST_CASE( dd2s_cmp_dev_host )
 	densedense_to_dia(C2,bdh,A2,B2);
 	
 	//cout <<"Host: "<<endl;
-	//for(int i=0;i<C2.h();i++){
-	//  for(int j=0;j<C2.w();j++)
+	//for(int i=0;i<C2.shape()[0];i++){
+	//  for(int j=0;j<C2.shape()[1];j++)
 	//          cout << C2(i,j)<<" ";
 	//  cout <<endl;
 	//}
 	//cout <<"Dev: "<<endl;
-	//for(int i=0;i<C.h();i++){
-	//  for(int j=0;j<C.w();j++)
+	//for(int i=0;i<C.shape()[0];i++){
+	//  for(int j=0;j<C.shape()[1];j++)
 	//          cout << C(i,j)<<" ";
 	//  cout <<endl;
 	//}

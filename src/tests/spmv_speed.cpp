@@ -38,7 +38,7 @@
 #include <boost/test/floating_point_comparison.hpp>
 
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/basics/dia_matrix.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
@@ -79,9 +79,9 @@ BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
 	dia_matrix<float,host_memory_space>   A_host;
-	dense_matrix<float,host_memory_space,column_major> A_;
-	dense_matrix<float,host_memory_space,column_major> B,B_,BLarge_host;
-	dense_matrix<float,host_memory_space,column_major> C,C_,CLarge_host;
+	tensor<float,host_memory_space,column_major> A_;
+	tensor<float,host_memory_space,column_major> B,B_,BLarge_host;
+	tensor<float,host_memory_space,column_major> C,C_,CLarge_host;
 	Fix()
 	:   A_host(n,m,fs*fs*nm,n)
 	,   A_(n,m)
@@ -89,8 +89,8 @@ struct Fix{
 	,   B_(m,1)
 	,   C(n,1)
 	,   C_(n,1)
-	,   BLarge_host(m,k)
-	,   CLarge_host(n,k)
+	,   BLarge_host(extents[m][k])
+	,   CLarge_host(extents[n][k])
 	{
 		std::vector<int> off;
 		off.resize(fs*fs*nm);
@@ -122,18 +122,18 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dense )
 {
 	if(px>64)
 		return;
-	dense_matrix<float,host_memory_space,column_major> Ahostdense(n,m);
+	tensor<float,host_memory_space,column_major> Ahostdense(n,m);
 	convert(Ahostdense,A_host);
 
-	dense_matrix<float,dev_memory_space,column_major> Adevdense(n,m);
+	tensor<float,dev_memory_space,column_major> Adevdense(n,m);
 	convert(Adevdense,Ahostdense);
 
 	dia_matrix<float,dev_memory_space>   Adevdia(n,m,A_host.num_dia(),A_host.stride());
 	convert(Adevdia,A_host);
 
-	dense_matrix<float,dev_memory_space,column_major> CLarge2_dev(CLarge_host.h(), CLarge_host.w());
+	tensor<float,dev_memory_space,column_major> CLarge2_dev(CLarge_host.shape());
 	convert(CLarge2_dev,CLarge_host);
-	dense_matrix<float,dev_memory_space,column_major> BLarge2(BLarge_host.h(), BLarge_host.w());
+	tensor<float,dev_memory_space,column_major> BLarge2(BLarge_host.shape());
 	convert(BLarge2,BLarge_host);
 
 	float factAv = 2.f, factC = 1.3f;
@@ -153,9 +153,9 @@ BOOST_AUTO_TEST_CASE( spmv_dev_speed_vs_dia )
 {
 	dia_matrix<float,dev_memory_space> A2(n,m,A_host.num_dia(),A_host.stride());
 	convert(A2,A_host);
-	dense_matrix<float,dev_memory_space,column_major> CLarge2_dev(CLarge_host.h(), CLarge_host.w());
+	tensor<float,dev_memory_space,column_major> CLarge2_dev(CLarge_host.shape());
 	convert(CLarge2_dev,CLarge_host);
-	dense_matrix<float,dev_memory_space,column_major> BLarge2(BLarge_host.h(), BLarge_host.w());
+	tensor<float,dev_memory_space,column_major> BLarge2(BLarge_host.shape());
 	convert(BLarge2,BLarge_host);
 
 	float factAv = 2.f, factC = 1.3f;
