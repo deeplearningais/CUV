@@ -37,7 +37,7 @@
 #include <pyublas/numpy.hpp>
 #include <boost/type_traits/is_base_of.hpp>
 
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/random/random.hpp>
@@ -55,8 +55,8 @@ void export_functions() {
 }
 
 void export_random(){
-	typedef dense_matrix<float,dev_memory_space,column_major> fdev;
-	typedef dense_matrix<float,host_memory_space,column_major> fhost;
+	typedef tensor<float,dev_memory_space,column_major> fdev;
+	typedef tensor<float,host_memory_space,column_major> fhost;
 	export_functions<fdev>();
 	export_functions<fhost>();
 	}

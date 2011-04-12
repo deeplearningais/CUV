@@ -38,7 +38,7 @@
 #include <pyublas/numpy.hpp>
 #include  <boost/type_traits/is_base_of.hpp>
 
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/tensor_ops/rprop.hpp>
@@ -49,27 +49,6 @@
 using namespace boost::python;
 using namespace cuv;
 namespace ublas = boost::numeric::ublas;
-
-template<class VT, class MST, class IT>
-boost::python::tuple matrix_arg_max(dense_matrix<VT, MST, row_major, IT>& mat){
-	IT idx = arg_max(mat.vec());	
-	return boost::python::make_tuple(idx / mat.w(), idx % mat.w());
-}
-template<class VT, class MST, class IT>
-boost::python::tuple matrix_arg_max(dense_matrix<VT, MST, column_major, IT>& mat){
-	IT idx = arg_max(mat.vec());	
-	return boost::python::make_tuple(idx % mat.h(), idx / mat.h());
-}
-template<class VT, class MST, class IT>
-boost::python::tuple matrix_arg_min(dense_matrix<VT, MST, row_major, IT>& mat){
-	IT idx = arg_min(mat.vec());	
-	return boost::python::make_tuple(idx / mat.w(), idx % mat.w());
-}
-template<class VT, class MST, class IT>
-boost::python::tuple matrix_arg_min(dense_matrix<VT, MST, column_major, IT>& mat){
-	IT idx = arg_min(mat.vec());	
-	return boost::python::make_tuple(idx % mat.h(), idx / mat.h());
-}
 
 template<class R, class S, class T>
 void export_blas3() {
@@ -309,8 +288,6 @@ void export_matrix_ops(){
 	export_reductions<uchostr>();
 	export_reductions<ucdevr>();
 
-	//export_argmax_vec<float,host_memory_space>();
-	//export_argmax_vec<float,dev_memory_space>();
 	export_learn_step<fhost>();
 	export_learn_step<fdev>();
 	export_learn_step<fhostr>();
@@ -340,7 +317,7 @@ void export_matrix_ops(){
 	export_transposed_view<float,host_memory_space>();
 	export_transposed_view<float,dev_memory_space>();
 
-	//export_multinomial_sampling<dense_matrix<float,dev_memory_space,row_major> >();
+	//export_multinomial_sampling<tensor<float,dev_memory_space,row_major> >();
 
 }
 

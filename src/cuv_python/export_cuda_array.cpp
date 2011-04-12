@@ -35,7 +35,7 @@
 #include <boost/python.hpp>
 #include <boost/python/extract.hpp>
 #include <pyublas/numpy.hpp>
-#include  <boost/type_traits/is_base_of.hpp>
+#include <boost/type_traits/is_base_of.hpp>
 #include <cuv/basics/cuda_array.hpp>
 
 using namespace std;
@@ -60,8 +60,8 @@ export_cuda_array(std::string name){
 		.def("dealloc",&mat::dealloc, "deallocate memory")
 		//.def("bind",&mat::bind, "bind to 2D texture")
 		//.def("unbind",&mat::unbind, "unbind from 2D texture")
-		.def("assign", (void (mat::*)(const tensor<value_type,dev_memory_space,row_major>&))(&mat::assign), "assign a device dense_matrix to cuda_array")
-		.def("assign", (void (mat::*)(const tensor<value_type,host_memory_space,row_major>&))(&mat::assign), "assign a host dense_matrix to cuda_array")
+		.def("assign", (void (mat::*)(const tensor<value_type,dev_memory_space,row_major>&))(&mat::assign), "assign a device tensor to cuda_array")
+		.def("assign", (void (mat::*)(const tensor<value_type,host_memory_space,row_major>&))(&mat::assign), "assign a host tensor to cuda_array")
 		.def("at",    (value_type (mat::*)(const index_type&,const index_type&))(&mat::operator()), "value at this position")
 		.add_property("h", &mat::h)
 		.add_property("w", &mat::w)

@@ -49,22 +49,6 @@ using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
 
-//template<class MS, class V,class M, class I>
-//struct ms_type {
-//};
-//template<class V,class M, class I>
-//struct ms_type<dev_memory_space,V,M,I> {
-        //typedef dev_dense_matrix<V,M,I> type;
-//};
-//template<class V,class M, class I>
-//struct ms_type<host_memory_space,V,M,I> {
-        //typedef host_dense_matrix<V,M,I> type;
-//};
-//template<class Mat, class NewVT>
-//struct switch_value_type{
-        //typedef typename ms_type<typename matrix_traits<Mat>::memory_space_type,NewVT, typename Mat::memory_layout, typename Mat::index_type>::type type;
-//};
-//// end: to be refactored
 
 
 template <class M>
