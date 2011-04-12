@@ -262,21 +262,22 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& d
    * Does not actually modify the content of the memory.
    * 
    */
-  template<class V, class T>
-  cuv::tensor<V,T,row_major> * transposed_view_p(cuv::tensor<V,T,column_major>&  src);
-  template<class V, class T>
-  cuv::tensor<V,T,column_major> * transposed_view_p(cuv::tensor<V,T,row_major>&  src);
+  template<class V, class T, class M>
+  cuv::tensor<V,T,typename other_memory_layout<M>::type > * transposed_view_p(cuv::tensor<V,T,M>&  src);
 
-  template<class V, class T>
-  std::auto_ptr<cuv::tensor<V,T,row_major> > transposed_view(cuv::tensor<V,T,column_major>&  src){
-	return std::auto_ptr<cuv::tensor<V,T,row_major> > (transposed_view_p(src));
-  }
-  template<class V, class T>
-  std::auto_ptr<cuv::tensor<V,T,column_major> > transposed_view(cuv::tensor<V,T,row_major>&  src){
-	return std::auto_ptr<cuv::tensor<V,T,column_major> >(transposed_view_p(src));
+  template<class V, class T, class M>
+  std::auto_ptr<cuv::tensor<V,T,typename other_memory_layout<M>::type > > transposed_view(cuv::tensor<V,T,M>&  src){
+	return std::auto_ptr<cuv::tensor<V,T,typename other_memory_layout<M>::type > >(transposed_view_p(src));
   }
         
+  //const variant
+  template<class V, class T, class M>
+  const cuv::tensor<V,T,typename other_memory_layout<M>::type > * transposed_view_p(const cuv::tensor<V,T,M>&  src);
 
+  template<class V, class T, class M>
+  std::auto_ptr<const cuv::tensor<V,T,typename other_memory_layout<M>::type > > transposed_view(const cuv::tensor<V,T,M>&  src){
+	return std::auto_ptr<const cuv::tensor<V,T,typename other_memory_layout<M>::type > >(transposed_view_p(src));
+  }
   /** @} */ // end group blas2
 } // cuv
   

@@ -105,7 +105,7 @@ tensor<__value_type , __memory_space_type,column_major>*blockview(
 				__index_type num_cols,
 				column_major
 				) {
-                        cuvAssert(matrix.shape().size()==2);
+                        cuvAssert(matrix.ndim()==2);
 			cuvAssert(start_rows==0);
 			cuvAssert(num_rows==matrix.shape()[0])
 			return new tensor<__value_type,__memory_space_type,column_major>(extents[num_rows][num_cols], matrix.ptr()+matrix.shape()[0]*start_cols);
@@ -120,7 +120,7 @@ tensor<__value_type,__memory_space_type,row_major>* blockview(
 		__index_type num_cols,
 		row_major
 ) {
-        cuvAssert(matrix.shape().size()==2);
+        cuvAssert(matrix.ndim()==2);
 	cuvAssert(start_cols==0);
 	cuvAssert(num_cols==matrix.shape()[1])
 	return new tensor<__value_type,__memory_space_type,row_major>(extents[num_rows][num_cols],matrix.ptr()+matrix.shape()[1]*start_rows);
@@ -146,9 +146,9 @@ void prod(tensor<float,dev_memory_space,column_major>& dst,
 		char transB,
 		const float& factAB,
 		const float& factC) {
-        cuvAssert(dst.shape().size()==2);
-        cuvAssert(A.shape().size()==2);
-        cuvAssert(B.shape().size()==2);
+        cuvAssert(dst.ndim()==2);
+        cuvAssert(A.ndim()==2);
+        cuvAssert(B.ndim()==2);
 	int m = (transA=='t' ? A.shape()[0] : A.shape()[0]);
 	int k1 = (transA=='t' ? A.shape()[0] : A.shape()[1]);
 	int k2 = (transB=='t' ? B.shape()[1] : B.shape()[0]);
@@ -174,9 +174,9 @@ void prod(tensor<float,host_memory_space,column_major>& dst,
 		char transB,
 		const float& factAB,
 		const float& factC) {
-        cuvAssert(dst.shape().size()==2);
-        cuvAssert(A.shape().size()==2);
-        cuvAssert(B.shape().size()==2);
+        cuvAssert(dst.ndim()==2);
+        cuvAssert(A.ndim()==2);
+        cuvAssert(B.ndim()==2);
 
 	int m = (transA=='t' ? A.shape()[1] : A.shape()[0]);
 	int k1 = (transA=='t' ? A.shape()[0] : A.shape()[1]);
@@ -216,9 +216,9 @@ void prod(tensor<float,dev_memory_space,row_major>& dst,
 		char transB,
 		const float& factAB,
 		const float& factC) {
-        cuvAssert(dst.shape().size()==2);
-        cuvAssert(A.shape().size()==2);
-        cuvAssert(B.shape().size()==2);
+        cuvAssert(dst.ndim()==2);
+        cuvAssert(A.ndim()==2);
+        cuvAssert(B.ndim()==2);
 	// we use column major prod and just exchange width and height
 	int m = (transB=='t' ? B.shape()[0] : B.shape()[1]);
 	int k1 = (transB=='t' ? B.shape()[1] : B.shape()[0]);
@@ -245,9 +245,9 @@ void prod(tensor<float,host_memory_space,row_major>& dst,
 		char transB,
 		const float& factAB,
 		const float& factC) {
-        cuvAssert(dst.shape().size()==2);
-        cuvAssert(A.shape().size()==2);
-        cuvAssert(B.shape().size()==2);
+        cuvAssert(dst.ndim()==2);
+        cuvAssert(A.ndim()==2);
+        cuvAssert(B.ndim()==2);
 	int m = (transA=='t' ? A.shape()[1] : A.shape()[0]);
 	int k1 = (transA=='t' ? A.shape()[0] : A.shape()[1]);
 	int k2 = (transB=='t' ? B.shape()[1] : B.shape()[0]);
@@ -380,8 +380,8 @@ namespace transpose_impl{
 	template<class V>
 	void transpose(tensor<V, dev_memory_space, column_major>& dst,
 			 const tensor<V, dev_memory_space, column_major>& src) {
-                cuvAssert(dst.shape().size()==2);
-                cuvAssert(src.shape().size()==2);
+                cuvAssert(dst.ndim()==2);
+                cuvAssert(src.ndim()==2);
 		cuvAssert(dst.shape()[1] == src.shape()[0]);
 		cuvAssert(dst.shape()[0] == src.shape()[1]);
                 typedef typename tensor<V, dev_memory_space, column_major>::index_type I;
@@ -399,8 +399,8 @@ namespace transpose_impl{
 	template<class V>
 	void transpose(tensor<V,dev_memory_space,row_major>& dst,
 			 const tensor<V,dev_memory_space,row_major>& src) {
-                cuvAssert(dst.shape().size()==2);
-                cuvAssert(src.shape().size()==2);
+                cuvAssert(dst.ndim()==2);
+                cuvAssert(src.ndim()==2);
 		cuvAssert(dst.shape()[1] == src.shape()[0]);
 		cuvAssert(dst.shape()[0] == src.shape()[1]);
                 typedef typename tensor<V, dev_memory_space, row_major>::index_type I;
@@ -418,8 +418,8 @@ namespace transpose_impl{
 	template<class V>
 	void transpose(tensor<V,host_memory_space,column_major>& dst,
 			 const tensor<V,host_memory_space,column_major>& src) {
-                cuvAssert(dst.shape().size()==2);
-                cuvAssert(src.shape().size()==2);
+                cuvAssert(dst.ndim()==2);
+                cuvAssert(src.ndim()==2);
 		cuvAssert(dst.shape()[1] == src.shape()[0]);
 		cuvAssert(dst.shape()[0] == src.shape()[1]);
 		V* dst_ptr = dst.ptr();
@@ -435,8 +435,8 @@ namespace transpose_impl{
 	template<class V>
 	void transpose(tensor<V,host_memory_space,row_major>& dst,
 			 const tensor<V,host_memory_space,row_major>& src) {
-                cuvAssert(dst.shape().size()==2);
-                cuvAssert(src.shape().size()==2);
+                cuvAssert(dst.ndim()==2);
+                cuvAssert(src.ndim()==2);
 		cuvAssert(dst.shape()[1] == src.shape()[0]);
 		cuvAssert(dst.shape()[0] == src.shape()[1]);
 		V* dst_ptr = dst.ptr();
@@ -455,16 +455,16 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& d
 	transpose_impl::transpose(dst,src);
 }
 
-template<class V, class T>
-cuv::tensor<V,T,row_major> * transposed_view_p(cuv::tensor<V,T,column_major>&  src){
-        cuvAssert(src.shape().size()==2);
-	return new tensor<V,T,row_major>(extents[src.shape()[1]][src.shape()[0]],src.ptr());
+template<class V, class T, class M>
+cuv::tensor<V,T,typename other_memory_layout<M>::type> * transposed_view_p(cuv::tensor<V,T,M>&  src){
+        cuvAssert(src.ndim()==2);
+	return new tensor<V,T,typename other_memory_layout<M>::type>(extents[src.shape()[1]][src.shape()[0]],src.ptr());
 }
 
-template<class V, class T>
-cuv::tensor<V,T,column_major> * transposed_view_p(cuv::tensor<V,T,row_major>&  src){
-        cuvAssert(src.shape().size()==2);
-	return new tensor<V,T,column_major>(extents[src.shape()[1]][src.shape()[0]],src.ptr());
+template<class V, class T, class M>
+const cuv::tensor<V,T,typename other_memory_layout<M>::type> * transposed_view_p(const cuv::tensor<V,T,M>&  src){
+        cuvAssert(src.ndim()==2);
+	return new tensor<V,T,typename other_memory_layout<M>::type>(extents[src.shape()[1]][src.shape()[0]],src.ptr());
 }
 
 #define INSTANTIATE_MV(V1,V2,M) \
@@ -490,22 +490,26 @@ cuv::tensor<V,T,column_major> * transposed_view_p(cuv::tensor<V,T,row_major>&  s
   template void transpose(tensor<V,host_memory_space,M>&,const tensor<V,host_memory_space,M>&); \
   template void transpose(tensor<V,dev_memory_space,M>&,const tensor<V,dev_memory_space,M>&); 
 
-#define INSTANTIATE_TRANSPOSED_VIEW(V,I) \
-  template std::auto_ptr<tensor<V,host_memory_space,row_major> > transposed_view(tensor<V,host_memory_space,column_major>&);\
-  template std::auto_ptr<tensor<V,host_memory_space,column_major> > transposed_view(tensor<V,host_memory_space,row_major>&);\
-  template std::auto_ptr<tensor<V,dev_memory_space,row_major> > transposed_view(tensor<V,dev_memory_space,column_major>&);\
-  template std::auto_ptr<tensor<V,dev_memory_space,column_major> > transposed_view(tensor<V,dev_memory_space,row_major>&);
+#define INSTANTIATE_TRANSPOSED_VIEW(V) \
+  template tensor<V,host_memory_space,other_memory_layout<column_major>::type >* transposed_view_p(tensor<V,host_memory_space,column_major>&);\
+  template tensor<V,host_memory_space,other_memory_layout<row_major>::type >* transposed_view_p(tensor<V,host_memory_space,row_major>&);\
+  template tensor<V,dev_memory_space,other_memory_layout<column_major>::type >* transposed_view_p(tensor<V,dev_memory_space,column_major>&);\
+  template tensor<V,dev_memory_space,other_memory_layout<row_major>::type >* transposed_view_p(tensor<V,dev_memory_space,row_major>&);\
+  template const tensor<V,host_memory_space,other_memory_layout<column_major>::type >* transposed_view_p(const tensor<V,host_memory_space,column_major>&);\
+  template const tensor<V,host_memory_space,other_memory_layout<row_major>::type >* transposed_view_p(const tensor<V,host_memory_space,row_major>&);\
+  template const tensor<V,dev_memory_space,other_memory_layout<column_major>::type >* transposed_view_p(const tensor<V,dev_memory_space,column_major>&);\
+  template const tensor<V,dev_memory_space,other_memory_layout<row_major>::type >* transposed_view_p(const tensor<V,dev_memory_space,row_major>&);
 
 INSTANTIATE_TRANSPOSE(float,column_major,unsigned int);
 INSTANTIATE_TRANSPOSE(float,row_major,unsigned int);
 INSTANTIATE_TRANSPOSE(int,column_major,unsigned int);
 INSTANTIATE_TRANSPOSE(int,row_major,unsigned int);
 
-INSTANTIATE_TRANSPOSED_VIEW(float,unsigned int);
-/*INSTANTIATE_TRANSPOSED_VIEW(int,unsigned int);*/
-/*INSTANTIATE_TRANSPOSED_VIEW(unsigned int,unsigned int);*/
-/*INSTANTIATE_TRANSPOSED_VIEW(char,unsigned int);*/
-/*INSTANTIATE_TRANSPOSED_VIEW(unsigned char,unsigned int);*/
+INSTANTIATE_TRANSPOSED_VIEW(float);
+/*INSTANTIATE_TRANSPOSED_VIEW(int);*/
+/*INSTANTIATE_TRANSPOSED_VIEW(unsigned int);*/
+/*INSTANTIATE_TRANSPOSED_VIEW(char);*/
+INSTANTIATE_TRANSPOSED_VIEW(unsigned char);
 
 INSTANTIATE_MV(float, float, column_major);
 INSTANTIATE_MV(float, float, row_major);
