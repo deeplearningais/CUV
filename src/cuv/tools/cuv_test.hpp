@@ -47,8 +47,8 @@
 	{ 
 		boost::test_tools::percent_tolerance_t <float> pt(prec);
 		boost::test_tools::close_at_tolerance<typename M::value_type> cmp(pt);
-		for(int i=0;i<w.h();i++){
-			for(int j=0;j<w.w();j++){
+		for(int i=0;i<w.shape()[0];i++){
+			for(int j=0;j<w.shape()[1];j++){
 				if( !cmp(w(i,j), w2(i,j)))
 					return false;
 			}
