@@ -62,7 +62,7 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
  */
 BOOST_AUTO_TEST_CASE( show_host_matrix )
 {
-	dense_matrix<float,host_memory_space,row_major> m(1,1);
+	tensor<float,host_memory_space,row_major> m(extents[1][1]);
 	cimg::load(m,"src/tests/data/gray_square.gif");
 	cimg::show(m,"gray_square");
 	cimg::save(m,"/tmp/a.png");

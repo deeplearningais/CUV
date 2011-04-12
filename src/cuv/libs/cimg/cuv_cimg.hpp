@@ -1,14 +1,14 @@
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 namespace cuv{
 	namespace cimg{
-		template<class V, class M, class I>
-		void show(const dense_matrix<V,host_memory_space,M,I>& m, const std::string& name);
+		template<class V, class M>
+		void show(const tensor<V,host_memory_space,M>& m, const std::string& name);
 
-		template<class V, class M, class I>
-		void load(      dense_matrix<V,host_memory_space,M,I>& m, const std::string& name);
+		template<class V, class M>
+		void load(      tensor<V,host_memory_space,M>& m, const std::string& name);
 
-		template<class V, class M, class I>
-		void save(      dense_matrix<V,host_memory_space,M,I>& m, const std::string& name);
+		template<class V, class M>
+		void save(      tensor<V,host_memory_space,M>& m, const std::string& name);
 	}
 	
 }
