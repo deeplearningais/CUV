@@ -230,8 +230,6 @@ void matrix_to_grid(tensor<float,dev_memory_space,row_major>& grid,
 
 template<>
 void sample_multinomial(tensor<float,dev_memory_space,row_major>& grid){
-   /*dense_matrix<float,dev_memory_space,row_major> tmp(grid.shape()[0],grid.shape()[1]);*/
-   /*apply_binary_functor(tmp,grid,BF_COPY);*/
 
    tensor<float,dev_memory_space,row_major> rnd(grid.shape()[0]);
    fill_rnd_uniform(rnd);
@@ -1253,70 +1251,6 @@ void filter_rotate(	tensor<float,dev_memory_space,row_major>& dst,
 
 }
 
-//__global__ void add_maps_h_kernel(float* dst, float* img, const int img_w, const int imagesize) {
-//
-//	int px = threadIdx.x +  blockDim.x * blockIdx.x;
-//	int row = blockIdx.y;
-//
-//	int num_maps = img_w / imagesize;
-//
-//	__shared__ float summedMaps[512];
-//
-//	// sum up in fast shared mem
-//	for(int i = 0; i < num_maps; i++){
-//		summedMaps[px] += *(img + row * img_w		// goto row in matrix
-//								+ px				// pixel
-//								+ i * imagesize);   // iterate on images
-//	}
-//
-//	// move result to global mem
-//	*(dst + row * img_w + px) = *(summedMaps + row * img_w + px);
-//}
-//
-//template<>
-//void add_maps_h(	dense_matrix<float,dev_memory_space,row_major>& dst,
-//					dense_matrix<float,dev_memory_space,row_major>& mat,
-//					unsigned int image_size){
-//
-//		int num_images = mat.shape()[1] / image_size;
-//		cuvAssert(dst.shape()[1] == image_size);
-//		cuvAssert(dst.shape()[0] == mat.shape()[0]);
-//		cuvAssert(num_images * image_size == mat.shape()[1]);
-//
-//		int numThreads = 512;
-//		int numBlocksX = ceil((float)mat.shape()[1]/numThreads);
-//		int numBlocksY = mat.shape()[0];
-//		dim3 grid(numBlocksX, numBlocksY);
-//		dim3 dimBlock(numThreads,1);
-//
-//		add_maps_h_kernel<<<grid,dimBlock>>>(dst.ptr(), mat.ptr(), mat.shape()[1], image_size);
-//		cuvSafeCall(cudaThreadSynchronize());
-//}
-//
-//template<>
-//void add_maps_h(	dense_matrix<float,host_memory_space,row_major>& dst,
-//					dense_matrix<float,host_memory_space,row_major>& mat,
-//					unsigned int image_size){
-//
-//		int num_images = mat.shape()[1] / image_size;
-//		cuvAssert(dst.shape()[1] == image_size);
-//		cuvAssert(dst.shape()[0] == mat.shape()[0]);
-//		cuvAssert(num_images * image_size == mat.shape()[1]);
-//
-//		float* e_ptr = dst.ptr();
-//		float* i_ptr = mat.ptr();
-//
-//		// host solution
-//		for (int row = 0; row<mat.shape()[0]; row++){
-//			for(int px = 0; px < image_size; px++){
-//				for(int img = 0; img < num_images; img++){
-//					*(e_ptr + row*dst.shape()[1] + px) += *(i_ptr + row * dst.shape()[1]  // move to right row
-//															 + img * image_size // move to img
-//															 + px);				// move to pixel in img
-//				}
-//			}
-//		}
-//}
 
 __global__ void calc_error_to_blob_kernel(float* img,
 										  float* src,
