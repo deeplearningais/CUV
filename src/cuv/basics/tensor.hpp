@@ -591,5 +591,25 @@ namespace cuv
 	}
 }
 
+#include <iostream>
+namespace std{
+	template<class V, class M, class T>
+	/** 
+	 * @brief Return stream containing matrix entries for debugging
+	 * 
+	 * @param o Output stream
+	 * @param w2 Matrix to output
+	 */
+	ostream& 
+	operator<<(ostream& o, const cuv::tensor<V,M,T>& w2){
+		cout << "Tensor shape: "<<endl;
+                typedef typename cuv::tensor<V,M,T>::index_type I;
+		for(I i=0;i<w2.ndim();i++){
+				o << w2.shape()[i] << " ";
+		}
+		o << endl;
+		return o;
+	}
+}
 
 #endif /* __TENSOR_HPP__ */
