@@ -6,7 +6,6 @@
  */
 
 #include <cuv/basics/tensor.hpp>
-#include <cuv/basics/dense_matrix.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/libs/separable_conv/separable_convolution.hpp>
 
@@ -182,35 +181,35 @@ namespace cuv{
 
 
 #define V(X) #X << " : "<< (X)<<"  "
-		template<int radius, class DstV, class SrcV, class I>
-		void convolve(dense_matrix<DstV,dev_memory_space,row_major,I>& dst,
-				     const dense_matrix<SrcV,dev_memory_space,row_major,I>& src, int dir=2){
+		template<int radius, class DstV, class SrcV>
+		void convolve(tensor<DstV,dev_memory_space,row_major>& dst,
+				     const tensor<SrcV,dev_memory_space,row_major>& src, int dir=2){
 
-			int dw = src.w();
-			int dh = src.h();
+			int dw = src.shape()[1];
+			int dh = src.shape()[0];
 			dim3 blockGridRows(iDivUp(dw, ROW_TILE_W), dh);
 			dim3 threadBlockRows(KERNEL_RADIUS_ALIGNED + ROW_TILE_W + radius);	// 16 128 8
 			dim3 blockGridColumns(iDivUp(dw, COLUMN_TILE_W), iDivUp(dh, COLUMN_TILE_H));
 			dim3 threadBlockColumns(COLUMN_TILE_W, 8);
 			
 			if(dir==2){
-				dense_matrix<DstV,dev_memory_space,row_major,I> intermed(dst.h(),dst.w());
-				convolutionRowGPU<radius><<<blockGridRows, threadBlockRows>>>( intermed.ptr(), src.ptr(), src.w(), src.h());
-				convolutionColumnGPU<radius><<<blockGridColumns, threadBlockColumns>>>( dst.ptr(), intermed.ptr(), intermed.w(), intermed.h(), COLUMN_TILE_W * threadBlockColumns.y, intermed.w() * threadBlockColumns.y);
+				tensor<DstV,dev_memory_space,row_major> intermed(dst.shape());
+				convolutionRowGPU<radius><<<blockGridRows, threadBlockRows>>>( intermed.ptr(), src.ptr(), src.shape()[1], src.shape()[0]);
+				convolutionColumnGPU<radius><<<blockGridColumns, threadBlockColumns>>>( dst.ptr(), intermed.ptr(), intermed.shape()[1], intermed.shape()[0], COLUMN_TILE_W * threadBlockColumns.y, intermed.shape()[1] * threadBlockColumns.y);
 			}
 			else if(dir==0){
-				convolutionRowGPU<radius><<<blockGridRows, threadBlockRows>>>( dst.ptr(), src.ptr(), src.w(), src.h());
+				convolutionRowGPU<radius><<<blockGridRows, threadBlockRows>>>( dst.ptr(), src.ptr(), src.shape()[1], src.shape()[0]);
 			}else if(dir==1){
-				convolutionColumnGPU<radius><<<blockGridColumns, threadBlockColumns>>>( dst.ptr(), src.ptr(), src.w(), src.h(), COLUMN_TILE_W * threadBlockColumns.y, src.w() * threadBlockColumns.y);
+				convolutionColumnGPU<radius><<<blockGridColumns, threadBlockColumns>>>( dst.ptr(), src.ptr(), src.shape()[1], src.shape()[0], COLUMN_TILE_W * threadBlockColumns.y, src.shape()[1] * threadBlockColumns.y);
 			}
 			cuvSafeCall(cudaThreadSynchronize());
 			safeThreadSync();
 		}
 
 
-		template<class DstV, class SrcV, class M, class I>
-		void radius_dispatch(const unsigned int& radius,dense_matrix<DstV,M,row_major,I>& dst,
-				     const dense_matrix<SrcV,M,row_major,I>& src,int dir=2){
+		template<class DstV, class SrcV, class M>
+		void radius_dispatch(const unsigned int& radius,tensor<DstV,M,row_major>& dst,
+				     const tensor<SrcV,M,row_major>& src,int dir=2){
 			switch(radius){
 				case 1: convolve<1>(dst,src,dir); break;
 				case 2: convolve<2>(dst,src,dir); break;
@@ -223,13 +222,14 @@ namespace cuv{
 				default: cuvAssert(false);
 			}
 		}
-		template<class DstV, class SrcV, class M, class I>
-		boost::ptr_vector<dense_matrix<DstV,M,row_major,I> >
-		convolve( const dense_matrix<SrcV,M,row_major,I>& src,
+		template<class DstV, class SrcV, class M>
+		boost::ptr_vector<tensor<DstV,M,row_major> >
+		convolve( const tensor<SrcV,M,row_major>& src,
 			  const unsigned int& radius,
 			  const separable_filter& filt ){
+                        cuvAssert(src.ndim()==2);
 
-			typedef dense_matrix<DstV,M,row_major,I> result_type;
+			typedef tensor<DstV,M,row_major> result_type;
 			cuvAssert(radius <= MAX_KERNEL_RADIUS);
 			boost::ptr_vector<result_type> res;
 
@@ -242,7 +242,7 @@ namespace cuv{
 				}
 				kernel /= cuv::sum(kernel);
 				cuvSafeCall( cudaMemcpyToSymbol(d_Kernel, kernel.ptr(), kernel.memsize()) );
-				res.push_back(new result_type(src.h(),src.w()));
+				res.push_back(new result_type(src.shape()));
 				radius_dispatch(radius,res.back(),src,2);
 			}else if(filt == SP_SOBEL){
 				boost::ptr_vector<result_type> intermed;
@@ -255,10 +255,10 @@ namespace cuv{
 				kernel[2]= 0.5;
 				cuvSafeCall( cudaMemcpyToSymbol(d_Kernel, kernel.ptr(), kernel.memsize()) );
 
-				res.push_back(new result_type(src.h(),src.w()));
+				res.push_back(new result_type(src.shape()));
 				radius_dispatch(1,res.back(),intermed.front(),0);
 
-				res.push_back(new result_type(src.h(),src.w()));
+				res.push_back(new result_type(src.shape()));
 				radius_dispatch(1,res.back(),intermed.front(),1);
 			}
 			return res;
@@ -266,8 +266,8 @@ namespace cuv{
 		
 		// instantiations
 #define INST(DSTV, SRCV,M, I) \
-		template boost::ptr_vector<dense_matrix<DSTV,M,row_major,I> > \
-		convolve<DSTV,SRCV,M,I>( const dense_matrix<SRCV,M,row_major,I>&, \
+		template boost::ptr_vector<tensor<DSTV,M,row_major> > \
+		convolve<DSTV,SRCV,M>( const tensor<SRCV,M,row_major>&, \
 				                      const unsigned int&,                     \
 				                      const separable_filter&);
 		INST(float,float,dev_memory_space,unsigned int);

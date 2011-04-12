@@ -2,7 +2,7 @@
 #define __SEPARABLE_CONVOLUTION_HPP__
 
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 
 namespace cuv{
 	namespace sep_conv
@@ -11,9 +11,9 @@ namespace cuv{
 			SP_GAUSS,
 			SP_SOBEL,
 		};
-		template<class DstV, class SrcV, class M, class I>
-		boost::ptr_vector<dense_matrix<DstV,M,row_major,I> >
-		convolve(  const dense_matrix<SrcV,M,row_major,I>& src,
+		template<class DstV, class SrcV, class M>
+		boost::ptr_vector<tensor<DstV,M,row_major> >
+		convolve(  const tensor<SrcV,M,row_major>& src,
 			   const unsigned int&   radius,
 			   const separable_filter& filt );
 	}

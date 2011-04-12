@@ -64,15 +64,15 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
  */
 BOOST_AUTO_TEST_CASE( show_host_matrix )
 {
-	dense_matrix<float,host_memory_space,row_major> m(1,1);
-	dense_matrix<float,dev_memory_space,row_major> d_m(1,1);
+	tensor<float,host_memory_space,row_major> m;
+	tensor<float,dev_memory_space,row_major> d_m;
 
 	cimg::load(m,"src/tests/data/lena_gray.png");
 	cimg::show(m,"before smoothing");
 
 	convert(d_m,m);
 
-	boost::ptr_vector<dense_matrix<float,dev_memory_space,row_major> > res =
+	boost::ptr_vector<tensor<float,dev_memory_space,row_major> > res =
 		sep_conv::convolve<float>(d_m,6,sep_conv::SP_SOBEL);
 
 	convert(m,res[0]);
