@@ -113,6 +113,18 @@ namespace cuv{
 					}
 				m_vec = NULL;
 			}
+			/** 
+			 * @brief shape of a dia-matrix. This is quite inefficient ATM, mainly for compatibility with tensor.
+			 *
+			 * @return a vector of height and width
+			 */
+			std::vector<index_type>
+			shape()const{
+				std::vector<index_type> s(2);
+				s[0]=this->h();
+				s[1]=this->w();
+				return s;
+			}
 			void alloc() ///< Allocate matrix entries: Create vector to store entries.
 			{
 				cuvAssert(m_stride >= this->h() || m_stride >= this->w());
