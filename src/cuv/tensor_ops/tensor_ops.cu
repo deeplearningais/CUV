@@ -233,7 +233,7 @@ namespace detail{
 	// **********************************
 	template<class V1, class V2, class M, class S1, class S2>
 	void apply_scalar_functor(tensor<V1, M>& dst, const tensor<V2, M>& src, const ScalarFunctor& sf, const int& numparams, const tensor<unsigned char,M>* mask, const S1& p, const S2& p2){
-		cuvAssert(dst.size()==src.size());
+		cuvAssert(equal_shape(dst,src));
 
 		typedef typename memspace_cuv2thrustptr<V1, M>::ptr_type ptr_type1;
 		typedef typename memspace_cuv2thrustptr<V2, M>::ptr_type ptr_type2;
@@ -302,8 +302,8 @@ namespace detail{
 	// **********************************
 	template<class V1, class V2, class V3, class M, class S1, class S2>
 	  void apply_binary_functor(tensor<V1, M>& dst,const tensor<V2, M>& src1, const tensor<V3, M>& src2, const BinaryFunctor& bf, const int& numparams, const S1& p, const S2& p2){
-		cuvAssert(dst.size() == src1.size());
-		cuvAssert(dst.size() == src2.size());
+		cuvAssert(equal_shape(dst,src1));
+		cuvAssert(equal_shape(dst,src2));
 		typedef typename memspace_cuv2thrustptr<V1, M>::ptr_type ptr_type1;
 		typedef typename memspace_cuv2thrustptr<V2,M>::ptr_type ptr_type2;
 		typedef typename memspace_cuv2thrustptr<V3,M>::ptr_type ptr_type3;
