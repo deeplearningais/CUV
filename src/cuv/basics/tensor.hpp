@@ -569,6 +569,26 @@ namespace cuv
 		struct switch_memory_space_type{
 			typedef tensor<typename Mat::value_type, NewMS, typename Mat::memory_layout_type> type;
 		};
+
+	/**
+	 * @brief returns true if both tensors have the same shape, regardless of their memory space and/or value type.
+	 *
+	 * @param s   the first tensor
+	 * @param t   the second tensor
+	 *
+	 */
+	template<class V, class M, class L,class P, class V2, class M2, class P2>
+	bool equal_shape(const const_tensor<V,M,L,P>& s, const const_tensor<V2,M2,L,P2>& t){
+		if(s.ndim()!=t.ndim())
+			return false;
+		typename std::vector<typename const_tensor<V ,M ,L,P >::index_type>::const_iterator it1=s.shape().begin(), end=s.shape().end();
+		typename std::vector<typename const_tensor<V2,M2,L,P2>::index_type>::const_iterator it2=t.shape().begin();
+		for(; it1!=end; it1++,it2++){
+			if(*it1 != *it2)
+				return false;
+		}
+		return true;
+	}
 }
 
 
