@@ -1,7 +1,6 @@
 #ifndef __FILTER_FACTORY_HPP__
 #define __FILTER_FACTORY_HPP__
 
-#include <cuv/basics/dense_matrix.hpp>
 #include <cuv/basics/dia_matrix.hpp>
 namespace cuv{
 	template<class T, class M, class I=unsigned int>
@@ -21,9 +20,9 @@ namespace cuv{
 			}
 
 			template<class M2>
-			dense_matrix<T,M,row_major,I>*
+			tensor<T,M,row_major>*
 			extract_filter( const dia_matrix<T,M2>& dia, unsigned int filternumber){
-				dense_matrix<T,M,row_major,I>* mat = new dense_matrix<T,M,row_major,I>(m_fs*m_fs, m_input_maps);
+				tensor<T,M,row_major>* mat = new tensor<T,M,row_major>(extents[m_fs*m_fs][m_input_maps]);
 				fill(*mat, 0);
 				unsigned int map_size=dia.h()/m_input_maps;
 				for (unsigned int map_num = 0; map_num < m_input_maps; map_num++)
@@ -34,7 +33,7 @@ namespace cuv{
 						if(!dia.has(i+map_num*map_size,filternumber))
 							continue;
 						mat[map_num * m_fs *m_fs + fi++]= dia(i+map_num*map_size,filternumber);
-						if(fi>=mat->n())
+						if(fi>=mat->size())
 							break;
 					}
 				}
