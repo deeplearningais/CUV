@@ -16,7 +16,7 @@ include_directories(
 ADD_LIBRARY(cuv_python SHARED 
         python_bindings.cpp
         export_tensor.cpp
-        export_dense_matrix.cpp
+        #export_dense_matrix.cpp
         export_cuda_array.cpp
         export_dia_mat.cpp
         export_matrix_ops.cpp

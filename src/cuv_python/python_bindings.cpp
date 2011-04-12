@@ -44,7 +44,7 @@ using namespace cuv;
 
 void export_tensor();
 void export_tensor_ops();
-void export_dense_matrix();
+//void export_dense_matrix();
 void export_cuda_array();
 void export_matrix_ops();
 void export_random();
@@ -63,7 +63,7 @@ BOOST_PYTHON_MODULE(_cuv_python){
         def("initialize_mersenne_twister_seeds", initialize_mersenne_twister_seeds);
         export_tensor();
         export_tensor_ops();
-        export_dense_matrix();
+        //export_dense_matrix();
         export_cuda_array();
         export_matrix_ops();
         export_random();
