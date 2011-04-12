@@ -1,5 +1,5 @@
 #include <iostream>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 #include <cuv/libs/kernels/kernels.hpp>
 #define V(X) #X <<": "<<(X) <<"   "
 
