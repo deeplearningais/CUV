@@ -35,7 +35,7 @@
 #define __CONVERT_HPP__
 
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/dense_matrix.hpp>
+#include <cuv/basics/tensor.hpp>
 namespace cuv{
 
 	 /** @defgroup convert Convert matrices and vectors between different formats
