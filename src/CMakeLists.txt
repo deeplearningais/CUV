@@ -7,7 +7,7 @@ IF(CUV_PYTHON_BINDINGS)
 	SET(CMAKE_CXX_FLAGS "-fPIC") # for FindCUDA, needed for python shared lib
 ENDIF(CUV_PYTHON_BINDINGS)
 
-SET(CUDA_SDK_ROOT_DIR "/usr/local/cuda/C" CACHE STRING "Location of CUDA SDK") 
+SET(CUDA_SDK_ROOT_DIR "/usr/local/cuda/C" CACHE STRING "Location of CUDA SDK (currently not used) ") 
 
 FIND_PACKAGE(CUDA)
 
