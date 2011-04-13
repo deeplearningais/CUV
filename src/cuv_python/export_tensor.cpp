@@ -135,7 +135,9 @@ namespace python_wrapping {
 		    std::vector<unsigned int> v(ndim);
 		    for(int i=0;i<ndim;i++)
 			    v[i]=o.dims()[i];
-		    bool is_f_contiguous = ((PyArrayObject *)o.handle().get())->flags & NPY_F_CONTIGUOUS;
+		    PyArrayObject* po = (PyArrayObject*)o.handle().get();
+		    cuvAssert(PyArray_ISFARRAY(po) || PyArray_ISCARRAY(po));
+		    bool is_f_contiguous = PyArray_ISFARRAY((PyArrayObject *)o.handle().get());
 		    if(IsSame<L,column_major>::Result::value != is_f_contiguous)
 			    std::reverse(v.begin(),v.end());
 		    return new T(v,o.data());
@@ -147,7 +149,9 @@ namespace python_wrapping {
 		    std::vector<unsigned int> v(ndim);
 		    for(int i=0;i<ndim;i++)
 			    v[i]=o.dims()[i];
-		    bool is_f_contiguous = ((PyArrayObject *)o.handle().get())->flags & NPY_F_CONTIGUOUS;
+		    PyArrayObject* po = (PyArrayObject*)o.handle().get();
+		    cuvAssert(PyArray_ISFARRAY(po) || PyArray_ISCARRAY(po));
+		    bool is_f_contiguous = PyArray_ISFARRAY(po);
 		    if(IsSame<L,column_major>::Result::value != is_f_contiguous)
 			    std::reverse(v.begin(),v.end());
 		    T view(v,o.data());
@@ -170,7 +174,9 @@ namespace python_wrapping {
 		    std::vector<unsigned int> v(ndim);
 		    for(int i=0;i<ndim;i++)
 			    v[i]=o.dims()[i];
-		    bool is_f_contiguous = ((PyArrayObject *)o.handle().get())->flags & NPY_F_CONTIGUOUS;
+		    PyArrayObject* po = (PyArrayObject*)o.handle().get();
+		    cuvAssert(PyArray_ISFARRAY(po) || PyArray_ISCARRAY(po));
+		    bool is_f_contiguous = PyArray_ISFARRAY(po);
 		    if(IsSame<L,column_major>::Result::value != is_f_contiguous)
 			    std::reverse(v.begin(),v.end());
 		    tensor<V,host_memory_space,L> view(v,o.data());
@@ -196,23 +202,29 @@ namespace python_wrapping {
 	    static pyublas::numpy_array<V> to_numpy_copy(const T& t){
 		    std::vector<npy_intp> dims(t.shape().size());
 		    std::copy(t.shape().begin(),t.shape().end(), dims.begin());
-		    if(IsSame<L,column_major>::Result::value)
-			    std::reverse(dims.begin(),dims.end());
 
-		    pyublas::numpy_array<V> v(t.shape().size(),&dims[0]);
-
-		    if(IsSame<L,column_major>::Result::value){
-			    ((PyArrayObject *)v.to_python().get())->flags &= ~NPY_C_CONTIGUOUS;
-			    ((PyArrayObject *)v.to_python().get())->flags |=  NPY_F_CONTIGUOUS;
-		    }else if(t.shape().size()==1){
-			    ((PyArrayObject *)v.to_python().get())->flags |= NPY_C_CONTIGUOUS;
-			    ((PyArrayObject *)v.to_python().get())->flags |= NPY_F_CONTIGUOUS;
-		    }else{
-			    ((PyArrayObject *)v.to_python().get())->flags |= NPY_C_CONTIGUOUS;
-			    ((PyArrayObject *)v.to_python().get())->flags &=~NPY_F_CONTIGUOUS;
+		    V* data= new V[t.size()];
+		    memcpy(data,t.ptr(),t.memsize());
+		    boost::python::handle<> result;
+		    if (IsSame<L,row_major>::Result::value) {
+			    result = boost::python::handle<>(PyArray_New(
+						    &PyArray_Type, t.shape().size(), &dims[0], 
+						    pyublas::get_typenum(V()), 
+						    /*strides*/0, 
+						    data,
+						    /* ? */ 0, 
+						    NPY_CARRAY, NULL));
 		    }
-		    std::copy(t.ptr(),t.ptr()+t.size(),v.data());
-		    return v;
+		    else {
+			    result = boost::python::handle<>(PyArray_New(
+						    &PyArray_Type, t.shape().size(), &dims[0], 
+						    pyublas::get_typenum(V()), 
+						    /*strides*/0, 
+						    data,
+						    /* ? */ 0, 
+						    NPY_FARRAY, NULL));
+		    }
+		    return result;
 	    }
     };
 
