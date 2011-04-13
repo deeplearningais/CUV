@@ -8,12 +8,12 @@ def _matstr(x,typestr):
 
 def __cpy(x):
     x2 = x.__class__(x.h,x.w)
-    apply_scalar_functor(x2.vec,x.vec,scalar_functor.COPY)
+    apply_scalar_functor(x2,x,scalar_functor.COPY)
     return x2
 
 def __cpy_dia(x):
     x2 = x.__class__(x)
-    apply_scalar_functor(x2.vec,x.vec,scalar_functor.COPY)
+    apply_scalar_functor(x2,x,scalar_functor.COPY)
     return x2
 
 def __sav_dense(x, file):
@@ -29,7 +29,7 @@ def __T(x):
     return transposed_view(x)
 
 def copy(dst,src):
-    apply_scalar_functor(dst.vec,src.vec,scalar_functor.COPY)
+    apply_scalar_functor(dst,src,scalar_functor.COPY)
 
 def __tensor_getitem(x,key):
     if isinstance(key,int):
@@ -43,7 +43,7 @@ def __tensor_setitem(x,key,val):
 
 def __matrix_getitem__(x,key):
     if isinstance(key,int):
-        return x.vec.at(key)
+        return x.at(key)
     elif isinstance(key,tuple): # slicing!
         if isinstance(key[0],int) and isinstance(key[1],int):
             return x.at(key[0],key[1]) # single element
@@ -84,7 +84,7 @@ def __matrix_getitem__(x,key):
 
 def __matrix_setitem__(x,key,value):
     if isinstance(key,int):
-        return x.vec.set(key,value=value)
+        return x.set(key,value=value)
     elif isinstance(key,tuple): # slicing!
         if isinstance(key[0],int) and isinstance(key[1],int):
             return x.set(key[0],key[1],value=value) # single element
