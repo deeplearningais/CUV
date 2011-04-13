@@ -291,7 +291,7 @@ namespace cuv
 			}
 
 			const_reference_type operator()(index_type d0, index_type d1, index_type d2)const{
-				index_type arr[3] = {d0,d1};
+				index_type arr[3] = {d0,d1,d2};
 				index_type idx = index_of<3>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
@@ -515,7 +515,7 @@ namespace cuv
 			}
 
 			reference_type operator()(index_type d0, index_type d1, index_type d2){
-				index_type arr[3] = {d0,d1};
+				index_type arr[3] = {d0,d1,d2};
 				index_type idx = super_type::template index_of<3>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
