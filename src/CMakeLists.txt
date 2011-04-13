@@ -21,6 +21,11 @@ FIND_PACKAGE( Boost 1.37 COMPONENTS date_time unit_test_framework serialization 
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 
+FIND_PATH(THRUST_PATH thrust/device_vector.h /usr/include /usr/local/include ${CUDA_INCLUDE_DIRS} "$ENV{THRUST_ROOT}")
+IF(NOT THRUST_PATH)
+	MESSAGE(FATAL_ERROR "Could not find the thrust library. Please install in standard locations or set THRUST_ROOT environment variable.")
+ENDIF(NOT THRUST_PATH)
+
 add_definitions(-DRANDOM_PATH=${CMAKE_BINARY_DIR})
 #SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --compiler-options;-DRANDOM_PATH=\\"${CMAKE_BINARY_DIR}\\")
 
@@ -28,6 +33,9 @@ CUDA_INCLUDE_DIRECTORIES( ${CUDA_SDK_ROOT_DIR}/common/inc ${CMAKE_CURRENT_SOURCE
 INCLUDE_DIRECTORIES(      ${CUDA_SDK_ROOT_DIR}/common/inc ${CUDA_INCLUDE_DIRS}         tools )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}                                )
 INCLUDE_DIRECTORIES(      ${CMAKE_CURRENT_SOURCE_DIR}                                )
+
+CUDA_INCLUDE_DIRECTORIES( ${THRUST_PATH}                                )
+INCLUDE_DIRECTORIES(      ${THRUST_PATH}                                )
 
 add_subdirectory(3rd_party)
 add_subdirectory(cuv)
