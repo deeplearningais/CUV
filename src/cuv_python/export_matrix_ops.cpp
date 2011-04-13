@@ -168,14 +168,18 @@ void export_reductions(){
         def("reduce_to_row", reduce_to_row<float, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
 }
 
-template <class M, class V2>
+template <class M>
 void export_blas2(){
-	//def("matrix_plus_col", matrix_plus_col<M,typename switch_value_type<M,V2>::type::vec_type>);
-	//def("matrix_times_col", matrix_times_col<M,typename switch_value_type<M,V2>::type::vec_type>);
-	//def("matrix_divide_col", matrix_divide_col<M,typename switch_value_type<M,V2>::type::vec_type>);
-	//def("matrix_plus_row", matrix_plus_row<M,typename switch_value_type<M,V2>::type::vec_type>);
-	//def("matrix_times_row", matrix_times_row<M,typename switch_value_type<M,V2>::type::vec_type>);
-	//def("matrix_divide_row", matrix_divide_row<M,typename switch_value_type<M,V2>::type::vec_type>);
+	typedef typename M::value_type        V1;
+	typedef typename M::memory_space_type M1;
+	typedef typename M::memory_layout_type L1;
+	typedef typename switch_memory_layout_type<M,row_major>::type VECT;
+	def("matrix_plus_col", matrix_plus_col<V1,M1,L1>);
+	def("matrix_times_col", matrix_times_col<V1,M1,L1>);
+	def("matrix_divide_col", matrix_divide_col<V1,M1,L1>);
+	def("matrix_plus_row", matrix_plus_row<V1,M1,L1>);
+	def("matrix_times_row", matrix_times_row<V1,M1,L1>);
+	def("matrix_divide_row", matrix_divide_row<V1,M1,L1>);
 }
 
 template <class M>
@@ -292,14 +296,14 @@ void export_matrix_ops(){
 	export_learn_step<fdev>();
 	export_learn_step<fhostr>();
 	export_learn_step<fdevr>();
-	export_blas2<fdev,float>();
-	export_blas2<fhost,float>();
-	export_blas2<fhostr,float>();
-	export_blas2<fdevr,float>();
-	export_blas2<fdev,unsigned char>();
-	export_blas2<fhost,unsigned char>();
-	export_blas2<fhostr,unsigned char>();
-	export_blas2<fdevr,unsigned char>();
+	export_blas2<fdev>();
+	export_blas2<fhost>();
+	export_blas2<fhostr>();
+	export_blas2<fdevr>();
+	export_blas2<fdev>();
+	export_blas2<fhost>();
+	export_blas2<fhostr>();
+	export_blas2<fdevr>();
 
 
 	export_blockview<fdev>();
