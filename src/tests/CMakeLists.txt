@@ -104,6 +104,16 @@ ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/src/tests/test_conv_op" )
 #ADD_TEST( conv_ops_speed "${CMAKE_BINARY_DIR}/tests/test_conv_op_speed" )
 #ADD_TEST( random_speed "${CMAKE_BINARY_DIR}/tests/test_random_speed" )
 
-SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
-ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/src python -c 'import cuv_python as cp'" )
+IF(CUV_PYTHON_BINDINGS)
+	SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
+	ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/src python -c 'import cuv_python as cp'" )
+
+	FIND_PROGRAM(NOSETEST_EXECUTABLE nosetests)
+	IF(NOSETEST_EXECUTABLE)
+		ADD_TEST( nose_tests sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/src cd ${CMAKE_BINARY_DIR}/src/tests/python ; nosetests" )
+	ELSE(NOSETEST_EXECUTABLE)
+		MESSAGE(SEND_ERROR "Did not find the nosetests binary, cannot run python tests")
+	ENDIF(NOSETEST_EXECUTABLE)
+ENDIF(CUV_PYTHON_BINDINGS)
+
 
