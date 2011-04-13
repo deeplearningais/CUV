@@ -14,7 +14,7 @@ def _tmp(dim1, dim2, value):
     @param dim2 -- number of columns.
 
     """
-    mat = cp.dev_matrix_cmf(dim1, dim2)
+    mat = cp.dev_tensor_float_cm([dim1, dim2])
     cp.fill(mat,  value)
     return mat
 cp.get_filled_matrix = _tmp

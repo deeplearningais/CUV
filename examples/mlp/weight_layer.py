@@ -13,19 +13,20 @@ class weight_layer:
         """
         self.source=source_layer
         self.target=target_layer
-        dim1 = self.target.activations.h
-        dim2 = self.source.activations.h
+        dim1 = self.target.activations.shape[0]
+        dim2 = self.source.activations.shape[0]
         self.weight = cp.get_filled_matrix(dim1, dim2, 0.0)
         cp.fill_rnd_uniform(self.weight)
-        cp.apply_scalar_functor(self.weight, cp.scalar_functor.SUBTRACT, 0.5)
-        cp.apply_scalar_functor(self.weight, cp.scalar_functor.DIV, 10)
-        self.bias = cp.get_filled_matrix(dim1, 1, 0)
+	self.weight -= 0.5
+	self.weight /= 10.0
+        self.bias = cp.dev_tensor_float(dim1)
+	cp.fill(self.bias, 0)
 
     def forward(self):
         """Forward pass, calculates the activations of next neuron layer."""
         cp.prod(self.target.activations, self.weight,
                 self.source.activations)
-        cp.matrix_plus_col(self.target.activations, self.bias.vec)
+        cp.matrix_plus_col(self.target.activations, self.bias)
         self.target.nonlinearity(self.target.activations)
 
     def backward(self):
@@ -33,13 +34,12 @@ class weight_layer:
            and later updates the weights."""
         cp.prod(self.source.deltas, self.weight, self.target.deltas,
             't',  'n')
-        h = cp.dev_matrix_cmf(self.source.activations.h,
-                              self.source.activations.w)
-        cp.apply_binary_functor(h,  self.source.activations,
-                                cp.binary_functor.COPY)
+        h = cp.dev_tensor_float_cm([self.source.activations.shape[0],
+                              self.source.activations.shape[1]])
+        cp.apply_scalar_functor(h,  self.source.activations,
+                                cp.scalar_functor.COPY)
         self.source.d_nonlinearity(h)
-        cp.apply_binary_functor(self.source.deltas, h,
-        cp.binary_functor.MULT)
+	self.source.deltas *= h
         h.dealloc()
         self.weight_update()
 
@@ -50,13 +50,14 @@ class weight_layer:
            @param learnrate  how strongly the gradient influences the weights
            @param decay      large values result in a regularization with
                              to the squared weight value"""
-        batch_size=self.source.activations.w
-        h = cp.dev_matrix_cmf(self.weight.h, self.weight.w)
+        batch_size=self.source.activations.shape[1]
+        h = cp.dev_tensor_float_cm([self.weight.shape[0], self.weight.shape[1]])
         cp.prod(h, self.target.deltas, self.source.activations, 'n', 't')
         cp.learn_step_weight_decay(self.weight, h, learnrate/batch_size, decay)
         h.dealloc()
-        h = cp.get_filled_matrix(self.target.activations.h, 1, 0)
-        cp.reduce_to_col(h.vec, self.target.deltas)
+        h = cp.dev_tensor_float(self.target.activations.shape[0])
+	cp.fill(h,0)
+        cp.reduce_to_col(h, self.target.deltas)
         cp.learn_step_weight_decay(self.bias, h, learnrate/batch_size, decay)
         h.dealloc()
 

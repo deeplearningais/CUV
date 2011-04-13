@@ -38,8 +38,8 @@ class MLP:
 
         """
         number_of_pictures = input_matrix.shape[-1]
-        squared_errors = cp.dev_matrix_cmf(self.neuron_layer[-1].deltas.h,
-                                           self.neuron_layer[-1].deltas.w)
+        squared_errors = cp.dev_tensor_float_cm([self.neuron_layer[-1].deltas.shape[0],
+		self.neuron_layer[-1].deltas.shape[1]])
         for r in xrange(number_of_epochs):
             print "Epoch ", r+1, "/", number_of_epochs
             mse = 0
@@ -48,9 +48,9 @@ class MLP:
                 index_end   = self.batch_size + index_begin
 
                 # Push input and teacher to GPU memory
-                self.neuron_layer[0].activations = cp.push(
+                self.neuron_layer[0].activations = cp.dev_tensor_float_cm(
                     input_matrix[:,index_begin:index_end].astype('float32').copy('F'))
-                teachbatch = cp.push(
+                teachbatch = cp.dev_tensor_float_cm(
                     teacher_matrix[:,index_begin:index_end].astype('float32').copy('F'))
 
                 # Forward-Pass
@@ -89,14 +89,14 @@ class MLP:
         """
         number_of_pictures = input_matrix.shape[-1]
         mse = 0
-        squared_errors = cp.dev_matrix_cmf(self.neuron_layer[-1].deltas.h,
-            self.neuron_layer[-1].deltas.w)
+        squared_errors = cp.dev_tensor_float_cm([self.neuron_layer[-1].deltas.shape[0],
+            self.neuron_layer[-1].deltas.shape[1]])
         for batch in xrange(number_of_pictures/self.batch_size):
             index_begin = self.batch_size * batch
             index_end = index_begin + self.batch_size
-            self.neuron_layer[0].activations = cp.push( input_matrix[:,
+            self.neuron_layer[0].activations = cp.dev_tensor_float_cm( input_matrix[:,
                 index_begin:index_end].astype('float32').copy('F'))
-            teachbatch = cp.push(teacher_matrix[:,
+            teachbatch = cp.dev_tensor_float_cm(teacher_matrix[:,
                 index_begin:index_end].astype('float32').copy('F'))
             for i in xrange(self.number_of_layers):
                 self.weight_layer[i].forward()
