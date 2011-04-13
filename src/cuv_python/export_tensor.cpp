@@ -57,29 +57,30 @@ long int internal_ptr(const T& t){
 
 namespace python_wrapping {
     template <class T>
-    typename T::reference_type get_reference(T& tensor,const boost::python::list &ind){
+    typename T::reference_type 
+    get_reference(T& tens,const boost::python::list &ind){
         typedef typename T::index_type ind_t;
         int length = boost::python::len(ind);
         if (length==1)
-            return tensor(extract<ind_t>(ind[0]));
+            return tens(extract<ind_t>(ind[0]));
         else if (length==2)
-            return tensor(extract<ind_t>(ind[0]),extract<ind_t>(ind[1]));
+            return tens(extract<ind_t>(ind[0]),extract<ind_t>(ind[1]));
         else if (length==3)
-            return tensor(extract<ind_t>(ind[0]),extract<ind_t>(ind[1]),extract<ind_t>( ind[2]));
+            return tens(extract<ind_t>(ind[0]),extract<ind_t>(ind[1]),extract<ind_t>( ind[2]));
         else if (length==4)
-            return tensor(extract<ind_t>(ind[0]),extract<ind_t>(ind[1]),extract<ind_t>( ind[2]),extract<ind_t>(ind[3]));
+            return tens(extract<ind_t>(ind[0]),extract<ind_t>(ind[1]),extract<ind_t>( ind[2]),extract<ind_t>(ind[3]));
         else
             cuvAssert(false);
             //return typename T::reference_type();
        }
     
     template <class T>
-    void set(T&tensor, const boost::python::list &ind, const typename T::value_type& val){
-        get_reference(tensor,ind)=val;
+    void set(T&tens, const boost::python::list &ind, const typename T::value_type& val){
+        get_reference(tens,ind)=val;
     }
     template <class T>
-    typename T::value_type get(T&tensor, const boost::python::list &ind){
-        return get_reference(tensor,ind);
+    typename T::value_type get(T&tens, const boost::python::list &ind){
+        return get_reference(tens,ind);
     }
     
     template <class value_type>
@@ -92,15 +93,15 @@ namespace python_wrapping {
         }
 
     template <class T>
-    void reshape(T& tensor, const boost::python::list &shape){
-        tensor.reshape(extract_python_list<typename T::index_type>(shape));
+    void reshape(T& tens, const boost::python::list &shape){
+        tens.reshape(extract_python_list<typename T::index_type>(shape));
     }
     template <class T>
-     boost::python::list shape(T& tensor){
+     boost::python::list shape(T& tens){
          boost::python::list python_shape;
-         int n = tensor.shape().size();
+         int n = tens.shape().size();
          for(int i=0; i<n; i++)
-             python_shape.append(tensor.shape()[i]);
+             python_shape.append(tens.shape()[i]);
          return python_shape;
     }
 
