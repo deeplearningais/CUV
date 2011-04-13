@@ -149,7 +149,7 @@ void prod(tensor<float,dev_memory_space,column_major>& dst,
         cuvAssert(dst.ndim()==2);
         cuvAssert(A.ndim()==2);
         cuvAssert(B.ndim()==2);
-	int m = (transA=='t' ? A.shape()[0] : A.shape()[0]);
+	int m = (transA=='t' ? A.shape()[1] : A.shape()[0]);
 	int k1 = (transA=='t' ? A.shape()[0] : A.shape()[1]);
 	int k2 = (transB=='t' ? B.shape()[1] : B.shape()[0]);
 	int n = (transB=='t' ? B.shape()[0] : B.shape()[1]);
