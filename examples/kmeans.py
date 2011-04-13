@@ -6,14 +6,14 @@ import os
 def kmeans(dataset,num_clusters,iters):
     rand_indices=np.random.randint(0,dataset.shape[1],num_clusters)
     clusters=dataset[:,rand_indices]
-    dataset_dev=cp.dev_tensor_float(dataset)
-    clusters_dev=cp.dev_tensor_float(clusters.copy("F")) # copy('F') is necessary so we can slice later on
+    dataset_dev=cp.dev_tensor_float_cm(dataset)
+    clusters_dev=cp.dev_tensor_float_cm(clusters.copy("F")) # copy('F') is necessary so we can slice later on
 
     norms = cp.dev_tensor_float(dataset_dev.shape[1])
     cp.reduce_to_row(norms,dataset_dev,cp.reduce_functor.ADD_SQUARED)
 
     norms_clusters=cp.dev_tensor_float(num_clusters)
-    dists  = cp.dev_tensor_float([dataset_dev.shape[1], num_clusters])
+    dists  = cp.dev_tensor_float_cm([dataset_dev.shape[1], num_clusters])
     nearest= cp.dev_tensor_uint(dataset_dev.shape[1])
     nearest_dist= cp.dev_tensor_float(dataset_dev.shape[1])
 
