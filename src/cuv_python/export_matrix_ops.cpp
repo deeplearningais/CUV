@@ -191,13 +191,16 @@ void export_blockview(){
 
 template <class M>
 void export_learn_step(){
+	typedef typename M::value_type        V1;
+	typedef typename M::memory_space_type M1;
+	typedef typename M::memory_layout_type L1;
+
+	typedef typename switch_value_type<M,signed char>::type USM;
+
 	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<typename M::value_type, typename M::memory_space_type>);
-	//def("rprop",
-			//(void (*)(M&, M&, M&,M&, const float&))
-			//rprop<typename M::value_type, typename M::value_type, typename M::memory_layout,typename M::memory_space_type,typename M::index_type>,
-			//(arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("cost")=0));
-	//def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<M>);
-	//def("rprop",(void (*)(M&, M&, M&,M&, const float&)) rprop<M,M>);
+
+	def("rprop", (void (*)(M&, M&, M&,  M&, const float&))rprop<V1,M1,V1>, (arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("cost")=0));
+	def("rprop", (void (*)(M&, M&, USM&,M&, const float&))rprop<V1,M1,signed char>, (arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("cost")=0));
 }
 
 template<class T>
