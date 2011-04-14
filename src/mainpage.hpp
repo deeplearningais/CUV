@@ -54,11 +54,10 @@
  * - On 8800GTS, random numbers and convolutions wont work.
  * 
  * Structure: 
- * - Like for example Matlab, CUV assumes that everything is a matrix or a vector.
- * - Vectors/Matrices can have an arbitrary type and can be on the host (CPU-memory) or device (GPU-memory)
- * - Matrices can be column-major or row-major
+ * - Like for example Matlab, CUV assumes that everything is an n-dimensional matrix called "tensor"
+ * - Tensors can have an arbitrary data-type and can be on the host (CPU-memory) or device (GPU-memory)
+ * - Tensors can be column-major or row-major (1-dimensional tensors are, by convention, row-major)
  * - The library defines many functions which may or may not apply to all possible combinations. Variations are easy to add.
- * - Conversion routines are provided for most cases
  * - For convenience, we also wrap some of the functionality provided by Alex
  *   Krizhevsky on his website (http://www.cs.utoronto.ca/~kriz/) with
  *   permission. Thanks Alex for providing your code!
@@ -97,19 +96,22 @@
  * - libboost-dev >= 1.37
  * - libblas-dev
  * - libtemplate-perl -- (we might get rid of this dependency soon)
- * - NVIDIA CUDA (tm), including SDK. We support versions 3.X.
+ * - NVIDIA CUDA (tm), including SDK. We support versions 3.X and 4.0
  * - thrust library (from http://code.google.com/p/thrust/)
  * - doxygen (if you want to build the documentation yourself)
  *
  * For Python Integration, you additionally have to install
  * - pyublas -- from http://mathema.tician.de/software/pyublas
+ * - python-nose -- for python testing
  * - python-dev 
+ *
+ * Optionally, install dependent libraries
+ * - cimg-dev for visualization of matrices (grayscale only, ATM)
+ *
  *
  * @subsection obtaining  Obtaining CUV
  *
- * You have two choices: 
- * - Download the tar-file from our website (http://www.ais.uni-bonn.de)
- * - Checkout our git repository 
+ * You should check out the git repository
  *   @code
  *   $ git clone git://github.com/deeplearningais/CUV.git
  *   @endcode
@@ -119,27 +121,26 @@
  * Building a debug version:
  *
  * @code
- * $ tar xzvf cuv-version-source.tar.gz
  * $ cd cuv-version-source
  * $ mkdir -p build/debug
  * $ cd build/debug
  * $ cmake -DCMAKE_BUILD_TYPE=Debug ../../
- * $ ccmake .          # adjust CUDA SDK paths to your system!
+ * $ ccmake .          # adjust paths to your system (cuda, thrust, pyublas, ...)!
+ *                     # turn on/off optional libraries (CImg, ...)
  * $ make -j
  * $ ctest             # run tests to see if it went well
- * $ make install
  * $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
  * @endcode
  *
  * Building a release version:
  *
  * @code
- * $ tar xzvf cuv-version-source.tar.gz
  * $ cd cuv-version-source
  * $ mkdir -p build/release
  * $ cd build/release
  * $ cmake -DCMAKE_BUILD_TYPE=Release ../../
- * $ ccmake .          # adjust CUDA SDK paths to your system!
+ * $ ccmake .          # adjust paths to your system (cuda, thrust, pyublas, ...)!
+ *                     # turn on/off optional libraries (CImg, ...)
  * $ make -j
  * $ ctest             # run tests to see if it went well
  * $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
@@ -161,19 +162,19 @@
  *
  * C++ Code:
  * @code
- * #include <vector.hpp>
+ * #include <cuv/basics/tensor.hpp>
  * using namespace cuv;
  * 
- * vector<float,host_memory_space> h(256);  // reserves space in host memory
- * vector<float,dev_memory_space>  d(256);  // reserves space in device memory
+ * tensor<float,host_memory_space> h(256);  // reserves space in host memory
+ * tensor<float,dev_memory_space>  d(256);  // reserves space in device memory
  *
  * fill(h,0);                          // terse form
  * apply_0ary_functor(h,NF_FILL,0);    // more verbose
  *
- * convert(d,h);                       // push to device
+ * d=h;                                // push to device
  * sequence(d);                        // fill device vector with a sequence
  *
- * convert(h,d);                       // pull to host
+ * h=d;                                // pull to host
  * for(int i=0;i<h.n();i++)
  * { 
  *   assert(d[i] == h[i]);
@@ -187,16 +188,16 @@
  * import numpy as np
  *
  * h = np.zeros((1,256)).astype("float32")                 # create numpy matrix
- * d = cp.push(h)                                          # creates dev_matrix_rmf (row-major float) object
+ * d = cp.dev_tensor_float(h)                              # constructs by copying numpy_array
  *
  * h2 = np.zeros((1,256)).astype("float32").copy("F")      # create numpy matrix
- * d2 = cp.push(h)                                         # creates dev_matrix_cmf (column-major float) object
+ * d2 = cp.dev_tensor_float(h2)                            # creates dev_matrix_cmf (column-major float) object
  *
  * cp.fill(d,1)                                            # terse form
  * cp.apply_nullary_functor(d,cp.nullary_functor.FILL,1)   # verbose form
  *
- * h = cp.pull(d)
- * assert(h.sum() == 256)
+ * h = d.np                                                # pull and convert to numpy
+ * assert(cp.sum(h) == 256)
  * d.dealloc()                                             # explicitly deallocate memory (optional)
  *
  * @endcode
@@ -205,11 +206,11 @@
  *
  * C++-Code
  * @code
- * #include <dense_matrix.hpp>
- * #include <matrix_ops.hpp>
+ * #include <cuv/basics/tensor.hpp>
+ * #include <cuv/matrix_ops/matrix_ops.hpp>
  * using namespace cuv;
  *
- * dense_matrix<float,column_major,dev_memory_space> C(2048,2048),A(2048,2048),B(2048,2048);
+ * tensor<float,dev_memory_space,column_major> C(2048,2048),A(2048,2048),B(2048,2048);
  *
  * fill(C,0);         // initialize to some defined value, not strictly necessary here
  * sequence(A); 
@@ -226,9 +227,9 @@
  * import pyublas
  * import cuv_python as cp
  * import numpy as np
- * C = cp.dev_matrix_cmf(2048,2048)   # cmf = column_major float
- * A = cp.dev_matrix_cmf(2048,2048)   
- * B = cp.dev_matrix_cmf(2048,2048)
+ * C = cp.dev_tensor_float_cm([2048,2048])   # column major tensor
+ * A = cp.dev_tensor_float_cm([2048,2048])   
+ * B = cp.dev_tensor_float_cm([2048,2048])
  * cp.fill(C,0)                       # fill with some defined values, not really necessary here
  * cp.sequence(A)
  * cp.sequence(B)

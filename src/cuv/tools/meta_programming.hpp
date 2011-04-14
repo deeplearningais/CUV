@@ -5,7 +5,14 @@ namespace cuv{
 // checks whether two types are the same
 // usage: IsSame<FirstClass,SecondClass>::Result::value
 
+/**
+ * @defgroup MetaProgramming
+ * @{
+ */
+
+	/// defines "False"
 struct FalseType { enum { value = false }; };
+	/// defines "True"
 struct TrueType { enum { value = true }; };
 
 
@@ -19,6 +26,9 @@ struct IsSame
 };
 
 
+/** 
+ * @see IsSame
+ */
 template <typename T>
 struct IsSame<T,T>
 {
@@ -33,6 +43,9 @@ struct unconst{
 	typedef T type;
 };
 
+/**
+ * @see unconst
+ */
 template <typename T>
 struct unconst<const T>{
 	typedef T type;
@@ -45,9 +58,17 @@ template <bool Condition, class Then, class Else>
 struct If{
 	typedef Then result;
 };
+/**
+ * @see If
+ */
 template<class Then, class Else>
 struct If<false,Then,Else>{
 	typedef Else result;
 };
+
+
+/**
+ * @}
+ */
 };
 #endif /* __META_PROGRAMMING_HPP__ */

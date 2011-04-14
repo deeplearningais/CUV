@@ -42,13 +42,13 @@ namespace cuv
 	template<class T, class M, class I>
 	struct reference
 	{
-		typedef T*                        pointer_type;
-		typedef typename unconst<T>::type value_type;
-		typedef M                memory_space_type;
-		typedef reference<T,M,I>            my_type;
-		typedef I                        index_type;
+		typedef T*                        pointer_type; /// the wrapped pointer type
+		typedef typename unconst<T>::type value_type;   /// the type of the pointer
+		typedef M                memory_space_type;     /// the memory space of the pointer
+		typedef reference<T,M,I>            my_type;    /// the type of this reference
+		typedef I                        index_type;    /// hmm this should be size_t eventually
 
-		const pointer_type ptr;
+		const pointer_type ptr;                         /// the wrapped pointer
 
 		/// convert to the stored value
 		operator value_type ()const{
@@ -78,11 +78,10 @@ namespace cuv
 		}
 
 		
+		/// get the wrapped pointer
 		pointer_type operator&(void)const{
 			return ptr;
 		}
-
-		
 
 		/// construct using a pointer
 		reference(const pointer_type& p)
@@ -102,19 +101,32 @@ namespace cuv
 		{
 		}
 		
+		/// add to the value stored at ptr
 		my_type& operator+=(const value_type& v){ *this = (value_type)(*this)+v; return *this; }
+		/// subtract from the value stored at ptr
 		my_type& operator-=(const value_type& v){ *this = (value_type)(*this)-v; return *this; }
+		/// multiply with the value stored at ptr
 		my_type& operator*=(const value_type& v){ *this = (value_type)(*this)*v; return *this; }
+		/// divide by the value stored at ptr
 		my_type& operator/=(const value_type& v){ *this = (value_type)(*this)/v; return *this; }
+		/// increment value at ptr
 		value_type operator++(int){value_type v=*this; *this=v+1; return v;}
+		/// decrement value at ptr
 		value_type operator--(int){value_type v=*this; *this=v-1; return v;}
+		/// increment value at ptr
 		value_type operator++(){value_type v=*this; *this=v+1; return v+1;}
+		/// decrement value at ptr
 		value_type operator--(){value_type v=*this; *this=v-1; return v-1;}
 
+		/// compare value at ptr with another
 		bool operator==(const value_type& v){ return ((value_type)*this)==v;}
+		/// compare value at ptr with another
 		bool operator<=(const value_type& v){ return ((value_type)*this)<=v;}
+		/// compare value at ptr with another
 		bool operator< (const value_type& v){ return ((value_type)*this)< v;}
+		/// compare value at ptr with another
 		bool operator>=(const value_type& v){ return ((value_type)*this)>=v;}
+		/// compare value at ptr with another
 		bool operator> (const value_type& v){ return ((value_type)*this)> v;}
 	};
 	

@@ -4,29 +4,39 @@
 
 namespace cuv
 {
-	//host and device	
+	/// Allocator allows allocation, deallocation and copying depending on memory_space_type
 	template <class value_type, class index_type, class memory_space_type>
 		struct allocator{
-			void alloc( value_type** ptr, index_type memsize)const;
-			void dealloc( value_type** ptr)const;
-			void copy(value_type* dst, const value_type*src,index_type size, host_memory_space);
-			void copy(value_type* dst, const value_type*src,index_type size, dev_memory_space);
+			void alloc( value_type** ptr, index_type memsize)const; /// allocate memory 
+			void dealloc( value_type** ptr)const;                   /// free memory
+			void copy(value_type* dst, const value_type*src,index_type size, host_memory_space); /// copy from host_memory_space
+			void copy(value_type* dst, const value_type*src,index_type size, dev_memory_space);  /// copy from dev_memory_space
 
-			void alloc( const value_type** ptr, index_type memsize)const;
-			void dealloc( const value_type** ptr)const;
-			void copy(const value_type* dst, const value_type*src,index_type size, host_memory_space)const{cuvAssert(false);}
-			void copy(const value_type* dst, const value_type*src,index_type size, dev_memory_space)const{cuvAssert(false);};
+			void alloc( const value_type** ptr, index_type memsize)const;   /// const variant of the above
+			void dealloc( const value_type** ptr)const;                     /// const variant of the above
+			void copy(const value_type* dst, const value_type*src,index_type size, host_memory_space)const{cuvAssert(false);}   /// this throws an assertion, it should never be called
+			void copy(const value_type* dst, const value_type*src,index_type size, dev_memory_space)const{cuvAssert(false);};   /// this throws an assertion, it should never be called
 		};
 
-	//host
+	/**
+	 * Set the value at *(ptr+idx) to val, when ptr is in host_memory_space.
+	 */
 	template <class value_type, class index_type>
 		void entry_set(value_type* ptr, index_type idx, value_type val, host_memory_space);
+	/**
+	 * Get the value at *(ptr+idx), when ptr is in host_memory_space.
+	 */
 	template <class value_type, class index_type>
 		value_type entry_get(const value_type* ptr, index_type idx, host_memory_space);
 
-	//device
+	/**
+	 * Set the value at *(ptr+idx) to val, when ptr is in dev_memory_space.
+	 */
 	template <class value_type, class index_type>
 		void entry_set(value_type* ptr, index_type idx, value_type val, dev_memory_space);
+	/**
+	 * Get the value at *(ptr+idx), when ptr is in dev_memory_space.
+	 */
 	template <class value_type, class index_type>
 		value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space);
 
@@ -109,14 +119,18 @@ namespace cuv
 			void dealloc(const value_type** ptr)const {
 				cuvAssert(false);
 			}
+			/// copy from host to host
 			void copy(value_type* dst, const value_type*src,index_type size, host_memory_space){
 				memcpy(dst,src,size*sizeof(value_type));
 			}
+			/// copy from device to host
 			void copy(value_type* dst, const value_type*src,index_type size, dev_memory_space);
 
+			/// throw assertion (should never be called)
 			void copy(const value_type* dst, const value_type*src,index_type size, host_memory_space)const{
 				cuvAssert(false);
 			}
+			/// throw assertion (should never be called)
 			void copy(const value_type* dst, const value_type*src,index_type size, dev_memory_space)const{
 				cuvAssert(false);
 			}

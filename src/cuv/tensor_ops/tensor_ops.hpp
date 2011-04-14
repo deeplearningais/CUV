@@ -181,6 +181,9 @@ namespace cuv{
   void
   apply_0ary_functor(tensor<__value_type, __memory_space_type>& v, const NullaryFunctor& sf);
 
+ /** 
+  * @see apply_0ary_functor
+  */
   template<class __value_type, class __memory_space_type>
   void apply_0ary_functor(tensor<__value_type, __memory_space_type, column_major>& v, const NullaryFunctor& sf){
       apply_0ary_functor(* reinterpret_cast<tensor<__value_type, __memory_space_type, row_major>* >(&v), sf);
@@ -197,11 +200,14 @@ namespace cuv{
   void
   apply_0ary_functor(tensor<V1, M>& v, const NullaryFunctor& sf, const S& param);
 
+ /** 
+  * @see apply_0ary_functor
+  */
   template<class V1, class M, class S>
   void apply_0ary_functor(tensor<V1, M, column_major>& v, const NullaryFunctor& sf, const S& param){
       apply_0ary_functor(* reinterpret_cast<tensor<V1, M, row_major>* >(&v), sf, param);
   }
-  // convenience wrappers
+
   /** 
    * @brief Fill a vector with a sequence of numbers
    * 
@@ -232,9 +238,25 @@ namespace cuv{
    * @{
    */
   namespace detail{
+	  /**
+	   * These functions do the actual work for apply_scalar_functor and are instantiated in the .cu file.
+	   *
+	   * The operation performed is dst[i] = sf(src[i]) for all i
+	   *
+	   * @param dst   where we write to
+	   * @param src   where we read from
+	   * @param sf    the operation to be performed
+	   * @param mask  whether the result should only applied to some values of dst
+	   * @param numparams how many of the following parameters are specified
+	   * @params p    first optional parameter
+	   * @params p2   2nd optional parameter
+	   */
 	  template<class V1, class V2, class M, class S1, class S2>
-	  void apply_scalar_functor(tensor<V1, M>&, const tensor<V2, M>&, const ScalarFunctor& sf, const int& numparams=0, const tensor<unsigned char,M>* mask=NULL,const S1& p=S1(), const S2& p2=S2());
+	  void apply_scalar_functor(tensor<V1, M>&dst, const tensor<V2, M>&src, const ScalarFunctor& sf, const int& numparams=0, const tensor<unsigned char,M>* mask=NULL,const S1& p=S1(), const S2& p2=S2());
 
+	  /**
+	   * @see apply_scalar_functor
+	   */
 	  template<class V1, class V2, class M, class S1, class S2>
           void apply_scalar_functor(tensor<V1, M, column_major>& dst, const tensor<V2, M, column_major>& src, const ScalarFunctor& sf, const int& numparams=0, const tensor<unsigned char,M,column_major>* mask=NULL, const S1& p=S1(), const S2& p2=S2()){
               apply_scalar_functor(*reinterpret_cast<tensor<V1, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V2, M, row_major>*>(&src), sf, numparams,reinterpret_cast<const tensor<unsigned char, M, row_major>*>(mask), p, p2); 
@@ -292,8 +314,21 @@ namespace cuv{
    * @{
    */
   namespace detail{
+	  /**
+	   * These functions do the actual work for apply_binary_functor and are instantiated in the .cu file.
+	   *
+	   * The operation performed is dst[i] = bf(src1[i], src2[i]) for all i
+	   *
+	   * @param dst    where we write to
+	   * @param src1   where we read from
+	   * @param src2   where we read from
+	   * @param bf    the operation to be performed
+	   * @param numparams how many of the following parameters are specified
+	   * @param p	  first optional parameter
+	   * @param p2    2nd optional parameter
+	   */
 	  template<class V1, class V2, class V3, class M, class S1, class S2>
-	  void apply_binary_functor(tensor<V1, M>&,const tensor<V2, M>&, const tensor<V3, M>&, const BinaryFunctor& bf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2());
+	  void apply_binary_functor(tensor<V1, M>& dst,const tensor<V2, M> src1, const tensor<V3, M>&src2, const BinaryFunctor& bf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2());
 	  template<class V1, class V2, class V3, class M, class S1, class S2>
 	  void apply_binary_functor(tensor<V1, M, column_major>& dst, const tensor<V2, M, column_major>& src1, const tensor<V3, M, column_major>& src2, const BinaryFunctor& bf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2()){
               apply_binary_functor(*reinterpret_cast<tensor<V1, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V2, M, row_major>*>(&src1), * reinterpret_cast<const tensor<V3, M, row_major>*>(&src2), bf, numparams, p, p2); 
@@ -368,6 +403,7 @@ namespace cuv{
    * @return true if v contains "Inf" or "-Inf", false otherwise 
    */
   template<class __value_type, class __memory_space_type> bool has_inf(const tensor<__value_type, __memory_space_type>& v);
+  /// @see has_inf
   template<class __value_type, class __memory_space_type> bool has_inf(const tensor<__value_type, __memory_space_type, column_major>& v){
 	return has_inf(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
   }
@@ -379,6 +415,7 @@ namespace cuv{
    * @return true if v contains "NaN", false otherwise 
    */
   template<class __value_type, class __memory_space_type> bool has_nan(const tensor<__value_type, __memory_space_type>& v);
+  /// @see has_nan
   template<class __value_type, class __memory_space_type> bool has_nan(const tensor<__value_type, __memory_space_type, column_major>& v){
 	return has_nan(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
   }
@@ -390,6 +427,7 @@ namespace cuv{
    * @return sum of v 
    */
   template<class __value_type, class __memory_space_type> float sum(const tensor<__value_type, __memory_space_type>& v);
+  /// @see sum
   template<class __value_type, class __memory_space_type> float sum(const tensor<__value_type, __memory_space_type, column_major>& v){
 	return sum(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
   }
@@ -401,6 +439,7 @@ namespace cuv{
    * @return Two-norm of v 
    */
   template<class __value_type, class __memory_space_type> float norm2(const tensor<__value_type, __memory_space_type>& v);
+  /// @see norm2
   template<class __value_type, class __memory_space_type> float norm2(const tensor<__value_type, __memory_space_type, column_major>& v){
 	return norm2(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
   }
@@ -412,6 +451,7 @@ namespace cuv{
    * @return one-norm of v 
    */
   template<class __value_type, class __memory_space_type> float norm1(const tensor<__value_type, __memory_space_type>& v);
+  /// @see norm1
   template<class __value_type, class __memory_space_type> float norm1(const tensor<__value_type, __memory_space_type, column_major>& v){
 	return norm1(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
   }
@@ -423,6 +463,7 @@ namespace cuv{
    * @return Minimum entry of v 
    */
   template<class __value_type, class __memory_space_type> float minimum(const tensor<__value_type, __memory_space_type>& v);
+  /// @see minimum
   template<class __value_type, class __memory_space_type> float minimum(const tensor<__value_type, __memory_space_type, column_major>& v){
 	return minimum(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
   }
@@ -434,6 +475,7 @@ namespace cuv{
    * @return Maximum entry of v 
    */
   template<class __value_type, class __memory_space_type> float maximum(const tensor<__value_type, __memory_space_type>& v);
+  /// @see maximum
   template<class __value_type, class __memory_space_type> float maximum(const tensor<__value_type, __memory_space_type, column_major>& v){
 	return maximum(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
   }
@@ -445,6 +487,7 @@ namespace cuv{
    * @return Mean of entries of v 
    */
   template<class __value_type, class __memory_space_type> float mean(const tensor<__value_type, __memory_space_type>& v);
+  /// @see mean
   template<class __value_type, class __memory_space_type> float mean(const tensor<__value_type, __memory_space_type, column_major>& v){
 	return mean(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
   }
@@ -456,6 +499,7 @@ namespace cuv{
    * @return Variation of entries of v 
    */
   template<class __value_type, class __memory_space_type> float var(const tensor<__value_type, __memory_space_type>& v);
+  /// @see var
   template<class __value_type, class __memory_space_type> float var(const tensor<__value_type, __memory_space_type, column_major>& v){
 	return var(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
   }
@@ -470,6 +514,7 @@ namespace cuv{
   template<class __value_type, class __memory_space_type> 
 	  typename tensor<__value_type, __memory_space_type>::index_type 
 	  arg_max(const tensor<__value_type, __memory_space_type>& v);
+  /// @see arg_max
   template<class __value_type, class __memory_space_type> 
 	  typename tensor<__value_type, __memory_space_type, column_major>::index_type 
 	  arg_max(const tensor<__value_type, __memory_space_type, column_major>& v){
@@ -485,6 +530,7 @@ namespace cuv{
   template<class __value_type, class __memory_space_type> 
 	  typename tensor<__value_type, __memory_space_type>::index_type 
 	  arg_min(const tensor<__value_type, __memory_space_type>& v);
+  /// @see arg_min
   template<class __value_type, class __memory_space_type> 
 	  typename tensor<__value_type, __memory_space_type, column_major>::index_type 
 	  arg_min(const tensor<__value_type, __memory_space_type, column_major>& v){

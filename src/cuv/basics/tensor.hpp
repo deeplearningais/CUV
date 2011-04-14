@@ -54,18 +54,24 @@ namespace cuv
 	/// Tag for row major matrices
 	struct row_major    : public memory_layout_tag{};
 
+	/// converts from column to row-major and vice versa
 	template<class T>
 	struct other_memory_layout{};
+	/// specialisation: converts from column to row-major 
 	template<>
 	struct other_memory_layout<column_major>{ typedef row_major type; };
+	/// specialisation: converts from row to column-major 
 	template<>
 	struct other_memory_layout<row_major>{ typedef column_major type; };
 
+	/// converts from dev to host memory space and vice versa
 	template<class T>
 	struct other_memory_space{
 	};
+	/// specialisation: converts from dev_memory_space to host_memory_space
 	template<>
 	struct other_memory_space<dev_memory_space>{ typedef host_memory_space type; };
+	/// specialisation: converts from host_memory_space to dev_memory_space
 	template<>
 	struct other_memory_space<host_memory_space>{ typedef dev_memory_space type; };
 
@@ -77,6 +83,9 @@ namespace cuv
 	}
 #endif
 
+	/**
+	 * an n-dimensional tensor with only non-changing accessors
+	 */
 	template<class __value_type, class __memory_space_type, class __memory_layout_type = row_major, class Tptr=const __value_type*>
 	class const_tensor{
 		public:
@@ -120,6 +129,7 @@ namespace cuv
 			}
 		public:
 
+			/// default constructor
 			const_tensor(){
 			}
 			/**
@@ -278,24 +288,36 @@ namespace cuv
 				return m_data[d0];
 			}
 
+			/**
+			 * return a reference to the value at this position in linear memory
+			 */
 			const_reference_type operator()(index_type d0)const{
 				//index_type arr[1] = {d0};
 				//index_type idx = index_of<1>(memory_layout_type(),arr);
 				//return m_data[idx];
 				return m_data[d0];
 			}
+			/**
+			 * return a reference to the value at this position in 2D memory
+			 */
 			const_reference_type operator()(index_type d0, index_type d1)const{
 				index_type arr[2] = {d0,d1};
 				index_type idx = index_of<2>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 
+			/**
+			 * return a reference to the value at this position in 3D memory
+			 */
 			const_reference_type operator()(index_type d0, index_type d1, index_type d2)const{
 				index_type arr[3] = {d0,d1,d2};
 				index_type idx = index_of<3>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 
+			/**
+			 * return a reference to the value at this position in 4D memory
+			 */
 			const_reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3)const{
 				index_type arr[4] = {d0,d1,d2,d3};
 				index_type idx = index_of<4>(memory_layout_type(),arr);
@@ -363,6 +385,9 @@ namespace cuv
 		
 	};
 	
+	/**
+	 * Provides non-const accessors to const_tensor
+	 */
 	template<class __value_type, class __memory_space_type, class __memory_layout_type=row_major>
 	class tensor
 	: public const_tensor<__value_type, __memory_space_type,__memory_layout_type, __value_type*>
@@ -388,6 +413,7 @@ namespace cuv
 
 		public:
 
+			/// default constructor
 			tensor(){
 			}
 			/**
@@ -495,6 +521,9 @@ namespace cuv
 			 */
                         tensor& operator=(const __value_type & f);
 
+			/**
+			 * returns a reference to this position in linear memory
+			 */
 			reference_type operator[](index_type d0){
 				//index_type arr[1] = {d0};
 				//index_type idx = super_type::template index_of<1>(memory_layout_type(),arr);
@@ -502,30 +531,45 @@ namespace cuv
 				return m_data[d0];
 			}
 
+			/**
+			 * returns a reference to this position in linear memory
+			 */
 			reference_type operator()(index_type d0){
 				//index_type arr[1] = {d0};
 				//index_type idx = super_type::template index_of<1>(memory_layout_type(),arr);
 				//return m_data[idx];
 				return m_data[d0];
 			}
+			/**
+			 * returns a reference to this position in 2D memory
+			 */
 			reference_type operator()(index_type d0, index_type d1){
 				index_type arr[2] = {d0,d1};
 				index_type idx = super_type::template index_of<2>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 
+			/**
+			 * returns a reference to this position in 3D memory
+			 */
 			reference_type operator()(index_type d0, index_type d1, index_type d2){
 				index_type arr[3] = {d0,d1,d2};
 				index_type idx = super_type::template index_of<3>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 
+			/**
+			 * returns a reference to this position in 4D memory
+			 */
 			reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3){
 				index_type arr[4] = {d0,d1,d2,d3};
 				index_type idx = super_type::template index_of<4>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 			
+			/**
+			 * change the shape of this tensor (product must be the same as before)
+			 */
 			template<std::size_t D>
 			void reshape(const extent_gen<D>& eg){
 				std::size_t new_size=1;	
@@ -538,9 +582,15 @@ namespace cuv
 				for(std::size_t i=0;i<D;i++)
 					m_shape.push_back(eg.ranges_[i].finish());
 			}
+			/**
+			 * convenience overloading for matrices: change the shape of this tensor (product must be the same as before)
+			 */
                         void reshape(index_type i, index_type j){
                                 reshape(extents[i][j]);
                         }
+			/**
+			 * change the shape of this tensor (product must be the same as before)
+			 */
                         void reshape(const std::vector<index_type>& new_shape){
 				index_type new_size =  std::accumulate(new_shape.begin(),new_shape.end(),(index_type)1,std::multiplies<index_type>());
                                 cuvAssert(new_size == size() );
@@ -564,14 +614,17 @@ namespace cuv
           return *this;
       }
       
+      /// create a tensor type with the same template parameters, but with switched value type
 	template<class Mat, class NewVT>
 		struct switch_value_type{
 			typedef tensor<NewVT, typename Mat::memory_space_type, typename Mat::memory_layout_type> type;
 		};
+      /// create a tensor type with the same template parameters, but with switched memory_layout_type
 	template<class Mat, class NewML>
 		struct switch_memory_layout_type{
 			typedef tensor<typename Mat::value_type, typename Mat::memory_space_type, NewML> type;
 		};
+      /// create a tensor type with the same template parameters, but with switched memory_space_type
 	template<class Mat, class NewMS>
 		struct switch_memory_space_type{
 			typedef tensor<typename Mat::value_type, NewMS, typename Mat::memory_layout_type> type;

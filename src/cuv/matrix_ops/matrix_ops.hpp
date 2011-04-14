@@ -136,7 +136,7 @@ namespace cuv{
   /** 
    * @brief Matrix multiplication and other BLAS3 functionality.
    * 
-   * @param dst Destination matrix 
+   * @param C Destination matrix 
    * @param A First matrix for product 
    * @param B Second matrix for product 
    * @param transA Whether to transpose A before calculating the matix product. Possible values 'n' for "do Not transpose" and 't' for "Transpose". 
@@ -152,6 +152,7 @@ namespace cuv{
    */
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
 	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
+  /// @see prod
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
 	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const dia_matrix<__value_type,__memory_space_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
 
@@ -265,15 +266,17 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& d
   template<class V, class T, class M>
   cuv::tensor<V,T,typename other_memory_layout<M>::type > * transposed_view_p(cuv::tensor<V,T,M>&  src);
 
+  /// As in @see transposed_view_p, but here we return an auto_ptr for convenience
   template<class V, class T, class M>
   std::auto_ptr<cuv::tensor<V,T,typename other_memory_layout<M>::type > > transposed_view(cuv::tensor<V,T,M>&  src){
 	return std::auto_ptr<cuv::tensor<V,T,typename other_memory_layout<M>::type > >(transposed_view_p(src));
   }
         
-  //const variant
+  /// Const variant of @see transposed_view_p
   template<class V, class T, class M>
   const cuv::tensor<V,T,typename other_memory_layout<M>::type > * transposed_view_p(const cuv::tensor<V,T,M>&  src);
 
+  /// As in @see transposed_view_p, but here we return an auto_ptr for convenience
   template<class V, class T, class M>
   std::auto_ptr<const cuv::tensor<V,T,typename other_memory_layout<M>::type > > transposed_view(const cuv::tensor<V,T,M>&  src){
 	return std::auto_ptr<const cuv::tensor<V,T,typename other_memory_layout<M>::type > >(transposed_view_p(src));
