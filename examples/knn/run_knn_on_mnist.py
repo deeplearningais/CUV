@@ -5,8 +5,8 @@ import numpy as np
 
 
 class MNISTPatGen:
-  def __init__(self,dir):
-      fd = open(dir+'/train-labels.idx1-ubyte')
+    def __init__(self,dir):
+        fd = open(dir+'/train-labels.idx1-ubyte')
       np.fromfile(file=fd, dtype=np.uint8, count=8)
       self.data_labels = np.fromfile(file=fd, dtype=np.uint8).reshape( 60000 )
       fd.close()
