@@ -611,7 +611,7 @@ class RBMStack:
             if l<self.cfg.num_layers-1:
                 self.act_info["%d-subs"%l]   = dict(px=np.sqrt(L.size), py=np.sqrt(L.size))
                 self.act["%d-subs"%l]   = L.act.np
-        if self.weights[0].mat.w < 800*6:
+        if self.weights[0].mat.shape[0] < 800*6:
             print "Trying to pull W0..."
             try:
                 self.W=self.weights[0].mat.np

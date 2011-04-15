@@ -144,7 +144,7 @@ def visualize_rows(fig, mat, indices, row_to_img, title="", normalize=True, save
             plt.clf()
     else:
         for pltn, idx in enumerate(indices):
-            ax = plt.subplot( ph, pw, 1+pltn)
+            ax = plt.subplot( int(ph), int(pw), 1+pltn)
             ax.set_axis_off()
             img = row_to_img(mat[idx,:])
             if use_imshow:
