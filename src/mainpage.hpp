@@ -163,27 +163,29 @@
  * C++ Code:
  * @code
  * #include <cuv/basics/tensor.hpp>
- * using namespace cuv;
+ * #include <cuv/tensor_ops/tensor_ops.hpp>
+ *     using namespace cuv;
  * 
- * tensor<float,host_memory_space> h(256);  // reserves space in host memory
- * tensor<float,dev_memory_space>  d(256);  // reserves space in device memory
- *
- * fill(h,0);                          // terse form
- * apply_0ary_functor(h,NF_FILL,0);    // more verbose
- *
- * d=h;                                // push to device
- * sequence(d);                        // fill device vector with a sequence
- *
- * h=d;                                // pull to host
- * for(int i=0;i<h.n();i++)
- * { 
- *   assert(d[i] == h[i]);
- * }
+ *     int main(void){
+ *         tensor<float,host_memory_space> h(256);  // reserves space in host memory
+ *         tensor<float,dev_memory_space>  d(256);  // reserves space in device memory
+ * 
+ *         fill(h,0);                          // terse form
+ *         apply_0ary_functor(h,NF_FILL,0.f);    // more verbose
+ * 
+ *         d=h;                                // push to device
+ *         sequence(d);                        // fill device vector with a sequence
+ * 
+ *         h=d;                                // pull to host
+ *         for(int i=0;i<h.size();i++)
+ *         {
+ *             assert(d[i] == h[i]);
+ *         }
+ *     }
  * @endcode
  *
  * Python Code:
  * @code
- * import pyublas
  * import cuv_python as cp
  * import numpy as np
  *
@@ -197,7 +199,7 @@
  * cp.apply_nullary_functor(d,cp.nullary_functor.FILL,1)   # verbose form
  *
  * h = d.np                                                # pull and convert to numpy
- * assert(cp.sum(h) == 256)
+ * assert(np.sum(h) == 256)
  * d.dealloc()                                             # explicitly deallocate memory (optional)
  *
  * @endcode
@@ -206,25 +208,26 @@
  *
  * C++-Code
  * @code
+ *
  * #include <cuv/basics/tensor.hpp>
  * #include <cuv/matrix_ops/matrix_ops.hpp>
  * using namespace cuv;
- *
- * tensor<float,dev_memory_space,column_major> C(2048,2048),A(2048,2048),B(2048,2048);
- *
- * fill(C,0);         // initialize to some defined value, not strictly necessary here
- * sequence(A); 
- * sequence(B);
- *
- * apply_binary_functor(A,B,BF_MULT);  // elementwise multiplication
- * A *= B;                             // operators also work (elementwise)
- * prod(C,A,B, 'n','t');               // matrix multiplication
- *
+ * 
+ * int main(void){
+ *     tensor<float,dev_memory_space,column_major> C(2048,2048),A(2048,2048),B(2048,2048);
+ * 
+ *     fill(C,0);         // initialize to some defined value, not strictly necessary here
+ *     sequence(A);
+ *     sequence(B);
+ * 
+ *     apply_binary_functor(A,B,BF_MULT);  // elementwise multiplication
+ *     A *= B;                             // operators also work (elementwise)
+ *     prod(C,A,B, 'n','t');               // matrix multiplication
+ * }
  * @endcode
  *
  * Python Code
  * @code
- * import pyublas
  * import cuv_python as cp
  * import numpy as np
  * C = cp.dev_tensor_float_cm([2048,2048])   # column major tensor
@@ -238,6 +241,7 @@
  * cp.prod(C,A,B,'n','t')                              # matrix multiplication
  * @endcode
  *
+ * The examples can be found in the "examples/" folder under "python" and "cpp"
  */
 
 
