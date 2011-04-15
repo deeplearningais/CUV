@@ -61,7 +61,7 @@ def test_pixel_classes():
     w, h = 512,512
     input_channels, pyramid_channels = 4,3
     pic = Image.open("tests/data/lena.bmp").resize((w,h)).convert("RGBA")
-    pic = np.asarray(pic).astype("float32").reshape(h,w*4)
+    pic = np.asarray(pic).reshape(h,w*4)
     pic_d = cp.push(pic)
     pyr = cp.dev_image_pyramid_f(pic_d.h/2,pic_d.w/input_channels/2,4,pyramid_channels)
     pyr.build(pic_d,4)
@@ -129,14 +129,14 @@ def run():
     #gray_test( np.asarray(pig).reshape(128**2  ,1))
 
     pig = Image.open("tests/data/gray_square.gif").resize((640,480)).convert("L")
-    #test_cuda_array(np.asarray(pig).astype("float32"))
+    #test_cuda_array(np.asarray(pig)
 
 def test_gaussian_pyramid_construction():
     print "Color Pyramid Construction on GPU: ",
     global pic
     w, h = 640,480
     pic = Image.open("tests/data/gray_square.gif").resize((w,h)).convert("RGBA")
-    pic = np.asarray(pic).astype("float32").reshape(h,w*4)
+    pic = np.asarray(pic).reshape(h,w*4)
     for x in xrange(1): # warmup
        build_pyramid_GPU(pic,input_channels=4,pyramid_channels=3)
     t = Timer('build_pyramid_GPU(pic,4,3)','from %s import build_pyramid_GPU, cp, pic'%__name__)
@@ -144,7 +144,7 @@ def test_gaussian_pyramid_construction():
 
     print "Grayscale Pyramid Construction on CPU: ",
     pic = Image.open("tests/data/gray_square.gif").resize((w,h)).convert("RGB")
-    pic = np.asarray(pic).astype("float32")
+    pic = np.asarray(pic)
     t = Timer('build_pyramid_CPU(pic)','from %s import build_pyramid_CPU, pic'%__name__)
     print t.timeit(number=100)/100
 
