@@ -6,16 +6,6 @@ from _cuv_python import *
 def _matstr(x,typestr):
     return "%s: (%d,%d)[%2.1f Mb]"%(typestr,x.shape,x.memsize/1024./1024.)
 
-def __cpy(x):
-    x2 = x.__class__(x.h,x.w)
-    apply_scalar_functor(x2,x,scalar_functor.COPY)
-    return x2
-
-def __cpy_dia(x):
-    x2 = x.__class__(x)
-    apply_scalar_functor(x2,x,scalar_functor.COPY)
-    return x2
-
 def __sav_dense(x, file):
     np.save(file.replace(".npy",""),pull(x))
 
@@ -103,7 +93,6 @@ for memory_space in ["dev","host"]:
     dia_type=eval(memory_space+"_dia_matrix_f")
     #dia_type.__str__=lambda x:(_matstr(x,memory_space+"_matrix_"+memory_layout+value_type))
 
-    dia_type.copy = __cpy_dia
     dia_type.shape = property(__shape)
     dia_type.np = property(__np)
 
@@ -113,7 +102,6 @@ for memory_space in ["dev","host"]:
             dense_type=eval(memory_space+"_tensor_"+value_type+memory_layout)
 
             dense_type.save = __sav_dense
-            dense_type.copy = __cpy
             dense_type.T = property(__T)
             dense_type.has_nan = property(lambda x:has_nan(x))
             dense_type.has_inf = property(lambda x:has_inf(x))

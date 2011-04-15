@@ -79,6 +79,10 @@ namespace python_wrapping {
         get_reference(tens,ind)=val;
     }
     template <class T>
+    T* copy(T&old){
+        return new T(old);
+    }
+    template <class T>
     typename T::value_type get(T&tens, const boost::python::list &ind){
         return get_reference(tens,ind);
     }
@@ -275,6 +279,7 @@ export_tensor_common(const char* name){
                 .def("dealloc",&arr::dealloc, "deallocate memory")
                 .def("set",    &python_wrapping::set<T>, "set index to value")
                 .def("get",    &python_wrapping::get<T>, "set index to value")
+                .def("copy",    &python_wrapping::copy<T>, "get copy of object",return_value_policy<manage_new_object>())
                 .def("reshape",    &python_wrapping::reshape<T>, "reshape tensor in place")
                 .add_property("np", &python_wrapping::tens2npy<value_type,memspace_type,memlayout_type>::to_numpy_copy)
                 .add_property("size", &arr::size)
