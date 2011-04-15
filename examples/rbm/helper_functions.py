@@ -45,21 +45,6 @@ def prmat(x,div=1.0):
 def lineno():
     return inspect.currentframe().f_back.f_back.f_lineno
 
-def copy(x,y):
-    cp.apply_binary_functor(x,y,cp.binary_functor.COPY)
-def get_copy(x):
-    y = x.__class__(x.h,x.w)
-    copy(y.vec,x.vec)
-    return y
-
-def _matstr(x):
-    "(%d,%d)[%2.1f Mb]"%(x.h,x.w,x.memsize/1024./1024.)
-    
-cp.dev_matrix_cmf.pull=cp.pull
-cp.dev_matrix_cmf.__str__=_matstr
-cp.dev_matrix_rmf.__str__=_matstr
-cp.dev_dia_matrix_f.__str__=_matstr
-
 def visualization_grid_size(num_imgs):
     v = math.sqrt(num_imgs)
     if v==int(v):

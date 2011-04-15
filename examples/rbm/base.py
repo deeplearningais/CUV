@@ -18,7 +18,7 @@ import minibatch_provider
 
 class WeightLayer(object):
     def __init__(self,layer1,layer2,cfg,layernum):
-        self.mat=cp.dev_matrix_cmf(layer1.size,layer2.size)
+        self.mat=cp.dev_tensor_float_cm([layer1.size,layer2.size])
         cp.fill(self.mat,0)
         cp.add_rnd_normal(self.mat)
         fact = 1.0
@@ -29,17 +29,17 @@ class WeightLayer(object):
         cp.apply_scalar_functor(self.mat,cp.scalar_functor.MULT,
                                 fact/math.sqrt(max(layer1.size, layer2.size)))
         self.allocBias(layer1,layer2)
-        self.num_params = self.mat.h*self.mat.w + len(self.bias_lo) + len(self.bias_hi)
+        self.num_params = self.mat.size + len(self.bias_lo) + len(self.bias_hi)
 
     def allocBias(self,layer1,layer2):
-        self.bias_lo=cp.dev_matrix_cmf(layer1.size,1)
-        self.bias_hi=cp.dev_matrix_cmf(layer2.size,1)
+        self.bias_lo=cp.dev_tensor_float(layer1.size)
+        self.bias_hi=cp.dev_tensor_float(layer2.size)
         cp.fill(self.bias_lo,0)
         cp.fill(self.bias_hi,0)
     def save(self,prefix,postfix):
-        np.save(os.path.join(prefix,"weights-%s.npy"%postfix),cp.pull(self.mat))
-        np.save(os.path.join(prefix,"bias-lo-%s.npy"%postfix),cp.pull(self.bias_lo))
-        np.save(os.path.join(prefix,"bias-hi-%s.npy"%postfix),cp.pull(self.bias_hi))
+        np.save(os.path.join(prefix,"weights-%s.npy"%postfix),self.mat.np)
+        np.save(os.path.join(prefix,"bias-lo-%s.npy"%postfix),self.bias_lo.np)
+        np.save(os.path.join(prefix,"bias-hi-%s.npy"%postfix),self.bias_hi.np)
     def load(self,prefix,postfix):
         fn = os.path.join(prefix,"weights-%s.npy"%postfix)
         if os.path.exists(fn):
@@ -56,10 +56,10 @@ class WeightLayer(object):
         cp.prod(layer2.act,self.mat,layer1.act,'t','n')
         layer2.postUpdateFromBelow(sample,bias=self.bias_hi)
     def allocUpdateMatrix(self):
-        self.w_tmp =cp.dev_matrix_cmf(self.mat.h,self.mat.w)
-        cp.fill(self.w_tmp.vec,0)
-        self.blo_tmp=cp.dev_matrix_cmf(len(self.bias_lo),1)
-        self.bhi_tmp=cp.dev_matrix_cmf(len(self.bias_hi),1)
+        self.w_tmp =cp.dev_tensor_float_cm(self.mat.shape)
+        cp.fill(self.w_tmp,0)
+        self.blo_tmp=cp.dev_tensor_float(len(self.bias_lo))
+        self.bhi_tmp=cp.dev_tensor_float(len(self.bias_hi))
         cp.fill(self.blo_tmp,0)
         cp.fill(self.bhi_tmp,0)
     def deallocUpdateMatrix(self):
@@ -71,17 +71,17 @@ class WeightLayer(object):
         if "bhi_tmp" in self.__dict__:
             self.bhi_tmp.dealloc()
     def updateStep(self,learnrate,cost):
-        cp.learn_step_weight_decay(self.mat.vec,self.w_tmp.vec,learnrate,cost) # W  += learnrate(dW - cost*W)
+        cp.learn_step_weight_decay(self.mat,self.w_tmp,learnrate,cost) # W  += learnrate(dW - cost*W)
         cp.learn_step_weight_decay(self.bias_lo,self.blo_tmp,learnrate,cost) # W  += learnrate(dW - cost*W)
         cp.learn_step_weight_decay(self.bias_hi,self.bhi_tmp,learnrate,cost) # W  += learnrate(dW - cost*W)
     def updateGradientNeg(self,layer1,layer2,batchsize):
         cp.prod(self.w_tmp,layer1.act,layer2.act,'n','t',-1./batchsize,1./batchsize)
-        cp.reduce_to_col(self.blo_tmp.vec,layer1.act,cp.reduce_functor.ADD,-1./batchsize,1./batchsize)
-        cp.reduce_to_col(self.bhi_tmp.vec,layer2.act,cp.reduce_functor.ADD,-1./batchsize,1./batchsize)
+        cp.reduce_to_col(self.blo_tmp,layer1.act,cp.reduce_functor.ADD,-1./batchsize,1./batchsize)
+        cp.reduce_to_col(self.bhi_tmp,layer2.act,cp.reduce_functor.ADD,-1./batchsize,1./batchsize)
     def updateGradientPos(self,layer1,layer2):
         cp.prod(self.w_tmp,layer1.act,layer2.act,'n','t')
-        cp.reduce_to_col(self.blo_tmp.vec,layer1.act)
-        cp.reduce_to_col(self.bhi_tmp.vec,layer2.act)
+        cp.reduce_to_col(self.blo_tmp,layer1.act)
+        cp.reduce_to_col(self.bhi_tmp,layer2.act)
 
 
 class NodeLayer(object):
@@ -97,7 +97,7 @@ class NodeLayer(object):
         elif self.unit_type == UnitType.binary:
             cp.rnd_binarize(self.act)
     def alloc(self):
-        self.act = cp.dev_matrix_cmf(self.size,self.bsize)
+        self.act = cp.dev_tensor_float_cm([self.size,self.bsize])
         cp.fill(self.act,0)
         return self
     def dealloc(self):
@@ -106,7 +106,7 @@ class NodeLayer(object):
         if not self.unit_type == UnitType.gaussian:
             cp.apply_scalar_functor(self.act,cp.scalar_functor.SIGM)
     def allocPChain(self):
-        self.pchain=cp.dev_matrix_cmf(self.size, self.bsize)
+        self.pchain=cp.dev_tensor_float_cm([self.size, self.bsize])
         cp.fill(self.pchain,0)
     def deallocPChain(self):
         if not "pchain" in self.__dict__:
@@ -119,12 +119,12 @@ class NodeLayer(object):
         self.pchain= self.act
         self.act   = self.org
     def postUpdateFromAbove(self,sample,bias):
-        cp.matrix_plus_col(self.act,bias.vec)
+        cp.matrix_plus_col(self.act,bias)
         self.nonlinearity()
         if sample:
             self.sample()
     def postUpdateFromBelow(self,sample,bias):
-        cp.matrix_plus_col(self.act,bias.vec)
+        cp.matrix_plus_col(self.act,bias)
         self.nonlinearity()
         if sample:
             self.sample()
@@ -178,11 +178,11 @@ class RBMStack:
             whi = self.weights[layernum]
 
             cp.prod(L.act,whi.mat,hi.act,'n','n')
-            cp.matrix_plus_col(L.act,whi.bias_lo.vec)
+            cp.matrix_plus_col(L.act,whi.bias_lo)
 
             tmp = get_copy(L.act)
             cp.prod(L.act,wlo.mat,lo.act,'t','n')
-            cp.matrix_plus_col(L.act,wlo.bias_hi.vec)
+            cp.matrix_plus_col(L.act,wlo.bias_hi)
 
             # add parts from above/below
             cp.apply_binary_functor(L.act,tmp,cp.binary_functor.AXPBY,0.5,0.5)
@@ -272,7 +272,7 @@ class RBMStack:
                     self.downPass(1,sample=False)
                     err=self.getErr(0,mbatch_provider.sampleset)
                     self.reconstruction_error.append(err)
-                    print "Iter: ",iter, "Err: %02.06f"%err, "|W|: %02.06f"%cp.norm2(self.weights[0].mat.vec)
+                    print "Iter: ",iter, "Err: %02.06f"%err, "|W|: %02.06f"%cp.norm2(self.weights[0].mat)
                     print self.cfg.workdir,
                     if self.cfg.save_every!=0 and iter % self.cfg.save_every == 0 and iter>0 :
                         for layernum in xrange(len(self.weights)):
@@ -374,7 +374,7 @@ class RBMStack:
                 timestr = " %2.4es/img ; %2.4e img/s"% ( td / (self.cfg.batchsize*(iter - self.last_time_stamp_iter)), (self.cfg.batchsize*(iter - self.last_time_stamp_iter))/td)
         err = self.getErr(layer,mbatch_provider.sampleset)
         self.reconstruction_error.append(err)
-        n   = cp.norm2(self.weights[layer].mat.vec)
+        n   = cp.norm2(self.weights[layer].mat)
         print "Iter: ",iter, "Err: %02.06f |W|=%2.2f"%(err,n), timestr
         if self.cfg.save_every!=0 and iter % self.cfg.save_every == 0 and iter>0 :
             self.saveLayer(layer,self.cfg.workdir,"-%010d"%iter)
@@ -382,7 +382,7 @@ class RBMStack:
             self.saveOptions({"reconstruction":err},layer,"-%010d"%iter)
 
             # write pcd chain to images:
-            #pchain=cp.pull(self.layers[layer].pchain)
+            #pchain=self.layers[layer].pchain.np
             #for i,image in enumerate(pchain[:,:10].T):
                 #plt.matshow(image.reshape((28,28)))
                 #plt.savefig(os.path.join(self.cfg.workdir,"figure-pchain-%010d-chain%05d.png"%(iter,i)))
@@ -480,7 +480,7 @@ class RBMStack:
                 self.updateLayer(layernum,sample=False)
 
             for i in xrange(1,len(self.layers)):
-                rep_list.appendRep(i-1,cp.pull(self.layers[i].act))
+                rep_list.appendRep(i-1,self.layers[i].act.np)
                 id +=1
         return rep_list
 
@@ -497,7 +497,7 @@ class RBMStack:
             mbatch_provider.forgetOriginalData()
             self.upPass(layer,sample=False)
             top_layer=self.layers[layer+1]
-            mblist.append( cp.pull( top_layer.act) )
+            mblist.append(top_layer.act.np)
             id += 1
 
     def project_down(self):
@@ -526,7 +526,7 @@ class RBMStack:
                 lower_layer = self.layers[i-1]
                 self.weights[i-1].downPass(lower_layer,self.layers[i],sample=False)
 
-            img = cp.pull( self.layers[0].act )
+            img = self.layers[0].act.np
             img -= np.tile(img.mean(axis=1), (img.shape[1],1)).T
             img -= np.tile(img.mean(axis=0), (img.shape[0],1))
             self.projection_results[layernum] = img
@@ -549,7 +549,7 @@ class RBMStack:
             self.downPass(1,sample=True)
         elif eval_start == EvalStartType.incomplete:
             print "Andy was to lazy to implement this yet"
-            #self.layers[0].act.pull()
+            #self.layers[0].act.np()
             #vis_=cp.create_numpy_from_mat_copy(self.layers[0].act)
             #vis=cp.create_mat_from_numpy_view("vis_hack",vis_) 
             #self.layers[0].act.dealloc()
@@ -610,20 +610,20 @@ class RBMStack:
             L = self.layers[l]
             if l<self.cfg.num_layers-1:
                 self.act_info["%d-subs"%l]   = dict(px=np.sqrt(L.size), py=np.sqrt(L.size))
-                self.act["%d-subs"%l]   = cp.pull(L.act)
+                self.act["%d-subs"%l]   = L.act.np
         if self.weights[0].mat.w < 800*6:
             print "Trying to pull W0..."
             try:
-                self.W=cp.pull(self.weights[0].mat)
+                self.W=self.weights[0].mat.np
                 if len(self.weights)>1:
-                    self.W1=cp.pull(self.weights[1].mat)
+                    self.W1=self.weights[1].mat.np
             except MemoryError:
                 print("weights too big!")
         print "done."
 
     def save_fantasy(self,step,Npoint,cb,activations):
-        #self.dbg_datout.append(cp.pull(self.layers[0].act)[0:self.layers[0].size,0:Npoint].T)
-        cb(step,cp.pull(activations)[0:self.layers[0].size,0:Npoint].T)
+        #self.dbg_datout.append(self.layers[0].act.np[0:self.layers[0].size,0:Npoint].T)
+        cb(step,activations.np[0:self.layers[0].size,0:Npoint].T)
     def saveAllLayers(self,postfix):
         for layernum in xrange(self.cfg.num_layers-1):
             self.saveLayer(layernum,self.cfg.workdir,postfix)

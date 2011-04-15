@@ -6,7 +6,7 @@ class MiniBatchProvider:
     def getMiniBatch(self): raise NotImplementedError
     def setMiniBatch(self, mb, dst_layer):
         self.sampleset_ = mb
-        self.sampleset  = cp.push(self.sampleset_.astype('float32').copy('F'))
+        self.sampleset  = cp.dev_tensor_float_cm(self.sampleset_.astype('float32').copy('F'))
         cp.apply_binary_functor(dst_layer,self.sampleset,cp.binary_functor.COPY)
 
     def forgetOriginalData(self):
@@ -39,21 +39,21 @@ class MNISTMiniBatchProvider(MiniBatchProvider):
             raise MiniBatchProviderEmpty
         self.setMiniBatch(self.dataset[:,id:id+samplesize], dst_layer)
         if return_teacher:
-            return cp.push(self.teacher[:,id:id+samplesize].astype('float32').copy('F'))
+            return cp.dev_tensor_float_cm(self.teacher[:,id:id+samplesize].astype('float32').copy('F'))
 
 class MiniBatchStatistics:
     def update_stats(self,batch):
-        vmin  = cp.dev_matrix_cmf(batch.h,1)
-        vmax  = cp.dev_matrix_cmf(batch.h,1)
-        mean  = cp.dev_matrix_cmf(batch.h,1)
-        mean2 = cp.dev_matrix_cmf(batch.h,1)
+        vmin  = cp.dev_tensor_float(batch.shape[0])
+        vmax  = cp.dev_tensor_float(batch.shape[0])
+        mean  = cp.dev_tensor_float(batch.shape[0])
+        mean2 = cp.dev_tensor_float(batch.shape[0])
         map(lambda x: cp.fill(x,0), [mean,mean2])
-        cp.reduce_to_col(mean.vec,batch)
-        cp.reduce_to_col(mean2.vec,batch,cp.reduce_functor.ADD_SQUARED)
-        cp.reduce_to_col(vmin.vec,batch,cp.reduce_functor.MIN)
-        cp.reduce_to_col(vmax.vec,batch,cp.reduce_functor.MAX)
+        cp.reduce_to_col(mean,batch)
+        cp.reduce_to_col(mean2,batch,cp.reduce_functor.ADD_SQUARED)
+        cp.reduce_to_col(vmin,batch,cp.reduce_functor.MIN)
+        cp.reduce_to_col(vmax,batch,cp.reduce_functor.MAX)
         if "N" in self.__dict__:
-            self.N += batch.w
+            self.N += batch.shape[1]
             cp.apply_binary_functor(self.mean, mean, cp.binary_functor.ADD)
             cp.apply_binary_functor(self.mean2,mean2,cp.binary_functor.ADD)
             cp.apply_binary_functor(self.min,vmin,cp.binary_functor.MIN)
@@ -63,7 +63,7 @@ class MiniBatchStatistics:
             vmin.dealloc()
             vmax.dealloc()
         else:
-            self.N     = batch.w
+            self.N     = batch.shape[1]
             self.mean  = mean
             self.mean2 = mean2
             self.min   = vmin
@@ -109,8 +109,8 @@ class MiniBatchStatistics:
 
     def normalize_zmuv(self,batch):
         """ Zero Mean, Unit Variance based on recorded statistics """
-        cp.matrix_plus_col(batch,self.negative_mean.vec)
-        cp.matrix_divide_col(batch,self.std.vec)
+        cp.matrix_plus_col(batch,self.negative_mean)
+        cp.matrix_divide_col(batch,self.std)
 
     def normalize_255(self,batch):
         """ normalize by subtracting min and dividing by range"""
@@ -118,12 +118,12 @@ class MiniBatchStatistics:
 
     def normalize_minmax(self,batch):
         """ normalize by subtracting min and dividing by range"""
-        cp.matrix_plus_col(batch,self.negative_min.vec)
-        cp.matrix_divide_col(batch,self.range.vec)
+        cp.matrix_plus_col(batch,self.negative_min)
+        cp.matrix_divide_col(batch,self.range)
 
     #def normalize_min2(self,batch):
     #    """ normalize by subtracting min and dividing by range"""
-    #    cp.matrix_plus_col(batch,self.negative_min.vec)
+    #    cp.matrix_plus_col(batch,self.negative_min)
     #    cp.apply_scalar_functor(batch,cp.scalar_functor.DIV,2.)
 
     def __init__(self, mbp, act):
@@ -133,7 +133,7 @@ class MiniBatchStatistics:
             while True:
                 sys.stdout.write('.')
                 sys.stdout.flush()
-                mbp.getMiniBatch(act.w,act, sid)
+                mbp.getMiniBatch(act.shape[1],act, sid)
                 mbp.forgetOriginalData()
                 self.update_stats(act)
                 sid += 1
@@ -156,7 +156,7 @@ class MovedMiniBatchProvider(MNISTMiniBatchProvider):
     def set_noise_std(self,n):         self.noise_std = n
     def setMiniBatch(self, mb, dst_layer):
         self.sampleset_ = mb
-        self.sampleset  = cp.push(self.sampleset_.copy('F'))
+        self.sampleset  = cp.dev_tensor_uc_cm(self.sampleset_.copy('F'))
         shift = np.random.randint(-self.maxmov,self.maxmov+1, 2).astype('int32')
         cp.image_move(dst_layer,self.sampleset,self.src_size, self.dst_size, self.src_num_maps, shift[0],shift[1])
         if self.noise_std != 0:
@@ -171,7 +171,7 @@ class ListMiniBatchProvider(MiniBatchProvider):
         self.dataset = list
         self.pos = 0
     def __len__(self):
-        return len(self.dataset) * self.dataset[0].w
+        return len(self.dataset) * self.dataset[0].shape[1]
     def getMiniBatch(self, samplesize, dst_layer, id=None):
         if id == None:
             #id = np.random.randint(0,len(self.dataset))
