@@ -41,6 +41,6 @@ if __name__ == "__main__":
     [clusters, indices]=kmeans(mnist,num_clusters,10)
 
     for i in xrange(num_clusters):
-        plt.subplot(np.ceil(num_clusters/5),5,i+1)
+        plt.subplot(int(np.ceil(num_clusters/5)),5,i+1)
         plt.imshow(clusters[:,i].reshape(28,28))
     plt.show()
