@@ -55,8 +55,12 @@ void export_functions() {
 }
 
 void export_random(){
-	typedef tensor<float,dev_memory_space,column_major> fdev;
-	typedef tensor<float,host_memory_space,column_major> fhost;
+	typedef tensor<float,dev_memory_space,column_major> fdev_cm;
+	typedef tensor<float,host_memory_space,column_major> fhost_cm;
+	typedef tensor<float,dev_memory_space> fdev;
+	typedef tensor<float,host_memory_space> fhost;
 	export_functions<fdev>();
 	export_functions<fhost>();
+	export_functions<fdev_cm>();
+	export_functions<fhost_cm>();
 	}
