@@ -144,7 +144,8 @@ namespace python_wrapping {
 	    }
 
 	    /// construct from numpy, copy memory
-	    static T* construct_tensor_numpy_array_copy(pyublas::numpy_array<typename T::value_type> o){
+	    template<class arg_val_type>
+	    static T* construct_tensor_numpy_array_copy(pyublas::numpy_array<arg_val_type> o){
 		    const unsigned int ndim = o.ndim();
 		    std::vector<unsigned int> v(ndim);
 		    for(int i=0;i<ndim;i++)
@@ -154,8 +155,9 @@ namespace python_wrapping {
 		    bool is_f_contiguous = PyArray_ISFARRAY(po);
 		    if(IsSame<L,column_major>::Result::value != is_f_contiguous)
 			    std::reverse(v.begin(),v.end());
-		    T view(v,o.data());
-		    return new T(view);
+		    T* cpy = new T(v);
+		    std::copy(o.data(), o.data()+cpy->size(), cpy->ptr());
+		    return cpy;
 	    }
     };
 
@@ -169,7 +171,8 @@ namespace python_wrapping {
 	    }
 
 	    /// construct from numpy, copy memory
-	    static T* construct_tensor_numpy_array_copy(pyublas::numpy_array<typename T::value_type> o){
+	    template<class arg_val_type>
+	    static T* construct_tensor_numpy_array_copy(pyublas::numpy_array<arg_val_type> o){
 		    const unsigned int ndim = o.ndim();
 		    std::vector<unsigned int> v(ndim);
 		    for(int i=0;i<ndim;i++)
@@ -179,8 +182,20 @@ namespace python_wrapping {
 		    bool is_f_contiguous = PyArray_ISFARRAY(po);
 		    if(IsSame<L,column_major>::Result::value != is_f_contiguous)
 			    std::reverse(v.begin(),v.end());
-		    tensor<V,host_memory_space,L> view(v,o.data());
-		    return new T(view);
+
+		    if(IsSame<arg_val_type,V>::Result::value){
+			    // argument type and value type are the same
+			    // we simply need to create a copy of the encapsulated memory on the device
+			    tensor<V,host_memory_space,L> view(v,(V*)o.data()); // cast does nothing, since types are always equal at runtime
+			    return new T(view);
+		    }else{
+			    // the argument type and the value type do not match
+			    // we therefore first copy everything to a host tensor of the target type
+			    // and then create the device tensor by copying this intermediate tensor.
+			    typename switch_memory_space_type<T,host_memory_space>::type cpy(v);
+			    std::copy(o.data(), o.data()+cpy.size(), cpy.ptr());
+			    return new T(cpy);
+		    }
 	    }
     };
 
@@ -254,7 +269,8 @@ export_tensor_common(const char* name){
 	c
 		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_shape))
 		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_int))
-		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_numpy_array_copy))
+		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::template construct_tensor_numpy_array_copy<value_type>))
+		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::template construct_tensor_numpy_array_copy<double>))
                 .def("__len__",&arr::size, "tensor size")
                 .def("dealloc",&arr::dealloc, "deallocate memory")
                 .def("set",    &python_wrapping::set<T>, "set index to value")
