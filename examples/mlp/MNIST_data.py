@@ -1,7 +1,5 @@
 import numpy as np
 import pyublas
-from scipy.io.numpyio import fwrite, fread
-
 
 class MNIST_data:
     """Input data for training and testing the MLP from MNIST dataset"""
@@ -13,23 +11,23 @@ class MNIST_data:
 
         """
         fd = open(dir+'/train-labels.idx1-ubyte')
-        fread(fd,8,'c')
-        self.data_labels = np.fromfile(file=fd, dtype=np.uint8).reshape((60000,1))
+        np.fromfile(file=fd, dtype=np.uint8, count=8)
+        self.data_labels = np.fromfile(file=fd, dtype=np.uint8).reshape( 60000 )
         fd.close()
 
         fd = open(dir+'/train-images.idx3-ubyte')
-        fread(fd,16,'c')
-        self.data = np.fromfile(file=fd, dtype=np.uint8).reshape((60000,784))
+        np.fromfile(file=fd, dtype=np.uint8, count=16)
+        self.data = np.fromfile(file=fd, dtype=np.uint8).reshape( (60000,784) )
         fd.close()
 
         fd = open(dir+'/t10k-images.idx3-ubyte')
-        fread(fd,16,'c')
-        self.test = np.fromfile(file=fd, dtype=np.uint8).reshape((10000,784))
+        np.fromfile(file=fd, dtype=np.uint8, count=16)
+        self.test = np.fromfile(file=fd, dtype=np.uint8).reshape( (10000,784) )
         fd.close()
 
         fd = open(dir+'/t10k-labels.idx1-ubyte')
-        fread(fd,8,'c')
-        self.test_labels = np.fromfile(file=fd, dtype=np.uint8).reshape((10000,1))
+        np.fromfile(file=fd, dtype=np.uint8, count=8)
+        self.test_labels = np.fromfile(file=fd, dtype=np.uint8).reshape( 10000 )
         fd.close()
 
     def get_test_data(self):
