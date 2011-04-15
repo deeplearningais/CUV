@@ -210,9 +210,9 @@ apply_0ary_functor(tensor<__value_type, __memory_space_type>& v, const NullaryFu
 	 cuvSafeCall(cudaThreadSynchronize());
 }
 
-template<class V1, class M, class S>
+template<class V1, class M>
 void
-apply_0ary_functor(tensor<V1, M>& v, const NullaryFunctor& nf, const S& param){
+apply_0ary_functor(tensor<V1, M>& v, const NullaryFunctor& nf, const V1& param){
 	 cuvAssert(v.ptr());
 
 	 typedef typename memspace_cuv2thrustptr<V1,M >::ptr_type ptr_type;

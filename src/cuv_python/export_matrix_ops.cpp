@@ -64,7 +64,7 @@ void export_nullary_functor() {
 	   apply_0ary_functor< typename M::value_type, typename M::memory_space_type>);
 	def("apply_nullary_functor",
 	   (void (*)(M&,const NullaryFunctor&, const typename M::value_type&)) 
-	   apply_0ary_functor< typename M::value_type, typename M::memory_space_type, typename M::value_type>);
+	   apply_0ary_functor< typename M::value_type, typename M::memory_space_type>);
 
 	// convenience wrappers
 	def("sequence", (void (*)(M&)) sequence);
