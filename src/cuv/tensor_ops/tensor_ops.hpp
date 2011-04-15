@@ -328,7 +328,7 @@ namespace cuv{
 	   * @param p2    2nd optional parameter
 	   */
 	  template<class V1, class V2, class V3, class M, class S1, class S2>
-	  void apply_binary_functor(tensor<V1, M>& dst,const tensor<V2, M> src1, const tensor<V3, M>&src2, const BinaryFunctor& bf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2());
+	  void apply_binary_functor(tensor<V1, M>& dst,const tensor<V2, M>& src1, const tensor<V3, M>&src2, const BinaryFunctor& bf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2());
 	  template<class V1, class V2, class V3, class M, class S1, class S2>
 	  void apply_binary_functor(tensor<V1, M, column_major>& dst, const tensor<V2, M, column_major>& src1, const tensor<V3, M, column_major>& src2, const BinaryFunctor& bf, const int& numparams=0, const S1& p=S1(), const S2& p2=S2()){
               apply_binary_functor(*reinterpret_cast<tensor<V1, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V2, M, row_major>*>(&src1), * reinterpret_cast<const tensor<V3, M, row_major>*>(&src2), bf, numparams, p, p2); 
