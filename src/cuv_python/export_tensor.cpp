@@ -215,28 +215,11 @@ namespace python_wrapping {
 		    std::copy(t.shape().begin(),t.shape().end(), dims.begin());
 
 		    boost::python::handle<> result;
-		    if (IsSame<L,row_major>::Result::value) {
-			    std::cout << "row major create_numpy_array_with_shape "<<std::endl;
-			    result = boost::python::handle<>(PyArray_New(
-						    &PyArray_Type, t.shape().size(), &dims[0], 
-						    pyublas::get_typenum(V()), 
-						    /*strides*/0, 
-						    /*data*/NULL,
-						    /* ? */ 0, 
-						    NPY_INOUT_ARRAY, NULL));
-		    }
-		    else {
-			    std::cout << "col major create_numpy_array_with_shape "<<std::endl;
-			    result = boost::python::handle<>(PyArray_New(
-						    &PyArray_Type, t.shape().size(), &dims[0], 
-						    pyublas::get_typenum(V()), 
-						    /*strides*/0, 
-						    /*data*/NULL,
-						    /* ? */ 0, 
-						    NPY_INOUT_FARRAY, NULL));
-		    }
-		    std::cout << "FARRAY: "<< (PyArray_FLAGS((PyArrayObject*)result.get())&NPY_F_CONTIGUOUS)<<std::endl;
-		    std::cout << "CARRAY: "<<(PyArray_FLAGS((PyArrayObject*)result.get())&NPY_C_CONTIGUOUS)<<std::endl;
+		    bool is_fortran_order = IsSame<L,column_major>::Result::value;
+		    result = boost::python::handle<>(PyArray_EMPTY(
+					    t.shape().size(), &dims[0], 
+					    pyublas::get_typenum(V()), 
+					    is_fortran_order));
 		    return result;
 	    }
     };
@@ -251,9 +234,8 @@ namespace python_wrapping {
 
 	    /// copy host vector into a numpy array
 	    static boost::python::handle<> to_numpy_copy(const T& t){
-		    std::cout << "to_numpy_copy host"<<std::endl;
 		    boost::python::handle<> result = my_type::create_numpy_array_with_shape(t);
-		    //memcpy((V*)PyArray_DATA((PyArrayObject*)result.get()),t.ptr(),t.memsize());
+		    memcpy((V*)PyArray_DATA((PyArrayObject*)result.get()),t.ptr(),t.memsize());
 		    return result;
 	    }
     };
@@ -265,7 +247,6 @@ namespace python_wrapping {
 	    
 	    /// copy device vector into a numpy array
 	    static pyublas::numpy_array<V> to_numpy_copy(const T& o){
-		    std::cout << "to_numpy_copy device"<<std::endl;
 		    boost::python::handle<> result = my_type::create_numpy_array_with_shape(o);
 		    tensor<V,host_memory_space,L> t(o.shape(),(V*)PyArray_DATA((PyArrayObject*)result.get())); // view on numpy matrix
 		    t = o;  // pull from device; should simply copy the memory
