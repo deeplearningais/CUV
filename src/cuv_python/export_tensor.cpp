@@ -208,41 +208,52 @@ namespace python_wrapping {
      *  Convert Tensor to Numpy
      ***************************************************/
     template<class V,class M, class L>
-    struct basic_tens2npy{};
-
-    template<class V,class M, class L>
-    struct tens2npy : public basic_tens2npy<V,M,L>{};
-
-    template<class V, class L>
-    struct tens2npy<V,host_memory_space,L> : public basic_tens2npy<V,host_memory_space,L>{
-	    typedef tensor<V,host_memory_space,L> T;
-
-	    /// copy host vector into a numpy array
-	    static boost::python::handle<> to_numpy_copy(const T& t){
+    struct basic_tens2npy{
+	    typedef tensor<V,M,L> T;
+	    static boost::python::handle<> create_numpy_array_with_shape(const T& t){
 		    std::vector<npy_intp> dims(t.shape().size());
 		    std::copy(t.shape().begin(),t.shape().end(), dims.begin());
 
 		    boost::python::handle<> result;
 		    if (IsSame<L,row_major>::Result::value) {
+			    std::cout << "row major create_numpy_array_with_shape "<<std::endl;
 			    result = boost::python::handle<>(PyArray_New(
 						    &PyArray_Type, t.shape().size(), &dims[0], 
 						    pyublas::get_typenum(V()), 
 						    /*strides*/0, 
-						    NULL,
+						    /*data*/NULL,
 						    /* ? */ 0, 
-						    NPY_CARRAY, NULL));
+						    NPY_INOUT_ARRAY, NULL));
 		    }
 		    else {
+			    std::cout << "col major create_numpy_array_with_shape "<<std::endl;
 			    result = boost::python::handle<>(PyArray_New(
 						    &PyArray_Type, t.shape().size(), &dims[0], 
 						    pyublas::get_typenum(V()), 
 						    /*strides*/0, 
-						    NULL,
+						    /*data*/NULL,
 						    /* ? */ 0, 
-						    NPY_FARRAY, NULL));
+						    NPY_INOUT_FARRAY, NULL));
 		    }
-		    memcpy((V*)PyArray_DATA((PyArrayObject*)result.get()),t.ptr(),t.memsize());
+		    std::cout << "FARRAY: "<< (PyArray_FLAGS((PyArrayObject*)result.get())&NPY_F_CONTIGUOUS)<<std::endl;
+		    std::cout << "CARRAY: "<<(PyArray_FLAGS((PyArrayObject*)result.get())&NPY_C_CONTIGUOUS)<<std::endl;
+		    return result;
+	    }
+    };
 
+    template<class V,class M, class L>
+    struct tens2npy : public basic_tens2npy<V,M,L>{ };
+
+    template<class V, class L>
+    struct tens2npy<V,host_memory_space,L> : public basic_tens2npy<V,host_memory_space,L>{
+	    typedef tensor<V,host_memory_space,L> T;
+	    typedef basic_tens2npy<V,host_memory_space,L> my_type;
+
+	    /// copy host vector into a numpy array
+	    static boost::python::handle<> to_numpy_copy(const T& t){
+		    std::cout << "to_numpy_copy host"<<std::endl;
+		    boost::python::handle<> result = my_type::create_numpy_array_with_shape(t);
+		    //memcpy((V*)PyArray_DATA((PyArrayObject*)result.get()),t.ptr(),t.memsize());
 		    return result;
 	    }
     };
@@ -250,11 +261,15 @@ namespace python_wrapping {
     template<class V, class L>
     struct tens2npy<V,dev_memory_space,L> : public basic_tens2npy<V,dev_memory_space,L>{
 	    typedef tensor<V,dev_memory_space,L> T;
+	    typedef basic_tens2npy<V,dev_memory_space,L> my_type;
 	    
 	    /// copy device vector into a numpy array
 	    static pyublas::numpy_array<V> to_numpy_copy(const T& o){
-		    tensor<V,host_memory_space,L> t = o;  // pull from device
-		    return tens2npy<V,host_memory_space,L>::to_numpy_copy(t);
+		    std::cout << "to_numpy_copy device"<<std::endl;
+		    boost::python::handle<> result = my_type::create_numpy_array_with_shape(o);
+		    tensor<V,host_memory_space,L> t(o.shape(),(V*)PyArray_DATA((PyArrayObject*)result.get())); // view on numpy matrix
+		    t = o;  // pull from device; should simply copy the memory
+		    return result;
 	    }
     };
     
