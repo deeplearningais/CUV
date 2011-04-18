@@ -110,7 +110,7 @@ IF(CUV_PYTHON_BINDINGS)
 
 	FIND_PROGRAM(NOSETEST_EXECUTABLE nosetests)
 	IF(NOSETEST_EXECUTABLE)
-		ADD_TEST( nose_tests sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/src cd ${CMAKE_BINARY_DIR}/src/tests/python ; nosetests" )
+            ADD_TEST( nose_tests sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/src cd ${CMAKE_SOURCE_DIR}/src/tests/python ; nosetests" )
 	ELSE(NOSETEST_EXECUTABLE)
 		MESSAGE(STATUS "Warning: Did not find the nosetests binary, cannot run python tests")
 	ENDIF(NOSETEST_EXECUTABLE)
