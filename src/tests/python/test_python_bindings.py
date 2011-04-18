@@ -6,14 +6,17 @@ import pdb
 import cuv_python as cp
 from nose.tools import *
 
-cp.initCUDA(0)
-
 import unittest
+def setUpModule():
+    cp.initCUDA(0)
+def tearDownModule():
+    cp.exitCUDA()
+
+
 
 class  testNumpyCompatibility:
     def setUp(self):
         self.shape = [2,3,4]
-        pass
     def tearDown(self):
         pass
 
