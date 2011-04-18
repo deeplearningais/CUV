@@ -218,19 +218,17 @@ namespace python_wrapping {
 	    typedef tensor<V,host_memory_space,L> T;
 
 	    /// copy host vector into a numpy array
-	    static pyublas::numpy_array<V> to_numpy_copy(const T& t){
+	    static boost::python::handle<> to_numpy_copy(const T& t){
 		    std::vector<npy_intp> dims(t.shape().size());
 		    std::copy(t.shape().begin(),t.shape().end(), dims.begin());
 
-		    V* data= new V[t.size()];
-		    memcpy(data,t.ptr(),t.memsize());
 		    boost::python::handle<> result;
 		    if (IsSame<L,row_major>::Result::value) {
 			    result = boost::python::handle<>(PyArray_New(
 						    &PyArray_Type, t.shape().size(), &dims[0], 
 						    pyublas::get_typenum(V()), 
 						    /*strides*/0, 
-						    data,
+						    NULL,
 						    /* ? */ 0, 
 						    NPY_CARRAY, NULL));
 		    }
@@ -239,10 +237,12 @@ namespace python_wrapping {
 						    &PyArray_Type, t.shape().size(), &dims[0], 
 						    pyublas::get_typenum(V()), 
 						    /*strides*/0, 
-						    data,
+						    NULL,
 						    /* ? */ 0, 
 						    NPY_FARRAY, NULL));
 		    }
+		    memcpy((V*)PyArray_DATA((PyArrayObject*)result.get()),t.ptr(),t.memsize());
+
 		    return result;
 	    }
     };
