@@ -45,7 +45,7 @@ class  testNumpyCompatibility:
     def testNpyToTensor(self):
         """ convert a numpy matrix to a tensor """
         n = np.arange(np.prod(self.shape)).reshape(self.shape)
-        t = cp.dev_tensor_float(n)
+        t = cp.dev_tensor_float(n.astype("float32"))
         self.cmp3d(t,n)
 
     def testTensorToNpy(self):
@@ -58,7 +58,7 @@ class  testNumpyCompatibility:
     def testNpyToTensorCm(self):
         """ convert a numpy matrix to a tensor (column major)"""
         n = np.arange(np.prod(self.shape)).reshape(self.shape).copy("F")
-        t = cp.dev_tensor_float_cm(n)
+        t = cp.dev_tensor_float_cm(n.astype("float32"))
         self.cmp3d(t,n)
 
     def testTensorToNpyCm(self):
@@ -71,7 +71,7 @@ class  testNumpyCompatibility:
     def testNpyToTensorTrans(self):
         """ convert a numpy matrix to a tensor (transposed) """
         n = np.arange(np.prod(self.shape)).reshape(self.shape).copy("F")
-        t = cp.dev_tensor_float(n)
+        t = cp.dev_tensor_float(n.astype("float32"))
         self.cmp3d_inv(t,n)
 
     def testTensorToNpyTrans(self):
@@ -84,7 +84,7 @@ class  testNumpyCompatibility:
     def testNpyToTensorCmTrans(self):
         """ convert a numpy matrix to a tensor (column major, transposed)"""
         n = np.arange(np.prod(self.shape)).reshape(self.shape)
-        t = cp.dev_tensor_float_cm(n)
+        t = cp.dev_tensor_float_cm(n.astype("float32"))
         self.cmp3d_inv(t,n)
 
     def testTensorToNpyCmTrans(self):
