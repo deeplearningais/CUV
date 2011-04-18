@@ -162,7 +162,7 @@ class linear_memory{
 	  /** 
 	   * @brief Deallocate memory if is_view is false.
 	   */
-	  virtual ~linear_memory(){
+	  ~linear_memory(){
 		  dealloc();
 	  } 
 
