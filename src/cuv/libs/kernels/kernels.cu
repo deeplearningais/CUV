@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cuv/basics/tensor.hpp>
 #include <cuv/libs/kernels/kernels.hpp>
+#include <cuv/matrix_ops/matrix_ops.hpp>
 #define V(X) #X <<": "<<(X) <<"   "
 
 using namespace std;
@@ -93,7 +94,7 @@ namespace libs{
                }
             }
         template <class __value_type, class __memory_space_type, class __memory_layout_type>
-        void pairwise_distance(tensor<__value_type,__memory_space_type,__memory_layout_type>& result, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B){
+        void pairwise_distance_custom(tensor<__value_type,__memory_space_type,__memory_layout_type>& result, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B){
                 cuvAssert(result.ndim() ==2);
                 cuvAssert(A.ndim() ==2);
                 cuvAssert(B.ndim() ==2);
@@ -103,8 +104,33 @@ namespace libs{
 
                 detail::pairwise_distance_impl(result,A,B);
 	}
-typedef tensor<float, dev_memory_space, row_major> t_rmf;
 
-template void pairwise_distance<float, dev_memory_space, row_major>(t_rmf&, const t_rmf &, const t_rmf&);
+        template <class __value_type, class __memory_space_type, class __memory_layout_type>
+        void pairwise_distance_l2(tensor<__value_type,__memory_space_type,__memory_layout_type>& result, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B){
+                cuvAssert(result.ndim() ==2);
+                cuvAssert(A.ndim() ==2);
+                cuvAssert(B.ndim() ==2);
+                cuvAssert(A.shape()[1] == B.shape()[1]);
+                cuvAssert(A.shape()[0] == result.shape()[0]);
+                cuvAssert(B.shape()[0] == result.shape()[1]);
+                
+                typedef tensor<__value_type, __memory_space_type> tensortype;
+                tensortype A_sqr_norm(A.shape()[0]);
+                tensortype B_sqr_norm(B.shape()[0]);
+                reduce_to_col(A_sqr_norm,A,RF_ADD_SQUARED);
+                reduce_to_col(B_sqr_norm,B,RF_ADD_SQUARED);
+                prod(result,A,B,'n','t',-2.,0.);
+                matrix_plus_col(result,A_sqr_norm);
+                matrix_plus_row(result,B_sqr_norm);
+                apply_scalar_functor(result,SF_MAX,0.);
+                apply_scalar_functor(result,SF_SQRT);
+	}
+
+typedef tensor<float, dev_memory_space, row_major> t_rmf;
+typedef tensor<float, dev_memory_space, column_major> t_cmf;
+
+template void pairwise_distance_custom<float, dev_memory_space, row_major>(t_rmf&, const t_rmf &, const t_rmf&);
+template void pairwise_distance_l2(t_rmf&, const t_rmf &, const t_rmf&);
+template void pairwise_distance_l2(t_cmf&, const t_cmf &, const t_cmf&);
 
 }}}
