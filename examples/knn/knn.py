@@ -12,12 +12,8 @@ class KNN:
     def get_distance_matrix(self, test):
         t   = cp.dev_tensor_float_cm(test)
         assert t.shape[1] == self.data.shape[1]
-        tsq = cp.dev_tensor_float(t.shape[0])
-        cp.reduce_to_col(tsq,t,cp.reduce_functor.ADD_SQUARED)
         p   = cp.dev_tensor_float_cm([self.data.shape[0], t.shape[0]])
-        cp.prod(p, self.data, t, 'n','t',-2, 0)
-        cp.matrix_plus_col(p,self.dsq)
-        cp.matrix_plus_row(p,tsq)
+        cp.pairwise_distance_l2(p,self.data,t)
         return p
     def run(self,test):
         p = self.get_distance_matrix(test)
