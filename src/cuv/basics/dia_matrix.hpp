@@ -201,7 +201,7 @@ namespace cuv{
 				const index_type i_start = std::max((int)0,-k);
 				const index_type j_start = std::max((int)0, k);
 				const index_type N = std::min(base_type::m_height - i_start, (base_type::m_width - j_start));
-				return new const_vec_type(extents[m_stride],  m_vec->ptr() + off * m_stride); 
+				return new const_vec_type(indices[index_range(0,m_stride)],  m_vec->ptr() + off * m_stride); 
 				//return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
 			} 
 			/** Return a vector (view) on the specified diagonal
@@ -211,7 +211,7 @@ namespace cuv{
 				const index_type i_start = std::max((int)0,-k);
 				const index_type j_start = std::max((int)0, k);
 				const index_type N = std::min(base_type::m_height - i_start, (base_type::m_width - j_start));
-				return new vec_type(extents[m_stride],  m_vec->ptr() + off * m_stride); 
+				return new vec_type(indices[index_range(0,m_stride)],  m_vec->ptr() + off * m_stride); 
 				//return new vec_type(N,  m_vec->ptr() + off * m_stride + i_start, true); 
 			} 
 			inline const intvec_type& get_offsets()const{return m_offsets;} ///< Return the vector of offsets

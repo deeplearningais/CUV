@@ -12,14 +12,14 @@ namespace cuv{
 		template<class V,class M>
 		void load(tensor<V,host_memory_space,M>& m, const std::string& name, column_major ){
 			CImg<V> img(name.c_str());
-			tensor<V,host_memory_space,row_major> m2(extents[img.height()][img.width()],(V*) img.data());
+			tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.height())][index_range(0,img.width())],(V*) img.data());
 			/*cuv::copy(m,m2);*/
 			cuvAssert(false); //copy not implemented yet
 		}
 		template<class V,class M>
 		void load(tensor<V,host_memory_space,M>& m, const std::string& name, row_major ){
 			CImg<V> img(name.c_str());
-			tensor<V,host_memory_space,row_major> m2(extents[img.width()][img.height()],(V*) img.data());
+			tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.width())][index_range(0,img.height())],(V*) img.data());
 			m = m2;
 		}
 		template<class V,class M>

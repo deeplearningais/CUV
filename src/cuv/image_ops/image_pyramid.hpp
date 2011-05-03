@@ -112,7 +112,7 @@ namespace cuv{
 			){
 				//std::cout << "Multichannel case"<<std::endl;
 				for(int i=0;i<m_dim;i++){
-					const __arg_matrix_type view(extents[src.shape()[0]/m_dim][src.shape()[1]],(argval_type*)src.ptr());
+					const __arg_matrix_type view(indices[index_range(0,src.shape()[0]/m_dim)][index_range(0,src.shape()[1])],(argval_type*)src.ptr());
 					argca_type cpy(view);
 					matrix_type* dstview = get(0,i);
 					gaussian_pyramid_downsample(*dstview, cpy,1);
@@ -153,7 +153,7 @@ namespace cuv{
 		//std::cout << "asking for channel "<<channel<<" in matrix of size "<<mat.shape()[0]<<"x"<<mat.shape()[1]<<std::endl;
 		unsigned int w = mat.shape()[1];
 		unsigned int h = mat.shape()[0];
-		return new matrix_type(extents[h/m_dim][w],mat.ptr()+channel*w*h/m_dim);
+		return new matrix_type(indices[index_range(0,h/m_dim)][index_range(0,w)],mat.ptr()+channel*w*h/m_dim);
 	}
 
 	template <class __matrix_type>

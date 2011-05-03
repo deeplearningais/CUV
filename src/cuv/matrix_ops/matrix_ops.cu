@@ -108,7 +108,7 @@ tensor<__value_type , __memory_space_type,column_major>*blockview(
                         cuvAssert(matrix.ndim()==2);
 			cuvAssert(start_rows==0);
 			cuvAssert(num_rows==matrix.shape()[0])
-			return new tensor<__value_type,__memory_space_type,column_major>(extents[num_rows][num_cols], matrix.ptr()+matrix.shape()[0]*start_cols);
+			return new tensor<__value_type,__memory_space_type,column_major>(indices[index_range(0,num_rows)][index_range(0,num_cols)], matrix.ptr()+matrix.shape()[0]*start_cols);
 		}
 
 template<class __value_type, class __memory_space_type, class __index_type>
@@ -123,7 +123,7 @@ tensor<__value_type,__memory_space_type,row_major>* blockview(
         cuvAssert(matrix.ndim()==2);
 	cuvAssert(start_cols==0);
 	cuvAssert(num_cols==matrix.shape()[1])
-	return new tensor<__value_type,__memory_space_type,row_major>(extents[num_rows][num_cols],matrix.ptr()+matrix.shape()[1]*start_rows);
+	return new tensor<__value_type,__memory_space_type,row_major>(indices[index_range(0,num_rows)][index_range(0,num_cols)],matrix.ptr()+matrix.shape()[1]*start_rows);
 }
 template<class __value_type, class __memory_space_type, class __memory_layout, class __index_type>
 tensor<__value_type,__memory_space_type,__memory_layout>* blockview(
@@ -458,13 +458,13 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& d
 template<class V, class T, class M>
 cuv::tensor<V,T,typename other_memory_layout<M>::type> * transposed_view_p(cuv::tensor<V,T,M>&  src){
         cuvAssert(src.ndim()==2);
-	return new tensor<V,T,typename other_memory_layout<M>::type>(extents[src.shape()[1]][src.shape()[0]],src.ptr());
+	return new tensor<V,T,typename other_memory_layout<M>::type>(indices[index_range(0,src.shape()[1])][index_range(0,src.shape()[0])],src.ptr());
 }
 
 template<class V, class T, class M>
 const cuv::tensor<V,T,typename other_memory_layout<M>::type> * transposed_view_p(const cuv::tensor<V,T,M>&  src){
         cuvAssert(src.ndim()==2);
-	return new tensor<V,T,typename other_memory_layout<M>::type>(extents[src.shape()[1]][src.shape()[0]],src.ptr());
+	return new tensor<V,T,typename other_memory_layout<M>::type>(indices[index_range(0,src.shape()[1])][index_range(0,src.shape()[0])],src.ptr());
 }
 
 #define INSTANTIATE_MV(V1,V2,M) \
