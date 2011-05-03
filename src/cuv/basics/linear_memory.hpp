@@ -39,9 +39,14 @@
 #ifndef __LINEAR_MEMORY_HPP__
 #define __LINEAR_MEMORY_HPP__
 #include <iostream>
+#include <vector>
+#include <numeric>
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/tools/meta_programming.hpp>
 #include <cuv/basics/reference.hpp>
+#include <cuv/basics/memory.hpp>
+#include <cuv/basics/memory2d.hpp>
+#include <boost/foreach.hpp>
 
 namespace cuv{
 
@@ -51,40 +56,33 @@ namespace cuv{
  * This linear memory class is the generic storage classes and is repsonsible for allocation/deletion.
  */
 template<class __value_type, class __memory_space_type, class TPtr=const __value_type*, class __index_type=unsigned int>
-class linear_memory{
+class linear_memory
+: public memory<__value_type,__memory_space_type,TPtr,__index_type>
+{
 	public:
-	  typedef __value_type          value_type;	 ///< Type of the entries of memory
-	  typedef const value_type               const_value_type;	///< Type of the entries of matrix
-	  typedef __index_type index_type;	 ///< Type of indices
-	  typedef __memory_space_type memory_space_type; ///< Indicates whether this is a host or device vector
-	  typedef TPtr                pointer_type; ///< Type of stored pointer, should be const or not-const value_type*
+	  typedef memory<__value_type,__memory_space_type,TPtr,__index_type> super_type;
+
+	  typedef typename super_type::value_type value_type; ///< Type of the entries of memory
+	  typedef typename super_type::const_value_type const_value_type; ///< Type of the entries of memory
+	  typedef typename super_type::index_type index_type; ///< Type indices/dimensions
+	  typedef typename super_type::memory_space_type memory_space_type; ///< Indicates whether this is a host or device vector
+	  typedef typename super_type::pointer_type      pointer_type; ///< Type of stored pointer, should be const or not-const value_type*
+	  typedef typename super_type::reference_type      reference_type; ///< Type of references returned by operator[]
+	  typedef typename super_type::const_reference_type      const_reference_type; ///< Type of references returned by operator[]
 	  template <class Archive, class V, class I> friend 
 		  void serialize(Archive&, linear_memory<V,memory_space_type,I>&, unsigned int) ; ///< serialize/deserialize the linear_memory to/from an archive
 	  typedef linear_memory<value_type, memory_space_type, TPtr, index_type> my_type; ///< Type of this linear_memory
-	  typedef reference<value_type, memory_space_type,index_type> reference_type; ///< Type of references returned by operators
-	  typedef const reference_type const_reference_type; ///< Type of references returned by operators
+	  typedef memory2d<value_type, memory_space_type, TPtr, index_type> mem2d_type; ///< Type of 2d memory with similar properties
 	protected:
-	  pointer_type m_ptr; ///< Pointer to actual entries in memory
-	  bool         m_is_view; ///< Indicates whether this linear_memory owns the memory or is just a view
-	  index_type   m_size; ///< Length of linear_memory
-	  allocator<value_type, index_type, memory_space_type> m_allocator;
+	  using super_type::m_ptr;
+	  using super_type::m_is_view;
+	  using super_type::m_allocator;
+	  index_type m_size;
 	public:
 	  /*
 	   * Member Access
 	   */
 
-	  /** 
-	   * @brief Return pointer to matrix entries
-	   */
-	  inline const pointer_type ptr()const{ return m_ptr;  }	
-	  /** 
-	   * @brief Return pointer to matrix entries
-	   */
-	  inline       pointer_type ptr()     { return m_ptr;  }
-	  /** 
-	   * @brief Return true if this linear_memory is a view and doesn't own the memory
-	   */
-	  inline bool is_view() const         { return m_is_view; }
 	  /**
 	   * @brief Return length of linear_memory
 	   */
@@ -93,48 +91,54 @@ class linear_memory{
 	   * @brief set length of linear_memory. If this is longer than the
 	   * original size, this will destroy the content due to reallocation!
 	   */
-	  void set_size(const index_type& s) {
+	  void set_size(index_type& pitch, const std::vector<index_type>& shape) {
+		  int s = std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
+		  pitch = sizeof(value_type) * shape[0];
 		  if(m_size < s){
 			  dealloc();
 			  m_size = s;
 			  alloc();
 			  return;
 		  }
-		  m_size = s;
+		  m_size    = s;
 	  }
-	  /** 
-	   * @brief Return size of linear_memory in memory
-	   */
-	  inline size_t memsize()       const{ return size() * sizeof(value_type); } 
 	  /*
 	   * Construction
 	   */
 	  /** 
 	   * @brief Empty constructor. Creates empty linear_memory (allocates no memory)
 	   */
-	  linear_memory():m_ptr(NULL),m_is_view(false),m_size(0) {} 
+	  linear_memory():m_size(0){} 
 	  /** 
 	   * @brief Creates linear_memory of lenght s and allocates memory
 	   * 
 	   * @param s Length of linear_memory
 	   */
-	  linear_memory(index_type s):m_ptr(NULL),m_is_view(false),m_size(s) {
+	  linear_memory(index_type s):m_size(s) {
 		  alloc();
 	  }
 	  /** 
 	   * @brief Copy-Constructor
 	   */
-	  linear_memory(const my_type& o):m_ptr(NULL),m_is_view(false),m_size(o.size()) {
+	  linear_memory(const my_type& o):m_size(o.size()) {
 		  alloc();
 		  m_allocator.copy(m_ptr,o.ptr(),size(),memory_space_type());
+	  }
+	  /** 
+	   * @brief Copy-Constructor for other linear memory spaces
+	   */
+	  template<class OM, class OP>
+	  linear_memory(const linear_memory<__value_type, OM, OP,__index_type>& o):m_size(o.size()) {
+		  alloc();
+		  m_allocator.copy(m_ptr,o.ptr(),size(),OM());
 	  }
 	  /** 
 	   * @brief Copy-Constructor for other memory spaces
 	   */
 	  template<class OM, class OP>
-	  linear_memory(const linear_memory<__value_type, OM, OP,__index_type>& o):m_ptr(NULL),m_is_view(false),m_size(o.size()) {
+	  linear_memory(const memory2d<__value_type, OM, OP,__index_type>& o):m_size(o.width()*o.height()) {
 		  alloc();
-		  m_allocator.copy(m_ptr,o.ptr(),size(),OM());
+		  m_allocator.copy2d(m_ptr,o.ptr(),o.width()*sizeof(value_type),o.pitch(),o.height(),o.width(),OM());
 	  }
 	  /** 
 	   * @brief Creates linear_memory from pointer to entries.
@@ -143,7 +147,7 @@ class linear_memory{
 	   * @param p Pointer to entries 
 	   * @param is_view If true will not take responsibility of memory at p. Otherwise will dealloc p on destruction.
 	   */
-	  linear_memory(index_type s,pointer_type p, bool is_view):m_ptr(p),m_is_view(is_view),m_size(s) {
+	  linear_memory(index_type s,pointer_type p, bool is_view):super_type(p,is_view),m_size(s) {
 		  alloc();
 	  }
 
@@ -151,12 +155,41 @@ class linear_memory{
 	   * @brief Make an already existing linear_memory a view on another linear_memory.
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
+	   *
+	   * WARNING: ptr should not be a pitched pointer!!!
 	   */
-	  void set_view(index_type s, pointer_type p){ 
+	  void set_view(index_type& pitch, const std::vector<index_type>& shape, pointer_type p){ 
 		  dealloc();
-		  m_ptr=p;
+		  m_ptr     = p;
+		  m_is_view = true;
+		  pitch     = shape[0]*sizeof(value_type);
+		  m_size    = std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
+	  }
+
+	  /**
+	   * @brief Make an already existing linear_memory a view on another linear_memory.
+	   *
+	   * this is a substitute for operator=, when you do NOT want to copy.
+	   */
+	  void set_view(index_type& pitch, const std::vector<index_type>& shape, linear_memory& o){ 
+		  dealloc();
+		  m_ptr=o.ptr();
 		  m_is_view=true;
-		  m_size=s;
+		  pitch     = shape[0]*sizeof(value_type);
+		  m_size    = std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
+	  }
+	  /**
+	   * @brief Make an already existing linear_memory a view on a memory2d.
+	   *
+	   * this is a substitute for operator=, when you do NOT want to copy.
+	   */
+	  void set_view(index_type& pitch, const std::vector<index_type>& shape, const memory2d<value_type, memory_space_type, TPtr,index_type>& o){ 
+		  cuvAssert(o.pitch()*o.height() == o.width()*o.height()*sizeof(value_type));
+		  dealloc();
+		  m_ptr=o.ptr();
+		  m_is_view=true;
+		  m_size = o.width()*o.height();
+		  pitch = shape[0]; // keep pitch constant!
 	  }
 
 	  /** 
@@ -181,6 +214,12 @@ class linear_memory{
 	  } 
 
 	  /** 
+	   * @brief Return size of linear_memory in memory
+	   */
+	  inline size_t memsize()       const{ return m_size*sizeof(value_type); } 
+
+
+	  /** 
 	   * @brief Deallocate memory if not a view
 	   */
 	  void dealloc(){
@@ -190,68 +229,109 @@ class linear_memory{
 	  }
 
 
-		/** 
-		 * @brief Copy linear_memory.
-		 * 
-		 * @param o Source linear_memory
-		 * 
-		 * @return copy to *this
-		 *
-		 */
+	  /** 
+	   * @brief Copy linear_memory.
+	   * 
+	   * @param o Source linear_memory
+	   * 
+	   * @return copy to *this
+	   *
+	   */
 	  my_type& 
 		  operator=(const my_type& o){
-			 
-			if(this->size() != o.size()){
-			  this->dealloc();
-			  m_size = o.size();
-			  this->alloc();
-			}
-			m_allocator.copy(m_ptr,o.ptr(),size(),memory_space_type());
-			  
-			return *this;
+
+			  if(this->size() != o.size()){
+				  this->dealloc();
+				  m_size = o.size();
+				  this->alloc();
+			  }
+			  m_allocator.copy(m_ptr,o.ptr(),size(),memory_space_type());
+
+			  return *this;
 		  }
 
-		/** 
-		 * @brief Copy linear_memory from other memory type.
-		 * 
-		 * @param o Source linear_memory
-		 * 
-		 * @return copy to *this
-		 *
-		 */
+	  /** 
+	   * @brief Copy linear_memory from other memory type.
+	   * 
+	   * @param o Source linear_memory
+	   * 
+	   * @return copy to *this
+	   *
+	   */
 	  template<class OM, class OP>
-	  my_type& 
-	  
+		  my_type& 
 		  operator=(const linear_memory<value_type, OM, OP,index_type>& o){
-			if(this->size() != o.size()){
-			  this->dealloc();
-			  m_size = o.size();
-			  this->alloc();
-			}
-			m_allocator.copy(m_ptr,o.ptr(),size(),OM());
-			return *this;
+			  if(this->size() != o.size()){
+				  this->dealloc();
+				  m_size = o.size();
+				  this->alloc();
+			  }
+			  m_allocator.copy(m_ptr,o.ptr(),size(),OM());
+			  return *this;
 		  }
 
-		reference_type
-		operator[](const index_type& idx)     ///< Return entry at position t
-			{
-				return reference_type(m_ptr+idx);
-			}
-		const_reference_type
-		operator[](const index_type& idx)const///< Return entry at position t
-			{
-				return const_reference_type(m_ptr+idx);
-			}
+	  /** 
+	   * @brief Copy linear_memory from memory2d type.
+	   * 
+	   * @param o Source linear_memory
+	   * 
+	   * @return copy to *this
+	   *
+	   */
+	  template<class OM, class OP>
+		  my_type& 
+		  operator=(const memory2d<value_type, OM, OP,index_type>& o){
+			  dealloc();
+			  m_size = o.width()*o.height();
+			  alloc();
+			  m_allocator.copy2d(m_ptr,o.ptr(),o.width()*sizeof(value_type),o.pitch(),o.height(),o.width(),OM());
+			  return *this;
+		  }
 
-		/** 
-		 * @brief Set entry idx to val
-		 * 
-		 * @param idx Index of which entry to change 
-		 * @param val New value of entry
-		 */
-		void set(const index_type& idx, const value_type& val){
-			(*this)[idx] = val;
-		}
+	  /**
+	   * assign another linear memory (shape parameter is ignored)
+	   *
+	   * @param oshape    shape of o, ignored
+	   * @param o         source linear memory
+	   */
+	  template<class OM, class OP>
+		  my_type&
+		  assign(const std::vector<index_type>& oshape, const linear_memory<value_type,OM,OP,index_type>& o ){
+			  return operator=(o);
+		  }
+
+	  /**
+	   * assign memory2d (shape parameter is ignored)
+	   *
+	   * @param oshape    shape of o, ignored, instead width/height/pitch of o is used
+	   * @param o         source linear memory
+	   */
+	  template<class OM, class OP>
+		  my_type&
+		  assign(const std::vector<index_type>& oshape, const memory2d<value_type,OM,OP,index_type>& o ){
+			  return operator=(o);
+		  }
+
+	  reference_type
+		  operator[](const index_type& idx)     ///< Return entry at position t
+		  {
+			  return reference_type(m_ptr+idx);
+		  }
+	  const_reference_type
+		  operator[](const index_type& idx)const///< Return entry at position t
+		  {
+			  return const_reference_type(m_ptr+idx);
+		  }
+
+	  /** 
+	   * @brief Set entry idx to val
+	   * 
+	   * @param idx Index of which entry to change 
+	   * @param val New value of entry
+	   */
+	  void set(const index_type& idx, const value_type& val){
+		  (*this)[idx] = val;
+	  }
 
 }; // linear_memory
 

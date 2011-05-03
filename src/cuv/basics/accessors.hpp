@@ -8,9 +8,13 @@ namespace cuv
 	template <class value_type, class index_type, class memory_space_type>
 		struct allocator{
 			void alloc( value_type** ptr, index_type memsize)const; /// allocate memory 
+			void alloc2d( value_type** ptr, index_type& pitch, index_type height, index_type width)const; /// allocate memory 
 			void dealloc( value_type** ptr)const;                   /// free memory
 			void copy(value_type* dst, const value_type*src,index_type size, host_memory_space); /// copy from host_memory_space
 			void copy(value_type* dst, const value_type*src,index_type size, dev_memory_space);  /// copy from dev_memory_space
+
+			void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, host_memory_space); /// copy from host_memory_space
+			void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, dev_memory_space);  /// copy from dev_memory_space
 
 			void alloc( const value_type** ptr, index_type memsize)const;   /// const variant of the above
 			void dealloc( const value_type** ptr)const;                     /// const variant of the above
@@ -87,6 +91,15 @@ namespace cuv
 			void alloc( value_type** ptr, index_type size) const{
 				*ptr = new value_type[size];
 			}
+			/**
+			 * @brief Allocate 2D memory
+			 *
+			 * @param ptr     Address of pointer which will be set to allocated memory
+			 * @param pitch  OUT size of one "line" in memory in bytes
+			 * @param height  number of lines in memory
+			 * @param width   number elements in one line
+			 */
+			void alloc2d( value_type** ptr, index_type& pitch, index_type height, index_type width)const; /// allocate memory 
 			/** 
 			 * @brief Deallocate memory for host matrices
 			 * 
@@ -96,7 +109,7 @@ namespace cuv
 			 */
 			void dealloc( value_type** ptr)const {
 				delete[] *ptr;
-				*ptr = NULL;
+				*ptr = 0;
 			}
 			/** 
 			 * @brief Allocate memory for host matrices - const allocator should never be called!
@@ -134,6 +147,9 @@ namespace cuv
 			void copy(const value_type* dst, const value_type*src,index_type size, dev_memory_space)const{
 				cuvAssert(false);
 			}
+
+			void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, host_memory_space); /// copy from host_memory_space
+			void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, dev_memory_space);  /// copy from dev_memory_space
 		};
 
 }
