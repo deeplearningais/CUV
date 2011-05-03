@@ -72,13 +72,18 @@ BOOST_AUTO_TEST_CASE( show_host_matrix )
 
 	convert(d_m,m);
 
-	boost::ptr_vector<tensor<float,dev_memory_space,row_major> > res =
-		sep_conv::convolve<float>(d_m,6,sep_conv::SP_SOBEL);
+	tensor<float,dev_memory_space,row_major> gauss, sobel0, sobel1;
+	sep_conv::convolve<float>(gauss, d_m,6,sep_conv::SP_GAUSS);
+	sep_conv::convolve<float>(sobel0,d_m,6,sep_conv::SP_CENTERED_DERIVATIVE,0);
+	sep_conv::convolve<float>(sobel1,d_m,6,sep_conv::SP_CENTERED_DERIVATIVE,1);
 
-	convert(m,res[0]);
+	convert(m,gauss);
+	libs::cimg::show(m,"gauss");
+
+	convert(m,sobel0);
 	libs::cimg::show(m,"sobel 0");
 
-	convert(m,res[1]);
+	convert(m,sobel1);
 	libs::cimg::show(m,"sobel 1");
 }
 

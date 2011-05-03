@@ -1,8 +1,5 @@
 /*
- * Original source from nvidia cuda SDK 2.0
- * Modified by S. James Lee (sjames@evl.uic.edi)
- * 2008.12.05
- * Further modified by Hannes Schulz
+ * Original source from nvidia cuda SDK 4.0
  */
 
 #include <cuv/basics/tensor.hpp>
@@ -13,194 +10,138 @@ namespace cuv{
 
 	namespace sep_conv{
 
-		//24-bit multiplication is faster on G80,
-		//but we must be sure to multiply integers
-		//only within [-8M, 8M - 1] range
-#define IMUL(a, b) __mul24(a, b)
 
-		////////////////////////////////////////////////////////////////////////////////
-		// Kernel configuration
-		////////////////////////////////////////////////////////////////////////////////
-#define MAX_KERNEL_RADIUS 10
+#define PITCH(PTR,PITCH,Y,X) \
+		((typeof(PTR))((char*)PTR + PITCH*Y) + X)
+#define MAX_KERNEL_RADIUS 8
 #define      MAX_KERNEL_W (2 * MAX_KERNEL_RADIUS + 1)
-		__device__ __constant__ float d_Kernel[MAX_KERNEL_W];
-
-		// Assuming ROW_TILE_W, KERNEL_RADIUS_ALIGNED and dataW 
-		// are multiples of coalescing granularity size,
-		// all global memory operations are coalesced in convolutionRowGPU()
-#define            ROW_TILE_W 128
-#define KERNEL_RADIUS_ALIGNED 16
-
-		// Assuming COLUMN_TILE_W and dataW are multiples
-		// of coalescing granularity size, all global memory operations 
-		// are coalesced in convolutionColumnGPU()
-#define COLUMN_TILE_W 16
-#define COLUMN_TILE_H 48
-
+		__device__ __constant__ float c_Kernel[MAX_KERNEL_W];
 
 		////////////////////////////////////////////////////////////////////////////////
 		// Row convolution filter
 		////////////////////////////////////////////////////////////////////////////////
+#define   ROWS_BLOCKDIM_X 16
+#define   ROWS_BLOCKDIM_Y 4
+#define ROWS_RESULT_STEPS 8
+#define   ROWS_HALO_STEPS 1
+
 		template<int KERNEL_RADIUS, class SrcT, class DstT>
-			__global__ void convolutionRowGPU(
-					DstT       *d_Result,
-					const SrcT *d_Data,
-					int dataW,
-					int dataH
-					){
-				//Data cache
-				__shared__ SrcT data[KERNEL_RADIUS + ROW_TILE_W + KERNEL_RADIUS];
+		__global__ void convolutionRowGPU(
+				SrcT *d_Dst,
+				DstT *d_Src,
+				int imageW,
+				int imageH,
+				int dpitch,
+				int spitch 
+				){
+			__shared__ float s_Data[ROWS_BLOCKDIM_Y][(ROWS_RESULT_STEPS + 2 * ROWS_HALO_STEPS) * ROWS_BLOCKDIM_X];
 
-				//Current tile and apron limits, relative to row start
-				const int         tileStart = IMUL(blockIdx.x, ROW_TILE_W);
-				const int           tileEnd = tileStart + ROW_TILE_W - 1;
-				const int        apronStart = tileStart - KERNEL_RADIUS;
-				const int          apronEnd = tileEnd   + KERNEL_RADIUS;
+			//Offset to the left halo edge
+			const int baseX = (blockIdx.x * ROWS_RESULT_STEPS - ROWS_HALO_STEPS) * ROWS_BLOCKDIM_X + threadIdx.x;
+			const int baseY = blockIdx.y * ROWS_BLOCKDIM_Y + threadIdx.y;
 
-				//Clamp tile and apron limits by image borders
-				const int    tileEndClamped = min(tileEnd, dataW - 1);
-				const int apronStartClamped = max(apronStart, 0);
-				const int   apronEndClamped = min(apronEnd, dataW - 1);
+			d_Src = PITCH(d_Src, spitch, baseY, baseX);
+			d_Dst = PITCH(d_Dst, dpitch, baseY, baseX);
 
-				//Row start index in d_Data[]
-				const int          rowStart = IMUL(blockIdx.y, dataW);
+			//Load main data
+#pragma unroll
+			for(int i = ROWS_HALO_STEPS; i < ROWS_HALO_STEPS + ROWS_RESULT_STEPS; i++)
+				s_Data[threadIdx.y][threadIdx.x + i * ROWS_BLOCKDIM_X] = d_Src[i * ROWS_BLOCKDIM_X];
 
-				//Aligned apron start. Assuming dataW and ROW_TILE_W are multiples 
-				//of half-warp size, rowStart + apronStartAligned is also a 
-				//multiple of half-warp size, thus having proper alignment 
-				//for coalesced d_Data[] read.
-				const int apronStartAligned = tileStart - KERNEL_RADIUS_ALIGNED;
+			//Load left halo
+#pragma unroll
+			for(int i = 0; i < ROWS_HALO_STEPS; i++)
+				s_Data[threadIdx.y][threadIdx.x + i * ROWS_BLOCKDIM_X] = (baseX >= -i * ROWS_BLOCKDIM_X ) ? d_Src[i * ROWS_BLOCKDIM_X] : 0;
 
-				const int loadPos = apronStartAligned + threadIdx.x;
-				//Set the entire data cache contents
-				//Load global memory values, if indices are within the image borders,
-				//or initialize with zeroes otherwise
-				if(loadPos >= apronStart){
-					const int smemPos = loadPos - apronStart;
+			//Load right halo
+#pragma unroll
+			for(int i = ROWS_HALO_STEPS + ROWS_RESULT_STEPS; i < ROWS_HALO_STEPS + ROWS_RESULT_STEPS + ROWS_HALO_STEPS; i++)
+				s_Data[threadIdx.y][threadIdx.x + i * ROWS_BLOCKDIM_X] = (imageW - baseX > i * ROWS_BLOCKDIM_X) ? d_Src[i * ROWS_BLOCKDIM_X] : 0;
 
-					data[smemPos] = 
-						((loadPos >= apronStartClamped) && (loadPos <= apronEndClamped)) ?
-						d_Data[rowStart + loadPos] : 0;
-				}
+			//Compute and store results
+			__syncthreads();
+#pragma unroll
+			for(int i = ROWS_HALO_STEPS; i < ROWS_HALO_STEPS + ROWS_RESULT_STEPS; i++){
+				float sum = 0;
 
+#pragma unroll
+				for(int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++)
+					sum += c_Kernel[KERNEL_RADIUS - j] * s_Data[threadIdx.y][threadIdx.x + i * ROWS_BLOCKDIM_X + j];
 
-				//Ensure the completness of the loading stage
-				//because results, emitted by each thread depend on the data,
-				//loaded by another threads
-				__syncthreads();
-				const int writePos = tileStart + threadIdx.x;
-
-				//Assuming dataW and ROW_TILE_W are multiples of half-warp size,
-				//rowStart + tileStart is also a multiple of half-warp size,
-				//thus having proper alignment for coalesced d_Result[] write.
-				if(writePos <= tileEndClamped){
-					const int smemPos = writePos - apronStart;
-					DstT sum = 0;
-
-					for(int k = -KERNEL_RADIUS; k <= KERNEL_RADIUS; k++)
-						sum += data[smemPos + k] * d_Kernel[KERNEL_RADIUS - k];
-
-					d_Result[rowStart + writePos] = sum;
-				}
+				d_Dst[i * ROWS_BLOCKDIM_X] = sum;
 			}
-
-
+		}
 
 		////////////////////////////////////////////////////////////////////////////////
 		// Column convolution filter
 		////////////////////////////////////////////////////////////////////////////////
+#define   COLUMNS_BLOCKDIM_X 16
+#define   COLUMNS_BLOCKDIM_Y 8
+#define COLUMNS_RESULT_STEPS 8
+#define   COLUMNS_HALO_STEPS 1
+
 		template<int KERNEL_RADIUS, class SrcT, class DstT>
-			__global__ void convolutionColumnGPU(
-					DstT       *d_Result,
-					const SrcT *d_Data,
-					int dataW,
-					int dataH,
-					int smemStride,
-					int gmemStride
-					){
-				//Data cache
-				__shared__ SrcT data[COLUMN_TILE_W * (KERNEL_RADIUS + COLUMN_TILE_H + KERNEL_RADIUS)];
+		__global__ void convolutionColumnGPU(
+				SrcT *d_Dst,
+				DstT *d_Src,
+				int imageW,
+				int imageH,
+				int dpitch,
+				int spitch
+				){
+			__shared__ float s_Data[COLUMNS_BLOCKDIM_X][(COLUMNS_RESULT_STEPS + 2 * COLUMNS_HALO_STEPS) * COLUMNS_BLOCKDIM_Y + 1];
 
-				//Current tile and apron limits, in rows
-				const int         tileStart = IMUL(blockIdx.y, COLUMN_TILE_H);
-				const int           tileEnd = tileStart + COLUMN_TILE_H - 1;
-				const int        apronStart = tileStart - KERNEL_RADIUS;
-				const int          apronEnd = tileEnd   + KERNEL_RADIUS;
+			//Offset to the upper halo edge
+			const int baseX = blockIdx.x * COLUMNS_BLOCKDIM_X + threadIdx.x;
+			const int baseY = (blockIdx.y * COLUMNS_RESULT_STEPS - COLUMNS_HALO_STEPS) * COLUMNS_BLOCKDIM_Y + threadIdx.y;
+			d_Src = PITCH(d_Src, spitch, baseY, baseX);
+			d_Dst = PITCH(d_Dst, dpitch, baseY, baseX);
 
-				//Clamp tile and apron limits by image borders
-				const int    tileEndClamped = min(tileEnd, dataH - 1);
-				const int apronStartClamped = max(apronStart, 0);
-				const int   apronEndClamped = min(apronEnd, dataH - 1);
+			//Main data
+#pragma unroll
+			for(int i = COLUMNS_HALO_STEPS; i < COLUMNS_HALO_STEPS + COLUMNS_RESULT_STEPS; i++)
+				s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y] = *PITCH(d_Src, spitch, i*COLUMNS_BLOCKDIM_Y,0);
 
-				//Current column index
-				const int       columnStart = IMUL(blockIdx.x, COLUMN_TILE_W) + threadIdx.x;
+			//Upper halo
+#pragma unroll
+			for(int i = 0; i < COLUMNS_HALO_STEPS; i++)
+				s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y] = (baseY >= -i * COLUMNS_BLOCKDIM_Y) ? *PITCH(d_Src,spitch,i*COLUMNS_BLOCKDIM_Y,0) : 0;
 
-				//Shared and global memory indices for current column
-				int smemPos = IMUL(threadIdx.y, COLUMN_TILE_W) + threadIdx.x;
-				int gmemPos = IMUL(apronStart + threadIdx.y, dataW) + columnStart;
+			//Lower halo
+#pragma unroll
+			for(int i = COLUMNS_HALO_STEPS + COLUMNS_RESULT_STEPS; i < COLUMNS_HALO_STEPS + COLUMNS_RESULT_STEPS + COLUMNS_HALO_STEPS; i++)
+				s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y]= (imageH - baseY > i * COLUMNS_BLOCKDIM_Y) ? *PITCH(d_Src,spitch,i*COLUMNS_BLOCKDIM_Y,0) : 0;
 
-				//Cycle through the entire data cache
-				//Load global memory values, if indices are within the image borders,
-				//or initialize with zero otherwise
-				for(int y = apronStart + threadIdx.y; y <= apronEnd; y += blockDim.y){
-					data[smemPos] = 
-						((y >= apronStartClamped) && (y <= apronEndClamped)) ? 
-						d_Data[gmemPos] : 0;
-					smemPos += smemStride;
-					gmemPos += gmemStride;
-				}
+			//Compute and store results
+			__syncthreads();
+#pragma unroll
+			for(int i = COLUMNS_HALO_STEPS; i < COLUMNS_HALO_STEPS + COLUMNS_RESULT_STEPS; i++){
+				float sum = 0;
+#pragma unroll
+				for(int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++)
+					sum += c_Kernel[KERNEL_RADIUS - j] * s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y + j];
 
-				//Ensure the completness of the loading stage
-				//because results, emitted by each thread depend on the data, 
-				//loaded by another threads
-				__syncthreads();
-
-				//Shared and global memory indices for current column
-				smemPos = IMUL(threadIdx.y + KERNEL_RADIUS, COLUMN_TILE_W) + threadIdx.x;
-				gmemPos = IMUL(tileStart + threadIdx.y , dataW) + columnStart;
-
-				//Cycle through the tile body, clamped by image borders
-				//Calculate and output the results
-				for(int y = tileStart + threadIdx.y; y <= tileEndClamped; y += blockDim.y){
-					DstT sum = 0;
-
-					for(int k = -KERNEL_RADIUS; k <= KERNEL_RADIUS; k++)
-						sum += 
-							data[smemPos + IMUL(k, COLUMN_TILE_W)] *
-							d_Kernel[KERNEL_RADIUS - k];
-
-					d_Result[gmemPos] = sum;
-					smemPos += smemStride;
-					gmemPos += gmemStride;
-				}
+				*PITCH(d_Dst,dpitch,i*COLUMNS_BLOCKDIM_Y,0) = sum;
 			}
-
-		int iDivUp(int a, int b){
-			return (a % b != 0) ? (a / b + 1) : (a / b);
 		}
 
 
 #define V(X) #X << " : "<< (X)<<"  "
 		template<int radius, class DstV, class SrcV>
-		void convolve(tensor<DstV,dev_memory_space,row_major>& dst,
-				     const tensor<SrcV,dev_memory_space,row_major>& src, int dir=2){
+		void convolve_call_kernel(tensor<DstV,dev_memory_space,row_major>& dst,
+				     const tensor<SrcV,dev_memory_space,row_major>& src, int dir){
 
 			int dw = src.shape()[1];
 			int dh = src.shape()[0];
-			dim3 blockGridRows(iDivUp(dw, ROW_TILE_W), dh);
-			dim3 threadBlockRows(KERNEL_RADIUS_ALIGNED + ROW_TILE_W + radius);	// 16 128 8
-			dim3 blockGridColumns(iDivUp(dw, COLUMN_TILE_W), iDivUp(dh, COLUMN_TILE_H));
-			dim3 threadBlockColumns(COLUMN_TILE_W, 8);
 			
-			if(dir==2){
-				tensor<DstV,dev_memory_space,row_major> intermed(dst.shape());
-				convolutionRowGPU<radius><<<blockGridRows, threadBlockRows>>>( intermed.ptr(), src.ptr(), src.shape()[1], src.shape()[0]);
-				convolutionColumnGPU<radius><<<blockGridColumns, threadBlockColumns>>>( dst.ptr(), intermed.ptr(), intermed.shape()[1], intermed.shape()[0], COLUMN_TILE_W * threadBlockColumns.y, intermed.shape()[1] * threadBlockColumns.y);
-			}
-			else if(dir==0){
-				convolutionRowGPU<radius><<<blockGridRows, threadBlockRows>>>( dst.ptr(), src.ptr(), src.shape()[1], src.shape()[0]);
+			if(dir==0){
+				dim3 blocks(dw / (ROWS_RESULT_STEPS * ROWS_BLOCKDIM_X), dh / ROWS_BLOCKDIM_Y);
+				dim3 threads(ROWS_BLOCKDIM_X, ROWS_BLOCKDIM_Y);
+				convolutionRowGPU<radius><<<blocks, threads>>>( dst.ptr(), src.ptr(), src.shape()[1], src.shape()[0],dst.pitch(),src.pitch());
 			}else if(dir==1){
-				convolutionColumnGPU<radius><<<blockGridColumns, threadBlockColumns>>>( dst.ptr(), src.ptr(), src.shape()[1], src.shape()[0], COLUMN_TILE_W * threadBlockColumns.y, src.shape()[1] * threadBlockColumns.y);
+				dim3 blocks(dw / COLUMNS_BLOCKDIM_X, dh / (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y));
+				dim3 threads(COLUMNS_BLOCKDIM_X, COLUMNS_BLOCKDIM_Y);
+				convolutionColumnGPU<radius><<<blocks, threads>>>( dst.ptr(), src.ptr(), src.shape()[1], src.shape()[0], dst.pitch(), src.pitch());
 			}
 			cuvSafeCall(cudaThreadSynchronize());
 			safeThreadSync();
@@ -209,31 +150,46 @@ namespace cuv{
 
 		template<class DstV, class SrcV, class M>
 		void radius_dispatch(const unsigned int& radius,tensor<DstV,M,row_major>& dst,
-				     const tensor<SrcV,M,row_major>& src,int dir=2){
+				     const tensor<SrcV,M,row_major>& src,int dir){
 			switch(radius){
-				case 1: convolve<1>(dst,src,dir); break;
-				case 2: convolve<2>(dst,src,dir); break;
-				case 3: convolve<3>(dst,src,dir); break;
-				case 4: convolve<4>(dst,src,dir); break;
-				case 5: convolve<5>(dst,src,dir); break;
-				case 6: convolve<6>(dst,src,dir); break;
-				case 7: convolve<7>(dst,src,dir); break;
-				case 8: convolve<8>(dst,src,dir); break;
+				case 1: convolve_call_kernel<1>(dst,src,dir); break;
+				case 2: convolve_call_kernel<2>(dst,src,dir); break;
+				case 3: convolve_call_kernel<3>(dst,src,dir); break;
+				case 4: convolve_call_kernel<4>(dst,src,dir); break;
+				case 5: convolve_call_kernel<5>(dst,src,dir); break;
+				case 6: convolve_call_kernel<6>(dst,src,dir); break;
+				case 7: convolve_call_kernel<7>(dst,src,dir); break;
+				case 8: convolve_call_kernel<8>(dst,src,dir); break;
 				default: cuvAssert(false);
 			}
 		}
 		template<class DstV, class SrcV, class M>
-		boost::ptr_vector<tensor<DstV,M,row_major> >
-		convolve( const tensor<SrcV,M,row_major>& src,
+		void
+		convolve(       tensor<DstV,M,row_major>& dst,
+			  const tensor<SrcV,M,row_major>& src,
 			  const unsigned int& radius,
-			  const separable_filter& filt ){
-                        cuvAssert(src.ndim()==2);
+			  const separable_filter& filt, int axis ){
 
 			typedef tensor<DstV,M,row_major> result_type;
+			typedef tensor<SrcV,M,row_major>    src_type;
 			cuvAssert(radius <= MAX_KERNEL_RADIUS);
-			boost::ptr_vector<result_type> res;
+                        cuvAssert(src.ndim()==2 || src.ndim()==3);
 
-			if(filt      == SP_GAUSS){
+			if(!equal_shape(dst,src)){
+				dst = result_type(src.shape());
+			}
+
+			if(src.ndim()==3){
+				const std::vector<typename src_type::index_type>& s = src.shape();
+				for(unsigned int i=0;i<s[0];i++){
+					src_type    sview(indices[i][index_range(0,s[1])][index_range(0,s[2])], src);
+					result_type dview(indices[i][index_range(0,s[1])][index_range(0,s[2])], dst);
+					convolve(dview,sview,radius,filt,axis);
+				}
+				return;
+			}
+
+			if(filt == SP_GAUSS){
 				const int kernel_w = 2*radius+1;
 				cuv::tensor<float, host_memory_space> kernel(kernel_w);
 				for(int i = 0; i < kernel_w; i++){
@@ -241,35 +197,29 @@ namespace cuv{
 					kernel[i]=expf(- dist * dist / 2);
 				}
 				kernel /= cuv::sum(kernel);
-				cuvSafeCall( cudaMemcpyToSymbol(d_Kernel, kernel.ptr(), kernel.memsize()) );
-				res.push_back(new result_type(src.shape()));
-				radius_dispatch(radius,res.back(),src,2);
-			}else if(filt == SP_SOBEL){
-				boost::ptr_vector<result_type> intermed;
-				intermed = convolve<DstV>(src,radius,SP_GAUSS);
-
+				cuvSafeCall( cudaMemcpyToSymbol(c_Kernel, kernel.ptr(), kernel.memsize()) );
+				tensor<DstV,M,row_major> tmp(extents[src.shape()[0]][src.shape()[1]]);
+				radius_dispatch(radius,tmp,src,0); 
+				radius_dispatch(radius,dst,tmp,1); 
+			}else if(filt == SP_CENTERED_DERIVATIVE){
+				cuvAssert(axis==0 || axis==1);
 				const int kernel_w = 3;
 				cuv::tensor<float, host_memory_space> kernel(kernel_w);
 				kernel[0]=-0.5;
 				kernel[1]= 0;
 				kernel[2]= 0.5;
-				cuvSafeCall( cudaMemcpyToSymbol(d_Kernel, kernel.ptr(), kernel.memsize()) );
-
-				res.push_back(new result_type(src.shape()));
-				radius_dispatch(1,res.back(),intermed.front(),0);
-
-				res.push_back(new result_type(src.shape()));
-				radius_dispatch(1,res.back(),intermed.front(),1);
+				cuvSafeCall( cudaMemcpyToSymbol(c_Kernel, kernel.ptr(), kernel.memsize()) );
+				radius_dispatch(1,dst,src,axis);
 			}
-			return res;
 		}
 		
 		// instantiations
 #define INST(DSTV, SRCV,M, I) \
-		template boost::ptr_vector<tensor<DSTV,M,row_major> > \
-		convolve<DSTV,SRCV,M>( const tensor<SRCV,M,row_major>&, \
-				                      const unsigned int&,                     \
-				                      const separable_filter&);
+		template void \
+		convolve<DSTV,SRCV,M>( tensor<DSTV,M,row_major>&, \
+				const tensor<SRCV,M,row_major>&, \
+				const unsigned int&,                     \
+				const separable_filter&, int axis);
 		INST(float,float,dev_memory_space,unsigned int);
 	} // namespace separable convolution
 } // namespace cuv
