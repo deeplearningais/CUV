@@ -14,7 +14,7 @@ namespace cuv{
 		void load(tensor<V,host_memory_space,M>& m, const std::string& name, column_major ){
 			CImg<V> img(name.c_str());
 			if(img.spectrum()>1){
-				tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.spectrum())][index_range(0,img.height())][index_range(0,img.width())],(V*) img.data());
+				tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.width())][index_range(0,img.height())][index_range(0,img.spectrum())],(V*) img.data());
 				m = m2;
 			}else{
 				tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.height())][index_range(0,img.width())],(V*) img.data());
@@ -25,7 +25,7 @@ namespace cuv{
 		void load(tensor<V,host_memory_space,M>& m, const std::string& name, row_major ){
 			CImg<V> img(name.c_str());
 			if(img.spectrum()>1){
-				tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.spectrum())][index_range(0,img.width())][index_range(0,img.width())],(V*) img.data());
+				tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.spectrum())][index_range(0,img.height())][index_range(0,img.width())],(V*) img.data());
 				m = m2;
 			}
 			else{
@@ -48,7 +48,7 @@ namespace cuv{
 					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[0],m.shape()[1]);
 					img.save(name.c_str());
 				}else if(m.ndim()==3){
-					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[1],m.shape()[0],1,m.shape()[2]);
+					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[0],m.shape()[1],1,m.shape()[2]);
 					img.save(name.c_str());
 				}
 			}else{
@@ -56,7 +56,7 @@ namespace cuv{
 					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[1],m.shape()[0]);
 					img.save(name.c_str());
 				}else if(m.ndim()==3){
-					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[0],m.shape()[1],1,m.shape()[2]);
+					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[2],m.shape()[1],1,m.shape()[0]);
 					img.save(name.c_str());
 				}
 			}
@@ -74,7 +74,7 @@ namespace cuv{
 					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[1],m.shape()[0]);
 					disp.assign(img, name.c_str());
 				}else if(m.ndim()==3){
-					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[0],m.shape()[1],1,m.shape()[2]);
+					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[2],m.shape()[1],1,m.shape()[0]);
 					disp.assign(img, name.c_str());
 				}
 				
