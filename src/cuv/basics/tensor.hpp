@@ -40,6 +40,7 @@
 #include <vector>
 #include <numeric>
 #include <boost/multi_array/extent_gen.hpp>
+#include <boost/multi_array/index_gen.hpp>
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/tools/meta_programming.hpp>
 #include <cuv/basics/linear_memory.hpp>
@@ -77,30 +78,35 @@ namespace cuv
 
 
 	using boost::detail::multi_array::extent_gen;
+	using boost::detail::multi_array::index_gen;
+	typedef boost::detail::multi_array::index_range<boost::detail::multi_array::index,boost::detail::multi_array::size_type> index_range;
 #ifndef CUV_DONT_CREATE_EXTENTS_OBJ
 	namespace{
 		extent_gen<0> extents;
+		index_gen<0,0> indices;
 	}
 #endif
 
 	/**
 	 * an n-dimensional tensor with only non-changing accessors
 	 */
-	template<class __value_type, class __memory_space_type, class __memory_layout_type = row_major, class Tptr=const __value_type*>
+	template<class __value_type, class __memory_space_type, class __memory_layout_type = row_major, class Tptr=const __value_type*,
+	       	class __allocator=linear_memory<__value_type,__memory_space_type,Tptr,unsigned int> >
 	class const_tensor{
 		public:
 			typedef typename unconst<__value_type>::type value_type;	///< Type of the entries of matrix
 			typedef const value_type const_value_type;	///< Type of the entries of matrix
 			typedef __memory_layout_type  memory_layout_type; ///< host or device
 			typedef __memory_space_type memory_space_type; ///< C or Fortran storage
-			typedef unsigned int index_type;       ///< the type of the tensor indices
-			typedef linear_memory<value_type,memory_space_type,Tptr, index_type> linear_memory_type;  ///< the type of the underlying memory container
-			typedef typename linear_memory_type::reference_type reference_type;       ///< the type of the references returned by access operator
-			typedef typename linear_memory_type::const_reference_type const_reference_type;
-			typedef typename linear_memory_type::pointer_type pointer_type;  ///< type of stored pointer, could be const or not-const value_type*
+			typedef __allocator memory_container_type;     ///< the thing that allocates our storage
+			typedef typename memory_container_type::index_type index_type;       ///< the type of the tensor indices
+			typedef typename memory_container_type::reference_type reference_type;       ///< the type of the references returned by access operator
+			typedef typename memory_container_type::const_reference_type const_reference_type;
+			typedef typename memory_container_type::pointer_type pointer_type;  ///< type of stored pointer, could be const or not-const value_type*
 		protected:
-			std::vector<index_type> m_shape;                                 ///< the shape of the tensor (size of dimensions)
-			linear_memory_type m_data;   ///< the data of the tensor
+			std::vector<index_type> m_shape;                                 ///< the shape of the tensor (size of dimensions for accessors)
+			index_type              m_pitch;                                 ///< pitch of array in bytes
+			memory_container_type m_data;   ///< the data of the tensor
 
 			template<int D>
 			index_type
@@ -145,13 +151,18 @@ namespace cuv
 
 			/**
 			 * construct tensor view using extents object and a pointer to the wrappable memory
+			 *
+			 * @deprecated you should use a constructor which knows about the spatial layout of the ptr
+			 *
+			 * @param eg   determines shape of new tensor
+			 * @param ptr  determines start of data in memory
 			 */
-			template<std::size_t D>
-			explicit const_tensor(const extent_gen<D>& eg, pointer_type ptr){
+			template<int D, int E>
+			explicit const_tensor(const index_gen<D,E>& eg, pointer_type ptr){
 				m_shape.reserve(D);
 				for(std::size_t i=0;i<D;i++)
 					m_shape.push_back(eg.ranges_[i].finish());
-				allocate(ptr);
+				m_data.set_view(m_pitch,m_shape, ptr);
 			}
 
 			/**
@@ -159,7 +170,7 @@ namespace cuv
 			 */
 			explicit const_tensor(const std::vector<index_type> eg, pointer_type ptr){
 				m_shape=eg;
-				allocate(ptr);
+				m_data.set_view(m_pitch, m_shape, ptr);
 			}
 
 			/**
@@ -167,7 +178,7 @@ namespace cuv
 			 */
 			const_tensor(int _size, pointer_type ptr){
 				m_shape.push_back(_size);
-				allocate(ptr);
+				m_data.set_view(m_pitch, m_shape, ptr);
 			}
 
 			/**
@@ -175,7 +186,7 @@ namespace cuv
 			 */
 			const_tensor(unsigned int _size, pointer_type ptr){
 				m_shape.push_back(_size);
-				allocate(ptr);
+				m_data.set_view(m_pitch, m_shape, ptr);
 			}
 
 			/**
@@ -218,13 +229,22 @@ namespace cuv
 			 * also accepts assignment from other memoryspace type
 			 * and convertible pointers
 			 */
-			template<class P, class OM, class OL>
-			const_tensor(const const_tensor<__value_type,OM,OL,P>& o)
+			template<class P, class OM, class OL, class OA>
+			const_tensor(const const_tensor<__value_type,OM,OL,P,OA>& o)
 			:m_shape(o.shape()),
 			 m_data(o.data())
 			{
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
 					std::reverse(m_shape.begin(),m_shape.end());
+			}
+			template<int D, int E, class P, class OM, class OL, class OA>
+			explicit const_tensor(const index_gen<D,E>& eg, const const_tensor<__value_type,OM,OL,P,OA>& o){
+				m_shape.reserve(D);
+				for(std::size_t i=0;i<D;i++)
+					m_shape.push_back(eg.ranges_[i].finish());
+				if(! IsSame<OL,__memory_layout_type>::Result::value)
+					std::reverse(m_shape.begin(),m_shape.end());
+				m_data.set_view(m_pitch,m_shape,o.m_data);
 			}
 
 			/**
@@ -243,12 +263,10 @@ namespace cuv
 			 * also accepts assignment from other memoryspace type
 			 * and convertible pointers
 			 */
-			template<class P, class OM, class OL>
-			const_tensor& operator=(const const_tensor<value_type,OM,OL,P>& o){
-				if(&o ==this)
-					return *this;
-				m_shape=o.m_shape;
-				m_data =o.m_data;
+			template<class P, class OM, class OL, class OA>
+			const_tensor& operator=(const const_tensor<value_type,OM,OL,P,OA>& o){
+				m_shape = o.shape();
+				m_data.assign(o.shape(),o.data());
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
 					std::reverse(m_shape.begin(),m_shape.end());
 				return *this;
@@ -327,7 +345,7 @@ namespace cuv
 			/**
 			 * return reference to underlying memory object
 			 */
-			const linear_memory_type& data()const{return m_data;}
+			const memory_container_type& data()const{return m_data;}
 
 			/**
 			 * return the number of elements stored in this container
@@ -345,12 +363,8 @@ namespace cuv
 			/**
 			 * @ptr if ptr!=NULL, create a view on this pointer instead of allocating memory
 			 */
-			void allocate(pointer_type ptr = NULL){ 
-				if(ptr==NULL){
-					m_data.set_size(size()); 
-					return;
-				}
-				m_data.set_view(size(),ptr);
+			void allocate(){ 
+				m_data.set_size(m_pitch,m_shape); 
 			}
 			/**
 			 * delete the memory used by this container (calls dealloc of wrapped linear memory)
@@ -388,12 +402,12 @@ namespace cuv
 	/**
 	 * Provides non-const accessors to const_tensor
 	 */
-	template<class __value_type, class __memory_space_type, class __memory_layout_type=row_major>
+	template<class __value_type, class __memory_space_type, class __memory_layout_type=row_major, class __allocator=linear_memory<__value_type,__memory_space_type,__value_type*,unsigned int> >
 	class tensor
-	: public const_tensor<__value_type, __memory_space_type,__memory_layout_type, __value_type*>
+	: public const_tensor<__value_type, __memory_space_type,__memory_layout_type, __value_type*, __allocator>
 	{
 		public:
-			typedef const_tensor<__value_type, __memory_space_type, __memory_layout_type, __value_type*> super_type;
+			typedef const_tensor<__value_type, __memory_space_type, __memory_layout_type, __value_type*,__allocator> super_type;
 			typedef typename super_type::value_type                      value_type;
 			typedef typename super_type::const_value_type          const_value_type;
 			typedef typename super_type::memory_space_type        memory_space_type;
@@ -402,7 +416,7 @@ namespace cuv
 			typedef typename super_type::reference_type              reference_type;
 			typedef typename super_type::const_reference_type  const_reference_type;
 			typedef typename super_type::pointer_type                  pointer_type;
-			typedef typename super_type::linear_memory_type      linear_memory_type;
+			typedef typename super_type::memory_container_type memory_container_type;
 
 			using super_type::m_data;
 			using super_type::m_shape;
@@ -412,6 +426,12 @@ namespace cuv
 			using super_type::operator();
 
 		public:
+			/// access pointer
+			pointer_type ptr(){return m_data.ptr();}
+			/// access pointer
+			const pointer_type ptr()const{
+				return m_data.ptr();
+			}
 
 			/// default constructor
 			tensor(){
@@ -428,9 +448,17 @@ namespace cuv
 			/**
 			 * construct tensor view using extents object and a pointer to the wrappable memory
 			 */
-			template<std::size_t D>
-			explicit tensor(const extent_gen<D>& eg, pointer_type ptr)
+			template<int D, int E>
+			explicit tensor(const index_gen<D,E>& eg, pointer_type ptr)
 			:super_type(eg,ptr)
+			{
+			}
+			/**
+			 * construct a tensor view using index range and another tensor
+			 */
+			template<int D, int E, class OM, class OL, class OA>
+			explicit tensor(const index_gen<D,E>& eg, const tensor<__value_type,OM,OL,OA>& o)
+			:super_type(eg,o)
 			{
 			}
 			/**
@@ -475,8 +503,8 @@ namespace cuv
 			/**
 			 * copy constructor for other memory spaces
 			 */
-			template<class OM>
-			tensor(const tensor<__value_type,OM,__memory_layout_type>& o)
+			template<class OM, class OA>
+			tensor(const tensor<__value_type,OM,__memory_layout_type, OA>& o)
 				:super_type(o)
 			{
 			}
@@ -504,15 +532,12 @@ namespace cuv
 			/**
 			 * assignment operator for other memory spaces
 			 */
-			template<class OM, class OL>
+			template<class OM, class OL, class OA>
 			tensor&
-			operator=(const tensor<__value_type, OM, OL>& o){
+			operator=(const tensor<__value_type, OM, OL, OA>& o){
 				//if(this == &o)   // is different type, anyway.
 				//        return *this;
-				m_shape = o.m_shape;
-				m_data  = o.m_data;
-				if(! IsSame<OL,__memory_layout_type>::Result::value)
-					std::reverse(m_shape.begin(),m_shape.end());
+				super_type::operator=(o);
 				return *this;
 			}
 
@@ -607,9 +632,9 @@ namespace cuv
       void copy(tensor<__value_type, __memory_space_type, __memory_layout_type>& v,
 	 const  tensor<__value_type, __memory_space_type, __memory_layout_type>& w);
 
-      template<class __value_type, class __memory_space_type, class __memory_layout_type>
-      tensor<__value_type, __memory_space_type, __memory_layout_type>& 
-      tensor<__value_type, __memory_space_type, __memory_layout_type>::operator=(const __value_type & f){
+      template<class __value_type, class __memory_space_type, class __memory_layout_type, class A>
+      tensor<__value_type, __memory_space_type, __memory_layout_type,A>& 
+      tensor<__value_type, __memory_space_type, __memory_layout_type,A>::operator=(const __value_type & f){
           fill(*this,f);
           return *this;
       }
@@ -664,7 +689,7 @@ namespace std{
 	operator<<(ostream& o, const cuv::tensor<V,M,T>& w2){
 		cout << "shape=[";
                 typedef typename cuv::tensor<V,M,T>::index_type I;
-		typename std::vector<I>::iterator it=w2.shape().begin(), end=w2.shape().end();
+		typename std::vector<I>::const_iterator it=w2.shape().begin(), end=w2.shape().end();
 		o <<*it;
 		for(it++; it!=end; it++)
 			o <<", "<<*it;
