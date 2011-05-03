@@ -655,19 +655,20 @@ namespace cuv
 namespace std{
 	template<class V, class M, class T>
 	/** 
-	 * @brief Return stream containing matrix entries for debugging
+	 * @brief Write matrix entries to stream
 	 * 
 	 * @param o Output stream
 	 * @param w2 Matrix to output
 	 */
 	ostream& 
 	operator<<(ostream& o, const cuv::tensor<V,M,T>& w2){
-		cout << "Tensor shape: "<<endl;
+		cout << "shape=[";
                 typedef typename cuv::tensor<V,M,T>::index_type I;
-		for(I i=0;i<w2.ndim();i++){
-				o << w2.shape()[i] << " ";
-		}
-		o << endl;
+		typename std::vector<I>::iterator it=w2.shape().begin(), end=w2.shape().end();
+		o <<*it;
+		for(it++; it!=end; it++)
+			o <<", "<<*it;
+		o<<"]";
 		return o;
 	}
 }
