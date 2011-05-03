@@ -7,20 +7,31 @@
 #include <cuv/libs/cimg/cuv_cimg.hpp>
 
 namespace cuv{
+	namespace libs{
 	namespace cimg{
 		using namespace cimg_library;
 		template<class V,class M>
 		void load(tensor<V,host_memory_space,M>& m, const std::string& name, column_major ){
 			CImg<V> img(name.c_str());
-			tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.height())][index_range(0,img.width())],(V*) img.data());
-			/*cuv::copy(m,m2);*/
-			cuvAssert(false); //copy not implemented yet
+			if(img.spectrum()>1){
+				tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.spectrum())][index_range(0,img.height())][index_range(0,img.width())],(V*) img.data());
+				m = m2;
+			}else{
+				tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.height())][index_range(0,img.width())],(V*) img.data());
+				m = m2;
+			}
 		}
 		template<class V,class M>
 		void load(tensor<V,host_memory_space,M>& m, const std::string& name, row_major ){
 			CImg<V> img(name.c_str());
-			tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.width())][index_range(0,img.height())],(V*) img.data());
-			m = m2;
+			if(img.spectrum()>1){
+				tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.spectrum())][index_range(0,img.width())][index_range(0,img.width())],(V*) img.data());
+				m = m2;
+			}
+			else{
+				tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.height())][index_range(0,img.width())],(V*) img.data());
+				m = m2;
+			}
 		}
 		template<class V,class M>
 		void load(tensor<V,host_memory_space,M>& m, const std::string& name){
@@ -30,12 +41,24 @@ namespace cuv{
 		template<class V,class M>
 		void save(tensor<V,host_memory_space,M>& m, const std::string& name ){
 			typedef typename unconst<V>::type Vuc;
+			cuvAssert(m.ndim()==2 || m.ndim()==3);
+
 			if(IsSame<M,column_major>::Result::value){
-				CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[0],m.shape()[1]);
-				img.save(name.c_str());
+				if(m.ndim()==2){
+					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[0],m.shape()[1]);
+					img.save(name.c_str());
+				}else if(m.ndim()==3){
+					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[1],m.shape()[0],1,m.shape()[2]);
+					img.save(name.c_str());
+				}
 			}else{
-				CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[1],m.shape()[0]);
-				img.save(name.c_str());
+				if(m.ndim()==2){
+					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[1],m.shape()[0]);
+					img.save(name.c_str());
+				}else if(m.ndim()==3){
+					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[0],m.shape()[1],1,m.shape()[2]);
+					img.save(name.c_str());
+				}
 			}
 		}
 		template<class V,class M>
@@ -44,14 +67,21 @@ namespace cuv{
                                         show(*transposed_view(m), name);
 			}else{
 				typedef typename unconst<V>::type Vuc;
-                                cuvAssert(m.ndim()==2)
-				CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[1],m.shape()[0]);
-				CImgDisplay disp(img, name.c_str());
+                                cuvAssert(m.ndim()==2 || m.ndim()==3);
+				CImgDisplay disp;
+
+				if(m.ndim()==2){
+					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[1],m.shape()[0]);
+					disp.assign(img, name.c_str());
+				}else if(m.ndim()==3){
+					CImg<Vuc> img(const_cast<Vuc*>(m.ptr()),m.shape()[0],m.shape()[1],1,m.shape()[2]);
+					disp.assign(img, name.c_str());
+				}
 				
 				while (!disp.is_closed() && !disp.is_keyQ() && !disp.is_keyESC()) {
-					img.resize(disp.display(img).resize(false).wait());
-					if (disp.is_keyCTRLLEFT() && disp.is_keyF())
-						disp.resize(m.shape()[1],m.shape()[0],false).toggle_fullscreen(false);
+					/*img.resize(disp.display(img).resize(false).wait());*/
+					/*if (disp.is_keyCTRLLEFT() && disp.is_keyF())*/
+					/*        disp.resize(m.shape()[1],m.shape()[0],false).toggle_fullscreen(false);*/
 				}
 			}
 		}
@@ -76,4 +106,5 @@ namespace cuv{
 		LOAD_INST_V(unsigned char);
 		
 	} // namespace cimg
+} // namespace libs
 } // namespace cuv

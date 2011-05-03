@@ -28,6 +28,7 @@ ADD_LIBRARY(cuv_python SHARED
         export_libs_rbm.cpp
         export_libs_kmeans.cpp
         export_libs_kernels.cpp
+        export_libs_cimg.cpp
     )
 
 CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
@@ -47,12 +48,19 @@ TARGET_LINK_LIBRARIES(cuv_python
                 cuv_rbm
                 cuv_kmeans
                 cuv_kernels
+                cuv_cimg
         #${Boost_LIBRARIES}
                 ${Boost_DATE_TIME_LIBRARY_RELEASE}
                 ${Boost_PYTHON_LIBRARY_RELEASE}
         ${PYTHON_LIBRARY}
         ${CUDA_CUBLAS_LIBRARIES}
 )
+
+IF( CUV_CIMG_BINDINGS )
+	FIND_PACKAGE( PNG REQUIRED)
+	TARGET_LINK_LIBRARIES(cuv_python X11 pthread ${PNG_LIBRARIES})
+ENDIF( CUV_CIMG_BINDINGS )
+
 install(TARGETS cuv_python
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib

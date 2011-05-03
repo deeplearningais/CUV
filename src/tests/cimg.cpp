@@ -62,10 +62,11 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
  */
 BOOST_AUTO_TEST_CASE( show_host_matrix )
 {
-	tensor<float,host_memory_space,row_major> m(extents[1][1]);
-	cimg::load(m,"src/tests/data/gray_square.gif");
-	cimg::show(m,"gray_square");
-	cimg::save(m,"/tmp/a.png");
+	tensor<float,host_memory_space,row_major> m;
+	//libs::cimg::load(m,"src/tests/data/gray_square.gif");
+	libs::cimg::load(m,"src/tests/data/colored_square.jpg");
+	libs::cimg::show(m,"gray_square");
+	libs::cimg::save(m,"/tmp/a.png");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
