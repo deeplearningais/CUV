@@ -162,7 +162,7 @@ namespace cuv
 				m_shape.reserve(D);
 				for(std::size_t i=0;i<D;i++)
 					m_shape.push_back(eg.ranges_[i].finish());
-				m_data.set_view(m_pitch,m_shape, ptr);
+				m_data.set_view(m_pitch,(index_type)0,m_shape, ptr);
 			}
 
 			/**
@@ -170,7 +170,7 @@ namespace cuv
 			 */
 			explicit const_tensor(const std::vector<index_type> eg, pointer_type ptr){
 				m_shape=eg;
-				m_data.set_view(m_pitch, m_shape, ptr);
+				m_data.set_view(m_pitch,(index_type)0, m_shape, ptr);
 			}
 
 			/**
@@ -178,7 +178,7 @@ namespace cuv
 			 */
 			const_tensor(int _size, pointer_type ptr){
 				m_shape.push_back(_size);
-				m_data.set_view(m_pitch, m_shape, ptr);
+				m_data.set_view(m_pitch,(index_type)0, m_shape, ptr);
 			}
 
 			/**
@@ -186,7 +186,7 @@ namespace cuv
 			 */
 			const_tensor(unsigned int _size, pointer_type ptr){
 				m_shape.push_back(_size);
-				m_data.set_view(m_pitch, m_shape, ptr);
+				m_data.set_view(m_pitch,(index_type)0, m_shape, ptr);
 			}
 
 			/**
@@ -240,11 +240,17 @@ namespace cuv
 			template<int D, int E, class P, class OM, class OL, class OA>
 			explicit const_tensor(const index_gen<D,E>& eg, const const_tensor<__value_type,OM,OL,P,OA>& o){
 				m_shape.reserve(D);
-				for(std::size_t i=0;i<D;i++)
+				for(std::size_t i=0;i<D;i++){
+					if(eg.ranges_[i].finish()-eg.ranges_[i].start()<=1)
+						continue;
 					m_shape.push_back(eg.ranges_[i].finish());
+				}
+
+				index_type offset = o.index_of(eg);
+
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
 					std::reverse(m_shape.begin(),m_shape.end());
-				m_data.set_view(m_pitch,m_shape,o.m_data);
+				m_data.set_view(m_pitch,offset,m_shape,o.m_data);
 			}
 
 			/**
@@ -283,6 +289,18 @@ namespace cuv
 			//        allocate();
 			//}
 
+			/**
+			 * returns the index in linear memory of start point of index-range
+			 */
+			template<int D, int E>
+			index_type
+			index_of(const index_gen<D,E>& eg)const{
+				index_type point[D];
+				for(unsigned int i=0;i<D;i++)
+					point[i]=eg.ranges_[i].start();
+
+				return index_of<D>(memory_layout_type(),&point[0]);
+			}
 			/**
 			 * returns the index in linear memory of a point 
 			 */
@@ -347,6 +365,12 @@ namespace cuv
 			 */
 			const memory_container_type& data()const{return m_data;}
 
+			/**
+			 * return the number of bytes in the innermost dimension
+			 */
+			index_type pitch()const{
+				return m_pitch;
+			}
 			/**
 			 * return the number of elements stored in this container
 			 */

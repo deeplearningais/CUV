@@ -211,12 +211,13 @@ class memory2d
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   */
-	  void set_view(index_type& pitch, const std::vector<index_type>& shape, const linear_memory<value_type,memory_space_type,TPtr,index_type>& o){ 
+	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const linear_memory<value_type,memory_space_type,TPtr,index_type>& o){ 
 		  dealloc();
-		  m_ptr=o.ptr();
+		  m_ptr=o.ptr() + ptr_offset;
 		  m_is_view=true;
 		  set_width_and_height(shape);
 		  m_pitch = pitch = m_width*sizeof(value_type);
+		  cuvAssert(o.memsize() >= m_pitch * m_height + sizeof(value_type) * ptr_offset);
 	  }
 
 	  /**
@@ -224,13 +225,18 @@ class memory2d
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   */
-	  void set_view(index_type& pitch, const std::vector<index_type>& shape, memory2d& o){ 
+	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, memory2d& o){ 
 		  dealloc();
-		  m_ptr=o.ptr();
+		  
+		  // we can only use an offset if it does not mess up our pitching,
+		  // otherwise we will get naaaasty effects
+		  cuvAssert(ptr_offset*sizeof(value_type)%m_pitch == 0);
+		  m_ptr=o.ptr() + ptr_offset;
 		  m_is_view=true;
 		  set_width_and_height(shape);
 		  cuvAssert(m_width*sizeof(value_type) <= o.pitch());
 		  pitch = m_pitch = o.pitch(); // keep pitch constant!
+		  cuvAssert(o.memsize() >= m_pitch * m_height + sizeof(value_type) * ptr_offset);
 	  }
 
 

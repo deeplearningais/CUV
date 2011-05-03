@@ -158,9 +158,9 @@ class linear_memory
 	   *
 	   * WARNING: ptr should not be a pitched pointer!!!
 	   */
-	  void set_view(index_type& pitch, const std::vector<index_type>& shape, pointer_type p){ 
+	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, pointer_type p){ 
 		  dealloc();
-		  m_ptr     = p;
+		  m_ptr     = p+ptr_offset;
 		  m_is_view = true;
 		  pitch     = shape[0]*sizeof(value_type);
 		  m_size    = std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
@@ -171,25 +171,27 @@ class linear_memory
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   */
-	  void set_view(index_type& pitch, const std::vector<index_type>& shape, linear_memory& o){ 
+	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const linear_memory& o){ 
 		  dealloc();
-		  m_ptr=o.ptr();
+		  m_ptr=o.ptr() + ptr_offset;
 		  m_is_view=true;
 		  pitch     = shape[0]*sizeof(value_type);
 		  m_size    = std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
+		  cuvAssert(o.size()>= m_size + ptr_offset);
 	  }
 	  /**
 	   * @brief Make an already existing linear_memory a view on a memory2d.
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   */
-	  void set_view(index_type& pitch, const std::vector<index_type>& shape, const memory2d<value_type, memory_space_type, TPtr,index_type>& o){ 
+	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const memory2d<value_type, memory_space_type, TPtr,index_type>& o){ 
 		  cuvAssert(o.pitch()*o.height() == o.width()*o.height()*sizeof(value_type));
 		  dealloc();
-		  m_ptr=o.ptr();
+		  m_ptr=o.ptr() + ptr_offset;
 		  m_is_view=true;
 		  m_size = o.width()*o.height();
 		  pitch = shape[0]; // keep pitch constant!
+		  cuvAssert(o.memsize()>= memsize() + sizeof(value_type)*ptr_offset);
 	  }
 
 	  /** 
