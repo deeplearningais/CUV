@@ -14,18 +14,18 @@ open(PFILE, "<$sfile") or die $!;
 
 my ($max_num_imgs_at_once, @seq_row_fact, $spmm_block_size);
 while(<PFILE>){
-	/^#define/ and print;
+	#/^#define/ and print;
 	/^#define\s*MAX_NUM_IMGS_AT_ONCE\s*(\d+)\s*/ and $max_num_imgs_at_once = $1;
 	/^#define\s*SEQ_ROW_FACT\s*(\d[,\d]*)\s*/    and @seq_row_fact = split(/,/,$1);
 	/^#define\s*SPMM_BLOCK_SIZE\s*(\d+)\s*/      and $spmm_block_size = $1;
 }
-print<<EOT
-- MAX_NUM_IMGS_AT_ONCE: $max_num_imgs_at_once
-- SEQ_ROW_FACT:         @seq_row_fact
-- SPMM_BLOCK_SIZE       $spmm_block_size
+#print<<EOT
+#- MAX_NUM_IMGS_AT_ONCE: $max_num_imgs_at_once
+#- SEQ_ROW_FACT:         @seq_row_fact
+#- SPMM_BLOCK_SIZE       $spmm_block_size
 
-EOT
-;
+#EOT
+#;
 
 
 open IFILE, "<$ifile" or die $!; $/=undef;
@@ -39,7 +39,7 @@ my $tt = Template->new({
 
 foreach my $rf (@seq_row_fact){
 foreach my $ni (1..$max_num_imgs_at_once){
-	print "Instantiating rf=$rf ni=$ni\n";
+	#print "Instantiating rf=$rf ni=$ni\n";
 	my $tmpl2 = $templ;
 
 	# now expand the loops et cetera
