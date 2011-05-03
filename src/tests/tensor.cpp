@@ -31,6 +31,7 @@
 #include <boost/test/included/unit_test.hpp>
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/basics/tensor.hpp>
+#include <cuv/basics/memory2d.hpp>
 using namespace cuv;
 
 struct MyConfig {
@@ -137,14 +138,67 @@ BOOST_AUTO_TEST_CASE( tensor_assignment )
 
 
 }
+
+template<class V, class M>
+void test_mem2d(){
+	typedef memory2d<V,M,V*> mem_t;
+
+	mem_t l(120,240);
+	mem_t k(120,240, l.ptr(),true);
+	BOOST_CHECK_EQUAL(l.ptr(), k.ptr());
+
+#define P(X) #X<<":"<<(X)<<"  "
+	tensor<V,M,row_major>       t1d(extents[123][247]);
+	tensor<V,M,row_major,mem_t> t2d(extents[123][247]);
+	if(IsSame<M,dev_memory_space>::Result::value){
+		// for this test to be useful, we would like to see a pitched memory at least on device!
+		bool has_pitch = t2d.data().width()*sizeof(V) != t2d.data().pitch();
+		BOOST_CHECK(has_pitch);
+	}
+	
+	for(int i=0;i<120; i++)
+		for(int j=0;j<240; j++){
+			t1d(i,j) = (V) 0;
+			t2d(i,j) = (V) (i*j+i);
+		}
+
+	t1d = t2d;
+	for(int i=0;i<120; i++)
+		for(int j=0;j<240; j++)
+			BOOST_CHECK_EQUAL( (V) t1d(i,j) , (V) (i*j+i) );
+
+	for(int i=0;i<120; i++)
+		for(int j=0;j<240; j++){
+			t1d(i,j) = (V) (i*j+i);
+			t2d(i,j) = (V) 0;
+		}
+
+	t2d = t1d;
+	for(int i=0;i<120; i++)
+		for(int j=0;j<240; j++)
+			BOOST_CHECK_EQUAL( (V) t2d(i,j) , (V) (i*j+i) );
+
+	tensor<V,M,row_major>       t1d_from2d(t2d);
+	for(int i=0;i<120; i++)
+		for(int j=0;j<240; j++)
+			BOOST_CHECK_EQUAL( (V) t1d_from2d(i,j) , (V) (i*j+i) );
+}
+BOOST_AUTO_TEST_CASE( mem2d )
+{
+	test_mem2d<float,host_memory_space>();
+	test_mem2d<float,dev_memory_space>();
+
+	test_mem2d<unsigned char,host_memory_space>();
+	test_mem2d<unsigned char,dev_memory_space>();
+}
 BOOST_AUTO_TEST_CASE( tensor_view )
 {
 	linear_memory<float,host_memory_space,float*> l(100);
-	linear_memory<float,host_memory_space,float*> k(100, l.ptr(),true);
+	const linear_memory<float,host_memory_space,float*> k(100, l.ptr(),true);
 	BOOST_CHECK_EQUAL(l.ptr(), k.ptr());
 	
 	tensor<float,host_memory_space,column_major> a(extents[2][3][4]);
-	tensor<float,host_memory_space,column_major> b(extents[2][3][4],a.ptr());
+	tensor<float,host_memory_space,column_major> b(indices[2][3][4],a.ptr());
 	BOOST_CHECK_EQUAL(a.ptr(), b.ptr());
 }
 
