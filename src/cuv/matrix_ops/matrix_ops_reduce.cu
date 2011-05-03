@@ -155,7 +155,7 @@ namespace reduce_impl {
 	template<>
 	struct reduce<1, dev_memory_space>{
                 template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
-	       	void operator()(tensor<__value_type,dev_memory_space> &v,const  tensor<__value_type2,dev_memory_space,__memory_layout_type> &m,const  S & factNew,const  S & factOld, RF rf)const{
+	       	void operator()(tensor<__value_type,dev_memory_space> &v,const tensor<__value_type2,dev_memory_space,__memory_layout_type> &m,const  S & factNew,const  S & factOld, RF rf)const{
                     cuvAssert(m.ptr() != NULL);
                     cuvAssert(m.shape()[0] == v.size());
                     static const int BLOCK_DIM = 16;
@@ -187,7 +187,7 @@ namespace reduce_impl {
 	template<>
 	struct reduce<0, dev_memory_space>{
                 template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
-	       	void operator()(tensor<__value_type,dev_memory_space> &v,const  tensor<__value_type2,dev_memory_space,__memory_layout_type> &m,const S & factNew,const  S & factOld, RF rf)const{
+	       	void operator()(tensor<__value_type,dev_memory_space> &v,const tensor<__value_type2,dev_memory_space,__memory_layout_type> &m,const S & factNew,const  S & factOld, RF rf)const{
 		cuvAssert(m.ptr() != NULL);
 		cuvAssert(m.shape()[1] == v.size());
 		static const int BLOCK_DIM = 16;
@@ -208,7 +208,7 @@ namespace reduce_impl {
 	template<int dim>
 	struct reduce<dim, host_memory_space>{
                 template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
-	       	void operator()(tensor<__value_type,host_memory_space> &v,const  tensor<__value_type2,host_memory_space,__memory_layout_type> &m,const S & factNew,const S & factOld, RF rf)const{
+	       	void operator()(tensor<__value_type,host_memory_space> &v,const tensor<__value_type2,host_memory_space,__memory_layout_type> &m,const S & factNew,const S & factOld, RF rf)const{
 		typedef __value_type2 V;
 		typedef __value_type V2;
 		typedef typename tensor<__value_type,host_memory_space,__memory_layout_type>::index_type I;
@@ -282,7 +282,9 @@ namespace reduce_impl {
 	}};
 
         template<int dimension, class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type, class S>
-	void reduce_switch(tensor<__value_type,__memory_space_type>&v, const tensor<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const S& factNew, const S& factOld) {
+	void reduce_switch(tensor<__value_type,__memory_space_type>&v,
+		           const tensor<__value_type2,__memory_space_type,__memory_layout_type>& m,
+			   reduce_functor rf, const S& factNew, const S& factOld) {
 		typedef __value_type2 const_mat_val;
 		typedef typename tensor<__value_type2,__memory_space_type,__memory_layout_type>::index_type mat_ind;
 		typedef __memory_space_type mat_mem;
@@ -336,7 +338,7 @@ void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const tensor<__va
 		//matrix is row major
                 //create column major view and call reduce_to_row for column major
 		// downstream from here everything is column major
-		const tensor<const __value_type2,__memory_space_type,__memory_layout_type> cm_view(extents[m.shape()[1]][m.shape()[0]],m.ptr());
+		const tensor<__value_type2,__memory_space_type,__memory_layout_type> cm_view(indices[index_range(0,m.shape()[1])][index_range(0,m.shape()[0])],m.ptr());
 		reduce_impl::reduce_switch<0>(v,cm_view,rf,factNew,factOld); // 0 means zeroth dimension is summed out - meaning summing over the columns in a column major matrix.
 	}
 	else {
@@ -353,7 +355,7 @@ void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const tensor<__va
 		//matrix is row major
 		//create column major view and call reduce_to_row for column major
 		// downstream from here everything is column major
-		const tensor<const __value_type2,__memory_space_type,column_major> cm_view(extents[m.shape()[1]][m.shape()[0]],m.ptr());
+		const tensor<__value_type2,__memory_space_type,column_major> cm_view(indices[index_range(0,m.shape()[1])][index_range(0,m.shape()[0])],m.ptr());
 		reduce_impl::reduce_switch<1>(v,cm_view,rf,factNew,factOld); // 1 means first (we start counting at zero) dimension is summed out - meaning summing over the rows in a column major matrix.
 	}
 	else {
