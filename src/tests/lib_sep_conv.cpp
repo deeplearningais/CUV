@@ -65,25 +65,43 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 BOOST_AUTO_TEST_CASE( show_host_matrix )
 {
 	tensor<float,host_memory_space,row_major> m;
-	tensor<float,dev_memory_space,row_major> d_m;
-
-	libs::cimg::load(m,"src/tests/data/lena_gray.png");
+	typedef tensor<float,dev_memory_space,row_major, memory2d_tag> dev_t;
+	//typedef tensor<float,dev_memory_space,row_major, linear_memory_tag> dev_t;
+	
+	//libs::cimg::load(m,"src/tests/data/lena_gray.png");
+	libs::cimg::load(m,"src/tests/data/colored_square.jpg");
 	libs::cimg::show(m,"before smoothing");
 
-	convert(d_m,m);
+	//dev_t d_m(extents[100][100]);
+	//for(int i=0;i<100;i++)
+		//for (int j = 0; j < 100; ++j)
+			//d_m(i,j) = 0.f;
+	//for(int i=0;i<100;i++){
+		//d_m(50,i) = 1.f;
+		//d_m(i,50) = 1.f;
+	//}
+	dev_t d_m;
+       	d_m = m;
 
-	tensor<float,dev_memory_space,row_major> gauss, sobel0, sobel1;
-	sep_conv::convolve<float>(gauss, d_m,6,sep_conv::SP_GAUSS);
-	sep_conv::convolve<float>(sobel0,d_m,6,sep_conv::SP_CENTERED_DERIVATIVE,0);
-	sep_conv::convolve<float>(sobel1,d_m,6,sep_conv::SP_CENTERED_DERIVATIVE,1);
+	m=d_m;
+	libs::cimg::show(m,"before");
 
-	convert(m,gauss);
+	tensor<float,dev_memory_space,row_major,memory2d_tag> view0(indices[0][index_range(0,400)][index_range(0,400)],d_m);
+	tensor<float,dev_memory_space,row_major,memory2d_tag> view1(indices[1][index_range(0,400)][index_range(0,400)],d_m);
+	tensor<float,dev_memory_space,row_major,memory2d_tag> view2(indices[2][index_range(0,400)][index_range(0,400)],d_m);
+
+	dev_t gauss, sobel0, sobel1;
+	sep_conv::convolve(gauss, d_m,8,sep_conv::SP_GAUSS, 2, 3.f);
+	sep_conv::convolve(sobel0,gauss,8,sep_conv::SP_CENTERED_DERIVATIVE,0);
+	sep_conv::convolve(sobel1,gauss,8,sep_conv::SP_CENTERED_DERIVATIVE,1);
+
+	m=gauss;
 	libs::cimg::show(m,"gauss");
 
-	convert(m,sobel0);
+	m=sobel0;
 	libs::cimg::show(m,"sobel 0");
 
-	convert(m,sobel1);
+	m=sobel1;
 	libs::cimg::show(m,"sobel 1");
 }
 
