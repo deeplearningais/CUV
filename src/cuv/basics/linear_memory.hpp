@@ -108,19 +108,19 @@ class linear_memory
 	  /** 
 	   * @brief Empty constructor. Creates empty linear_memory (allocates no memory)
 	   */
-	  linear_memory():m_size(0){} 
+	  explicit linear_memory():m_size(0){} 
 	  /** 
 	   * @brief Creates linear_memory of lenght s and allocates memory
 	   * 
 	   * @param s Length of linear_memory
 	   */
-	  linear_memory(index_type s):m_size(s) {
+	  explicit linear_memory(index_type s):m_size(s) {
 		  alloc();
 	  }
 	  /** 
 	   * @brief Copy-Constructor
 	   */
-	  linear_memory(const my_type& o):m_size(o.size()) {
+	  explicit linear_memory(const my_type& o):m_size(o.size()) {
 		  alloc();
 		  m_allocator.copy(m_ptr,o.ptr(),size(),memory_space_type());
 	  }
@@ -128,7 +128,7 @@ class linear_memory
 	   * @brief Copy-Constructor for other linear memory spaces
 	   */
 	  template<class OM, class OP>
-	  linear_memory(const linear_memory<__value_type, OM, OP,__index_type>& o):m_size(o.size()) {
+	  explicit linear_memory(const linear_memory<__value_type, OM, OP,__index_type>& o):m_size(o.size()) {
 		  alloc();
 		  m_allocator.copy(m_ptr,o.ptr(),size(),OM());
 	  }
@@ -136,7 +136,7 @@ class linear_memory
 	   * @brief Copy-Constructor for other memory spaces
 	   */
 	  template<class OM, class OP>
-	  linear_memory(const memory2d<__value_type, OM, OP,__index_type>& o):m_size(o.width()*o.height()) {
+	  explicit linear_memory(const memory2d<__value_type, OM, OP,__index_type>& o):m_size(o.width()*o.height()) {
 		  alloc();
 		  m_allocator.copy2d(m_ptr,o.ptr(),o.width()*sizeof(value_type),o.pitch(),o.height(),o.width(),OM());
 	  }
@@ -147,7 +147,7 @@ class linear_memory
 	   * @param p Pointer to entries 
 	   * @param is_view If true will not take responsibility of memory at p. Otherwise will dealloc p on destruction.
 	   */
-	  linear_memory(index_type s,pointer_type p, bool is_view):super_type(p,is_view),m_size(s) {
+	  explicit linear_memory(index_type s,pointer_type p, bool is_view):super_type(p,is_view),m_size(s) {
 		  alloc();
 	  }
 
