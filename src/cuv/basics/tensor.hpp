@@ -167,8 +167,9 @@ namespace cuv
 			/**
 			 * construct tensor view using extents object and a pointer to the wrappable memory
 			 */
-			explicit const_tensor(const std::vector<index_type> eg, pointer_type ptr){
-				m_shape=eg;
+			explicit const_tensor(const std::vector<index_type> eg, pointer_type ptr)
+				:m_shape(eg)
+			{
 				m_data.set_view(m_pitch,(index_type)0, m_shape, ptr);
 			}
 
@@ -249,7 +250,7 @@ namespace cuv
 
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
 					std::reverse(m_shape.begin(),m_shape.end());
-				m_data.set_view(m_pitch,offset,m_shape,o.m_data);
+				m_data.set_view(m_pitch,offset,m_shape,o.data());
 			}
 
 			/**
@@ -259,7 +260,7 @@ namespace cuv
 				if(&o ==this)
 					return *this;
 				m_shape=o.m_shape;
-				m_data =o.m_data;
+				m_data.assign(m_pitch,o.shape(),o.data());
 				return *this;
 			}
 
@@ -271,7 +272,7 @@ namespace cuv
 			template<class P, class OM, class OL, class OA>
 			const_tensor& operator=(const const_tensor<value_type,OM,OL,P,OA>& o){
 				m_shape = o.shape();
-				m_data.assign(o.shape(),o.data());
+				m_data.assign(m_pitch,o.shape(),o.data());
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
 					std::reverse(m_shape.begin(),m_shape.end());
 				return *this;
@@ -381,7 +382,7 @@ namespace cuv
 			 * return the number of bytes needed by this container
 			 */
 			size_t memsize()const{
-				return size()*sizeof(value_type);
+				return m_data.memsize();
 			}
 			/**
 			 * @ptr if ptr!=NULL, create a view on this pointer instead of allocating memory
@@ -548,8 +549,7 @@ namespace cuv
 			operator=(const tensor& o){
 				if(this == &o)
 					return *this;
-				m_shape = o.m_shape;
-				m_data  = o.m_data;
+				super_type::operator=(o);
 				return *this;
 			}
 			/**
