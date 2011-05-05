@@ -139,57 +139,100 @@ BOOST_AUTO_TEST_CASE( tensor_assignment )
 
 }
 
-template<class V, class M>
-void test_mem2d(){
-	typedef memory2d<V,M,V*> mem_t;
-
-	mem_t l(120,240);
-	mem_t k(120,240, l.ptr(),true);
-	BOOST_CHECK_EQUAL(l.ptr(), k.ptr());
-
-#define P(X) #X<<":"<<(X)<<"  "
-	tensor<V,M,row_major>       t1d(extents[123][247]);
-	tensor<V,M,row_major,mem_t> t2d(extents[123][247]);
-	if(IsSame<M,dev_memory_space>::Result::value){
-		// for this test to be useful, we would like to see a pitched memory at least on device!
-		bool has_pitch = t2d.data().width()*sizeof(V) != t2d.data().pitch();
-		BOOST_CHECK(has_pitch);
-	}
-	
-	for(int i=0;i<120; i++)
-		for(int j=0;j<240; j++){
-			t1d(i,j) = (V) 0;
-			t2d(i,j) = (V) (i*j+i);
-		}
-
-	t1d = t2d;
-	for(int i=0;i<120; i++)
-		for(int j=0;j<240; j++)
-			BOOST_CHECK_EQUAL( (V) t1d(i,j) , (V) (i*j+i) );
-
-	for(int i=0;i<120; i++)
-		for(int j=0;j<240; j++){
-			t1d(i,j) = (V) (i*j+i);
-			t2d(i,j) = (V) 0;
-		}
-
-	t2d = t1d;
-	for(int i=0;i<120; i++)
-		for(int j=0;j<240; j++)
-			BOOST_CHECK_EQUAL( (V) t2d(i,j) , (V) (i*j+i) );
-
-	tensor<V,M,row_major>       t1d_from2d(t2d);
-	for(int i=0;i<120; i++)
-		for(int j=0;j<240; j++)
-			BOOST_CHECK_EQUAL( (V) t1d_from2d(i,j) , (V) (i*j+i) );
-}
-BOOST_AUTO_TEST_CASE( mem2d )
+template<class V,class M1,class M2, class A1, class A2>
+void test_pushpull_2d()
 {
-	test_mem2d<float,host_memory_space>();
-	test_mem2d<float,dev_memory_space>();
+	static const int h=123,w=247;
+	tensor<V,M1,row_major,A1> t1;
+	tensor<V,M2,row_major,A2> t2(extents[h][w]);
+	
+	for(int i=0;i<h; i++)
+		for(int j=0;j<w; j++){
+			t2(i,j) = (float) drand48();
+		}
+	t1 = t2;
+	BOOST_CHECK(equal_shape(t1,t2));
+	for(int i=0;i<h; i++)
+		for(int j=0;j<w; j++)
+			BOOST_CHECK_EQUAL( (V) t1(i,j) , (V) t2(i,j) );
+}
+template<class V,class M1,class M2, class A1, class A2>
+void test_pushpull_3d()
+{
+	static const int d=3,h=123,w=247;
+	tensor<V,M1,row_major,A1> t1;
+	tensor<V,M2,row_major,A2> t2(extents[d][h][w]);
+	
+	// ***************************************
+	// assignment 2D --> 1D
+	// ***************************************
+	for(int k=0;k<d;k++)
+		for(int i=0;i<h; i++)
+			for(int j=0;j<w; j++){
+				t2(k,i,j) = (float) drand48();
+			}
+	t1 = t2;
+	BOOST_CHECK(equal_shape(t1,t2));
+	for (int k = 0; k < d; ++k)
+		for(int i=0;i<h; i++)
+			for(int j=0;j<w; j++)
+				BOOST_CHECK_EQUAL( (V) t1(k,i,j) , (V) t2(k,i,j) );
 
-	test_mem2d<unsigned char,host_memory_space>();
-	test_mem2d<unsigned char,dev_memory_space>();
+}
+
+template<class V, class M>
+void test_lowdim_views(){
+	static const int d=3,h=123,w=247;
+	tensor<V,M,row_major>              t1d(extents[d][h][w]);
+	tensor<V,M,row_major,memory2d_tag> t2d(extents[d][h][w]);
+
+	for(int k=0;k<d;k++)
+		for(int i=0;i<h; i++)
+			for(int j=0;j<w; j++){
+				t2d(k,i,j) = (float) drand48();
+			}
+
+	// ***************************************
+	// 2D View on 3D tensor
+	// ***************************************
+	for(int k=0;k<d;++k){
+		tensor<V,M,row_major,memory2d_tag> view(indices[k][index_range(0,h)][index_range(0,w)], t2d);
+		for(int i=0;i<h; i++)
+			for(int j=0;j<w; j++)
+				BOOST_CHECK_EQUAL( (V) view(i,j) , (V) t2d(k,i,j) );
+	}
+
+	// ***************************************
+	// 1D View on 3D tensor
+	// ***************************************
+	for(int k=0;k<d;++k){
+		for (int i = 0; i < h; ++i) {
+		       tensor<V,M,row_major,linear_memory_tag> view(indices[k][i][index_range(0,w)], t2d);
+		       for(int j=0;j<w; j++)
+			      BOOST_REQUIRE_EQUAL( (V) view(j) , (V) t2d(k,i,j) );
+		}
+	}
+}
+
+BOOST_AUTO_TEST_CASE( lowdim_views ) {
+	test_lowdim_views<float,host_memory_space>();
+	test_lowdim_views<float,dev_memory_space>();
+}
+BOOST_AUTO_TEST_CASE( pushpull_nd )
+{
+	// same memory space, linear container
+	test_pushpull_2d<float,host_memory_space,host_memory_space,linear_memory_tag,linear_memory_tag>();
+	test_pushpull_2d<float, dev_memory_space, dev_memory_space,linear_memory_tag,linear_memory_tag>();
+
+	// same memory space, 2d container
+	test_pushpull_2d<float,host_memory_space,host_memory_space,memory2d_tag,memory2d_tag>();
+	test_pushpull_2d<float, dev_memory_space, dev_memory_space,memory2d_tag,memory2d_tag>();
+
+	// same memory space, 2d vs. 1d
+	test_pushpull_2d<float,host_memory_space,host_memory_space,memory2d_tag,linear_memory_tag>();
+	test_pushpull_2d<float, dev_memory_space, dev_memory_space,memory2d_tag,linear_memory_tag>();
+	test_pushpull_2d<float,host_memory_space,host_memory_space,linear_memory_tag,memory2d_tag>();
+	test_pushpull_2d<float, dev_memory_space, dev_memory_space,linear_memory_tag,memory2d_tag>();
 }
 BOOST_AUTO_TEST_CASE( tensor_view )
 {
