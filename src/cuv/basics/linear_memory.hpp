@@ -97,6 +97,7 @@ class linear_memory
 		  if(m_size < s){
 			  dealloc();
 			  m_size = s;
+			  m_is_view = false;
 			  alloc();
 			  return;
 		  }
@@ -185,13 +186,25 @@ class linear_memory
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   */
 	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const memory2d<value_type, memory_space_type, TPtr,index_type>& o){ 
-		  cuvAssert(o.pitch()*o.height() == o.width()*o.height()*sizeof(value_type));
 		  dealloc();
-		  m_ptr=o.ptr() + ptr_offset;
+		  if(ptr_offset != 0){
+			  // we can only use an offset if it does not mess up our pitching,
+			  // otherwise we will get naaaasty effects
+			  int x = ptr_offset % o.width();
+			  int y = ptr_offset / o.width();
+			  //cuvAssert((y*o.pitch()+x*sizeof(value_type))%o.pitch() == 0);
+			  m_ptr=(value_type*)((char*)o.ptr() + y * o.pitch())+ x;
+		  }else{
+			  m_ptr = o.ptr();
+		  }
 		  m_is_view=true;
-		  m_size = o.width()*o.height();
-		  pitch = shape[0]; // keep pitch constant!
+		  m_size    = std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
+		  pitch = sizeof(value_type) * shape[0]; // keep pitch constant!
 		  cuvAssert(o.memsize()>= memsize() + sizeof(value_type)*ptr_offset);
+
+		  // make sure the memory2d is unpitched or we just view one line
+		  cuvAssert( o.width()*sizeof(value_type) <= memsize() 
+			||   o.pitch()*o.height() == o.width()*o.height()*sizeof(value_type));
 	  }
 
 	  /** 
@@ -298,8 +311,12 @@ class linear_memory
 	   */
 	  template<class OM, class OP>
 		  my_type&
-		  assign(const std::vector<index_type>& oshape, const linear_memory<value_type,OM,OP,index_type>& o ){
-			  return operator=(o);
+		  assign(index_type& pitch, const std::vector<index_type>& oshape, const linear_memory<value_type,OM,OP,index_type>& o ){
+			  operator=(o);
+
+			  pitch = oshape[0]*sizeof(value_type);
+
+			  return *this;
 		  }
 
 	  /**
@@ -310,8 +327,10 @@ class linear_memory
 	   */
 	  template<class OM, class OP>
 		  my_type&
-		  assign(const std::vector<index_type>& oshape, const memory2d<value_type,OM,OP,index_type>& o ){
-			  return operator=(o);
+		  assign(index_type& pitch, const std::vector<index_type>& oshape, const memory2d<value_type,OM,OP,index_type>& o ){
+			  operator=(o);
+			  pitch = oshape[0]*sizeof(value_type);
+			  return *this;
 		  }
 
 	  reference_type
@@ -337,6 +356,12 @@ class linear_memory
 
 }; // linear_memory
 
+
+struct linear_memory_tag{};
+template<class V,class M, class P, class I>
+struct memory_traits<V,M,P,I,linear_memory_tag>{
+	typedef linear_memory<V,M,P,I> type;
+};
 
 }; // cuv
 

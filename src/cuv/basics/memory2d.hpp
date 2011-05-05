@@ -82,25 +82,25 @@ class memory2d
 	  /*
 	   * Member Access
 	   */
-	  index_type width()const{return m_width;}
+	  index_type width() const{return m_width;}
 	  index_type height()const{return m_height;}
-	  index_type pitch()const{return m_pitch;}
+	  index_type pitch() const{return m_pitch;}
 
 	  /**
 	   * Set width and height of memory2d using a shape
 	   *
-	   * For 3D-shapes, we assume that the innermost dimension is a
-	   * pixel-type, that is, the actual width is (shape0*shape1, shape2).
+	   * For 3D-shapes, we assume that the outermost dimension is the depth
+	   * Actual height is therefore shape1*shape2
 	   */ 
 	  void set_width_and_height(const std::vector<index_type>&shape){
 		  cuvAssert(shape.size()==2 || shape.size()==3);
 		  if(shape.size()==3){
-			  m_width   = shape[0] * shape[1];
-			  m_height  = shape[2];
+			  m_width   = shape[2];
+			  m_height  = shape[1] * shape[0];
 		  }
 		  if(shape.size()==2){
-			  m_width   = shape[0];
-			  m_height  = shape[1];
+			  m_width   = shape[1];
+			  m_height  = shape[0];
 		  }
 	  }
 
@@ -114,9 +114,14 @@ class memory2d
 	   */
 	  void set_size(index_type& pitch, const std::vector<index_type>& shape) {
 		  dealloc();
+		  m_is_view = false;
 		  set_width_and_height(shape);
 		  alloc();
+		  pitch = m_pitch;
 	  }
+	  /**
+	   * @brief get the size of stored memory
+	   */
 	  size_t memsize()const{
 		  return m_pitch * m_height;
 	  }
@@ -136,19 +141,14 @@ class memory2d
 		  alloc();
 	  }
 	  /** 
-	   * @brief Copy-Constructor
-	   */
-	  memory2d(const memory2d& o):super_type(o.size()) {
-		  alloc();
-		  m_allocator.copy(m_ptr,o.ptr(),memsize(),memory_space_type());
-	  }
-	  /** 
 	   * @brief Copy-Constructor for other memory spaces
 	   */
 	  template<class OM, class OP>
-	  memory2d(const memory2d<OM, OP,__index_type>& o):super_type(o.size()) {
+	  explicit memory2d(const memory2d<OM, OP,__index_type>& o)
+	  :m_width(o.width()),m_height(o.height())
+	  {
 		  alloc();
-		  m_allocator.copy(m_ptr,o.ptr(),memsize(),OM());
+		  m_allocator.copy2d(m_ptr,o.ptr(),m_pitch,o.pitch(),m_height,m_width,OM());
 	  }
 	  /** 
 	   * @brief Creates memory2d from pointer to entries.
@@ -225,13 +225,19 @@ class memory2d
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   */
-	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, memory2d& o){ 
+	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const memory2d& o){ 
 		  dealloc();
 		  
-		  // we can only use an offset if it does not mess up our pitching,
-		  // otherwise we will get naaaasty effects
-		  cuvAssert(ptr_offset*sizeof(value_type)%m_pitch == 0);
-		  m_ptr=o.ptr() + ptr_offset;
+		  if(ptr_offset != 0){
+			  // we can only use an offset if it does not mess up our pitching,
+			  // otherwise we will get naaaasty effects
+			  int x = ptr_offset % o.width();
+			  int y = ptr_offset / o.width();
+			  cuvAssert((y*o.pitch()+x*sizeof(value_type))%o.pitch() == 0);
+			  m_ptr=(value_type*)((char*)o.ptr() + y * o.pitch())+ x;
+		  }else{
+			  m_ptr = o.ptr();
+		  }
 		  m_is_view=true;
 		  set_width_and_height(shape);
 		  cuvAssert(m_width*sizeof(value_type) <= o.pitch());
@@ -251,12 +257,16 @@ class memory2d
 	  memory2d& 
 		  operator=(const memory2d& o){
 			 
-			if(this->size() != o.size()){
+			if(m_is_view
+			|| this->pitch() <= o.width()*sizeof(value_type)
+			|| this->height()<= o.height()){
 			  this->dealloc();
-			  m_width  = o.m_width;
-			  m_height = o.m_height;
+			  m_width  = o.width();
+			  m_height = o.height();
 			  this->alloc();
 			}
+			m_width  = o.width();
+			m_height = o.height();
 			m_allocator.copy2d(m_ptr,o.ptr(),m_pitch,o.pitch(),m_height,m_width,memory_space_type());
 			  
 			return *this;
@@ -272,15 +282,17 @@ class memory2d
 		 */
 	  template<class OM, class OP>
 	  memory2d& 
-	  
 		  operator=(const memory2d<OM, OP,index_type>& o){
-			if(this->size() != o.size()){
-			  this->dealloc();
+			if(m_is_view ||
+			   this->size() != o.size()){
+			   this->dealloc();
 			  m_width  = o.width;
 			  m_height = o.height;
 			  this->alloc();
 			}
-			m_allocator.copy2d(m_ptr,o.ptr(),m_pitch,o.pitch(),m_height,m_width,memory_space_type());
+			m_width  = o.width;
+			m_height = o.height;
+			m_allocator.copy2d(m_ptr,o.ptr(),m_pitch,o.pitch(),m_height,m_width,OM());
 			return *this;
 		  }
 
@@ -295,11 +307,12 @@ class memory2d
 	   */
 	  template<class OM, class OP>
 		  memory2d& 
-		  assign(const std::vector<index_type>& oshape, const linear_memory<value_type,OM,OP,index_type>& o){
+		  assign(index_type& pitch, const std::vector<index_type>& oshape, const linear_memory<value_type,OM,OP,index_type>& o){
 			  dealloc();
 			  set_width_and_height(oshape);
 			  alloc();
 			  m_allocator.copy2d(m_ptr,o.ptr(),m_pitch,m_width*sizeof(value_type),m_height,m_width,OM());
+			  pitch = m_pitch;
 			  return *this;
 		  }
 	  /** 
@@ -313,8 +326,10 @@ class memory2d
 	   */
 	  template<class OM, class OP>
 		  memory2d& 
-		  assign(const std::vector<index_type>& oshape, const memory2d& o){
-			  return this->operator=(o);
+		  assign(index_type& pitch, const std::vector<index_type>& oshape, const memory2d<value_type,OM,OP,index_type>& o){
+			  this->operator=(o);
+			  pitch = m_pitch;
+			  return *this;
 		  }
 
 	  /**
@@ -338,6 +353,11 @@ class memory2d
 
 }; // memory2d
 
+struct memory2d_tag{};
+template<class V,class M, class P, class I>
+struct memory_traits<V,M,P,I,memory2d_tag>{
+	typedef memory2d<V,M,P,I> type;
+};
 
 }; // cuv
 

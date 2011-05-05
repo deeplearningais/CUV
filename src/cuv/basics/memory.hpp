@@ -95,6 +95,11 @@ namespace cuv
 	};
 	
 
+	template<class V, class M, class P, class I, class MemoryContainer>
+	struct memory_traits{
+		typedef memory<V,M,P,I> type;
+	};
+
 
 
 }
