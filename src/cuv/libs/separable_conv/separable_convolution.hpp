@@ -11,12 +11,14 @@ namespace cuv{
 			SP_GAUSS,
 			SP_CENTERED_DERIVATIVE,
 		};
-		template<class DstV, class SrcV, class M>
+		template<class DstV, class SrcV, class M, class A>
 		void
-		convolve(  tensor<DstV,M,row_major>& dst,
-			   const tensor<SrcV,M,row_major>& src,
+		convolve(  tensor<DstV,M,row_major, A>& dst,
+			   const tensor<SrcV,M,row_major, A>& src,
 			   const unsigned int&   radius,
-			   const separable_filter& filt, int axis=2 );
+			   const separable_filter& filt, int axis=2,
+			   const float& param=0.
+		       	);
 	}
 }
 
