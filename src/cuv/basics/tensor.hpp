@@ -685,8 +685,8 @@ namespace cuv
 	 * @param t   the second tensor
 	 *
 	 */
-	template<class V, class M, class L,class P, class V2, class M2, class P2>
-	bool equal_shape(const const_tensor<V,M,L,P>& s, const const_tensor<V2,M2,L,P2>& t){
+	template<class V, class M, class L,class P, class A, class V2, class M2, class P2, class A2>
+	bool equal_shape(const const_tensor<V,M,L,P,A>& s, const const_tensor<V2,M2,L,P2,A2>& t){
 		if(s.ndim()!=t.ndim())
 			return false;
 		typename std::vector<typename const_tensor<V ,M ,L,P >::index_type>::const_iterator it1=s.shape().begin(), end=s.shape().end();
