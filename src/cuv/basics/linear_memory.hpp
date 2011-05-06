@@ -131,7 +131,7 @@ class linear_memory
 	   */
 	  explicit linear_memory(const my_type& o):m_size(o.size()) {
 		  alloc();
-		  m_allocator.copy(m_ptr,o.ptr(),size(),memory_space_type());
+		  m_allocator.copy(this->m_ptr,o.ptr(),size(),memory_space_type());
 	  }
 	  /** 
 	   * @brief Copy-Constructor for other linear memory spaces
@@ -139,7 +139,7 @@ class linear_memory
 	  template<class OM, class OP>
 	  explicit linear_memory(const linear_memory<__value_type, OM, OP,__index_type>& o):m_size(o.size()) {
 		  alloc();
-		  m_allocator.copy(m_ptr,o.ptr(),size(),OM());
+		  m_allocator.copy(this->m_ptr,o.ptr(),size(),OM());
 	  }
 	  /** 
 	   * @brief Copy-Constructor for other memory spaces
@@ -147,7 +147,7 @@ class linear_memory
 	  template<class OM, class OP>
 	  explicit linear_memory(const memory2d<__value_type, OM, OP,__index_type>& o):m_size(o.width()*o.height()) {
 		  alloc();
-		  m_allocator.copy2d(m_ptr,o.ptr(),o.width()*sizeof(value_type),o.pitch(),o.height(),o.width(),OM());
+		  m_allocator.copy2d(this->m_ptr,o.ptr(),o.width()*sizeof(value_type),o.pitch(),o.height(),o.width(),OM());
 	  }
 	  /** 
 	   * @brief Creates linear_memory from pointer to entries.
@@ -169,7 +169,7 @@ class linear_memory
 	   */
 	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, pointer_type p, bool inner_is_last){ 
 		  dealloc();
-		  m_ptr     = p+ptr_offset;
+		  this->m_ptr     = p+ptr_offset;
 		  m_is_view = true;
 		  m_size    = get_size_pitch(pitch,shape,inner_is_last);
 	  }
@@ -181,7 +181,7 @@ class linear_memory
 	   */
 	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const linear_memory& o, bool inner_is_last ){ 
 		  dealloc();
-		  m_ptr=o.ptr() + ptr_offset;
+		  this->m_ptr=o.ptr() + ptr_offset;
 		  m_is_view=true;
 		  m_size    = get_size_pitch(pitch,shape,inner_is_last);
 		  cuvAssert(o.size()>= m_size + ptr_offset);
@@ -199,9 +199,9 @@ class linear_memory
 			  int x = ptr_offset % o.width();
 			  int y = ptr_offset / o.width();
 			  //cuvAssert((y*o.pitch()+x*sizeof(value_type))%o.pitch() == 0);
-			  m_ptr=(value_type*)((char*)o.ptr() + y * o.pitch())+ x;
+			  this->m_ptr=(value_type*)((char*)o.ptr() + y * o.pitch())+ x;
 		  }else{
-			  m_ptr = o.ptr();
+			  this->m_ptr = o.ptr();
 		  }
 		  m_is_view=true;
 		  m_size    = get_size_pitch(pitch,shape,inner_is_last);
@@ -228,8 +228,8 @@ class linear_memory
 	   */
 	  void alloc(){
 		  if (! m_is_view) {
-			  cuvAssert(m_ptr == NULL)
-			  m_allocator.alloc( &m_ptr,m_size);
+			  cuvAssert(this->m_ptr == NULL)
+			  m_allocator.alloc( &this->m_ptr,m_size);
 		  }
 	  } 
 
@@ -243,9 +243,9 @@ class linear_memory
 	   * @brief Deallocate memory if not a view
 	   */
 	  void dealloc(){
-		  if (m_ptr && ! m_is_view)
-			m_allocator.dealloc(&m_ptr);
-		  m_ptr=NULL;
+		  if (this->m_ptr && ! m_is_view)
+			m_allocator.dealloc(&this->m_ptr);
+		  this->m_ptr=NULL;
 	  }
 
 
@@ -265,7 +265,7 @@ class linear_memory
 				  m_size = o.size();
 				  this->alloc();
 			  }
-			  m_allocator.copy(m_ptr,o.ptr(),size(),memory_space_type());
+			  m_allocator.copy(this->m_ptr,o.ptr(),size(),memory_space_type());
 
 			  return *this;
 		  }
@@ -286,7 +286,7 @@ class linear_memory
 				  m_size = o.size();
 				  this->alloc();
 			  }
-			  m_allocator.copy(m_ptr,o.ptr(),size(),OM());
+			  m_allocator.copy(this->m_ptr,o.ptr(),size(),OM());
 			  return *this;
 		  }
 
@@ -304,7 +304,7 @@ class linear_memory
 			  dealloc();
 			  m_size = o.width()*o.height();
 			  alloc();
-			  m_allocator.copy2d(m_ptr,o.ptr(),o.width()*sizeof(value_type),o.pitch(),o.height(),o.width(),OM());
+			  m_allocator.copy2d(this->m_ptr,o.ptr(),o.width()*sizeof(value_type),o.pitch(),o.height(),o.width(),OM());
 			  return *this;
 		  }
 
@@ -339,12 +339,12 @@ class linear_memory
 	  reference_type
 		  operator[](const index_type& idx)     ///< Return entry at position t
 		  {
-			  return reference_type(m_ptr+idx);
+			  return reference_type(this->m_ptr+idx);
 		  }
 	  const_reference_type
 		  operator[](const index_type& idx)const///< Return entry at position t
 		  {
-			  return const_reference_type(m_ptr+idx);
+			  return const_reference_type(this->m_ptr+idx);
 		  }
 
 	  /** 

@@ -142,7 +142,7 @@ class memory2d
 	  :m_width(o.width()),m_height(o.height())
 	  {
 		  alloc();
-		  m_allocator.copy2d(m_ptr,o.ptr(),m_pitch,o.pitch(),m_height,m_width,OM());
+		  m_allocator.copy2d(this->m_ptr,o.ptr(),m_pitch,o.pitch(),m_height,m_width,OM());
 	  }
 	  /** 
 	   * @brief Creates memory2d from pointer to entries.
@@ -172,8 +172,8 @@ class memory2d
 	   */
 	  void alloc(){
 		  if (! m_is_view) {
-			  cuvAssert(m_ptr == NULL);
-			  m_allocator.alloc2d(&m_ptr,m_pitch,m_height,m_width);
+			  cuvAssert(this->m_ptr == NULL);
+			  m_allocator.alloc2d(&this->m_ptr,m_pitch,m_height,m_width);
 		  }
 	  } 
 
@@ -181,9 +181,9 @@ class memory2d
 	   * @brief Deallocate memory if not a view
 	   */
 	  void dealloc(){
-		  if (m_ptr && ! m_is_view)
-			m_allocator.dealloc(&m_ptr);
-		  m_ptr=NULL;
+		  if (this->m_ptr && ! m_is_view)
+			m_allocator.dealloc(&this->m_ptr);
+		  this->m_ptr=NULL;
 	  }
 
 	  /**
@@ -195,7 +195,7 @@ class memory2d
 	   */
 	  void set_view(index_type& pitch, const std::vector<index_type>& shape, pointer_type ptr, bool inner_is_last){ 
 		  dealloc();
-		  m_ptr = ptr;
+		  this->m_ptr = ptr;
 		  m_is_view=true;
 		  set_width_and_height(shape,inner_is_last);
 		  m_pitch = pitch = m_width*sizeof(value_type);
@@ -207,7 +207,7 @@ class memory2d
 	   */
 	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const linear_memory<value_type,memory_space_type,TPtr,index_type>& o, bool inner_is_last){ 
 		  dealloc();
-		  m_ptr=o.ptr() + ptr_offset;
+		  this->m_ptr=o.ptr() + ptr_offset;
 		  m_is_view=true;
 		  set_width_and_height(shape, inner_is_last);
 		  m_pitch = pitch = m_width*sizeof(value_type);
@@ -228,9 +228,9 @@ class memory2d
 			  int x = ptr_offset % o.width();
 			  int y = ptr_offset / o.width();
 			  cuvAssert((y*o.pitch()+x*sizeof(value_type))%o.pitch() == 0);
-			  m_ptr=(value_type*)((char*)o.ptr() + y * o.pitch())+ x;
+			  this->m_ptr=(value_type*)((char*)o.ptr() + y * o.pitch())+ x;
 		  }else{
-			  m_ptr = o.ptr();
+			  this->m_ptr = o.ptr();
 		  }
 		  m_is_view=true;
 		  set_width_and_height(shape,inner_is_last);
@@ -261,7 +261,7 @@ class memory2d
 			}
 			m_width  = o.width();
 			m_height = o.height();
-			m_allocator.copy2d(m_ptr,o.ptr(),m_pitch,o.pitch(),m_height,m_width,memory_space_type());
+			m_allocator.copy2d(this->m_ptr,o.ptr(),m_pitch,o.pitch(),m_height,m_width,memory_space_type());
 			  
 			return *this;
 		  }
@@ -286,7 +286,7 @@ class memory2d
 			}
 			m_width  = o.width;
 			m_height = o.height;
-			m_allocator.copy2d(m_ptr,o.ptr(),m_pitch,o.pitch(),m_height,m_width,OM());
+			m_allocator.copy2d(this->m_ptr,o.ptr(),m_pitch,o.pitch(),m_height,m_width,OM());
 			return *this;
 		  }
 
@@ -305,7 +305,7 @@ class memory2d
 			  dealloc();
 			  set_width_and_height(oshape,inner_is_last);
 			  alloc();
-			  m_allocator.copy2d(m_ptr,o.ptr(),m_pitch,m_width*sizeof(value_type),m_height,m_width,OM());
+			  m_allocator.copy2d(this->m_ptr,o.ptr(),m_pitch,m_width*sizeof(value_type),m_height,m_width,OM());
 			  pitch = m_pitch;
 			  return *this;
 		  }
@@ -335,14 +335,14 @@ class memory2d
 		  {
 			  int x = idx % m_width;
 			  int y = idx / m_width;
-			  return reference_type((value_type*)((char*)m_ptr+y*m_pitch)+x);
+			  return reference_type((value_type*)((char*)this->m_ptr+y*m_pitch)+x);
 		  }
 	  const_reference_type
 		  operator[](const index_type& idx)const///< Return entry at position t
 		  {
 			  int x = idx % m_width;
 			  int y = idx / m_width;
-			  return reference_type((value_type*)((char*)m_ptr+y*m_pitch)+x);
+			  return reference_type((value_type*)((char*)this->m_ptr+y*m_pitch)+x);
 		  }
 
 }; // memory2d
