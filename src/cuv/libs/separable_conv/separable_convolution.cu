@@ -211,6 +211,15 @@ namespace cuv{
 				kernel[2]= 0.5;
 				cuvSafeCall( cudaMemcpyToSymbol(c_Kernel, kernel.ptr(), kernel.memsize()) );
 				radius_dispatch(1,dst,src,axis);
+			}else if(filt == SP_BOX){
+				const int kernel_w = 2*filter_radius+1;
+				cuv::tensor<float, host_memory_space> kernel(kernel_w);
+				cuv::fill(kernel, 1.f);
+				kernel /= (float) kernel_w;
+				cuvSafeCall( cudaMemcpyToSymbol(c_Kernel, kernel.ptr(), kernel.memsize()) );
+				result_type tmp(extents[src.shape()[0]][src.shape()[1]]);
+				radius_dispatch(filter_radius,tmp,src,0);
+				radius_dispatch(filter_radius,dst,tmp,1);
 			}
 		}
 		

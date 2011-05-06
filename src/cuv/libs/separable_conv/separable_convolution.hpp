@@ -10,6 +10,7 @@ namespace cuv{
 		enum separable_filter{
 			SP_GAUSS,
 			SP_CENTERED_DERIVATIVE,
+			SP_BOX,
 		};
 		template<class DstV, class SrcV, class M, class A>
 		void
