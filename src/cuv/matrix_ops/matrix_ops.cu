@@ -47,6 +47,7 @@
 #define __shared__
 #endif
 
+#define PITCH(PTR,PITCH,Y,X) ((typeof(PTR))((char*)(PTR) + (PITCH)*(Y)) + (X))
 #define CVT_TRANSPOSE(c) \
 	(CBLAS_TRANSPOSE)(((c) == 'N' || (c) == 'n') ? CblasNoTrans : \
 	 ((c) == 'T' || (c) == 't') ? CblasTrans : \
@@ -74,25 +75,60 @@
 
 // "coalesced transpose" with no bank conflicts, example from SDK
 // potential speedup by 5 possible for "fine-grained transpose"
-template<int BLOCK_SIZE, class T>
+template<int BLOCK_SIZE, class T, class I>
 __global__
-void transpose_kernel(T* dst, const T* src, int width, int height) {
-	const int bx = blockIdx.x * blockDim.x;
-	const int by = blockIdx.y * blockDim.y;
-	const int tx = bx + threadIdx.x;
-	const int ty = by + threadIdx.y;
+void transpose_kernel(T* dst, const T* src, I width, I height,
+		I dpitch, I spitch) {
+	const I bx = blockIdx.x * blockDim.x;
+	const I by = blockIdx.y * blockDim.y;
+	I tx = bx + threadIdx.x;
+	I ty = by + threadIdx.y;
 
 	__shared__
 	T shared[BLOCK_SIZE][BLOCK_SIZE + 1];
 
 	if (tx < width && ty < height) {
-		shared[threadIdx.y][threadIdx.x] = src[ty * width + tx];
+		shared[threadIdx.y][threadIdx.x] = *PITCH(src,spitch,ty,tx);
 	}
 	__syncthreads();
 
-	if (by + threadIdx.x < height && threadIdx.y + bx < width) {
-		dst[(bx + threadIdx.y) * height + by + threadIdx.x]
+	tx = by + threadIdx.x;
+	ty = bx + threadIdx.y;
+
+	if (tx < height && ty < width) {
+		*PITCH(dst,dpitch,ty,tx)
+		/*dst[(bx + threadIdx.y) * height + by + threadIdx.x]*/
 				= shared[threadIdx.x][threadIdx.y];
+	}
+}
+template<int BLOCK_SIZE, class T, class I>
+__global__ void transposeNoBankConflicts(T *dst, const T *src,
+	       	I width, I height,
+		I dpitch, I spitch)
+{
+	const I BLOCK_ROWS = BLOCK_SIZE;
+	__shared__ float tile[BLOCK_SIZE][BLOCK_SIZE+1];
+
+	int xIndex = blockIdx.x * BLOCK_SIZE + threadIdx.x;
+	int yIndex = blockIdx.y * BLOCK_SIZE + threadIdx.y;  
+	if(xIndex > width) return;
+
+	const T* srcp = PITCH(src,spitch,yIndex,xIndex);
+
+	for (int i=0; i<BLOCK_SIZE; i+=BLOCK_ROWS) {
+		tile[threadIdx.y+i][threadIdx.x] = 
+			yIndex+i<height ?  *PITCH(srcp,spitch,i,0):0;
+	}
+
+	xIndex = blockIdx.y * BLOCK_SIZE + threadIdx.x;
+	yIndex = blockIdx.x * BLOCK_SIZE + threadIdx.y;
+
+	T*       dstp = PITCH(dst,dpitch,yIndex,xIndex);
+	__syncthreads();
+
+	for (int i=0; i<BLOCK_SIZE; i+=BLOCK_ROWS) {
+		if(yIndex+i<width)
+			*PITCH(dstp,dpitch,i,0) = tile[threadIdx.x][threadIdx.y+i];
 	}
 }
 namespace cuv {
@@ -377,47 +413,47 @@ void matrix_divide_row(tensor<__value_type,__memory_space_type,__memory_layout_t
 }
 
 namespace transpose_impl{
-	template<class V>
-	void transpose(tensor<V, dev_memory_space, column_major>& dst,
-			 const tensor<V, dev_memory_space, column_major>& src) {
+	template<class V,class A>
+	void transpose(tensor<V, dev_memory_space, column_major,A>& dst,
+			 const tensor<V, dev_memory_space, column_major,A>& src) {
                 cuvAssert(dst.ndim()==2);
                 cuvAssert(src.ndim()==2);
 		cuvAssert(dst.shape()[1] == src.shape()[0]);
 		cuvAssert(dst.shape()[0] == src.shape()[1]);
                 typedef typename tensor<V, dev_memory_space, column_major>::index_type I;
-		const I width = dst.shape()[1];
-		const I height = dst.shape()[0];
+		const I width = src.shape()[0];
+		const I height = src.shape()[1];
 		static const int BLOCK_SIZE = 16;
 		const int numBlocksX = ceil((float)width / BLOCK_SIZE);
 		const int numBlocksY = ceil((float)height / BLOCK_SIZE);
 		dim3 gridSize(numBlocksX, numBlocksY, 1);
 		dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
-		transpose_kernel<BLOCK_SIZE><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
+		transpose_kernel<BLOCK_SIZE><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height,dst.pitch(),src.pitch());
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
-	template<class V>
-	void transpose(tensor<V,dev_memory_space,row_major>& dst,
-			 const tensor<V,dev_memory_space,row_major>& src) {
+	template<class V,class A>
+	void transpose(tensor<V,dev_memory_space,row_major,A>& dst,
+			 const tensor<V,dev_memory_space,row_major,A>& src) {
                 cuvAssert(dst.ndim()==2);
                 cuvAssert(src.ndim()==2);
 		cuvAssert(dst.shape()[1] == src.shape()[0]);
 		cuvAssert(dst.shape()[0] == src.shape()[1]);
                 typedef typename tensor<V, dev_memory_space, row_major>::index_type I;
-		const I width = dst.shape()[0];
-		const I height = dst.shape()[1];
+		const I width = src.shape()[1];
+		const I height = src.shape()[0];
 		static const int BLOCK_SIZE = 16;
 		const int numBlocksX = ceil((float)width / BLOCK_SIZE);
 		const int numBlocksY = ceil((float)height / BLOCK_SIZE);
 		dim3 gridSize(numBlocksX, numBlocksY, 1);
 		dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, 1);
-		transpose_kernel<BLOCK_SIZE><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height);
+		transpose_kernel<BLOCK_SIZE><<<gridSize, blockSize>>>(dst.ptr(), src.ptr(), width, height,dst.pitch(),src.pitch());
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
-	template<class V>
-	void transpose(tensor<V,host_memory_space,column_major>& dst,
-			 const tensor<V,host_memory_space,column_major>& src) {
+	template<class V, class A>
+	void transpose(tensor<V,host_memory_space,column_major,A>& dst,
+			 const tensor<V,host_memory_space,column_major,A>& src) {
                 cuvAssert(dst.ndim()==2);
                 cuvAssert(src.ndim()==2);
 		cuvAssert(dst.shape()[1] == src.shape()[0]);
@@ -432,9 +468,9 @@ namespace transpose_impl{
 		}
 	}
 
-	template<class V>
-	void transpose(tensor<V,host_memory_space,row_major>& dst,
-			 const tensor<V,host_memory_space,row_major>& src) {
+	template<class V, class A>
+	void transpose(tensor<V,host_memory_space,row_major,A>& dst,
+			 const tensor<V,host_memory_space,row_major,A>& src) {
                 cuvAssert(dst.ndim()==2);
                 cuvAssert(src.ndim()==2);
 		cuvAssert(dst.shape()[1] == src.shape()[0]);
@@ -450,8 +486,8 @@ namespace transpose_impl{
 	}
 } // namespace transpose_impl
 
-template<class __value_type, class __memory_space_type, class __memory_layout_type>
-void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& dst, const tensor<__value_type,__memory_space_type, __memory_layout_type>& src){
+template<class __value_type, class __memory_space_type, class __memory_layout_type, class A>
+void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type,A>& dst, const tensor<__value_type,__memory_space_type, __memory_layout_type,A>& src){
 	transpose_impl::transpose(dst,src);
 }
 
@@ -486,9 +522,11 @@ const cuv::tensor<V,T,typename other_memory_layout<M>::type> * transposed_view_p
   template tensor<V,host_memory_space,M>* blockview(tensor<V,host_memory_space,M>&,I,I,I,I); \
   template tensor<V,dev_memory_space,M>* blockview(tensor<V,dev_memory_space,M>&,I,I,I,I);
 
-#define INSTANTIATE_TRANSPOSE(V,M,I) \
-  template void transpose(tensor<V,host_memory_space,M>&,const tensor<V,host_memory_space,M>&); \
-  template void transpose(tensor<V,dev_memory_space,M>&,const tensor<V,dev_memory_space,M>&); 
+#define INSTANTIATE_TRANSPOSE(V,M) \
+  template void transpose(tensor<V, host_memory_space, M, linear_memory_tag>&, const tensor<V, host_memory_space, M, linear_memory_tag>&); \
+  template void transpose(tensor<V, dev_memory_space , M, linear_memory_tag>&, const tensor<V, dev_memory_space , M, linear_memory_tag>&);   \
+  template void transpose(tensor<V, host_memory_space, M, memory2d_tag>&     , const tensor<V, host_memory_space, M, memory2d_tag>&); \
+  template void transpose(tensor<V, dev_memory_space , M, memory2d_tag>&     , const tensor<V, dev_memory_space , M, memory2d_tag>&);
 
 #define INSTANTIATE_TRANSPOSED_VIEW(V) \
   template tensor<V,host_memory_space,other_memory_layout<column_major>::type >* transposed_view_p(tensor<V,host_memory_space,column_major>&);\
@@ -500,10 +538,12 @@ const cuv::tensor<V,T,typename other_memory_layout<M>::type> * transposed_view_p
   template const tensor<V,dev_memory_space,other_memory_layout<column_major>::type >* transposed_view_p(const tensor<V,dev_memory_space,column_major>&);\
   template const tensor<V,dev_memory_space,other_memory_layout<row_major>::type >* transposed_view_p(const tensor<V,dev_memory_space,row_major>&);
 
-INSTANTIATE_TRANSPOSE(float,column_major,unsigned int);
-INSTANTIATE_TRANSPOSE(float,row_major,unsigned int);
-INSTANTIATE_TRANSPOSE(int,column_major,unsigned int);
-INSTANTIATE_TRANSPOSE(int,row_major,unsigned int);
+INSTANTIATE_TRANSPOSE(float,column_major);
+INSTANTIATE_TRANSPOSE(float,row_major);
+INSTANTIATE_TRANSPOSE(int,column_major);
+INSTANTIATE_TRANSPOSE(int,row_major);
+INSTANTIATE_TRANSPOSE(unsigned char,column_major);
+INSTANTIATE_TRANSPOSE(unsigned char,row_major);
 
 INSTANTIATE_TRANSPOSED_VIEW(float);
 /*INSTANTIATE_TRANSPOSED_VIEW(int);*/

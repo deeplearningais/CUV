@@ -250,8 +250,8 @@ namespace cuv{
    * @param src Source matrix 
    * 
    */
-template<class __value_type, class __memory_space_type, class __memory_layout_type>
-void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& dst, const tensor<__value_type,__memory_space_type, __memory_layout_type>& src);
+template<class __value_type, class __memory_space_type, class __memory_layout_type, class __memory_container_type>
+void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __memory_container_type>& dst, const tensor<__value_type,__memory_space_type, __memory_layout_type, __memory_container_type>& src);
 
   /** 
    * @brief Transpose a matrix by creating a view with different storage
