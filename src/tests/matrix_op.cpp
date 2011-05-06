@@ -452,8 +452,8 @@ BOOST_AUTO_TEST_CASE( mat_op_transpose )
 	transpose(hC, hD);
 	transpose(dC, dD);
 
-	tensor<float,host_memory_space,column_major> h2A(dA.shape()); convert(h2A, dA);
-	tensor<float,host_memory_space,row_major> h2C(dC.shape()); convert(h2C, dC);
+	tensor<float,host_memory_space,column_major> h2A(dA.shape()); h2A = dA;
+	tensor<float,host_memory_space,row_major> h2C(dC.shape()); h2C = dC; 
 
 	for(int i=0;i<n;i++)
 		for(int j=0;j<m;j++){
