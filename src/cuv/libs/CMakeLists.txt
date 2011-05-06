@@ -1,6 +1,7 @@
 add_subdirectory(rbm)
 add_subdirectory(kmeans)
 add_subdirectory(kernels)
+add_subdirectory(integral_image)
 add_subdirectory(separable_conv)
 add_subdirectory(cimg)
 IF(CUV_CIMG_BINDINGS)

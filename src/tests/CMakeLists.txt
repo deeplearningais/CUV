@@ -77,6 +77,10 @@ IF(CUV_CIMG_BINDINGS)
 
 	ADD_EXECUTABLE( test_lib_sep_conv lib_sep_conv.cpp )
 	TARGET_LINK_LIBRARIES( test_lib_sep_conv cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_separable_conv cuv_cimg cuv_matrix_ops X11 pthread ${PNG_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} )
+
+	ADD_EXECUTABLE( test_lib_intimg lib_intimg.cpp )
+	TARGET_LINK_LIBRARIES( test_lib_intimg cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_intimg cuv_cimg cuv_matrix_ops X11 pthread ${PNG_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} )
+
         FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 ENDIF(CUV_CIMG_BINDINGS)
