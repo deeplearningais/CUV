@@ -132,6 +132,10 @@ namespace cuv
 				}
 				return pos;
 			}
+
+			inline bool inner_is_last(){
+				return IsSame<memory_layout_type,row_major>::Result::value;
+			}
 		public:
 
 			/// default constructor
@@ -161,7 +165,7 @@ namespace cuv
 				m_shape.reserve(D);
 				for(std::size_t i=0;i<D;i++)
 					m_shape.push_back(eg.ranges_[i].finish());
-				m_data.set_view(m_pitch,(index_type)0,m_shape, ptr);
+				m_data.set_view(m_pitch,(index_type)0,m_shape, ptr, inner_is_last());
 			}
 
 			/**
@@ -170,7 +174,7 @@ namespace cuv
 			explicit const_tensor(const std::vector<index_type> eg, pointer_type ptr)
 				:m_shape(eg)
 			{
-				m_data.set_view(m_pitch,(index_type)0, m_shape, ptr);
+				m_data.set_view(m_pitch,(index_type)0, m_shape, ptr, inner_is_last());
 			}
 
 			/**
@@ -178,7 +182,7 @@ namespace cuv
 			 */
 			const_tensor(int _size, pointer_type ptr){
 				m_shape.push_back(_size);
-				m_data.set_view(m_pitch,(index_type)0, m_shape, ptr);
+				m_data.set_view(m_pitch,(index_type)0, m_shape, ptr, inner_is_last());
 			}
 
 			/**
@@ -186,7 +190,7 @@ namespace cuv
 			 */
 			const_tensor(unsigned int _size, pointer_type ptr){
 				m_shape.push_back(_size);
-				m_data.set_view(m_pitch,(index_type)0, m_shape, ptr);
+				m_data.set_view(m_pitch,(index_type)0, m_shape, ptr, inner_is_last());
 			}
 
 			/**
@@ -250,7 +254,7 @@ namespace cuv
 
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
 					std::reverse(m_shape.begin(),m_shape.end());
-				m_data.set_view(m_pitch,offset,m_shape,o.data());
+				m_data.set_view(m_pitch,offset,m_shape,o.data(),inner_is_last());
 			}
 
 			/**
@@ -260,7 +264,7 @@ namespace cuv
 				if(&o ==this)
 					return *this;
 				m_shape=o.m_shape;
-				m_data.assign(m_pitch,o.shape(),o.data());
+				m_data.assign(m_pitch,o.shape(),o.data(), inner_is_last());
 				return *this;
 			}
 
@@ -272,7 +276,7 @@ namespace cuv
 			template<class P, class OM, class OL, class OA>
 			const_tensor& operator=(const const_tensor<value_type,OM,OL,P,OA>& o){
 				m_shape = o.shape();
-				m_data.assign(m_pitch,o.shape(),o.data());
+				m_data.assign(m_pitch,o.shape(),o.data(),inner_is_last());
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
 					std::reverse(m_shape.begin(),m_shape.end());
 				return *this;
@@ -388,7 +392,7 @@ namespace cuv
 			 * @ptr if ptr!=NULL, create a view on this pointer instead of allocating memory
 			 */
 			void allocate(){ 
-				m_data.set_size(m_pitch,m_shape); 
+				m_data.set_size(m_pitch,m_shape,inner_is_last()); 
 			}
 			/**
 			 * delete the memory used by this container (calls dealloc of wrapped linear memory)

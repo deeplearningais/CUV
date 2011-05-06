@@ -78,6 +78,15 @@ class linear_memory
 	  using super_type::m_is_view;
 	  using super_type::m_allocator;
 	  index_type m_size;
+
+	  /**
+	   * get size and set pitch
+	   */
+	  index_type get_size_pitch(index_type& pitch, const std::vector<index_type>& shape, bool inner_is_last){
+		  pitch = sizeof(value_type) * (inner_is_last ? shape.back() : shape.front());
+		  return std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
+	  }
+
 	public:
 	  /*
 	   * Member Access
@@ -91,9 +100,8 @@ class linear_memory
 	   * @brief set length of linear_memory. If this is longer than the
 	   * original size, this will destroy the content due to reallocation!
 	   */
-	  void set_size(index_type& pitch, const std::vector<index_type>& shape) {
-		  int s = std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
-		  pitch = sizeof(value_type) * shape[0];
+	  void set_size(index_type& pitch, const std::vector<index_type>& shape, bool inner_is_last) {
+		  int s = get_size_pitch(pitch,shape,inner_is_last);
 		  if(m_size < s){
 			  dealloc();
 			  m_size = s;
@@ -159,12 +167,11 @@ class linear_memory
 	   *
 	   * WARNING: ptr should not be a pitched pointer!!!
 	   */
-	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, pointer_type p){ 
+	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, pointer_type p, bool inner_is_last){ 
 		  dealloc();
 		  m_ptr     = p+ptr_offset;
 		  m_is_view = true;
-		  pitch     = shape[0]*sizeof(value_type);
-		  m_size    = std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
+		  m_size    = get_size_pitch(pitch,shape,inner_is_last);
 	  }
 
 	  /**
@@ -172,12 +179,11 @@ class linear_memory
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   */
-	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const linear_memory& o){ 
+	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const linear_memory& o, bool inner_is_last ){ 
 		  dealloc();
 		  m_ptr=o.ptr() + ptr_offset;
 		  m_is_view=true;
-		  pitch     = shape[0]*sizeof(value_type);
-		  m_size    = std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
+		  m_size    = get_size_pitch(pitch,shape,inner_is_last);
 		  cuvAssert(o.size()>= m_size + ptr_offset);
 	  }
 	  /**
@@ -185,7 +191,7 @@ class linear_memory
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   */
-	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const memory2d<value_type, memory_space_type, TPtr,index_type>& o){ 
+	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const memory2d<value_type, memory_space_type, TPtr,index_type>& o, bool inner_is_last){ 
 		  dealloc();
 		  if(ptr_offset != 0){
 			  // we can only use an offset if it does not mess up our pitching,
@@ -198,8 +204,7 @@ class linear_memory
 			  m_ptr = o.ptr();
 		  }
 		  m_is_view=true;
-		  m_size    = std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
-		  pitch = sizeof(value_type) * shape[0]; // keep pitch constant!
+		  m_size    = get_size_pitch(pitch,shape,inner_is_last);
 		  cuvAssert(o.memsize()>= memsize() + sizeof(value_type)*ptr_offset);
 
 		  // make sure the memory2d is unpitched or we just view one line
@@ -311,11 +316,9 @@ class linear_memory
 	   */
 	  template<class OM, class OP>
 		  my_type&
-		  assign(index_type& pitch, const std::vector<index_type>& oshape, const linear_memory<value_type,OM,OP,index_type>& o ){
+		  assign(index_type& pitch, const std::vector<index_type>& oshape, const linear_memory<value_type,OM,OP,index_type>& o, bool inner_is_last ){
 			  operator=(o);
-
-			  pitch = oshape[0]*sizeof(value_type);
-
+			  get_size_pitch(pitch,oshape,inner_is_last);
 			  return *this;
 		  }
 
@@ -327,9 +330,9 @@ class linear_memory
 	   */
 	  template<class OM, class OP>
 		  my_type&
-		  assign(index_type& pitch, const std::vector<index_type>& oshape, const memory2d<value_type,OM,OP,index_type>& o ){
+		  assign(index_type& pitch, const std::vector<index_type>& oshape, const memory2d<value_type,OM,OP,index_type>& o, bool inner_is_last ){
 			  operator=(o);
-			  pitch = oshape[0]*sizeof(value_type);
+			  get_size_pitch(pitch,oshape,inner_is_last);
 			  return *this;
 		  }
 

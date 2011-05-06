@@ -78,6 +78,19 @@ class memory2d
 	  index_type m_width;
 	  index_type m_pitch;
 	  index_type m_height;
+
+	  /**
+	   * Set width and height of memory2d using a shape
+	   *
+	   * For 3D-shapes, we assume that the outermost dimension is the depth
+	   * Actual height is therefore shape1*shape2
+	   */ 
+	  void set_width_and_height(const std::vector<index_type>&shape, bool inner_is_last){
+		  m_width          = inner_is_last ? shape.back() : shape.back();
+		  index_type s     = std::accumulate(shape.begin(),shape.end(),(index_type)1,std::multiplies<index_type>());
+		  m_height         = s / m_width;
+	  }
+
 	public:
 	  /*
 	   * Member Access
@@ -87,35 +100,16 @@ class memory2d
 	  index_type pitch() const{return m_pitch;}
 
 	  /**
-	   * Set width and height of memory2d using a shape
-	   *
-	   * For 3D-shapes, we assume that the outermost dimension is the depth
-	   * Actual height is therefore shape1*shape2
-	   */ 
-	  void set_width_and_height(const std::vector<index_type>&shape){
-		  cuvAssert(shape.size()==2 || shape.size()==3);
-		  if(shape.size()==3){
-			  m_width   = shape[2];
-			  m_height  = shape[1] * shape[0];
-		  }
-		  if(shape.size()==2){
-			  m_width   = shape[1];
-			  m_height  = shape[0];
-		  }
-	  }
-
-
-	  /**
 	   * @brief set length of memory2d. 
 	   *
 	   * @param pitch   OUT the stride in bytes for each dimension
 	   * @param shape      IN the shape  in value_types
 	   *
 	   */
-	  void set_size(index_type& pitch, const std::vector<index_type>& shape) {
+	  void set_size(index_type& pitch, const std::vector<index_type>& shape, bool inner_is_last) {
 		  dealloc();
 		  m_is_view = false;
-		  set_width_and_height(shape);
+		  set_width_and_height(shape,inner_is_last);
 		  alloc();
 		  pitch = m_pitch;
 	  }
@@ -199,11 +193,11 @@ class memory2d
 	   *
 	   * WARNING: ptr should not be a pitched pointer!!!
 	   */
-	  void set_view(index_type& pitch, const std::vector<index_type>& shape, pointer_type ptr){ 
+	  void set_view(index_type& pitch, const std::vector<index_type>& shape, pointer_type ptr, bool inner_is_last){ 
 		  dealloc();
 		  m_ptr = ptr;
 		  m_is_view=true;
-		  set_width_and_height(shape);
+		  set_width_and_height(shape,inner_is_last);
 		  m_pitch = pitch = m_width*sizeof(value_type);
 	  }
 	  /**
@@ -211,11 +205,11 @@ class memory2d
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   */
-	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const linear_memory<value_type,memory_space_type,TPtr,index_type>& o){ 
+	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const linear_memory<value_type,memory_space_type,TPtr,index_type>& o, bool inner_is_last){ 
 		  dealloc();
 		  m_ptr=o.ptr() + ptr_offset;
 		  m_is_view=true;
-		  set_width_and_height(shape);
+		  set_width_and_height(shape, inner_is_last);
 		  m_pitch = pitch = m_width*sizeof(value_type);
 		  cuvAssert(o.memsize() >= m_pitch * m_height + sizeof(value_type) * ptr_offset);
 	  }
@@ -225,7 +219,7 @@ class memory2d
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   */
-	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const memory2d& o){ 
+	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const memory2d& o, bool inner_is_last){ 
 		  dealloc();
 		  
 		  if(ptr_offset != 0){
@@ -239,7 +233,7 @@ class memory2d
 			  m_ptr = o.ptr();
 		  }
 		  m_is_view=true;
-		  set_width_and_height(shape);
+		  set_width_and_height(shape,inner_is_last);
 		  cuvAssert(m_width*sizeof(value_type) <= o.pitch());
 		  pitch = m_pitch = o.pitch(); // keep pitch constant!
 		  cuvAssert(o.memsize() >= m_pitch * m_height + sizeof(value_type) * ptr_offset);
@@ -307,9 +301,9 @@ class memory2d
 	   */
 	  template<class OM, class OP>
 		  memory2d& 
-		  assign(index_type& pitch, const std::vector<index_type>& oshape, const linear_memory<value_type,OM,OP,index_type>& o){
+		  assign(index_type& pitch, const std::vector<index_type>& oshape, const linear_memory<value_type,OM,OP,index_type>& o, bool inner_is_last){
 			  dealloc();
-			  set_width_and_height(oshape);
+			  set_width_and_height(oshape,inner_is_last);
 			  alloc();
 			  m_allocator.copy2d(m_ptr,o.ptr(),m_pitch,m_width*sizeof(value_type),m_height,m_width,OM());
 			  pitch = m_pitch;
@@ -326,7 +320,7 @@ class memory2d
 	   */
 	  template<class OM, class OP>
 		  memory2d& 
-		  assign(index_type& pitch, const std::vector<index_type>& oshape, const memory2d<value_type,OM,OP,index_type>& o){
+		  assign(index_type& pitch, const std::vector<index_type>& oshape, const memory2d<value_type,OM,OP,index_type>& o, bool inner_is_last){
 			  this->operator=(o);
 			  pitch = m_pitch;
 			  return *this;
