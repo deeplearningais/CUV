@@ -80,6 +80,8 @@ def instantiate_memtype(memtype):
 	for s in reductions(tensor_types):
 		yield s
 
+	yield False
+
 
 def f7(seq):
     """ uniquify a list """
