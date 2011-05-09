@@ -13,10 +13,11 @@ include_directories(
         ${PYTHON_INCLUDE_PATH} 
         ${PYUBLAS_INCLUDE_DIR}
         )
-ADD_LIBRARY(cuv_python SHARED 
+
+FIND_PACKAGE(PythonLibs)
+PYTHON_ADD_MODULE(cuv_python SHARED 
         python_bindings.cpp
         export_tensor.cpp
-        #export_dense_matrix.cpp
         export_cuda_array.cpp
         export_dia_mat.cpp
         export_matrix_ops.cpp
@@ -61,8 +62,12 @@ IF( CUV_CIMG_BINDINGS )
 	TARGET_LINK_LIBRARIES(cuv_python X11 pthread ${PNG_LIBRARIES})
 ENDIF( CUV_CIMG_BINDINGS )
 
-install(TARGETS cuv_python
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib/static)
+#install(TARGETS cuv_python
+#        RUNTIME DESTINATION bin
+#        LIBRARY DESTINATION lib
+#        ARCHIVE DESTINATION lib/static)
+
+execute_process ( COMMAND python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+install(TARGETS cuv_python  DESTINATION ${PYTHON_SITE_PACKAGES}/cuv_python)
+install(FILES   __init__.py DESTINATION ${PYTHON_SITE_PACKAGES}/cuv_python)
 
