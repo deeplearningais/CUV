@@ -17,7 +17,7 @@ SET(CPACK_PACKAGE_VERSION_PATCH "1")
 SET(CPACK_SOURCE_IGNORE_FILES "${CPACK_SOURCE_IGNORE_FILES};cfg/config.h;${CMAKE_SOURCE_DIR}/.git;${CMAKE_SOURCE_DIR}/src/matrix_ops/spmv_kernel_inst.cuh;${CMAKE_SOURCE_DIR}/src/matrix_ops/spmv_kernel_inst.cuh-")
 SET(CPACK_PACKAGE_INSTALL_DIRECTORY "cuv")
 
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS    "libboost-dev (>= 1.42.0), libblas-dev" )
+SET(CPACK_DEBIAN_PACKAGE_DEPENDS    "libboost-dev (>= 1.40.0), libblas-dev" )
 SET(CPACK_DEBIAN_PACKAGE_SUGGESTS   "cimg-dev, python-dev, libboost-python-dev" )
 INCLUDE(CPack)
 
