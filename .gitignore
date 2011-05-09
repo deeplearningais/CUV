@@ -7,3 +7,5 @@ src/types_c.vim
 src/types_py.vim
 *.gch
 *.swp
+src/cuv/tensor_ops/instantiations
+*.pyc
