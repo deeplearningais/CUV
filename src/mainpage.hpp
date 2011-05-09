@@ -148,6 +148,13 @@
  * $ export PYTHONPATH=`pwd`/src      # only if you want python bindings
  * @endcode
  *
+ * On Debian/Ubuntu systems, you can skip the sudo make install step and instead do
+ *
+ * @code
+ * $ cpack -G DEB
+ * $ sudo dpkg -i cuv-VERSION.deb
+ * @endcode
+ *
  * @subsection docinst  Building the documentation
  *
  * @code
