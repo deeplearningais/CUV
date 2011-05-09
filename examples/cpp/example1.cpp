@@ -1,5 +1,4 @@
-#include <cuv/basics/tensor.hpp>
-#include <cuv/tensor_ops/tensor_ops.hpp>
+#include <cuv.hpp>
 using namespace cuv;
 
 int main(void){

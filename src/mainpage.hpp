@@ -129,7 +129,8 @@
  *                     # turn on/off optional libraries (CImg, ...)
  * $ make -j
  * $ ctest             # run tests to see if it went well
- * $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
+ * $ sudo make install
+ * $ export PYTHONPATH=`pwd`/src      # only if you want python bindings
  * @endcode
  *
  * Building a release version:
@@ -143,7 +144,8 @@
  *                     # turn on/off optional libraries (CImg, ...)
  * $ make -j
  * $ ctest             # run tests to see if it went well
- * $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
+ * $ sudo make install
+ * $ export PYTHONPATH=`pwd`/src      # only if you want python bindings
  * @endcode
  *
  * @subsection docinst  Building the documentation
@@ -162,8 +164,7 @@
  *
  * C++ Code:
  * @code
- * #include <cuv/basics/tensor.hpp>
- * #include <cuv/tensor_ops/tensor_ops.hpp>
+ * #include <cuv.hpp>
  *     using namespace cuv;
  * 
  *     int main(void){
@@ -209,8 +210,7 @@
  * C++-Code
  * @code
  *
- * #include <cuv/basics/tensor.hpp>
- * #include <cuv/matrix_ops/matrix_ops.hpp>
+ * #include <cuv.hpp>
  * using namespace cuv;
  * 
  * int main(void){
