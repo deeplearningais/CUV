@@ -4,7 +4,7 @@ PROJECT(CUV Fortran CXX C)
 SET(CMAKE_MODULE_PATH  ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules )
 
 EXECUTE_PROCESS(COMMAND "date" "+%Y%m%d%H%M" OUTPUT_VARIABLE DATESTR)
-string(REGEX REPLACE "(..)/(..)/..(..).*" "\\1/\\2/\\3" DATESTR ${DATESTR}) 
+string(REGEX REPLACE "^(....)(..)(..)(..)(..).*" "\\1\\2\\3\\4\\5" DATESTR ${DATESTR}) 
 
 
 INCLUDE(InstallRequiredSystemLibraries)
