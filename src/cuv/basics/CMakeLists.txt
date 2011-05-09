@@ -1,5 +1,5 @@
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} )
-CUDA_ADD_LIBRARY(cuv_basics STATIC
+CUDA_ADD_LIBRARY(cuv_basics SHARED
 	linear_memory.cu
 	cuda_array.cu
   )

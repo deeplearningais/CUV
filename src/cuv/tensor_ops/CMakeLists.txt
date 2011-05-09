@@ -6,7 +6,7 @@ IF(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/instantiations" )
 ENDIF(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/instantiations")
 
 FILE(GLOB TENSOR_OPS_INST "${CMAKE_CURRENT_SOURCE_DIR}/instantiations/*.cu")
-CUDA_ADD_LIBRARY(cuv_tensor_ops STATIC
+CUDA_ADD_LIBRARY(cuv_tensor_ops SHARED
 	${TENSOR_OPS_INST}
 	rprop.cu
   )

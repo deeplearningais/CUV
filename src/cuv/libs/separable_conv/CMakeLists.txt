@@ -1,6 +1,6 @@
 INCLUDE_DIRECTORIES( ${CUDA_SDK_INCLUDE_DIR}/common/inc )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} )
-CUDA_ADD_LIBRARY(cuv_separable_conv STATIC
+CUDA_ADD_LIBRARY(cuv_separable_conv SHARED
 	separable_convolution.cu
   )
 TARGET_LINK_LIBRARIES(cuv_separable_conv ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY})
@@ -9,4 +9,3 @@ install(TARGETS cuv_separable_conv
 	RUNTIME DESTINATION bin
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib/static)
-

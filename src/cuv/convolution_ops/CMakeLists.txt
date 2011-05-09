@@ -15,7 +15,7 @@ CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/tensor_ops )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/convert )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/tools )
 
-CUDA_ADD_LIBRARY(cuv_convolution_ops STATIC
+CUDA_ADD_LIBRARY(cuv_convolution_ops SHARED
 	convolution_ops.cu
   )
 
