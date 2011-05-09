@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import os
 
 class vec_t:
 	def __init__(self, v, m):
@@ -51,19 +52,31 @@ def instantiate_memtype(memtype):
 	tensor_types = [x for x in tensors(value_types, [memtype])]
 	scalar_types = "float,int".split(",")
 
+	# operators w/o arguments
 	for s in apply_0ary_functor(zip(tensor_types,[x.value_type() for x in tensor_types])):
 		yield s
+
+	yield False
 
 	# operators which have the same type before and after the operation
 	for s in apply_scalar_functor(zip(tensor_types, tensor_types, [x.value_type() for x in tensor_types])):
 		yield s
+
+	yield False
+
 	# boolean predicates
 	for s in apply_scalar_functor(zip([vec_t("unsigned char",memtype) for v in tensor_types], tensor_types, [x.value_type() for x in tensor_types])):
 		yield s
 
+	yield False
+
 	# operators where all operands have the same type
 	for s in apply_binary_functor(zip(tensor_types,tensor_types,tensor_types,[x.value_type() for x in tensor_types])):
 		yield s
+
+	yield False
+
+	# reductions
 	for s in reductions(tensor_types):
 		yield s
 
@@ -76,11 +89,31 @@ def f7(seq):
 
 if __name__ == "__main__":
 	hd_types    = "host_memory_space, dev_memory_space".split(",")
+	idx = 0
 	L = []
+	try:
+		os.mkdir("instantiations")
+	except OSError:
+		pass
 	for m in hd_types:
 		for s in instantiate_memtype(m):
-			L.append(s)
-	print "\n".join(f7(L))
+			if s:
+				L.append(s)
+				continue
+			with open("instantiations/inst%02d.cu"%idx, "w") as f:
+				f.write("""
+/**************************************************
+ This is an auto-generated file.
+ See instantiate.py to modify the content in here!
+ **************************************************/
+ #include "../tensor_ops.cuh"
+ namespace cuv{
+ """)
+				f.write("\n".join(f7(L)))
+				f.write("\n}\n")
+			idx += 1
+			L = []
+	#print "\n".join(f7(L))
 
 
 

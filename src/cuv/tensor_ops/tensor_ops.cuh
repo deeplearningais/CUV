@@ -470,11 +470,5 @@ arg_min(const tensor<__value_type, __memory_space_type>& v){
 	return thrust::distance(begin,elem);
 }
 
-/*
- * Template instantiations
- */
-
-#include "tensor_ops_inst.hxx"
-
 } // cuv
 
