@@ -73,13 +73,16 @@ void compute_clusters_kernel(const T* matrix, T* centers, const V* indices, cons
 	}
 }
 
-template<class V, class I>
-void compute_clusters_impl(tensor<V,dev_memory_space,column_major>& centers,
-		const tensor<V,dev_memory_space,column_major>& m,
+template<class V, class I, class M>
+void compute_clusters_impl(tensor<V,dev_memory_space,M>& centers,
+		const tensor<V,dev_memory_space,M>& m,
 		const cuv::tensor<I,dev_memory_space>& indices){
 
+		I height = cuv::IsSame<M,column_major>::Result::value ? m.shape()[0] : m.shape()[1];
+		I  width = cuv::IsSame<M,column_major>::Result::value ? m.shape()[1] : m.shape()[0];
+
 		static const int BLOCK_DIM = 16;
-		const int blocks_needed = ceil((float)m.shape()[0]/(BLOCK_DIM));
+		const int blocks_needed = ceil((float)height/(BLOCK_DIM));
 		int grid_x =0, grid_y=0;
 
 		// how to handle grid dimension constraint
@@ -98,53 +101,70 @@ void compute_clusters_impl(tensor<V,dev_memory_space,column_major>& centers,
 		/*unsigned int mem = sizeof(V) * BLOCK_DIM*(BLOCK_DIM+1) *num_clusters;//+1 to count clusters!*/
 		unsigned int mem = sizeof(V) * (BLOCK_DIM+1) *num_clusters;//+1 to count clusters!
 
-		compute_clusters_kernel<BLOCK_DIM,V,I><<<grid,threads,mem>>>(m.ptr(),centers.ptr(),indices.ptr(), m.shape()[1],m.shape()[0], num_clusters);
+		compute_clusters_kernel<BLOCK_DIM,V,I><<<grid,threads,mem>>>(m.ptr(),centers.ptr(),indices.ptr(), width, height, num_clusters);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
 
-template<class V, class I>
-void compute_clusters_impl(tensor<V,host_memory_space,column_major>& clusters,
-		const tensor<V,host_memory_space,column_major>& data,
+template<class V, class I, class M>
+void compute_clusters_impl(tensor<V,host_memory_space,M>& clusters,
+		const tensor<V,host_memory_space,M>& data,
 		const tensor<I,host_memory_space>& indices){
-	const int data_length=data.shape()[0];
-	int* points_in_cluster=new int[clusters.shape()[1]];
-	for (int i=0; i <clusters.shape()[1]; i++)
+
+	const I data_length = cuv::IsSame<M,column_major>::Result::value ? data.shape()[0] : data.shape()[1];
+	const I  data_num   = cuv::IsSame<M,column_major>::Result::value ? data.shape()[1] : data.shape()[0];
+
+	const I clusters_length = cuv::IsSame<M,column_major>::Result::value ? clusters.shape()[0] : clusters.shape()[1];
+	const I clusters_num    = cuv::IsSame<M,column_major>::Result::value ? clusters.shape()[1] : clusters.shape()[0];
+
+	unsigned int* points_in_cluster=new unsigned int[clusters_num];
+	for (int i=0; i <clusters_num; i++)
 		points_in_cluster[i]=0;
 	
 	// accumulate vectors:
 	V* clusters_ptr = clusters.ptr();
 	const V* data_ptr = data.ptr();
-	for(int i=0; i<data.shape()[1]; i++){
+	for(int i=0; i<data_num; i++){
 		const int this_cluster=indices[i];
-		for(int j=0; j<data.shape()[0]; j++){
+		for(int j=0; j<data_length; j++){
 			clusters_ptr[this_cluster*data_length+j]+=data_ptr[i*data_length+j];
 		}
 			points_in_cluster[this_cluster]++;
 	}
 
-	// devide by number of vectors in cluster
-
-	for (int i=0; i<clusters.shape()[1]; i++)
-		for(int j=0; j<clusters.shape()[0]; j++)
+	// divide by number of vectors in cluster
+	for (int i=0; i<clusters_num; i++)
+		for(int j=0; j<clusters_length; j++)
 			clusters_ptr[i*data_length+j]/=max(points_in_cluster[i],1);
+	delete[] points_in_cluster;
 }
 
 namespace cuv{
 namespace libs{
 namespace kmeans{
 
-template<class __data_matrix_type, class __index_vector_type>
-void compute_clusters(__data_matrix_type& clusters, const __data_matrix_type& data, const __index_vector_type& indices){
-        cuvAssert(clusters.shape().size()==2);
-        cuvAssert(data.shape().size()==2);
-        cuvAssert(indices.shape().size()==1);
-	cuvAssert(data.shape()[1]==indices.size());
-	cuvAssert(cuv::maximum(indices)<clusters.shape()[1]); // indices start with 0.
+template<class __data_value_type, class __memory_space_type, class __memory_layout_type>
+void compute_clusters(cuv::tensor<__data_value_type, __memory_space_type, __memory_layout_type>& clusters,
+		const cuv::tensor<__data_value_type, __memory_space_type, __memory_layout_type>& data,
+		const cuv::tensor<typename cuv::tensor<__data_value_type, __memory_space_type, __memory_layout_type>::index_type,__memory_space_type>& indices){
+        cuvAssert(clusters.ndim()==2);
+        cuvAssert(data.ndim()==2);
+        cuvAssert(indices.ndim()==1);
+	if(IsSame<__memory_layout_type,column_major>::Result::value){
+		cuvAssert(data.shape()[1]==indices.size());
+		cuvAssert(cuv::maximum(indices)<clusters.shape()[1]); // indices start with 0.
+	}else{
+		cuvAssert(data.shape()[0]==indices.size());
+		cuvAssert(cuv::maximum(indices)<clusters.shape()[0]); // indices start with 0.
+	}
 	compute_clusters_impl(clusters,data,indices);
 	}
 
-template void compute_clusters<tensor<float, host_memory_space, column_major>, tensor<unsigned int, host_memory_space> >(tensor<float, host_memory_space, column_major>&, const tensor<float, host_memory_space, column_major>&,const tensor<unsigned int, host_memory_space>&);
-template void compute_clusters<tensor<float, dev_memory_space, column_major>, tensor<unsigned int, dev_memory_space> >(tensor<float, dev_memory_space, column_major>&, const tensor<float, dev_memory_space, column_major>&,const tensor<unsigned int, dev_memory_space>&);
+typedef tensor<float, host_memory_space>::index_type __standard_index_type;
+template void compute_clusters<float,host_memory_space,row_major>(tensor<float, host_memory_space>&, const tensor<float, host_memory_space>&,const tensor<__standard_index_type, host_memory_space>&);
+template void compute_clusters<float, dev_memory_space,row_major>(tensor<float,  dev_memory_space>&, const tensor<float,  dev_memory_space>&,const tensor<__standard_index_type,  dev_memory_space>&);
+
+template void compute_clusters<float,host_memory_space,column_major>(tensor<float, host_memory_space, column_major>&, const tensor<float, host_memory_space, column_major>&,const tensor<__standard_index_type, host_memory_space>&);
+template void compute_clusters<float, dev_memory_space,column_major>(tensor<float,  dev_memory_space, column_major>&, const tensor<float,  dev_memory_space, column_major>&,const tensor<__standard_index_type,  dev_memory_space>&);
 
 } } }
