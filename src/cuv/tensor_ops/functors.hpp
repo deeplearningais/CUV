@@ -5,7 +5,7 @@
 #include <cmath>
 #include <cuv/tools/cuv_general.hpp>
 
-#define sgn(a) (copysign(1.f,a))
+#define sgn(a) (copysign(1.f,(float)a))
 
 namespace cuv {
 /**
@@ -161,10 +161,16 @@ struct tf_dtanh:ternary_functor<R,T,T,T>{  __device__  __host__      T operator(
 
 template<class R, class T=R>
 struct tf_sqsquared_loss:ternary_functor<R,T,T,T>{  __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
-       	T v1 = max((T)0,(T)1-x_hat-m); 
-       	T v2 = max((T)0,(T)  x_hat-m); 
-	//return x*v1*v1 + ((T)1-x)*v2*v2;
-	return -x*v1 + ((T)1-x)*v2; // this is the _DERVIATIVE_ of the loss function
+               //T v1 = max((T)0,(T)1-x_hat-m); 
+               //T v2 = max((T)0,(T)  x_hat-m); 
+	       //return x*v1*v1 + ((T)1-x)*v2*v2;
+	       //return -x*v1 + ((T)1-x)*v2; // this is the _DERVIATIVE_ of the loss function
+	uf_abs<T,T> absfunc;
+	T diff = x-x_hat;
+	//T absdiff = diff <0 ? -diff : diff;
+	T absdiff = absfunc(diff);
+	T v = max((T)0, (T) (absdiff-m));
+	return sgn(diff) * v;
 }};
 
 /// calculates the rectifying transfer function log(1+expf(a*x))/a using a numerically stable variant
