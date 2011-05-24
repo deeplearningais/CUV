@@ -247,7 +247,7 @@ namespace cuv
 				for(std::size_t i=0;i<D;i++){
 					if(eg.ranges_[i].finish()-eg.ranges_[i].start()<=1)
 						continue;
-					m_shape.push_back(eg.ranges_[i].finish());
+					m_shape.push_back(eg.ranges_[i].finish()-eg.ranges_[i].start());
 				}
 
 				index_type offset = o.index_of(eg);
