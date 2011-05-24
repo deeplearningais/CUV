@@ -343,6 +343,7 @@ namespace detail{
 			switch(bf){
 				case BF_AXPY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_axpy<V1,V2,V3>(p)); break;
 				case BF_XPBY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_xpby<V1,V2,V3>(p)); break;
+				case BF_SQSQLOSS: thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, make_bind3rd(tf_sqsquared_loss<V1>(),p)); break;
 						  /*case BF_XPBY:     cublasSaxpy(v.size(), param, (float*)w.ptr(), 1, (float*)v.ptr(), 1) ; break;*/
 				default: cuvAssert(false);
 			}
