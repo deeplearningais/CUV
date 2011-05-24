@@ -133,6 +133,7 @@ namespace cuv{
 	 *  With one scalar parameter a:
 	 *  @li BF_AXPY computes x = a * x + y
 	 *  @li BF_XPBY computes x += a * y
+	 *  @li BF_SQSQLOSS computes  x*max(0,1-y-a)^2 + (1-x)*max(0,y-a)^2
 	 *
 	 *  With two scalar parameters a and b:
 	 *  @li BF_AXPBY computes x = a * x + b * y
@@ -152,7 +153,8 @@ namespace cuv{
 	  // w/ param
 	  BF_AXPY,
 	  BF_XPBY,
-	  BF_AXPBY
+	  BF_AXPBY,
+	  BF_SQSQLOSS
   };
 
   /** 
