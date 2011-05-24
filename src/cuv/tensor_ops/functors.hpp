@@ -201,6 +201,24 @@ make_bind2nd(const __binary_functor& bf, const typename __binary_functor::second
 
 /// bind 2nd and 3rd arg of a ternary functor, yielding a unary functor
 template<class ternary_functor>
+struct bf_bind3rd:binary_functor<typename ternary_functor::result_type,typename ternary_functor::first_argument_type,typename ternary_functor::second_argument_type>{
+  typedef typename ternary_functor::result_type result_type;
+  typedef typename ternary_functor::first_argument_type first_argument_type;
+  typedef typename ternary_functor::second_argument_type second_argument_type;
+  typedef typename ternary_functor::third_argument_type third_argument_type;
+  const third_argument_type y;  /// the encapsulated constant 3rd argument of tf
+  const ternary_functor tf;     /// the encapsulated ternary functor
+  bf_bind3rd(const ternary_functor& _tf, const third_argument_type& _y):y(_y),tf(_tf){};
+  __device__ __host__
+  result_type operator()(const first_argument_type& s, const second_argument_type& t){ return tf(s,t,y); } /// calls tf with s, t and y
+};
+/// creates a unary functor from a ternary functor and two fixed arguments
+template<class __ternary_functor>
+bf_bind3rd<__ternary_functor>
+make_bind3rd(const __ternary_functor& tf, const typename __ternary_functor::third_argument_type& y){ return bf_bind3rd<__ternary_functor>(tf,y); }
+
+/// bind 2nd and 3rd arg of a ternary functor, yielding a unary functor
+template<class ternary_functor>
 struct uf_bind2nd3rd:unary_functor<typename ternary_functor::result_type,typename ternary_functor::first_argument_type>{
   typedef typename ternary_functor::result_type result_type;
   typedef typename ternary_functor::first_argument_type first_argument_type;
