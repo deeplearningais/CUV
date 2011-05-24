@@ -166,7 +166,7 @@ struct tf_sqsquared_loss:ternary_functor<R,T,T,T>{  __device__  __host__      T 
 	       //return x*v1*v1 + ((T)1-x)*v2*v2;
 	       //return -x*v1 + ((T)1-x)*v2; // this is the _DERVIATIVE_ of the loss function
 	uf_abs<T,T> absfunc;
-	T diff = x-x_hat;
+	T diff = x_hat-x;
 	//T absdiff = diff <0 ? -diff : diff;
 	T absdiff = absfunc(diff);
 	T v = max((T)0, (T) (absdiff-m));
