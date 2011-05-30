@@ -9,7 +9,7 @@ add_subdirectory(random)
 add_subdirectory(libs)
 
 
-CUDA_ADD_LIBRARY(cuv SHARED)
+CUDA_ADD_LIBRARY(cuv SHARED cuv.cpp)
 
 TARGET_LINK_LIBRARIES(cuv 
 	cuv_tools 
