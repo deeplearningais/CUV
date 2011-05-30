@@ -62,7 +62,7 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
  * @test
  * @brief create dense device matrix.
  */
-BOOST_AUTO_TEST_CASE( show_host_matrix )
+BOOST_AUTO_TEST_CASE( separable_convolution )
 {
 	tensor<float,host_memory_space,row_major> m;
 	typedef tensor<float,dev_memory_space,row_major, memory2d_tag> dev_t;
