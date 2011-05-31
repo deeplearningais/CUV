@@ -60,6 +60,9 @@ TARGET_LINK_LIBRARIES( test_conv_op_speed cuv_basics cuv_tools cuv_convert cuv_t
 ADD_EXECUTABLE( test_random random.cpp )
 TARGET_LINK_LIBRARIES( test_random cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random)
 
+ADD_EXECUTABLE( test_nlmeans lib_nlmean.cpp )
+TARGET_LINK_LIBRARIES( test_nlmeans cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_nlmeans)
+
 ADD_EXECUTABLE( test_random_speed random_speed.cpp )
 TARGET_LINK_LIBRARIES( test_random_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random)
 
