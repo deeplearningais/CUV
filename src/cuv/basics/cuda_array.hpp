@@ -60,6 +60,7 @@ namespace cuv
 		  typedef cuda_array<value_type,memory_space_type,index_type>  my_type;	        ///< Type of this object
 		  using base_type::m_width;
 		  using base_type::m_height;
+		  index_type m_depth;
 
 		private:
 		  cudaArray*         m_ptr;   ///< data storage in cudaArray
@@ -74,8 +75,9 @@ namespace cuv
 		   *
 		   * when type is float and dim=4 then the cudaArray is float4
 		   */
-		  cuda_array(const index_type& height, const index_type& width, const unsigned int dim=1)
+		  cuda_array(const index_type& height, const index_type& width, const index_type& depth=1, const unsigned int dim=1)
 			  :base_type(height, width)
+			  ,m_depth(depth)
 			  ,m_ptr(NULL)
 			  ,m_dim(dim)
 		  {
@@ -92,10 +94,19 @@ namespace cuv
 		   */
 		  template<class S>
 		  cuda_array(const tensor<value_type,S,row_major>& src, const unsigned int dim=1) ///< construct by copying a dense matrix
-		  : base_type(src.shape()[0], src.shape()[1]/dim)
+		  :base_type(0, 0)
 		  , m_ptr(NULL)
 		  , m_dim(dim)
 		  {
+			  if(src.ndim()==2){
+				  m_height = src.shape()[0];
+				  m_width  = src.shape()[1];
+				  m_depth  = 1;
+			  }else if(src.ndim()==3){
+				  m_depth  = src.shape()[0];
+				  m_height = src.shape()[1];
+				  m_width  = src.shape()[2];
+			  }
 			  alloc();
 			  assign(src);
 		  }
@@ -104,7 +115,8 @@ namespace cuv
 		  }
 		  inline index_type w()const{return m_width;}           ///< width 
 		  inline index_type h()const{return m_height;}          ///< height 
-		  inline index_type n()const{return m_width*m_height;}  ///< number of elements
+		  inline index_type d()const{return m_depth;}          ///< depth
+		  inline index_type n()const{return m_width*m_height*m_depth;}  ///< number of elements
 		  inline index_type dim()const{return m_dim; }          ///< size of a single array element (in units of sizeof(value_type))
 		  inline       cudaArray* ptr()      {return m_ptr;}    ///< the wrapped cudaArray
 		  inline const cudaArray* ptr() const{return m_ptr;}    ///< the wrapped cudaArray
@@ -118,6 +130,7 @@ namespace cuv
 		   * src.h() should be the same as this->h()
 		   */
 		  void assign(const tensor<__value_type,dev_memory_space,row_major>& src);  
+		  void assign(const tensor<__value_type,dev_memory_space,row_major,memory2d_tag>& src);  
 		  /**
 		   * @brief assign memory
 		   *
