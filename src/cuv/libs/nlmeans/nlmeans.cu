@@ -27,16 +27,20 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
 
+#include <cstdio>
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/tools/progressbar.hpp>
 #include <cuv/basics/cuda_array.hpp>
 #include <cuv/basics/tensor.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
+
 #include "nlmeans.hpp"
+#include "conv3d.hpp"
 
 namespace cuv{
 namespace libs{
 namespace nlmeans{
+#define PITCH(PTR,PITCH,Y,X) ((typeof(PTR))((char*)(PTR) + (PITCH)*(Y)) + (X))
 
 	texture<float,         2, cudaReadModeElementType> cuda_array_tex_float2d; 
 	texture<unsigned char, 2, cudaReadModeElementType> cuda_array_tex_uchar2d; 
@@ -61,45 +65,53 @@ namespace nlmeans{
 		static inline __device__ __host__ type& get(){ return cuda_array_tex_uchar3d; }; 
 	};
 
-	template<int search_radius, int filter_radius, class DstT, class SrcT, class I>
-	__global__ void get_weights3D(DstT* dst, const SrcT* src, I x, I y, I z, I w, I h, I d){
-		/*__shared__ SrcT cmp[2*filter_radius+1][2*filter_radius+1][2*filter_radius+1];*/
-		__shared__ SrcT dff[2*filter_radius+1][2*filter_radius+1][2*filter_radius+1];
-
-		dff[threadIdx.z][threadIdx.y][threadIdx.x] = 0;
-		/*cmp[threadIdx.z][threadIdx.y][threadIdx.x] =*/
-		/*        tex3D(texref<3,SrcT>::get(),*/
-		/*                x+threadIdx.x-filter_radius,*/
-		/*                y+threadIdx.y-filter_radius,*/
-		/*                z+threadIdx.z-filter_radius);*/
-		SrcT* cmptr=&dff[0][0][0];
-		unsigned int tid = threadIdx.x + threadIdx.y*blockDim.x + threadIdx.z*blockDim.x*blockDim.y;
-		for(int i=x-search_radius+blockIdx.x;i<=x+search_radius;i+=gridDim.x)
-			for(int j=y-search_radius+blockIdx.y;j<=y+search_radius;j+=gridDim.y)
-				for(int k=z-search_radius+blockIdx.z;k<=z+search_radius;k+=gridDim.z){
-					for(int f=-filter_radius+(int)threadIdx.z;f<=filter_radius;f+=blockDim.z){
-						if(threadIdx.x<2*filter_radius+1){
-							DstT v =  //cmp[threadIdx.z][threadIdx.y][threadIdx.x]
-								tex3D(texref<3,SrcT>::get(),
-										x+threadIdx.x-filter_radius,
-										y+threadIdx.y-filter_radius,
-										z+f);
-								- tex3D(texref<3,SrcT>::get(),
-										i+threadIdx.x-filter_radius,
-										j+threadIdx.y-filter_radius,
-										k+f);
-							dff[threadIdx.z][threadIdx.y][threadIdx.x] += - v*v;
-						}
-					}
-					for (unsigned int offset = blockDim.x*blockDim.y*blockDim.z / 2; offset > 0; offset >>=1) {
-					       __syncthreads();
-					       if (tid < offset)
-						       cmptr[offset] += cmptr[tid+offset];
-					}
-					if(tid==0)
-						dst[blockIdx.x+blockIdx.y*blockDim.y+blockIdx.z*blockDim.y*blockDim.z] = exp(cmptr[0]/(2.f*2.f))*src[x+y*w+z*w*h];
-					__syncthreads();
-				}
+	template<class V, class I1>
+	__device__ I1 clamp(const V& i, const I1&maxi){
+		return ((i<0)?0:((i>=maxi)?(maxi-1):i));
+	}
+	template<class DstT, class SrcT, class I, class DI>
+	__global__ 
+	void mult_offset(DstT* dst, const SrcT* weights, const SrcT* orig, DI x, DI y, DI z, I w, I h, I d, I spitch){
+		const int xstart = threadIdx.x +blockIdx.x*blockDim.x;
+		const int ystart = threadIdx.y +blockIdx.y*blockDim.y;
+		const int zstart = threadIdx.z +blockIdx.z*blockDim.z;
+		const int xoff   = blockDim.x*gridDim.x;
+		const int yoff   = blockDim.y*gridDim.y;
+		const int zoff   = blockDim.z*gridDim.z;
+		for(int i=zstart;i<d;i+=zoff)
+		for(int j=ystart;j<h;j+=yoff)
+		for(int k=xstart;k<w;k+=xoff){
+			dst[k+j*w+i*w*h] += weights[k+j*w+i*w*h] *
+				/**PITCH(orig,spitch,clamp(j+y,h)+clamp(i+z,d)*h, clamp(k+x,w) );*/
+				/*orig[clamp(j+y,h)*w + clamp(i+z,d)*w*h + clamp(k+x,w)];*/
+				tex3D(texref<3,SrcT>::get(), k+x, j+y, i+z);
+		}
+	}
+	template<class DstT, class SrcT, class I, class DI>
+	__global__ 
+	void get_sqdiff(DstT* diffs, const SrcT* src, DI x, DI y, DI z, I w, I h, I d, I spitch){
+		const int xstart = threadIdx.x +blockIdx.x*blockDim.x;
+		const int ystart = threadIdx.y +blockIdx.y*blockDim.y;
+		const int zstart = threadIdx.z +blockIdx.z*blockDim.z;
+		const int xoff   = blockDim.x*gridDim.x;
+		const int yoff   = blockDim.y*gridDim.y;
+		const int zoff   = blockDim.z*gridDim.z;
+		for(int i=zstart;i<d;i+=zoff)
+		for(int j=ystart;j<h;j+=yoff)
+		for(int k=xstart;k<w;k+=xoff){
+			 /*
+			  *DstT v = src[j*w+i*h*w+k]
+			  *        -src[clamp(j+y,h)*w+clamp(i+z,d)*w*h+ clamp(k+x,w)];
+			  */
+			/*
+			 *DstT v = *PITCH(src,spitch,j+i*h,k)
+			 *        -*PITCH(src,spitch,clamp(j+y,h)+clamp(i+z,d)*h, clamp(k+x,w) );
+			 */
+			DstT v =  tex3D(texref<3,SrcT>::get(), k, j, i)
+				- tex3D(texref<3,SrcT>::get(), k+x,j+y,i+z);
+				;
+			diffs[k+j*w+i*w*h] = v*v;
+		}
 	}
 	int divup(int a, int b)
 	{
@@ -110,9 +122,13 @@ namespace nlmeans{
 	}
 	
 	template<class T>
-	void filter_nlmean(cuv::tensor<T,dev_memory_space,row_major,memory2d_tag>& dst, const cuv::tensor<T,dev_memory_space,row_major,memory2d_tag>& src){
-		if(src.ndim()!=3)
-			cuvAssert(false);
+	void filter_nlmean(cuv::tensor<T,dev_memory_space,row_major>& dst, const cuv::tensor<T,dev_memory_space,row_major,memory2d_tag>& constsrc, int search_radius, int filter_radius, float sigma, float step_size, bool threeDim, bool verbose){
+		cuvAssert(!threeDim || constsrc.ndim()==3);
+
+		bool d3 = constsrc.ndim()==3;
+		unsigned int w = constsrc.shape()[d3?2:1], h=constsrc.shape()[d3?1:0], d=d3?constsrc.shape()[0]:1;
+		const tensor<float,dev_memory_space,row_major,memory2d_tag> src(indices[index_range(0,d)][index_range(0,h)][index_range(0,w)], constsrc);
+
 		if(!equal_shape(dst,src)){
 			dst = cuv::tensor<T,dev_memory_space>(src.shape());
 		}
@@ -122,35 +138,79 @@ namespace nlmeans{
 		typedef typename texref<3,T>::type textype;
 		textype& tex = texref<3,T>::get();
 		cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<T>();
-		cuvSafeCall(cudaBindTextureToArray(tex, ca.ptr(), channelDesc));
 		tex.normalized = false;
 		tex.filterMode = cudaFilterModePoint;
 		tex.addressMode[0] = cudaAddressModeClamp;
 		tex.addressMode[1] = cudaAddressModeClamp;
+		tex.addressMode[2] = cudaAddressModeClamp;
+		cuvSafeCall(cudaBindTextureToArray(tex, ca.ptr(), channelDesc));
 
-		static const int filter_radius = 7;
-		static const int search_radius = 5;
-		unsigned int w = src.shape()[2], h=src.shape()[1], d=src.shape()[0];
-		dim3 blocks(divup(filter_radius,4),divup(filter_radius,4), divup(filter_radius,4));
-		dim3 threads(16*divup(2*filter_radius+1,16),2*filter_radius+1,1);
-		ProgressBar pb(w*h*d);
-		cuv::tensor<float,dev_memory_space>weights(extents[blocks.z][blocks.y][blocks.x]);
-		for(unsigned int i=0;i<w;i++){
-			for(unsigned int j=0;j<h;j++){
-				for(unsigned int k=0;k<d;k++){
-					get_weights3D<search_radius, filter_radius><<<blocks,threads>>>(weights.ptr(),src.ptr(),i,j,k,w,h,d);
-					//cuvSafeCall(cudaThreadSynchronize());
-					dst(k,j,i) = (T) sum(weights);
-					pb.inc();
+
+		dim3 blocks(divup(w,8),divup(h,8),divup(d,8));
+		dim3 threads(16,16,1);
+
+		cuv::tensor<float,dev_memory_space> weights(src.shape());
+		cuv::tensor<float,dev_memory_space> diffs(src.shape());
+
+		cuv::tensor<float,dev_memory_space> tmp1(src.shape());
+		cuv::tensor<float,dev_memory_space> tmp2(src.shape());
+
+		// prepare kernel
+		cuv::tensor<float,host_memory_space> kernel(2*filter_radius+1);
+		kernel = 1.f/kernel.size();
+		setConvolutionKernel_horizontal(kernel);
+		setConvolutionKernel_vertical(kernel);
+		setConvolutionKernel_depth(kernel);
+
+		dst     = (T)0.f;
+		weights = (T)0.f;
+		typedef float step_type;
+		if(threeDim){
+			int fw=(2*search_radius+1)*1.f/step_size;
+			ProgressBar pb(fw*fw*fw);
+			for(step_type i=-search_radius;i<=search_radius;i+=step_size){
+				for(step_type j=-search_radius;j<=search_radius;j+=step_size){
+					for(step_type k=-search_radius;k<=search_radius;k+=step_size){
+						get_sqdiff<<<blocks,threads>>>(diffs.ptr(),src.ptr(),k,j,i,w,h,d,src.pitch());
+						convolutionRows(tmp1,diffs,filter_radius);
+						convolutionColumns(tmp2,tmp1,filter_radius);
+						convolutionDepth(tmp1,tmp2,filter_radius);
+						tmp1 /= -sigma*sigma;
+						cuv::apply_scalar_functor(tmp1, SF_EXP);
+						weights += tmp1;
+						mult_offset<<<blocks,threads>>>(dst.ptr(),tmp1.ptr(),src.ptr(),k,j,i,w,h,d,src.pitch());
+						if(verbose)
+							pb.inc();
+					}
 				}
 			}
-			
+			if(verbose)
+				pb.finish();
+		}else{
+			int fw=(2*search_radius+1)*1.f/step_size;
+			ProgressBar pb(fw*fw);
+			for(step_type k=-search_radius;k<=search_radius;k+=step_size){
+				for(step_type j=-search_radius;j<=search_radius;j+=step_size){
+					get_sqdiff<<<blocks,threads>>>(diffs.ptr(),src.ptr(),k,j,(step_type)0,w,h,d,src.pitch());
+					convolutionRows(tmp1,diffs,filter_radius);
+					convolutionColumns(tmp2,tmp1,filter_radius);
+					tmp2 /= -sigma*sigma;
+					cuv::apply_scalar_functor(tmp2, SF_EXP);
+					weights += tmp2;
+					mult_offset<<<blocks,threads>>>(dst.ptr(),tmp2.ptr(),src.ptr(),k,j,(step_type)0,w,h,d,src.pitch());
+					if(verbose)
+						pb.inc();
+				}
+			}
+			if(verbose)
+				pb.finish();
 		}
+		dst /= weights;
 		cuvSafeCall(cudaUnbindTexture(tex));
 	}
 
 	/*template void filter_nlmean(cuv::tensor<float,dev_memory_space>& dst, const cuv::tensor<float,dev_memory_space>& src);*/
-	template void filter_nlmean(cuv::tensor<float,dev_memory_space,row_major,memory2d_tag>& dst, const cuv::tensor<float,dev_memory_space,row_major,memory2d_tag>& src);
+	template void filter_nlmean(cuv::tensor<float,dev_memory_space,row_major>& dst, const cuv::tensor<float,dev_memory_space,row_major,memory2d_tag>& src, int,int,float,float,bool,bool);
 }
 }
 }

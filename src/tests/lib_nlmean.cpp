@@ -37,6 +37,8 @@
 #include <cuv/tools/timing.hpp>
 #include <cuv/tools/cuv_test.hpp>
 
+#include <cuv/libs/cimg/cuv_cimg.hpp>
+
 using namespace cuv;
 
 #define MEASURE_TIME(MSG, OPERATION, ITERS)     \
@@ -83,18 +85,36 @@ BOOST_AUTO_TEST_CASE( test_nlmeans )
 	FILE* pFile = fopen("/home/VI/staff/schulz/checkout/git/wurzel/data/L2_17aug-upsampled.dat","r");
 	unsigned int s = fread(mh.ptr(),sizeof(float),mh.size(),pFile);
 	fclose(pFile);
+
+#define LENA 0
+#if LENA
+	libs::cimg::load(mh,"src/tests/data/lena_color.jpg");
+	for(int i=0;i<mh.shape()[0];i++)
+	for(int j=0;j<mh.shape()[1];j++)
+	for(int k=0;k<mh.shape()[2];k++){
+		float f = 15.f*sqrt(-2*log(drand48()))*cos(2*M_PI*drand48());
+		mh(i,j,k) += f;
+	}
+	libs::cimg::show(mh,"filtered image");
+#endif
+
 	//cuvAssert(s==mh.memsize());
 	typedef tensor<float,dev_memory_space,row_major, memory2d_tag> dev_t;
-	//typedef tensor<float,dev_memory_space,row_major> dev_t;
-	dev_t md, md2;
+	typedef tensor<float,dev_memory_space,row_major> dev1d_t;
+	dev_t    md;
 	md  = mh;
-	md2 = md;
-	libs::nlmeans::filter_nlmean(md2,md);
-	mh = md2;
+	dev1d_t dst(mh.shape());
+#if LENA
+	libs::nlmeans::filter_nlmean(dst,md, 20, 5, 15.f, 0.25f, false, true);
+#else
+	libs::nlmeans::filter_nlmean(dst,md, 20, 3, 0.05f, 0.5f,  true, true);
+#endif
+	mh = dst;
 	pFile = fopen("nlmeanresult.dat","w");
 	fwrite(mh.ptr(), sizeof(float), mh.size(), pFile);
-	
-	
+#if LENA
+	libs::cimg::show(mh,"filtered image");
+#endif
 }
 
 BOOST_AUTO_TEST_SUITE_END()

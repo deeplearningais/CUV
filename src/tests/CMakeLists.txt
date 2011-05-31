@@ -31,7 +31,8 @@ ADD_EXECUTABLE( test_optimize optimize.cpp )
 TARGET_LINK_LIBRARIES( test_optimize cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random )
 
 ADD_EXECUTABLE( test_mat_op matrix_op.cpp )
-TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+#TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+TARGET_LINK_LIBRARIES( test_mat_op cuv ${CUDA_CUBLAS_LIBRARIES} )
 
 ADD_EXECUTABLE( test_dia_mat dia_mat.cpp )
 TARGET_LINK_LIBRARIES( test_dia_mat cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
@@ -60,9 +61,6 @@ TARGET_LINK_LIBRARIES( test_conv_op_speed cuv_basics cuv_tools cuv_convert cuv_t
 ADD_EXECUTABLE( test_random random.cpp )
 TARGET_LINK_LIBRARIES( test_random cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random)
 
-ADD_EXECUTABLE( test_nlmeans lib_nlmean.cpp )
-TARGET_LINK_LIBRARIES( test_nlmeans cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_nlmeans)
-
 ADD_EXECUTABLE( test_random_speed random_speed.cpp )
 TARGET_LINK_LIBRARIES( test_random_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random)
 
@@ -83,6 +81,9 @@ IF(CUV_CIMG_BINDINGS)
 
 	ADD_EXECUTABLE( test_lib_intimg lib_intimg.cpp )
 	TARGET_LINK_LIBRARIES( test_lib_intimg cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_intimg cuv_cimg cuv_matrix_ops X11 pthread ${PNG_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} )
+
+	ADD_EXECUTABLE( test_nlmeans lib_nlmean.cpp )
+	TARGET_LINK_LIBRARIES( test_nlmeans cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_nlmeans cuv_cimg cuv_matrix_ops X11 pthread ${PNG_LIBRARIES})
 
         FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
