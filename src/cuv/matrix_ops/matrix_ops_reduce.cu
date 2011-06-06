@@ -112,7 +112,7 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	unconst_value_type* values = (unconst_value_type*) sptr;
 	unsigned int* indices                  = (unsigned int*)(values + BLOCK_DIM*BLOCK_DIM);
 	const unsigned int tx = threadIdx.x; // blockIdx.x is always 0
-	const unsigned int by = blockIdx.y; //threadIdx.y is always 0, blockDim.y is always 1!
+	const unsigned int by = blockIdx.y + gridDim.y*blockIdx.z; //threadIdx.y is always 0, blockDim.y is always 1!
 	const unsigned int off = blockDim.x;
 	
 	values[tx] = init_value;
@@ -192,6 +192,10 @@ namespace reduce_impl {
 		cuvAssert(m.shape()[1] == v.size());
 		static const int BLOCK_DIM = 16;
 		dim3 grid(1, m.shape()[1]);
+		if(grid.y>=65535){
+			grid.y = ceil(sqrt(m.shape()[1]));
+			grid.z = ceil((float)m.shape()[1]/grid.y);
+		}
 		dim3 threads(BLOCK_DIM*BLOCK_DIM,1);
 
 		typedef __value_type matval_t;
@@ -338,7 +342,7 @@ void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const tensor<__va
 		//matrix is row major
                 //create column major view and call reduce_to_row for column major
 		// downstream from here everything is column major
-		const tensor<__value_type2,__memory_space_type,__memory_layout_type> cm_view(indices[index_range(0,m.shape()[1])][index_range(0,m.shape()[0])],m.ptr());
+		const tensor<__value_type2,__memory_space_type,column_major> cm_view(indices[index_range(0,m.shape()[1])][index_range(0,m.shape()[0])],m.ptr());
 		reduce_impl::reduce_switch<0>(v,cm_view,rf,factNew,factOld); // 0 means zeroth dimension is summed out - meaning summing over the columns in a column major matrix.
 	}
 	else {
