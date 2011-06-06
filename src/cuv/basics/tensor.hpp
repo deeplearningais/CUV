@@ -235,9 +235,9 @@ namespace cuv
 			 */
 			template<class P, class OM, class OL, class OA>
 			const_tensor(const const_tensor<__value_type,OM,OL,P,OA>& o)
-			:m_shape(o.shape()),
-			 m_data(o.data())
+			:m_shape(o.shape())
 			{
+				m_data.assign(m_pitch,o.shape(),o.data(), inner_is_last());
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
 					std::reverse(m_shape.begin(),m_shape.end());
 			}
