@@ -32,6 +32,7 @@
 #include <boost/test/floating_point_comparison.hpp>
 
 #include <cuv/tools/cuv_general.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/libs/nlmeans/nlmeans.hpp>
 #include <cuv/tools/timing.hpp>
@@ -81,21 +82,30 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
  */
 BOOST_AUTO_TEST_CASE( test_nlmeans )
 {
-	tensor<float,host_memory_space,row_major> mh(extents[256][256][256]);
-	FILE* pFile = fopen("/home/VI/staff/schulz/checkout/git/wurzel/data/L2_17aug-upsampled.dat","r");
-	unsigned int s = fread(mh.ptr(),sizeof(float),mh.size(),pFile);
-	fclose(pFile);
+	tensor<float,host_memory_space,row_major> mh(extents[410][192][192]), mhorig;
 
 #define LENA 0
-#if LENA
+#if !LENA
+	FILE* pFile = fopen("/home/VI/staff/schulz/checkout/git/wurzel/data/GersteLA_192x192x410_normal-upsampled.dat","r");
+	unsigned int s = fread(mh.ptr(),sizeof(float),mh.size(),pFile);
+	fclose(pFile);
+	mh/=425000.f;
+#else
 	libs::cimg::load(mh,"src/tests/data/lena_color.jpg");
+	//libs::cimg::load(mh,"src/tests/data/colored_square.jpg");
 	for(int i=0;i<mh.shape()[0];i++)
 	for(int j=0;j<mh.shape()[1];j++)
 	for(int k=0;k<mh.shape()[2];k++){
 		float f = 15.f*sqrt(-2*log(drand48()))*cos(2*M_PI*drand48());
 		mh(i,j,k) += f;
 	}
+	//tensor<float,host_memory_space,row_major> mh2(indices[0][index_range(0,300)][index_range(0,400)], mh), mh3;
+	//mh3 = mh2;
+	//mh  = mh3;
+
 	libs::cimg::show(mh,"filtered image");
+	//mh.reshape(extents[300][1][400]);
+	mhorig = mh;
 #endif
 
 	//cuvAssert(s==mh.memsize());
@@ -105,15 +115,30 @@ BOOST_AUTO_TEST_CASE( test_nlmeans )
 	md  = mh;
 	dev1d_t dst(mh.shape());
 #if LENA
-	libs::nlmeans::filter_nlmean(dst,md, 20, 5, 15.f, 0.25f, false, true);
+	cuv::apply_scalar_functor(mh,cuv::SF_MAX,0.f);
+	cuv::apply_scalar_functor(mh,cuv::SF_MIN,255.f);
+	libs::cimg::save(mh,"noisedlena.png");
+	//libs::nlmeans::filter_nlmean(dst,md, 20, 5, 15.f, 0.25f, false, true);
+	//filter_nlmean(tensor dst, const tensor src, search_radius, filter_radius, sigma, dist_sigma, step_size, bool threeDim, bool verbose){
+	MEASURE_TIME(dev, libs::nlmeans::filter_nlmean(dst,md, 50, 6,  15.00f, -1.f,  1.0f, false, false), 1);
+	//dst.reshape(extents[300][400]);
+	
 #else
-	libs::nlmeans::filter_nlmean(dst,md, 20, 3, 0.05f, 0.5f,  true, true);
+	libs::nlmeans::filter_nlmean(dst, md,  50, 2, 0.02f, -1.f,  1.0f,  true, true);
 #endif
 	mh = dst;
+#if !LENA
 	pFile = fopen("nlmeanresult.dat","w");
 	fwrite(mh.ptr(), sizeof(float), mh.size(), pFile);
-#if LENA
+#else
+	//libs::cimg::show(tensor<float,host_memory_space,row_major>(indices[0][index_range(0,400)][index_range(0,400)], mh), "channel0");
+	//libs::cimg::show(tensor<float,host_memory_space,row_major>(indices[1][index_range(0,400)][index_range(0,400)], mh), "channel1");
+	//libs::cimg::show(tensor<float,host_memory_space,row_major>(indices[2][index_range(0,400)][index_range(0,400)], mh), "channel2");
 	libs::cimg::show(mh,"filtered image");
+	libs::cimg::show(mh-mhorig,"difference");
+	cuv::apply_scalar_functor(mh,cuv::SF_MAX,0.f);
+	cuv::apply_scalar_functor(mh,cuv::SF_MIN,255.f);
+	libs::cimg::save(mh,"filteredlena2.png");
 #endif
 }
 
