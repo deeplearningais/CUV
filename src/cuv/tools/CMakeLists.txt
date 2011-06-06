@@ -3,6 +3,7 @@ CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} )
 CUDA_ADD_LIBRARY(cuv_tools SHARED
 	cuv_general.cu
 	device_tools.cpp
+	progressbar.cpp
   )
 TARGET_LINK_LIBRARIES(cuv_tools ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY})
 
