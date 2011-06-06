@@ -28,8 +28,8 @@ namespace cuv{
 		/*template<int KERNEL_RADIUS, class SrcT, class DstT, class BinFuncConv>*/
 		template<int KERNEL_RADIUS, class SrcT, class DstT>
 		__global__ void convolutionRowGPU(
-				SrcT *d_Dst,
-				const DstT *d_Src,
+				DstT *d_Dst,
+				const SrcT *d_Src,
 				int imageW,
 				int imageH,
 				int dpitch,
@@ -159,7 +159,7 @@ namespace cuv{
 			}else if(dir==1){
 				dim3 blocks(iDivUp(dw , COLUMNS_BLOCKDIM_X), iDivUp(dh , (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y)));
 				dim3 threads(COLUMNS_BLOCKDIM_X, COLUMNS_BLOCKDIM_Y);
-				convolutionColumnGPU<radius><<<blocks, threads>>>( (dst_vec_t) dst.ptr(), (src_vec_t) src.ptr(), dh, dw, dst.pitch(), src.pitch());
+				convolutionColumnGPU<radius><<<blocks, threads>>>( (dst_vec_t) dst.ptr(), (src_vec_t) src.ptr(), dw, dh, dst.pitch(), src.pitch());
 				/*convolutionColumnGPU<radius><<<blocks, threads>>>( (dst_vec_t) dst.ptr(), (src_vec_t) src.ptr(), dh, dw, dst.pitch(), src.pitch(),*/
 						/*make_bf_vd_vd<channels,1>(bf_multiplies<DstV,SrcV,float>()));*/
 			}
