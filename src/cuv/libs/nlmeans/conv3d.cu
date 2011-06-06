@@ -18,133 +18,140 @@
 namespace cuv{
 	namespace libs{
 		namespace nlmeans{
-
-
-			////////////////////////////////////////////////////////////////////////////////
-			// Convolution kernel storage
-			////////////////////////////////////////////////////////////////////////////////
-			__constant__ float c_Kernel_h[100];
-			__constant__ float c_Kernel_v[100];
-			__constant__ float c_Kernel_d[100];
-
-			void setConvolutionKernel_horizontal(const cuv::tensor<float,host_memory_space>&src){
-				cudaMemcpyToSymbol(c_Kernel_h, src.ptr(), src.size() * sizeof(float));
-			}
-			void setConvolutionKernel_vertical(const cuv::tensor<float,host_memory_space>&src){
-				cudaMemcpyToSymbol(c_Kernel_v, src.ptr(), src.size() * sizeof(float));
-			}
-			void setConvolutionKernel_depth(const cuv::tensor<float,host_memory_space>&src){
-				cudaMemcpyToSymbol(c_Kernel_d, src.ptr(), src.size() * sizeof(float));
+			inline unsigned int divup(unsigned int a, unsigned int b)
+			{
+				if (a % b)  /* does a divide b leaving a remainder? */
+					return a / b + 1; /* add in additional block */
+				else
+					return a / b; /* divides cleanly */
 			}
 
+
+#define PITCH(PTR,P,Y,X) ((typeof(PTR))((char*)PTR + ((size_t)P)*((size_t)Y)) + ((size_t)X))
+#define MAX_KERNEL_RADIUS 8
+#define      MAX_KERNEL_W (2 * MAX_KERNEL_RADIUS + 1)
 			////////////////////////////////////////////////////////////////////////////////
 			// Constants
 			////////////////////////////////////////////////////////////////////////////////
-#define   ROWS_BLOCKDIM_X 16
-#define   ROWS_BLOCKDIM_Y 16
-#define   ROWS_RESULT_STEPS 8
-#define   ROWS_HALO_STEPS 3
-#define   COLUMNS_BLOCKDIM_X 16
-#define   COLUMNS_BLOCKDIM_Y 16
-#define   COLUMNS_RESULT_STEPS 8
-#define   COLUMNS_HALO_STEPS 3
+#if 1
+#  define   ROWS_BLOCKDIM_X 16
+#  define   ROWS_BLOCKDIM_Y 16
+#  define   ROWS_RESULT_STEPS 8
+#  define   ROWS_HALO_STEPS 3
+#else
+#  define   ROWS_BLOCKDIM_X 16
+#  define   ROWS_BLOCKDIM_Y 4
+#  define   ROWS_RESULT_STEPS 8
+#  define   ROWS_HALO_STEPS 1
+#endif
+
+#if 0
+// original SDK
+#  define   COLUMNS_BLOCKDIM_X 16
+#  define   COLUMNS_BLOCKDIM_Y 8
+#  define   COLUMNS_RESULT_STEPS 8
+#  define   COLUMNS_HALO_STEPS 1
+#else
+#  define   COLUMNS_BLOCKDIM_X 16
+#  define   COLUMNS_BLOCKDIM_Y 16
+#  define   COLUMNS_RESULT_STEPS 8
+#  define   COLUMNS_HALO_STEPS 3
+#endif
+
 #define   DEPTH_BLOCKDIM_Y 16
-#define   DEPTH_BLOCKDIM_Z 16
+#define   DEPTH_BLOCKDIM_X 16
 #define   DEPTH_RESULT_STEPS 4
 #define   DEPTH_HALO_STEPS 3
+			////////////////////////////////////////////////////////////////////////////////
+			// Convolution kernel storage
+			////////////////////////////////////////////////////////////////////////////////
+			__constant__ float c_Kernel_h[MAX_KERNEL_W];
+			__constant__ float c_Kernel_v[MAX_KERNEL_W];
+			__constant__ float c_Kernel_d[MAX_KERNEL_W];
+
+			void setConvolutionKernel_horizontal(const cuv::tensor<float,host_memory_space>&src){
+				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_h, src.ptr(), src.size() * sizeof(float)));
+			}
+			void setConvolutionKernel_vertical(const cuv::tensor<float,host_memory_space>&src){
+				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_v, src.ptr(), src.size() * sizeof(float)));
+			}
+			void setConvolutionKernel_depth(const cuv::tensor<float,host_memory_space>&src){
+				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_d, src.ptr(), src.size() * sizeof(float)));
+			}
+
 
 
 
 			////////////////////////////////////////////////////////////////////////////////
 			// Row convolution filter
 			////////////////////////////////////////////////////////////////////////////////
-			__global__ void convolutionRowsKernel(
-					float *d_Dst,
-					const float *d_Src,
-					int imageW,
-					int imageH,
-					int imageD,
-					int kernel_radius
-					){
-				__shared__ float s_Data[ROWS_BLOCKDIM_Y]
-					[(ROWS_RESULT_STEPS + 2 * ROWS_HALO_STEPS) * ROWS_BLOCKDIM_X];
+		template<class SrcT, class DstT>
+		__global__ void convolutionRowGPU(
+				DstT *d_Dst,
+				const SrcT *d_Src,
+				int imageW,
+				int imageH,
+				int dpitch,
+				int spitch,
+				int KERNEL_RADIUS
+				){
+			__shared__ SrcT s_Data[ROWS_BLOCKDIM_Y][(ROWS_RESULT_STEPS + 2 * ROWS_HALO_STEPS) * ROWS_BLOCKDIM_X];
 
-				//Offset to the left halo edge
-				int n_blocks_per_row = imageW/(ROWS_RESULT_STEPS * ROWS_BLOCKDIM_X);
-				int basez = floor(float(blockIdx.x)/n_blocks_per_row);
+			//Offset to the left halo edge
+			const int baseX = (blockIdx.x * ROWS_RESULT_STEPS - ROWS_HALO_STEPS) * ROWS_BLOCKDIM_X + threadIdx.x;
+			const int baseY = blockIdx.y * ROWS_BLOCKDIM_Y + threadIdx.y;
+			if(baseY>=imageH)
+				return;
 
-				int blockx = blockIdx.x - basez*n_blocks_per_row;
-				// const int baseX = (blockIdx.x * ROWS_RESULT_STEPS - ROWS_HALO_STEPS) *
-				// ROWS_BLOCKDIM_X + threadIdx.x;
-				const int baseX = (blockx * ROWS_RESULT_STEPS - ROWS_HALO_STEPS) *
-					ROWS_BLOCKDIM_X + threadIdx.x;
-				const int baseY = blockIdx.y * ROWS_BLOCKDIM_Y + threadIdx.y;
+			d_Src = PITCH(d_Src, spitch, baseY, baseX);
+			d_Dst = PITCH(d_Dst, dpitch, baseY, baseX);
 
-				d_Src += basez*imageW*imageH + baseY * imageW + baseX;
-				d_Dst += basez*imageW*imageH + baseY * imageW + baseX;
-
-				//Main data
+			//Load main data
 #pragma unroll
-				for(int i = ROWS_HALO_STEPS; i < ROWS_HALO_STEPS + ROWS_RESULT_STEPS; i++)
-					s_Data[threadIdx.y]
-						[threadIdx.x + i * ROWS_BLOCKDIM_X]
-						= d_Src[i * ROWS_BLOCKDIM_X];
+		       for(int i = ROWS_HALO_STEPS; i < ROWS_HALO_STEPS + ROWS_RESULT_STEPS; i++)
+			       s_Data[threadIdx.y][threadIdx.x + i * ROWS_BLOCKDIM_X] = (imageW - baseX > i * ROWS_BLOCKDIM_X)  ? d_Src[i * ROWS_BLOCKDIM_X] : 0;
 
-				//Left halo
-				for(int i = 0; i < ROWS_HALO_STEPS; i++){
-					s_Data[threadIdx.y][threadIdx.x + i * ROWS_BLOCKDIM_X] =
-						(baseX >= -i * ROWS_BLOCKDIM_X ) ? d_Src[i * ROWS_BLOCKDIM_X] : 0;
+			//Load left halo
+#pragma unroll
+		       for(int i = 0; i < ROWS_HALO_STEPS; i++)
+			       s_Data[threadIdx.y][threadIdx.x + i * ROWS_BLOCKDIM_X] = (baseX >= -i * ROWS_BLOCKDIM_X ) ? d_Src[i * ROWS_BLOCKDIM_X] : 0;
+
+			//Load right halo
+#pragma unroll
+		       for(int i = ROWS_HALO_STEPS + ROWS_RESULT_STEPS; i < ROWS_HALO_STEPS + ROWS_RESULT_STEPS + ROWS_HALO_STEPS; i++)
+			       s_Data[threadIdx.y][threadIdx.x + i * ROWS_BLOCKDIM_X] = (imageW - baseX > i * ROWS_BLOCKDIM_X) ? d_Src[i * ROWS_BLOCKDIM_X] : 0;
+
+			//Compute and store results
+			__syncthreads();
+
+/*#pragma unroll*/
+			for(int i = ROWS_HALO_STEPS; i < ROWS_HALO_STEPS + ROWS_RESULT_STEPS; i++){
+				float sum = 0;
+
+/*#pragma unroll*/
+				for(int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++){
+					sum += s_Data[threadIdx.y][threadIdx.x + i * ROWS_BLOCKDIM_X + j] * c_Kernel_h[KERNEL_RADIUS - j];
 				}
 
-				//Right halo
-				for(int i = ROWS_HALO_STEPS + ROWS_RESULT_STEPS;
-						i < ROWS_HALO_STEPS + ROWS_RESULT_STEPS + ROWS_HALO_STEPS; i++){
-					s_Data[threadIdx.y][threadIdx.x + i * ROWS_BLOCKDIM_X] =
-						(imageW - baseX > i * ROWS_BLOCKDIM_X) ? d_Src[i * ROWS_BLOCKDIM_X] : 0;
-				}
-
-				//Compute and store results
-				__syncthreads();
-				// #pragma unroll
-				for(int i = ROWS_HALO_STEPS; i < ROWS_HALO_STEPS + ROWS_RESULT_STEPS; i++){
-					float sum = 0;
-
-#pragma unroll
-					for(int j = -kernel_radius; j <= kernel_radius; j++)
-						sum += c_Kernel_h[kernel_radius - j] *
-							s_Data    [threadIdx.y]
-							[threadIdx.x + i * ROWS_BLOCKDIM_X + j];
+				if(imageW - baseX > i * ROWS_BLOCKDIM_X)
 					d_Dst[i * ROWS_BLOCKDIM_X] = sum;
-				}
 			}
-
+		}
 			void convolutionRows(
-					cuv::tensor<float,dev_memory_space> &d_Dst,
-					const cuv::tensor<float,dev_memory_space> &d_Src,
+					cuv::tensor<float,dev_memory_space> &dst,
+					const cuv::tensor<float,dev_memory_space> &src,
 					int kernel_radius
 					){
-				int imageW = d_Src.shape()[2];
-				int imageH = d_Src.shape()[1];
-				int imageD = d_Src.shape()[0];
-				cuvAssert( ROWS_BLOCKDIM_X * ROWS_HALO_STEPS >= kernel_radius );
-				//There is a rational division of the image into blocks
-				cuvAssert( imageW % (ROWS_RESULT_STEPS * ROWS_BLOCKDIM_X) == 0 );
-				cuvAssert( imageH % ROWS_BLOCKDIM_Y == 0 );
-
-				dim3 blocks(imageD*(imageW / (ROWS_RESULT_STEPS * ROWS_BLOCKDIM_X)),
-						imageH / ROWS_BLOCKDIM_Y);
+				cuvAssert(equal_shape(dst,src));
+				cuvAssert(kernel_radius <= MAX_KERNEL_RADIUS);
+				int dw = src.shape()[2];
+				int dh = src.shape()[1];
+				int dd = src.shape()[0];
+				dim3 blocks(divup(dw , (ROWS_RESULT_STEPS * ROWS_BLOCKDIM_X)), divup(dh*dd , ROWS_BLOCKDIM_Y));
 				dim3 threads(ROWS_BLOCKDIM_X, ROWS_BLOCKDIM_Y);
-				convolutionRowsKernel<<<blocks, threads>>>(
-						// &d_Dst[i*imageH*imageW],
-						// &d_Src[i*imageH*imageW],
-						d_Dst.ptr(),
-						d_Src.ptr(),
-						imageW,
-						imageH,
-						imageD,
-						kernel_radius
-						);
+				convolutionRowGPU<<<blocks, threads>>>(  dst.ptr(),  src.ptr(), dw, dh*dd,dst.pitch(),src.pitch(),kernel_radius);
 				cuvSafeCall(cudaThreadSynchronize());
+				safeThreadSync();
 			}
 
 
@@ -157,6 +164,7 @@ namespace cuv{
 					const float *d_Src,
 					int imageW,
 					int imageH,
+					int imageD,
 					int pitch,
 					int kernel_radius
 					){
@@ -169,13 +177,16 @@ namespace cuv{
 				//Offset to the upper halo edge
 				const int baseX = blockIdx.x * COLUMNS_BLOCKDIM_X + threadIdx.x;
 				const int baseY = (blocky * COLUMNS_RESULT_STEPS - COLUMNS_HALO_STEPS) * COLUMNS_BLOCKDIM_Y + threadIdx.y;
+				if(basez<=imageD) return;
+				if(baseX<=imageW) return;
+				if(baseY<=imageH) return;
 				d_Src += basez*imageH*imageW + baseY * imageH + baseX;
 				d_Dst += basez*imageH*imageW + baseY * imageH + baseX;
 
 				//Main data
 #pragma unroll
 				for(int i = COLUMNS_HALO_STEPS; i < COLUMNS_HALO_STEPS + COLUMNS_RESULT_STEPS; i++)
-					s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y] = d_Src[i * COLUMNS_BLOCKDIM_Y * pitch];
+					s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y] =(imageH-baseY > i * COLUMNS_BLOCKDIM_Y) ? d_Src[i * COLUMNS_BLOCKDIM_Y * pitch] : 0;
 
 				//Upper halo
 				for(int i = 0; i < COLUMNS_HALO_STEPS; i++)
@@ -196,7 +207,8 @@ namespace cuv{
 					for(int j = -kernel_radius; j <= kernel_radius; j++)
 						sum += c_Kernel_v[kernel_radius - j] * s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y + j];
 
-					d_Dst[i * COLUMNS_BLOCKDIM_Y * pitch] = sum;
+					if(imageH-baseY > i * COLUMNS_BLOCKDIM_Y)
+						d_Dst[i * COLUMNS_BLOCKDIM_Y * pitch] = sum;
 				}
 			}
 
@@ -210,8 +222,8 @@ namespace cuv{
 				int imageH = d_Src.shape()[1];
 				int imageD = d_Src.shape()[0];
 				cuvAssert( COLUMNS_BLOCKDIM_Y * COLUMNS_HALO_STEPS >= kernel_radius );
-				cuvAssert( imageW % COLUMNS_BLOCKDIM_X == 0 );
-				cuvAssert( imageH % (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y) == 0 );
+				/*cuvAssert( imageW % COLUMNS_BLOCKDIM_X == 0 );*/
+				/*cuvAssert( imageH % (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y) == 0 );*/
 
 				dim3 blocks(imageW / COLUMNS_BLOCKDIM_X, imageD * imageH / (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y));
 				dim3 threads(COLUMNS_BLOCKDIM_X, COLUMNS_BLOCKDIM_Y);
@@ -221,104 +233,80 @@ namespace cuv{
 						d_Src.ptr(),
 						imageW,
 						imageH,
+						imageD,
 						imageW,
 						kernel_radius
 						);
 				cuvSafeCall(cudaThreadSynchronize());
 			}
 
-			////////////////////////////////////////////////////////////////////////////////
-			// Depth convolution filter - Really naive implementation
-			////////////////////////////////////////////////////////////////////////////////
-			__global__ void convolutionDepthKernel(
-					float *d_Dst,
-					const float *d_Src,
-					int imageW,
-					int imageH,
-					int imageD,
-					int kernel_radius
-					){
-				__shared__ float s_Data[DEPTH_BLOCKDIM_Y]
-					[(DEPTH_RESULT_STEPS + 2 * DEPTH_HALO_STEPS) * DEPTH_BLOCKDIM_Z];
+		template<class SrcT, class DstT>
+		__global__ void convolutionDepthGPU(
+				DstT *d_Dst,
+				const SrcT *d_Src,
+				int imageW,
+				int imageH,
+				size_t dpitch,
+				size_t spitch,
+				int KERNEL_RADIUS
+				){
+			__shared__ float s_Data[COLUMNS_BLOCKDIM_X][(COLUMNS_RESULT_STEPS + 2 * COLUMNS_HALO_STEPS) * COLUMNS_BLOCKDIM_Y + 1];
 
-				//Offset to the left halo edge
-				int n_blocks_per_depth = imageD / (DEPTH_RESULT_STEPS * DEPTH_BLOCKDIM_Z);
-				int basex = floor(float(blockIdx.x)/n_blocks_per_depth);
+			//Offset to the upper halo edge
+			const int baseX =  blockIdx.x * COLUMNS_BLOCKDIM_X + threadIdx.x;
+			const int baseY = (blockIdx.y * COLUMNS_RESULT_STEPS - COLUMNS_HALO_STEPS) * COLUMNS_BLOCKDIM_Y + threadIdx.y;
+			if(baseX>=imageW)
+			       return;
+			d_Src = PITCH(d_Src, spitch, baseY, baseX);
+			d_Dst = PITCH(d_Dst, dpitch, baseY, baseX);
 
-				int blockz = blockIdx.x - basex*n_blocks_per_depth;
-
-				const int baseZ = (blockz * DEPTH_RESULT_STEPS - DEPTH_HALO_STEPS)*DEPTH_BLOCKDIM_Z +
-					threadIdx.x;
-				const int baseY = blockIdx.y * DEPTH_BLOCKDIM_Y + threadIdx.y;
-
-				//Put the pointers to the beginning of the data
-				d_Src += baseZ * imageW * imageH + baseY * imageW + basex;
-				d_Dst += baseZ * imageW * imageH + baseY * imageW + basex;
-
-				// //Main data
+			//Main data
 #pragma unroll
-				for(int i = DEPTH_HALO_STEPS; i < DEPTH_HALO_STEPS + DEPTH_RESULT_STEPS; i++)
-					s_Data[threadIdx.y]
-						[threadIdx.x + i * DEPTH_BLOCKDIM_Z]
-						= d_Src[i * DEPTH_BLOCKDIM_Z * imageH * imageW];
+			for(int i = COLUMNS_HALO_STEPS; i < COLUMNS_HALO_STEPS + COLUMNS_RESULT_STEPS; i++)
+				s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y] = (imageH-baseY > i * COLUMNS_BLOCKDIM_Y) ? *PITCH(d_Src, spitch, i*COLUMNS_BLOCKDIM_Y,0) : 0;
 
-				//Left halo
-				for(int i = 0; i < DEPTH_HALO_STEPS; i++){
-					s_Data[threadIdx.y][threadIdx.x + i * DEPTH_BLOCKDIM_Z] =
-						(baseZ >= -i * DEPTH_BLOCKDIM_Z ) ?
-						d_Src[i * DEPTH_BLOCKDIM_Z * imageH * imageW] : 0;
-				}
-
-				// Right halo
-				for(int i = DEPTH_HALO_STEPS + DEPTH_RESULT_STEPS;
-						i < DEPTH_HALO_STEPS + DEPTH_RESULT_STEPS + DEPTH_HALO_STEPS; i++){
-					s_Data[threadIdx.y][threadIdx.x + i * DEPTH_BLOCKDIM_Z] =
-						(imageD - baseZ > i * DEPTH_BLOCKDIM_Z ) ?
-						d_Src[i * DEPTH_BLOCKDIM_Z * imageH * imageW] : 0;
-				}
-
-				// //Compute and store results
-				__syncthreads();
-				/*#pragma unroll*/
-				for(int i = DEPTH_HALO_STEPS; i < DEPTH_HALO_STEPS + DEPTH_RESULT_STEPS; i++){
-					float sum = 0;
+			//Upper halo
 #pragma unroll
-					for(int j = -kernel_radius; j <= kernel_radius; j++)
-						sum += c_Kernel_d[kernel_radius - j] *
-							s_Data    [threadIdx.y]
-							[threadIdx.x + i * DEPTH_BLOCKDIM_Z + j];
-					if(baseZ*imageW*imageH+baseY*imageW+basex+i*DEPTH_BLOCKDIM_Z*imageH*imageW < imageD*imageW*imageH)
-						d_Dst[i * DEPTH_BLOCKDIM_Z * imageH * imageW] = sum;
-				}
+			for(int i = 0; i < COLUMNS_HALO_STEPS; i++)
+				s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y] = (baseY >= -i * COLUMNS_BLOCKDIM_Y) ? *PITCH(d_Src,spitch,i*COLUMNS_BLOCKDIM_Y,0) : 0;
+
+			//Lower halo
+#pragma unroll
+			for(int i = COLUMNS_HALO_STEPS + COLUMNS_RESULT_STEPS; i < COLUMNS_HALO_STEPS + COLUMNS_RESULT_STEPS + COLUMNS_HALO_STEPS; i++)
+				s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y]= (imageH - baseY > i * COLUMNS_BLOCKDIM_Y) ? *PITCH(d_Src,spitch,i*COLUMNS_BLOCKDIM_Y,0) : 0;
+
+			//Compute and store results
+			__syncthreads();
+/*#pragma unroll*/
+			for(int i = COLUMNS_HALO_STEPS; i < COLUMNS_HALO_STEPS + COLUMNS_RESULT_STEPS; i++){
+				float sum = 0;
+/*#pragma unroll*/
+				for(int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++)
+					sum += s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y + j] * c_Kernel_d[KERNEL_RADIUS - j];
+				if(imageH - baseY > i * COLUMNS_BLOCKDIM_Y)
+					*PITCH(d_Dst,dpitch,i*COLUMNS_BLOCKDIM_Y,0) = sum;
+					/**PITCH(d_Dst,dpitch,i*COLUMNS_BLOCKDIM_Y,0) = *PITCH(d_Src,spitch,i*COLUMNS_BLOCKDIM_Y,0);*/
+					/**PITCH(d_Dst,dpitch,i*COLUMNS_BLOCKDIM_Y,0) = baseY+i*COLUMNS_BLOCKDIM_Y;*/
 			}
+		}
+
 
 			void convolutionDepth(
-					cuv::tensor<float,dev_memory_space>& d_Dst,
-					const cuv::tensor<float,dev_memory_space>& d_Src,
+					cuv::tensor<float,dev_memory_space>& dst,
+					const cuv::tensor<float,dev_memory_space>& src,
 					int kernel_radius
 					){
-				int imageW = d_Src.shape()[2];
-				int imageH = d_Src.shape()[1];
-				int imageD = d_Src.shape()[0];
+				int dw = src.shape()[2]*src.shape()[1];
+				int dh = src.shape()[0];
+				size_t spitch = src.pitch()*src.shape()[1];
+				size_t dpitch = dst.pitch()*dst.shape()[1];
 
-				cuvAssert( DEPTH_BLOCKDIM_Z * DEPTH_HALO_STEPS >= kernel_radius );
-				//There is a rational division of the image into blocks
-				cuvAssert( imageW % (ROWS_RESULT_STEPS * ROWS_BLOCKDIM_X) == 0 );
-				cuvAssert( imageH % ROWS_BLOCKDIM_Y == 0 );
+				cuvAssert( COLUMNS_BLOCKDIM_X * COLUMNS_HALO_STEPS >= kernel_radius );
 
-				dim3 blocks(imageW*imageD / (DEPTH_RESULT_STEPS * DEPTH_BLOCKDIM_Z),
-						imageH / DEPTH_BLOCKDIM_Y);
-				dim3 threads(DEPTH_BLOCKDIM_Z, DEPTH_BLOCKDIM_Y);
+				dim3 blocks(divup(dw , COLUMNS_BLOCKDIM_X), divup(dh , (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y)));
+				dim3 threads(COLUMNS_BLOCKDIM_X, COLUMNS_BLOCKDIM_Y);
+				convolutionDepthGPU<<<blocks, threads>>>(  dst.ptr(),  src.ptr(), dw, dh, dpitch, spitch, kernel_radius);
 
-				// for(int x = 0; x < imageW; x++)
-				convolutionDepthKernel<<<blocks, threads>>>(
-						d_Dst.ptr(),
-						d_Src.ptr(),
-						imageW,
-						imageH,
-						imageD,
-						kernel_radius
-						);
 				cuvSafeCall(cudaThreadSynchronize());
 			}
 
