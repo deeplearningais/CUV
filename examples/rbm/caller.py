@@ -114,6 +114,10 @@ print "#",
 print "".join(map(lambda x:(("%20s:"%x)+str(dic[x])),cfgk))
 print ""
 
+if cfg.dbm==1 and cfg.num_layers==2:
+    print "dbm training not possible with only one layer"
+    sys.exit(1)
+
 cfg.maps_bottom=1
 
 if cfg.dataset==pyrbm.Dataset.mnist:
