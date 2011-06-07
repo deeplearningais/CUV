@@ -7,7 +7,7 @@ class MiniBatchProvider:
     def setMiniBatch(self, mb, dst_layer):
         self.sampleset_ = mb
         self.sampleset  = cp.dev_tensor_float_cm(self.sampleset_.astype('float32').copy('F'))
-        cp.apply_binary_functor(dst_layer,self.sampleset,cp.binary_functor.COPY)
+        cp.copy(dst_layer,self.sampleset)
 
     def forgetOriginalData(self):
         if "sampleset" in self.__dict__:
