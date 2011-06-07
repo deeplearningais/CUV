@@ -161,7 +161,7 @@ def read_data(basename,idx):
     return bv, bh, W
 
 def usage():
-    print "Usage: $0 --basename <basename>"
+    print "Usage: %s --basename <basename> [--idx <index> ] [ --verbose ] [ --help ] [ --force-overwrite ] [ --device <devicenum> ]"%sys.argv[0]
 
 class Cfg (object):pass
 
@@ -199,8 +199,7 @@ def main():
         usage()
         sys.exit()
     if not hasattr(cfg,"idx"):
-        usage()
-        sys.exit()
+        cfg.idx="pretrain"
     fn = os.path.join(cfg.basename, "info-0-%s.pickle"%cfg.idx)
     if not cfg.overwrite and os.path.exists(fn):
         with open(fn, "r") as f:
