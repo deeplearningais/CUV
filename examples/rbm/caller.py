@@ -301,26 +301,9 @@ if "W" in rbmstack.__dict__ :
 else:
     print "Can't load weights"
 
-if "W1" in rbmstack.__dict__ :
-    W_old=rbmstack.W1.copy()
-    w=rbmstack.W1.T
-    start = 0 * px**2
-    end   = start + px**2
-    visualize_rows(PLT_NUM,w,range(start,end), cut_filters_func(px,py,cfg.maps_bottom), title="Weights/Filters Layer 1", use_imshow=cfg.maps_bottom>1, cb=False)
-    PLT_NUM+=2
-
 # originals
 visualize_rows(PLT_NUM,rbmstack.dbg_sampleset,range(20), lambda x:make_img(x,px,py,[4,1][cfg.maps_bottom==1],mbs,False), title='Originals', use_imshow=cfg.maps_bottom>1)
 PLT_NUM+=1
-
-
-for k in rbmstack.act.keys():
-    _px = rbmstack.act_info[k]["px"]
-    _py = rbmstack.act_info[k]["py"]
-    #visualize_rows(PLT_NUM,rbmstack.act[k].T,range(20), cut_filters_func(_px), title=k, normalize=False)
-    visualize_rows(PLT_NUM,rbmstack.act[k].T,range(20), lambda x:make_img(x,_px,_py,_maps,isweight=True), title=k, normalize=False)
-    PLT_NUM+=1
-
 
 cp.exitCUDA()
 
