@@ -180,7 +180,7 @@ class RBMStack:
             cp.prod(L.act,whi.mat,hi.act,'n','n')
             cp.matrix_plus_col(L.act,whi.bias_lo)
 
-            tmp = get_copy(L.act)
+            tmp = L.act.copy()
             cp.prod(L.act,wlo.mat,lo.act,'t','n')
             cp.matrix_plus_col(L.act,wlo.bias_hi)
 
