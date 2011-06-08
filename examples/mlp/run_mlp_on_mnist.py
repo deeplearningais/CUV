@@ -1,6 +1,5 @@
 import sys
-import pyublas
-import cProfile
+#import cProfile
 from multi_layer_perceptron import MLP
 import cuv_python as cp
 from switchtohost import switchtohost
@@ -49,11 +48,14 @@ if __name__ == "__main__":
     mlp = MLP(sizes, 96)
 
     print('Initializing training of  MLP...')
-    mlp.train(train_data, train_labels, 100)
+    try:
+	    mlp.train(train_data, train_labels, 100)
+    except KeyboardInterrupt:
+	    pass
 
     print('Initializing testing of MLP...')
     mlp.test(test_data,test_labels)
 
     print('done.')
-    cp.exitCUDA()
+    #cp.exitCUDA()
 

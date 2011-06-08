@@ -1,4 +1,3 @@
-import pyublas
 import cuv_python as cp
 
 class neuron_layer:
@@ -29,12 +28,6 @@ class neuron_layer:
 
 			"""
 			cp.apply_scalar_functor(input_, cp.scalar_functor.DTANH)
-
-    def _del_(self):
-        """Destructor"""
-        self.activations.dealloc()
-        self.deltas.dealloc()
-
 
 
 
