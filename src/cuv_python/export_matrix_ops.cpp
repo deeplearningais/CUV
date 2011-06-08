@@ -160,6 +160,7 @@ void export_reductions(){
 	def("maximum",(float (*)(const M&)) maximum<value_type,typename M::memory_space_type>);
 	def("minimum",(float (*)(const M&)) minimum<value_type,typename M::memory_space_type>);
 	def("mean", (float (*)(const M&)) mean<value_type,typename M::memory_space_type>);
+	def("var", (float (*)(const M&)) var<value_type,typename M::memory_space_type>);
         def("reduce_to_col", reduce_to_col<value_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
         def("reduce_to_row", reduce_to_row<value_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
         def("reduce_to_col", reduce_to_col<typename M::index_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
@@ -197,10 +198,10 @@ void export_learn_step(){
 
 	typedef typename switch_value_type<M,signed char>::type USM;
 
-	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&)) learn_step_weight_decay<typename M::value_type, typename M::memory_space_type>);
+	def("learn_step_weight_decay",(void (*)(M&, M&, const float&, const float&,const float&)) learn_step_weight_decay<typename M::value_type, typename M::memory_space_type>, (arg("W"),arg("dW"),arg("learnrate"),arg("l2decay")=0,arg("l1decay")=0));
 
-	def("rprop", (void (*)(M&, M&, M&,  M&, const float&))rprop<V1,M1,V1>, (arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("cost")=0));
-	def("rprop", (void (*)(M&, M&, USM&,M&, const float&))rprop<V1,M1,signed char>, (arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("cost")=0));
+	def("rprop", (void (*)(M&, M&, M&,  M&, const float&,const float&))rprop<V1,M1,V1>, (arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("l2cost")=0, arg("l1cost")=0));
+	def("rprop", (void (*)(M&, M&, USM&,M&, const float&,const float&))rprop<V1,M1,signed char>, (arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("l2cost")=0),arg("l1cost")=0);
 }
 
 template<class T>
