@@ -7,15 +7,16 @@ IF(CUV_PYTHON_BINDINGS)
 	SET(CMAKE_CXX_FLAGS "-fPIC") # for FindCUDA, needed for python shared lib
 ENDIF(CUV_PYTHON_BINDINGS)
 
-SET(CUDA_SDK_ROOT_DIR "/usr/local/cuda/C" CACHE STRING "Location of CUDA SDK (currently not used) ") 
+SET (CUDA_SDK_ROOT_DIR "/usr/local/cuda/C" CACHE STRING "Location of CUDA SDK (currently not used) ") 
 
 FIND_PACKAGE(CUDA)
+#SET (CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -arch=sm_21")
 
 # ---------- Find Boost Headers/Libraries -----------------------
 SET (Boost_FIND_REQUIRED TRUE)
 SET (Boost_FIND_QUIETLY TRUE)
-set (Boost_USE_MULTITHREADED TRUE)
-set (Boost_USE_STATIC_LIBS FALSE)
+SET (Boost_USE_MULTITHREADED TRUE)
+SET (Boost_USE_STATIC_LIBS FALSE)
 SET (Boost_ADDITIONAL_VERSIONS "1.39" "1.39.0" "1.40" "1.42" "1.43" "1.44" "1.45" )
 FIND_PACKAGE( Boost 1.37 COMPONENTS date_time unit_test_framework serialization REQUIRED )
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
@@ -27,7 +28,9 @@ IF(NOT THRUST_PATH)
 ENDIF(NOT THRUST_PATH)
 
 add_definitions(-DRANDOM_PATH=${CMAKE_BINARY_DIR})
-#SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --compiler-options;-DRANDOM_PATH=\\"${CMAKE_BINARY_DIR}\\")
+SET(CUDA_ARCHITECTURE "-arch=sm_21" CACHE STRING "The CUDA architecture to compile for")
+SET(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};${CUDA_ARCHITECTURE}")
+MESSAGE(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 
 CUDA_INCLUDE_DIRECTORIES( ${CUDA_SDK_ROOT_DIR}/common/inc ${CMAKE_CURRENT_SOURCE_DIR}  tools )
 INCLUDE_DIRECTORIES(      ${CUDA_SDK_ROOT_DIR}/common/inc ${CUDA_INCLUDE_DIRS}         tools )
