@@ -1,10 +1,7 @@
+import os
+import numpy as np
 import cuv_python as cp
-import pyublas
-import os, sys, re
-import threading
-import math, numpy as np
 from minibatch_provider import MiniBatchProviderEmpty
-from helper_classes import MaxPoolType
 
 
 class WeightLayer:
@@ -14,16 +11,16 @@ class WeightLayer:
         self.weights=weights
         self.bias=bias
 
-        self.d_w=cp.dev_dia_matrix_f(self.weights)
+        #self.d_w=cp.dev_dia_matrix_f(self.weights)
 
-        self.d_bias=cp.dev_dia_matrix_f(self.bias)
+        #self.d_bias=cp.dev_dia_matrix_f(self.bias)
 
     def initialize_rprop(self,initial_learnrate):
-        self.d_w_old=cp.dev_dia_matrix_f(self.weights)
-        self.d_bias_old=cp.dev_dia_matrix_f(self.bias)
+        #self.d_w_old=cp.dev_dia_matrix_f(self.weights)
+        #self.d_bias_old=cp.dev_dia_matrix_f(self.bias)
 
-        self.learnrate_w=cp.dev_dia_matrix_f(self.weights)
-        self.learnrate_bias=cp.dev_dia_matrix_f(self.bias)
+        #self.learnrate_w=cp.dev_dia_matrix_f(self.weights)
+        #self.learnrate_bias=cp.dev_dia_matrix_f(self.bias)
 
         cp.fill(self.learnreate_w,initial_learnrate)
         cp.fill(self.learnreate_bias,initial_learnrate)
@@ -40,8 +37,8 @@ class WeightLayer:
 
 class NodeLayer:
     def __init__(self,size,batchsize):
-        self.act=cp.dev_matrix_cmf(size,batchsize)
-        self.delta=cp.dev_matrix_cmf(size,batchsize)
+        self.act=cp.dev_tensor_float_cm([size,batchsize])
+        self.delta=cp.dev_tensor_float_cm([size,batchsize])
 
     def nonlinearity(self):
         cp.apply_scalar_functor(self.act,cp.scalar_functor.SIGM)
@@ -72,7 +69,7 @@ class MLP:
     self.NumberOfNeuronsPerLayer = []
     for i in xrange(self.NumberOfLayers-2):
         #self.Weights.append(newWeights)
-        dim1, dim2 = self.Weights[i].h, self.Weights[i].w
+        dim1, dim2 = self.Weights[i].shape
         self.createCopyFilled(self.DeltaWeightsOld,self.Weights[i] , 0)
         self.createCopyFilled(self.WeightsLearnRate,self.Weights[i] , l)
         if not self.cfg.finetune_online_learning or (self.cfg.finetune_online_learning and self.cfg.finetune_rprop):
@@ -83,16 +80,16 @@ class MLP:
         self.NumberOfNeuronsPerLayer.append(dim1)
 
     # create dense matrix for last layer
-    dim1,dim2 = self.Weights[-1].w, self.cfg.num_classes
+    dim1,dim2 = self.Weights[-1].shape[1], self.cfg.num_classes
     if self.cfg.load and self.loadLastLayer(dim1,dim2):
         pass
     else:
-        self.Weights.append(cp.dev_matrix_cmf(dim1,dim2))
+        self.Weights.append(cp.dev_tensor_float_cm([dim1,dim2]))
         cp.fill_rnd_uniform(self.Weights[-1])
         #print "Initializing weights with rnd(%2.5f)", 
-        cp.apply_scalar_functor(self.Weights[-1].vec,cp.scalar_functor.SUBTRACT, 0.5)
-        #cp.apply_scalar_functor(self.Weights[-1].vec,cp.scalar_functor.MULT, 1./math.sqrt(self.Weights[-2].w))
-        cp.apply_scalar_functor(self.Weights[-1].vec,cp.scalar_functor.MULT, 1./self.Weights[-2].w)
+        cp.apply_scalar_functor(self.Weights[-1],cp.scalar_functor.SUBTRACT, 0.5)
+        #cp.apply_scalar_functor(self.Weights[-1],cp.scalar_functor.MULT, 1./math.sqrt(self.Weights[-2].w))
+        cp.apply_scalar_functor(self.Weights[-1],cp.scalar_functor.MULT, 1./self.Weights[-2].shape[1])
         self.createFilled(self.Bias, dim2, 1, 0)
     self.createFilled(self.DeltaBiasOld, dim2, 1, 0)
     self.createFilled(self.BiasLearnRate, dim2, 1, l)
@@ -107,12 +104,18 @@ class MLP:
     self.reconstruction_error = []
 
   def createFilled(self, matList, dim1, dim2, value):
-    matList.append(cp.dev_matrix_cmf(dim1, dim2))
+    if dim2==1:
+        matList.append(cp.dev_tensor_float([dim1]))
+    else:
+        matList.append(cp.dev_tensor_float_cm([dim1, dim2]))
     cp.fill(matList[-1], value)
 
   def createCopyFilled(self, matList, someMat, value):
-      matList.append(cp.dev_matrix_cmf(someMat.h,someMat.w))
-      cp.fill(matList[-1].vec, value)
+      if len(someMat.shape)<2 or someMat.shape[1] == 1:
+          matList.append(cp.dev_tensor_float(someMat.shape))
+      else:
+          matList.append(cp.dev_tensor_float_cm(someMat.shape))
+      cp.fill(matList[-1], value)
 
 
   def __del__(self):
@@ -149,10 +152,10 @@ class MLP:
         while True:
             try:
                 output= []
-                output.append(cp.dev_matrix_cmf(self.cfg.px*self.cfg.py*self.cfg.maps_bottom,batchSize))
+                output.append(cp.dev_tensor_float_cm([self.cfg.px*self.cfg.py*self.cfg.maps_bottom,batchSize]))
                 teachbatch = mbatch_provider.getMiniBatch(batchSize, output[0], return_teacher=True, id=batch_idx)
 
-                numberPictures += teachbatch.w
+                numberPictures += teachbatch.shape[1]
                 batch_idx += 1
 
                 # forward pass trough all layers
@@ -177,8 +180,8 @@ class MLP:
 
         if not self.cfg.finetune_online_learning:
             self.applyDeltaWeights(self.dWeights,self.dBias,updateOnlyLast, batchSize)
-            map(lambda x: cp.fill(x.vec,0),self.dWeights)
-            map(lambda x: cp.fill(x.vec,0),self.dBias)
+            map(lambda x: cp.fill(x,0),self.dWeights)
+            map(lambda x: cp.fill(x,0),self.dBias)
 
         self.Errorrate.append((numberPictures - self.NumCorrect)/ float(numberPictures) )
 
@@ -197,9 +200,9 @@ class MLP:
         try:
             #print "Batch ", batch+1, "/", numberBatches
             output, indices = [], []
-            output.append(cp.dev_matrix_cmf(self.cfg.px*self.cfg.py*self.cfg.maps_bottom,batchSize))
+            output.append(cp.dev_tensor_float_cm([self.cfg.px*self.cfg.py*self.cfg.maps_bottom,batchSize]))
             teachbatch = mbatch_provider.getMiniBatch(batchSize, output[0], return_teacher=True, id=batch_idx)
-            numberPictures += teachbatch.w
+            numberPictures += teachbatch.shape[1]
             batch_idx += 1
 
             # Forward Pass
@@ -239,10 +242,10 @@ class MLP:
 
   def forward(self, input, weight, bias,linear=False):
 
-    result = cp.dev_matrix_cmf(weight.w, input.w)
+    result = cp.dev_tensor_float_cm([weight.shape[1], input.shape[1]])
     cp.fill(result,0)
     cp.prod(result, weight, input, "t", "n")
-    cp.matrix_plus_col(result, bias.vec)
+    cp.matrix_plus_col(result, bias)
     if not linear: cp.apply_scalar_functor(result, cp.scalar_functor.SIGM)
 
     return result
@@ -250,14 +253,14 @@ class MLP:
   def applyDeltaWeights(self, dWList,dBList, updateOnlyLast, batchSize):
     if self.useRPROP:
         for i in reversed(xrange(self.NumberOfLayers-1)):
-            cp.rprop(self.Weights[i].vec, dWList[i].vec, self.DeltaWeightsOld[i].vec, self.WeightsLearnRate[i].vec, self.cfg.finetune_cost)
-            cp.rprop(self.Bias[i].vec,    dBList[i].vec,    self.DeltaBiasOld[i].vec,    self.BiasLearnRate[i].vec, self.cfg.finetune_cost)
+            cp.rprop(self.Weights[i], dWList[i], self.DeltaWeightsOld[i], self.WeightsLearnRate[i], self.cfg.finetune_cost)
+            cp.rprop(self.Bias[i],    dBList[i],    self.DeltaBiasOld[i],    self.BiasLearnRate[i], self.cfg.finetune_cost)
             if updateOnlyLast: break
     else:
         for i in reversed(xrange(self.NumberOfLayers-1)):
-            W, B   = self.Weights[i].vec, self.Bias[i].vec
-            dW,dWo = dWList[i].vec, self.DeltaWeightsOld[i].vec
-            dB,dBo = dBList[i].vec, self.DeltaBiasOld[i].vec
+            W, B   = self.Weights[i], self.Bias[i]
+            dW,dWo = dWList[i], self.DeltaWeightsOld[i]
+            dB,dBo = dBList[i], self.DeltaBiasOld[i]
             cp.apply_binary_functor(  dW, dWo, cp.binary_functor.XPBY, self.cfg.finetune_momentum)
             cp.apply_binary_functor(  dB, dBo, cp.binary_functor.XPBY, self.cfg.finetune_momentum)
             cp.learn_step_weight_decay(W, dW,    self.cfg.finetune_learnrate/batchSize, self.cfg.finetune_cost)
@@ -286,36 +289,36 @@ class MLP:
 
     #DeltaBias                    
     for i in xrange(self.NumberOfLayers-1):
-        self.createFilled(deltaBias, self.Bias[i].n, 1, 0)
-        cp.reduce_to_col(deltaBias[-1].vec, derivative[i])
+        self.createFilled(deltaBias, self.Bias[i].size, 1, 0)
+        cp.reduce_to_col(deltaBias[-1], derivative[i])
 
     # Weight Update
     if self.cfg.finetune_online_learning and not self.useRPROP:
         self.applyDeltaWeights(deltaWeights,deltaBias,updateOnlyLast,batchSize)
     elif self.cfg.finetune_online_learning and self.useRPROP and batch_idx%16 == 0:
         self.applyDeltaWeights(self.dWeights,self.dBias,updateOnlyLast, batchSize)
-        map(lambda x: cp.fill(x.vec,0),self.dWeights)
-        map(lambda x: cp.fill(x.vec,0),self.dBias)
+        map(lambda x: cp.fill(x,0),self.dWeights)
+        map(lambda x: cp.fill(x,0),self.dBias)
     else:
         for i in xrange(self.NumberOfLayers-1):
-            cp.apply_binary_functor(self.dWeights[i].vec,deltaWeights[i].vec,cp.binary_functor.ADD)
-            cp.apply_binary_functor(self.dBias[i].vec,   deltaBias[i].vec,   cp.binary_functor.ADD)
+            cp.apply_binary_functor(self.dWeights[i],deltaWeights[i],cp.binary_functor.ADD)
+            cp.apply_binary_functor(self.dBias[i],   deltaBias[i],   cp.binary_functor.ADD)
 
     da = lambda x:x.dealloc()
     map(da, deltaWeights)
     map(da, deltaBias)
     map(da, derivative)
-  
+
   #calculating deltaWeights
   def calculateDeltaWeights(self, derivative, input,oldWeights):
-      result = cp.dev_matrix_cmf(oldWeights.h, oldWeights.w)
+      result = cp.dev_tensor_float_cm(oldWeights.shape)
       cp.prod(result, input,derivative, 'n', 't')
       return result
-  
+
 #calculating intermediary results for the Output-Layer
   def calculateDerivativeForOutputLayer(self, calculated, correct):
-    derivative = cp.dev_matrix_cmf(calculated.h, correct.w)
-    h = cp.dev_matrix_cmf(calculated.h,  correct.w)
+    derivative = cp.dev_tensor_float_cm([calculated.shape[0], correct.shape[1]])
+    h = cp.dev_tensor_float_cm(derivative.shape)
 
     cp.copy(derivative, calculated)
     cp.apply_scalar_functor(derivative, cp.scalar_functor.DSIGM)
@@ -333,21 +336,21 @@ class MLP:
     derivative = calculated.copy()
 
     # add negative maximum from each column (such that exp behaves better...)
-    #maxima = cp.dev_matrix_cmf(calculated.w,1);
+    #maxima = cp.dev_tensor_float_cm(calculated.w);
     #cp.fill(maxima,0)
-    #cp.reduce_to_row(maxima.vec,calculated, cp.reduce_functor.MAX)
+    #cp.reduce_to_row(maxima,calculated, cp.reduce_functor.MAX)
     #cp.apply_scalar_functor(maxima,cp.scalar_functor.NEGATE)
-    #cp.matrix_plus_col(cp.make_rm_view(derivative), maxima.vec)
+    #cp.matrix_plus_col(cp.make_rm_view(derivative), maxima)
 
     # exp makes sure everything is positive, still monotonous
     cp.apply_scalar_functor(derivative,  cp.scalar_functor.EXP)
 
-    sums = cp.dev_matrix_cmf(calculated.w,1)
+    sums = cp.dev_tensor_float(calculated.shape[1])
     cp.fill(sums,0)
-    cp.reduce_to_row(sums.vec, derivative, cp.reduce_functor.ADD)
-    cp.apply_scalar_functor(sums,cp.scalar_functor.ADD,0.1/derivative.h)
-    rv = cp.make_rm_view(derivative)
-    cp.matrix_divide_col(rv,sums.vec)
+    cp.reduce_to_row(sums, derivative, cp.reduce_functor.ADD)
+    cp.apply_scalar_functor(sums,cp.scalar_functor.ADD,0.1/derivative.shape[0])
+    rv = cp.transposed_view(derivative)
+    cp.matrix_divide_col(rv,sums)
 
     cp.apply_binary_functor(derivative,  correct,  cp.binary_functor.AXPBY, -1.,1.)
     sums.dealloc()
@@ -357,7 +360,7 @@ class MLP:
 
 #calculating intermediary results for a Hidden-Layer
   def calculateDerivativeForHiddenLayer(self, weight, knownDerivative, netInput):
-    deltaLo = cp.dev_matrix_cmf(weight.h, netInput.w)
+    deltaLo = cp.dev_tensor_float_cm([weight.shape[0], netInput.shape[1]])
 
     cp.prod(deltaLo, weight, knownDerivative, 'n', 'n')
     help = netInput.copy()
