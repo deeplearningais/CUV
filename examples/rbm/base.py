@@ -596,6 +596,7 @@ class RBMStack:
         for layer_num,layer in enumerate(self.layers[0:-1]):
             self.upPass(layer_num, sample=False)
             if layer_num+2 < len(self.layers):
+                assert(False)
                 layer_above=self.layers[layer_num+1]
         self.save_fantasy(nsteps+1,Npoint,save_callback, self.layers[0].act)
         self.dbg_sampleset = mbatch_provider.sampleset_[:, 0:Npoint].T
