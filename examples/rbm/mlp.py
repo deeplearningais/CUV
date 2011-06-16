@@ -4,44 +4,44 @@ import cuv_python as cp
 from minibatch_provider import MiniBatchProviderEmpty
 
 
-class WeightLayer:
-    def __init__(self,upper_layer,lower_layer,weights,bias):
-        self.upper_layer=upper_layer
-        self.lower_layer=lower_layer
-        self.weights=weights
-        self.bias=bias
+#class WeightLayer:
+#    def __init__(self,upper_layer,lower_layer,weights,bias):
+#        self.upper_layer=upper_layer
+#        self.lower_layer=lower_layer
+#        self.weights=weights
+#        self.bias=bias
 
-        #self.d_w=cp.dev_dia_matrix_f(self.weights)
+#        #self.d_w=cp.dev_dia_matrix_f(self.weights)
 
-        #self.d_bias=cp.dev_dia_matrix_f(self.bias)
+#        #self.d_bias=cp.dev_dia_matrix_f(self.bias)
 
-    def initialize_rprop(self,initial_learnrate):
-        #self.d_w_old=cp.dev_dia_matrix_f(self.weights)
-        #self.d_bias_old=cp.dev_dia_matrix_f(self.bias)
+#    def initialize_rprop(self,initial_learnrate):
+#        #self.d_w_old=cp.dev_dia_matrix_f(self.weights)
+#        #self.d_bias_old=cp.dev_dia_matrix_f(self.bias)
 
-        #self.learnrate_w=cp.dev_dia_matrix_f(self.weights)
-        #self.learnrate_bias=cp.dev_dia_matrix_f(self.bias)
+#        #self.learnrate_w=cp.dev_dia_matrix_f(self.weights)
+#        #self.learnrate_bias=cp.dev_dia_matrix_f(self.bias)
 
-        cp.fill(self.learnreate_w,initial_learnrate)
-        cp.fill(self.learnreate_bias,initial_learnrate)
+#        cp.fill(self.learnreate_w,initial_learnrate)
+#        cp.fill(self.learnreate_bias,initial_learnrate)
 
-    def forward_pass(self):
-        cp.prod(upper_layer.act,self.weights,lower_layer.act,'t','n')
-        cp.matrix_plus_col(upper_layer.act,self.bias)
-        upper_layer.nonlinearity()
+#    def forward_pass(self):
+#        cp.prod(upper_layer.act,self.weights,lower_layer.act,'t','n')
+#        cp.matrix_plus_col(upper_layer.act,self.bias)
+#        upper_layer.nonlinearity()
 
-    def backward_pass(self):
-        cp.prod(lower_layer.delta,self.weights,upper_layer.delta,'n','n')
-        cp.matrix_plus_col(upper_layer.act,self.bias)
-        upper_layer.nonlinearity()
+#    def backward_pass(self):
+#        cp.prod(lower_layer.delta,self.weights,upper_layer.delta,'n','n')
+#        cp.matrix_plus_col(upper_layer.act,self.bias)
+#        upper_layer.nonlinearity()
 
-class NodeLayer:
-    def __init__(self,size,batchsize):
-        self.act=cp.dev_tensor_float_cm([size,batchsize])
-        self.delta=cp.dev_tensor_float_cm([size,batchsize])
+#class NodeLayer:
+#    def __init__(self,size,batchsize):
+#        self.act=cp.dev_tensor_float_cm([size,batchsize])
+#        self.delta=cp.dev_tensor_float_cm([size,batchsize])
 
-    def nonlinearity(self):
-        cp.apply_scalar_functor(self.act,cp.scalar_functor.SIGM)
+#    def nonlinearity(self):
+#        cp.apply_scalar_functor(self.act,cp.scalar_functor.SIGM)
 
 class MLP:
   def __init__(self, cfg, weights,biases):
@@ -160,7 +160,6 @@ class MLP:
 
                 # forward pass trough all layers
                 for i in xrange(self.NumberOfLayers-1):
-                   idx=None
                    linear = self.cfg.finetune_softmax and i==self.NumberOfLayers-2 # set output layer to linear
                    output.append(self.forward(output[i], self.Weights[i], self.Bias[i], linear=linear))
 
@@ -223,14 +222,6 @@ class MLP:
     self.testError.append((numberPictures - self.NumCorrect)/float(numberPictures)) 
     print "Test Correctly Classified:             ", self.NumCorrect, "/", numberPictures
     print "Test Error-Rate:                             %2.3f"% (100*self.testError[-1])
-
-#Functions for returning private Variables  
-  def getNumberOfLayers():
-    return self.NumberOfLayers
-  def getNumCorrect():
-    return self.NumCorrect
-  def getErrorrate():
-    return self.Errorrate[-1]
 
   def printListOf(self, listMat, anzMat, name):
     """Function for printing a list of dev_matrix"""
@@ -372,11 +363,6 @@ class MLP:
 
 #calculating number of right results
   def calculateRightResults(self, calculated, correct):
-
-    targetPosition = 0
-    actualPosition = 0
-    res = 0
-
     corr_idx = correct.np.argmax(axis=0)
     calc_idx = calculated.np.argmax(axis=0)
     return (corr_idx==calc_idx).sum()
