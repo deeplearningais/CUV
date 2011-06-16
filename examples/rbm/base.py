@@ -1,10 +1,6 @@
-import sets
-import re
 import time
 import cPickle
 import sys, os
-import pyublas
-import threading
 import cuv_python as cp
 import numpy as np
 import math
