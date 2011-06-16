@@ -40,11 +40,11 @@ class WeightLayer(object):
         fn = os.path.join(prefix,"weights-%s.npy"%postfix)
         if os.path.exists(fn):
             self.mat.dealloc()
-            self.mat=cp.push(np.load(fn))
+            self.mat=cp.dev_tensor_float_cm(np.load(fn))
             self.bias_lo.dealloc()
             self.bias_hi.dealloc()
-            self.bias_lo = cp.push(np.load(os.path.join(prefix,"bias-lo-%s.npy"%postfix)))
-            self.bias_hi = cp.push(np.load(os.path.join(prefix,"bias-hi-%s.npy"%postfix)))
+            self.bias_lo = cp.dev_tensor_float(np.load(os.path.join(prefix,"bias-lo-%s.npy"%postfix)))
+            self.bias_hi = cp.dev_tensor_float(np.load(os.path.join(prefix,"bias-hi-%s.npy"%postfix)))
     def downPass(self,layer1,layer2,sample):
         cp.prod(layer1.act,self.mat,layer2.act,'n','n')
         layer1.postUpdateFromAbove(sample,bias=self.bias_lo)
