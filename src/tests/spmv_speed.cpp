@@ -60,6 +60,7 @@ static const unsigned int nm = m/n;  // number of maps in output layer
 		Timing tim;                             \
 		for(int i=0;i<ITERS;i++){               \
 			OPERATION ;                         \
+                        safeThreadSync();               \
 		}                                       \
 		tim.update(ITERS);                      \
 		printf("%s [%s] took %4.4f us/pass\n", #MSG, #OPERATION, 1000000.0f*tim.perf()); \

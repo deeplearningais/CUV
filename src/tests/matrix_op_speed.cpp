@@ -48,7 +48,8 @@ using namespace cuv;
 	if(1){                                      \
 		Timing tim;                             \
 		for(int i=0;i<ITERS;i++){               \
-			OPERATION ;                         \
+			OPERATION ;                     \
+                        safeThreadSync();               \
 		}                                       \
 		tim.update(ITERS);                      \
 		printf("%s [%s] took %4.4f us/pass\n", #MSG, #OPERATION, 1000000.0f*tim.perf()); \
