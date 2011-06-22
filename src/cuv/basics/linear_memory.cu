@@ -38,8 +38,6 @@
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/basics/linear_memory.hpp>
 
-#define checkSuccess(X) \
-	cuvAssert((X)==cudaSuccess)
 
 namespace cuv{
 
@@ -47,14 +45,14 @@ template <class value_type, class index_type>
 struct allocator<value_type,index_type,dev_memory_space>{
 	void alloc2d( value_type** ptr, index_type& pitch, index_type height, index_type width ) const{
 		size_t p;
-		checkSuccess(cudaMallocPitch(ptr, &p, sizeof(value_type)*width, height));
+		cuvSafeCall(cudaMallocPitch(ptr, &p, sizeof(value_type)*width, height));
 		pitch = p;
 	}
 	void alloc( value_type** ptr, index_type size) const{
-		checkSuccess(cudaMalloc(ptr, sizeof(value_type)*size));
+		cuvSafeCall(cudaMalloc(ptr, sizeof(value_type)*size));
 	}
 	void dealloc( value_type** ptr) const {
-		checkSuccess(cudaFree((void*)*ptr));
+		cuvSafeCall(cudaFree((void*)*ptr));
 		*ptr = NULL;
 	}
 	void alloc(const value_type** ptr, index_type size) const{
@@ -64,16 +62,16 @@ struct allocator<value_type,index_type,dev_memory_space>{
 	       cuvAssert(false);
 	}
 	void copy(value_type* dst, const value_type*src,index_type size, host_memory_space){
-		checkSuccess(cudaMemcpy( dst, src, size*sizeof( value_type ), cudaMemcpyHostToDevice ));
+		cuvSafeCall(cudaMemcpy( dst, src, size*sizeof( value_type ), cudaMemcpyHostToDevice ));
 	}
 	void copy(value_type* dst, const value_type*src,index_type size, dev_memory_space){
-		checkSuccess(cudaMemcpy( dst, src, size*sizeof( value_type ), cudaMemcpyDeviceToDevice ));
+		cuvSafeCall(cudaMemcpy( dst, src, size*sizeof( value_type ), cudaMemcpyDeviceToDevice ));
 	}
 	void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, host_memory_space){
-		checkSuccess(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(value_type),h,cudaMemcpyHostToDevice));
+		cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(value_type),h,cudaMemcpyHostToDevice));
 	}
 	void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, dev_memory_space){
-		checkSuccess(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(value_type),h,cudaMemcpyDeviceToDevice));
+		cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(value_type),h,cudaMemcpyDeviceToDevice));
 	}
 };
 
@@ -86,19 +84,19 @@ allocator<V,I,host_memory_space>::alloc2d(V** ptr, I& pitch, I height, I width)c
 template<class V,class I>
 void
 allocator<V,I,host_memory_space>::copy(V*dst, const V*src,I size,dev_memory_space){
-	checkSuccess(cudaMemcpy( dst, src, size*sizeof( V ), cudaMemcpyDeviceToHost ));
+	cuvSafeCall(cudaMemcpy( dst, src, size*sizeof( V ), cudaMemcpyDeviceToHost ));
 }
 
 template<class V,class I>
 void
 allocator<V,I,host_memory_space>::copy2d(V* dst, const V*src,I dpitch, I spitch, I h, I w, dev_memory_space){
-	checkSuccess(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(V),h,cudaMemcpyDeviceToHost));
+	cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(V),h,cudaMemcpyDeviceToHost));
 }
 
 template<class V,class I>
 void
 allocator<V,I,host_memory_space>::copy2d(V* dst, const V*src,I dpitch, I spitch, I h, I w, host_memory_space){
-	checkSuccess(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(V),h,cudaMemcpyHostToHost));
+	cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(V),h,cudaMemcpyHostToHost));
 }
 
 template <class value_type, class index_type>
