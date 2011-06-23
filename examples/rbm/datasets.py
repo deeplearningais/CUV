@@ -1,10 +1,8 @@
 #from scipy.cluster.vq import whiten
 #import mdp
 import base as pyrbm
-import pdb as pdb
-import re,os,sys
+import os
 import numpy as np
-from glob import glob
 import Image
 
 
@@ -134,7 +132,7 @@ class BarsAndStripesData(DataSet):
         cfg.px=16
         cfg.py=1
         cfg.maps_bottom=1
-        data=[] 
+        data=[]
         self.teacher=None
         # load training data
         with open(os.path.join(path,'BarsAndStripes.txt')) as fd:
@@ -229,7 +227,7 @@ class MNISTTestData(DataSet):
             cfg.batchsize=16*25
         with open(os.getenv("HOME")+'/MNIST/t10k-images.idx3-ubyte') as fd:
             np.fromfile(file=fd, dtype=np.uint8, count=16)
-            data = np.fromfile(file=fd, dtype=np.uint8).reshape( (10000,784) )
+            self.data = np.fromfile(file=fd, dtype=np.uint8).reshape( (10000,784) )
 
 class ImagePatchesData(DataSet):
     def __init__(self,cfg,path):
