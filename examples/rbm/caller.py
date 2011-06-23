@@ -80,7 +80,7 @@ options = [
     Option('finetune_intermediate_outputs', 'whether to use intermediate outputs [%default]', '1', converter=int),
     Option('finetune_timesteps', 'recurrent timesteps [%default]', '5', converter=int),
     #Option('finetune_translation_max', 'translating training images by as most x pixels [%default]', '0', converter=int),
-    Option('finetune_noise_std', 'add noise with this standard dev BEFORE Normalization of minibatches [%default]', '0.0', converter=float),
+    #Option('finetune_noise_std', 'add noise with this standard dev BEFORE Normalization of minibatches [%default]', '0.0', converter=float),
 ]
 
 cfg = Config(options, usage = "usage: %prog [options]")
@@ -162,7 +162,7 @@ print "ready."
 rbmstack = pyrbm.RBMStack(cfg)
 rbmstack.saveOptions(cfg.get_serialization_obj())
 
-mbp = minibatch_provider.MNISTMiniBatchProvider(dataset.data)
+mbp = minibatch_provider.MNISTMiniBatchProvider(dataset.data, dataset.teacher)
 
 print "Calculating statistics for minibatch..."
 mbs = minibatch_provider.MiniBatchStatistics(mbp, rbmstack.layers[0].act)
@@ -171,7 +171,7 @@ if cfg.utype[0] == pyrbm.UnitType.gaussian:
 else:
    mbp.norm = lambda x: mbs.normalize_255(x)
 if "test_data" in dataset.__dict__:
-   mbp_test = minibatch_provider.MovedMiniBatchProvider(dataset.test_data,cfg.px,cfg.px,[4,1][cfg.maps_bottom==1],teacher=dataset.test_teacher,maxmov=0,noise_std=cfg.finetune_noise_std) 
+   mbp_test = minibatch_provider.MNISTMiniBatchProvider(dataset.test_data, dataset.test_teacher) 
    mbp_test.norm = mbp.norm
 mbp.mbs = mbs # allows visualization of mean, range, etc 
 print "done."
@@ -244,7 +244,7 @@ if cfg.finetune:
     pymlp = MLP(cfg, weights,biases)
 
     #mbp.set_translation_max(cfg.finetune_translation_max)
-    mbp.set_noise_std(cfg.finetune_noise_std)
+    #mbp.set_noise_std(cfg.finetune_noise_std)
 
     pymlp.preEpochHook = lambda mlp,epoch: epoch%10==0 and mlp.runMLP(mbp_test, cfg.test_batchsize,epoch)
     try:

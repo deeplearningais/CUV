@@ -8,6 +8,8 @@ import Image
 
 class DataSet:
     def __init__(self):
+        self.teacher = None
+        self.test_teacher = None
         pass
     def make_cmf(self):
         """ convert to column major float32 """
