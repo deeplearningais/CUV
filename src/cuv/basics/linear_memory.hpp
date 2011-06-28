@@ -69,8 +69,6 @@ class linear_memory
 	  typedef typename super_type::pointer_type      pointer_type; ///< Type of stored pointer, should be const or not-const value_type*
 	  typedef typename super_type::reference_type      reference_type; ///< Type of references returned by operator[]
 	  typedef typename super_type::const_reference_type      const_reference_type; ///< Type of references returned by operator[]
-	  template <class Archive, class V, class I> friend 
-		  void serialize(Archive&, linear_memory<V,memory_space_type,I>&, unsigned int) ; ///< serialize/deserialize the linear_memory to/from an archive
 	  typedef linear_memory<value_type, memory_space_type, TPtr, index_type> my_type; ///< Type of this linear_memory
 	  typedef memory2d<value_type, memory_space_type, TPtr, index_type> mem2d_type; ///< Type of 2d memory with similar properties
 	protected:
