@@ -15,6 +15,9 @@ add_definitions(-DCUDA_TEST_DEVICE=${CUDA_TEST_DEVICE})
 ADD_EXECUTABLE( test_tensor tensor.cpp )
 TARGET_LINK_LIBRARIES( test_tensor cuv_basics cuv_tools cuv_matrix_ops cuv_convert)
 
+ADD_EXECUTABLE( test_tensor_serialization tensor_serialization.cpp )
+TARGET_LINK_LIBRARIES( test_tensor_serialization cuv_basics cuv_tools cuv_matrix_ops cuv_convert ${Boost_LIBRARIES})
+
 ADD_EXECUTABLE( test_basic basic.cpp )
 TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools cuv_matrix_ops cuv_convert)
 
@@ -89,6 +92,7 @@ IF(CUV_CIMG_BINDINGS)
 
 ENDIF(CUV_CIMG_BINDINGS)
 
+ADD_TEST( tensor_serialization  "${CMAKE_BINARY_DIR}/src/tests/test_tensor_serialization" )
 ADD_TEST( basics  "${CMAKE_BINARY_DIR}/src/tests/test_basic" )
 ADD_TEST( convert "${CMAKE_BINARY_DIR}/src/tests/test_convert" )
 ADD_TEST( tensor_op "${CMAKE_BINARY_DIR}/src/tests/test_tensor_op" )

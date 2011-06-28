@@ -448,6 +448,7 @@ namespace cuv
 
 			using super_type::m_data;
 			using super_type::m_shape;
+			using super_type::m_pitch;
 			using super_type::index_of;
 			using super_type::size;
 			using super_type::operator[];
@@ -648,6 +649,17 @@ namespace cuv
                                 cuvAssert(new_size == size() );
                                 m_shape = new_shape;
                         }
+
+			/**
+			 * return reference to underlying memory object
+			 */
+			memory_container_type&       data()     {return m_data;}
+			const memory_container_type& data()const{return m_data;}
+
+			/**
+			 * change pitch (dangerous!) primarily here for serialization
+			 */
+			void set_pitch(index_type i){ m_pitch=i; }
 	};
 
       // forward declaration of fill to implement operator= for value_type	
