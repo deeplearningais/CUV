@@ -50,30 +50,41 @@ namespace boost
 		void save(Archive& ar, const cuv::linear_memory<V,cuv::host_memory_space,TPtr,I>& m, const unsigned int version){
 			unsigned int size = m.size();
 			ar << size;
-			ar << make_array(m.ptr(), m.size());
+			if(size>0)
+				ar << make_array(m.ptr(), m.size());
 		}
 		template<class Archive, class V, class TPtr, class I>
 		void load(Archive& ar, cuv::linear_memory<V,cuv::host_memory_space,TPtr, I>& m, const unsigned int version){
 			unsigned int size;
 			ar >> size;
-			m = cuv::linear_memory<V,cuv::host_memory_space,TPtr, I>(size);
-			ar >> make_array(m.ptr(), m.size());
+			if(size>0){
+				m = cuv::linear_memory<V,cuv::host_memory_space,TPtr, I>(size);
+				ar >> make_array(m.ptr(), m.size());
+			}else{
+				m.dealloc();
+			}
 		}
 		// dev linear memory
 		template<class Archive, class V, class TPtr, class I>
 		void save(Archive& ar, const cuv::linear_memory<V,cuv::dev_memory_space,TPtr, I>& m, const unsigned int version){
 			unsigned int size = m.size();
 			ar << size;
-			cuv::linear_memory<V,cuv::host_memory_space,TPtr,I> mh(m);
-			ar << make_array(mh.ptr(), mh.size());
+			if(size>0){
+				cuv::linear_memory<V,cuv::host_memory_space,TPtr,I> mh(m);
+				ar << make_array(mh.ptr(), mh.size());
+			}
 		}
 		template<class Archive, class V, class TPtr, class I>
 		void load(Archive& ar, cuv::linear_memory<V,cuv::dev_memory_space,TPtr, I>& m, const unsigned int version){
 			unsigned int size;
 			ar >> size;
-			cuv::linear_memory<V,cuv::host_memory_space,TPtr,I> mh(size);
-			ar >> make_array(mh.ptr(), mh.size());
-			m = mh;
+			if(size>0){
+				cuv::linear_memory<V,cuv::host_memory_space,TPtr,I> mh(size);
+				ar >> make_array(mh.ptr(), mh.size());
+				m = mh;
+			}else{
+				m.dealloc();
+			}
 		}
 		template<class Archive, class V, class MS, class TPtr, class I>
 		void serialize(Archive& ar, cuv::linear_memory<V,MS,TPtr, I>& m, const unsigned int version){
@@ -88,19 +99,25 @@ namespace boost
 		template<class Archive, class V, class MS,class ML, class MC>
 		void save(Archive& ar, const cuv::tensor<V,MS, ML, MC>& t, const unsigned int version){
 			ar << t.shape();
-			unsigned int pitch = t.pitch();
-			ar << pitch;
-			ar << t.data();
+			if(t.ndim()>0){
+				unsigned int pitch = t.pitch();
+				ar << pitch;
+				ar << t.data();
+			}
 		}
 		template<class Archive, class V, class MS, class ML, class MC>
 		void load(Archive& ar, cuv::tensor<V,MS, ML, MC>& t, const unsigned int version){
 			std::vector<unsigned int> shape;
 			ar >> shape;
-			t = cuv::tensor<V,cuv::host_memory_space, ML, MC>(shape);
-			unsigned int pitch;
-			ar >> pitch;
-			t.set_pitch(pitch);
-			ar >> t.data();
+			if(shape.size()>0){
+				t = cuv::tensor<V,cuv::host_memory_space, ML, MC>(shape);
+				unsigned int pitch;
+				ar >> pitch;
+				t.set_pitch(pitch);
+				ar >> t.data();
+			}else{
+				t.dealloc();
+			}
 		}
 		template<class Archive, class V, class MS, class ML, class MC>
 		void serialize(Archive& ar, cuv::tensor<V,MS, ML, MC>& t, const unsigned int version){

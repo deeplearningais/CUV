@@ -94,10 +94,34 @@ void binary_save()
 	}
 }
 
+template<class T>
+void empty_save()
+{
+	T m;
+	T n;
+
+	std::ofstream os("test.dat");
+	boost::archive::binary_oarchive oa(os);
+	oa << m;
+	os.close();
+
+	std::ifstream is("test.dat");
+	boost::archive::binary_iarchive ia(is);
+	ia >> n;
+
+	BOOST_REQUIRE(!n.ptr());
+	BOOST_REQUIRE_EQUAL(m.ndim(), n.ndim());
+	BOOST_REQUIRE(cuv::equal_shape(m,n));
+}
+
 
 BOOST_AUTO_TEST_CASE( binary_save_test ) {
 	binary_save<tensor<float,host_memory_space> >();
 	binary_save<tensor<float,dev_memory_space> >();
+}
+BOOST_AUTO_TEST_CASE( empty_save_test ) {
+	empty_save<tensor<float,host_memory_space> >();
+	empty_save<tensor<float,dev_memory_space> >();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
