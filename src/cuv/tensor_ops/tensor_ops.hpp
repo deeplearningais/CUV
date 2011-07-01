@@ -545,18 +545,13 @@ namespace cuv{
 
 
  /* 
-  * operator overloading for arithmatic operations on vectors
+  * operator overloading for arithmatic operations on tensors
   */
   
-  
-/*  template<class T, class V>
-   cuv::tensor<T, V> 
-    operator- (const cuv::tensor<T, V>& v1, const cuv::tensor<T, V>& v2){
-        cuv::tensor<T, V> temp= v1;
-        temp-= v2;
-        return temp;
-  }*/
-  
+
+/*
+ * binary operators (tensor, scalar)
+ */
   template<class T, class V, class M>
    cuv::tensor<T, V, M> 
     operator+ (const cuv::tensor<T, V, M>& v, const T& p){
@@ -585,6 +580,44 @@ namespace cuv{
         temp/= p;
         return temp;
   }
+
+/*
+ * binary operators (scalar, tensor)
+ */
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator+ (const T& p, const cuv::tensor<T, V, M>& v){
+        cuv::tensor<T, V, M> temp = v;
+        temp+= p;
+        return temp;
+  }
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator- (const T& p, const cuv::tensor<T, V, M>& v){
+        cuv::tensor<T, V, M> temp = -v;
+        temp += p;
+        return temp;
+  }
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator* (const T& p, const cuv::tensor<T, V, M>& v){
+        cuv::tensor<T, V, M> temp = v;
+        temp *= p;
+        return temp;
+  }
+  template<class T, class V, class M>
+   cuv::tensor<T, V, M> 
+    operator/ (const T& p, const cuv::tensor<T, V, M>& v){
+        cuv::tensor<T, V, M> temp = v;
+        apply_scalar_functor(temp, cuv::SF_INV);
+        temp *= p;
+        return temp;
+  }
+
+/*
+ * binary operators (tensor, tensor)
+ */
+
   template<class T, class V, class M>
    cuv::tensor<T, V, M> 
     operator+ (const cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
@@ -615,6 +648,10 @@ namespace cuv{
         return temp;
   }
         
+/*
+ * binary modification operators (tensor, tensor)
+ */
+
   template<class T, class V, class M>
     cuv::tensor<T, V, M>& 
     operator-=(cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
@@ -640,6 +677,10 @@ namespace cuv{
   	cuv::apply_binary_functor(v1,v2, cuv::BF_ADD);
   	return v1;
   }
+
+/*
+ * binary assignment operators (tensor, scalar)
+ */
  
   template<class T, class V, class M>
     cuv::tensor<T, V, M>& 
@@ -667,6 +708,9 @@ namespace cuv{
   	return v;
   }
 
+/*
+ * unary operators (tensor)
+ */
   template<class T, class V, class M>
     cuv::tensor<T, V, M>
     operator-(const cuv::tensor<T, V, M>& v){
