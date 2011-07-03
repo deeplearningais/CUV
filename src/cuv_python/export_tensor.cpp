@@ -298,6 +298,7 @@ export_tensor_common(const char* name){
 		.def(s * s)
 		.def(s / s)
 		.def("__add__", ( arr (*) (const arr&,const value_type&))operator+<value_type,memspace_type,memlayout_type>)
+                .def("__radd__", ( arr (*) (const arr&, const value_type&))operator+<value_type,memspace_type,memlayout_type>)
 		.def("__sub__", ( arr (*) (const arr&,const value_type&))operator-<value_type,memspace_type,memlayout_type>)
 		//.def(s + value_type()) // incompatible with pyublas. god knows why.
 		//.def(s - value_type()) // incompatible with pyublas. god knows why.
