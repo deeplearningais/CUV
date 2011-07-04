@@ -43,18 +43,21 @@
  * @section features  Features
  *
  * Supported Platforms:
- * - This library was only tested on Ubuntu Karmic, Lucid and Maverick. It uses only standard
- *   components and should run without major modification on any current linux
+ * - This library was only tested on Ubuntu Karmic, Lucid and Maverick. It uses mostly standard
+ *   components (except PyUBLAS) and should run without major modification on any current linux
  *   system.
  *
  * Supported GPUs:
+ * - By default, code is generated for the lowest compute architecture.
+ *   We recommend you change this to match your hardware.
+ *   Using ccmake you can set the build variable "CUDA_ARCHITECTURE" for example to --arch=compute_20
  * - All GT 9800 and GTX 280 and above
  * - GT 9200 without convolutions. It might need some minor modifications to make the rest work.
  *   If you want to use that card and have problems, just get in contact.
  * - On 8800GTS, random numbers and convolutions wont work.
- * 
+ *
  * Structure: 
- * - Like for example Matlab, CUV assumes that everything is an n-dimensional matrix called "tensor"
+ * - Like for example Matlab, CUV assumes that everything is an n-dimensional array called "tensor"
  * - Tensors can have an arbitrary data-type and can be on the host (CPU-memory) or device (GPU-memory)
  * - Tensors can be column-major or row-major (1-dimensional tensors are, by convention, row-major)
  * - The library defines many functions which may or may not apply to all possible combinations. Variations are easy to add.
@@ -86,18 +89,20 @@
  *
  * Contact
  * - We are eager to help you getting started with CUV and improve the library continuously!
- *   http://www.ais.uni-bonn.de/deep_learning/index.html
+ *   If you have any questions, feel free to contact Hannes Schulz (schulz at ais dot uni-bonn dot de) or Andreas Mueller (amueller at ais dot uni-bonn dot de).
+ *   You can find the website of our group at http://www.ais.uni-bonn.de/deep_learning/index.html.
  *
  * @section installation  Installation
  *
  * @subsection req  Requirements
  *
  * For C++ libs, you will need:
+ * - cmake (and cmake-curses-gui for easy configuration)
  * - libboost-dev >= 1.37
  * - libblas-dev
  * - libtemplate-perl -- (we might get rid of this dependency soon)
  * - NVIDIA CUDA (tm), including SDK. We support versions 3.X and 4.0
- * - thrust library (from http://code.google.com/p/thrust/)
+ * - thrust library - included in CUDA since 4.0 (otherwise available from http://code.google.com/p/thrust/) 
  * - doxygen (if you want to build the documentation yourself)
  *
  * For Python Integration, you additionally have to install
