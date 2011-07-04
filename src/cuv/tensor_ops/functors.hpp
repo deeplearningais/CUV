@@ -197,6 +197,19 @@ template<class R, class T, class A>
 struct bf_norm:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& x, const A& y)      const{ return sqrtf(y*y+x*x); } };
 
 
+/// binds the 1st argument of a binary functor, yielding a unary functor
+template<class __binary_functor>
+struct uf_bind1st : unary_functor<typename __binary_functor::result_type,typename __binary_functor::second_argument_type>{
+  typedef typename __binary_functor::first_argument_type first_argument_type;
+  typedef typename __binary_functor::second_argument_type second_argument_type;
+  typedef typename __binary_functor::result_type result_type;
+  const  first_argument_type x; /// the encapsulated, constant 2nd argument of bf
+  const __binary_functor bf; /// the encapsulated binary functor
+  uf_bind1st(const __binary_functor& _bf, const second_argument_type& _x):x(_x),bf(_bf){};  
+  inline __device__ __host__
+  result_type operator()(const second_argument_type& s){ return bf(x,s); } /// calls bf with s and x
+};
+
 /// binds the 2nd argument of a binary functor, yielding a unary functor
 template<class __binary_functor>
 struct uf_bind2nd : unary_functor<typename __binary_functor::result_type,typename __binary_functor::first_argument_type>{
@@ -210,7 +223,12 @@ struct uf_bind2nd : unary_functor<typename __binary_functor::result_type,typenam
   result_type operator()(const first_argument_type& s){ return bf(s,x); } /// calls bf with s and x
 };
 
-/// creates a unary functor from a binary functor and a fixed, second argument
+/// creates a unary functor from a binary functor and a fixed first argument
+template<class __binary_functor>
+uf_bind1st<__binary_functor>
+make_bind1st(const __binary_functor& bf, const typename __binary_functor::first_argument_type& x){ return uf_bind1st<__binary_functor>(bf, x); }
+
+/// creates a unary functor from a binary functor and a fixed second argument
 template<class __binary_functor>
 uf_bind2nd<__binary_functor>
 make_bind2nd(const __binary_functor& bf, const typename __binary_functor::second_argument_type& x){ return uf_bind2nd<__binary_functor>(bf, x); }

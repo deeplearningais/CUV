@@ -254,7 +254,9 @@ namespace detail{
 				case SF_ADD:       launch_unary_kernel(dst,src,make_bind2nd(thrust::plus<V1>(),p),mask); break;
 				case SF_MULT:      launch_unary_kernel(dst,src,make_bind2nd(thrust::multiplies<V1>(),p),mask); break;
 				case SF_DIV:       launch_unary_kernel(dst,src,make_bind2nd(thrust::divides<V1>(),p),mask); break;
+				case SF_RDIV:      launch_unary_kernel(dst,src,make_bind1st(thrust::divides<V1>(),p),mask); break;
 				case SF_SUBTRACT:  launch_unary_kernel(dst,src,make_bind2nd(thrust::minus<V1>(),p),mask); break;
+				case SF_RSUB:      launch_unary_kernel(dst,src,make_bind1st(thrust::minus<V1>(),p),mask); break;
 				case SF_MIN:       launch_unary_kernel(dst,src,make_bind2nd(bf_min<V1,V2,S1>(),p),mask); break;
 				case SF_MAX:       launch_unary_kernel(dst,src,make_bind2nd(bf_max<V1,V2,S1>(),p),mask); break;
 				case SF_RECT:      launch_unary_kernel(dst,src,make_bind2nd(bf_rect<V1,V2,S1>(),p),mask); break;
