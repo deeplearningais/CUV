@@ -19,7 +19,7 @@ Supported GPUs:
 
   • By default, code is generated for the lowest compute architecture. We
     recommend you change this to match your hardware. Using ccmake you can set
-    the build variable "CUDA_ARCHITECTURE" for example to --arch=compute_20
+    the build variable "CUDA_ARCHITECTURE" for example to -arch=compute_20
   • All GT 9800 and GTX 280 and above
   • GT 9200 without convolutions. It might need some minor modifications to
     make the rest work. If you want to use that card and have problems, just
