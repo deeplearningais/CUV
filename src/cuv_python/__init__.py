@@ -4,7 +4,7 @@ import pyublas
 from _cuv_python import *
 
 def _matstr(x,typestr):
-    return "%s: (%d,%d)[%2.1f Mb]"%(typestr,x.shape,x.memsize/1024./1024.)
+    return "%s: %s [%2.1f Mb]"%(typestr,",".join([str(s) for s in x.shape]),x.memsize/1024./1024.)
 
 def __sav_dense(x, file):
     np.save(file.replace(".npy",""),pull(x))
