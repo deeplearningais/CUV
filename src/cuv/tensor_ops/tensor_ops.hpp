@@ -123,6 +123,8 @@ namespace cuv{
 	 *
 	 *  Without scalar parameters:
 	 *
+	 * 	@li BF_AND computes  x && y
+	 * 	@li BF_OR  computes  x || y
 	 * 	@li BF_ADD computes  x += y
 	 * 	@li BF_SUBTRACT computes x -= y
 	 * 	@li BF_MULT computes x *= y
@@ -141,6 +143,8 @@ namespace cuv{
 	 */
   enum BinaryFunctor{
 	  // w/o params
+	  BF_AND,
+	  BF_OR,
 	  BF_ADD,
 	  BF_SUBTRACT,
 	  BF_MULT,

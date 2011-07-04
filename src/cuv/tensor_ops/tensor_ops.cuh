@@ -313,6 +313,8 @@ namespace detail{
 		if(numparams==0){
 #if USE_THRUST_LAUNCHER 
 			switch(bf){
+				case BF_AND:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_and<V1,V2,V3>()); break;
+				case BF_OR :      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_or<V1,V2,V3>()); break;
 				case BF_ADD:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_plus<V1,V2,V3>()); break;
 				case BF_SUBTRACT: thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_minus<V1,V2,V3>()); break;
 				case BF_MULT:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_multiplies<V1,V2,V3>()); break;
@@ -327,6 +329,8 @@ namespace detail{
 			dim3 blocks, threads;
 			setLinearGridAndThreads(blocks,threads,v.size());
 			switch(bf){
+				case BF_AND:      launch_binary_kernel(v,w,bf_and<V1,V2,V3>()); break;
+				case BF_OR :      launch_binary_kernel(v,w,bf_or<V1,V2,V3>()); break;
 				case BF_ADD:      launch_binary_kernel(v,w,bf_plus<V1,V2,V3>()); break;
 				case BF_SUBTRACT: launch_binary_kernel(v,w,bf_minus<V1,V2,V3>()); break;
 				case BF_MULT:     launch_binary_kernel(v,w,bf_multiplies<V1,V2,V3>()); break;

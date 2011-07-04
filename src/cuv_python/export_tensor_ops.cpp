@@ -89,6 +89,8 @@ void export_scalar_functors() {
 
 void export_binary_functors(){
     enum_<cuv::BinaryFunctor>("binary_functor")
+        .value("OR", BF_OR)
+        .value("AND", BF_AND)
         .value("ADD", BF_ADD)
         .value("SUBTRACT", BF_SUBTRACT)
         .value("MULT", BF_MULT)
