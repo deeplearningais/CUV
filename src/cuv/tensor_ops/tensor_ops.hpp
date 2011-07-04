@@ -426,6 +426,19 @@ namespace cuv{
 	return has_nan(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
   }
   /** 
+   * @brief Count the elements with a certain scalar value in a vector
+   * 
+   * @param v vector
+   * @param s scalar
+   * 
+   * @return count of elements with that scalar value
+   */
+  template<class __value_type, class __memory_space_type> unsigned int count(const tensor<__value_type, __memory_space_type>& v, const __value_type& s);
+  /// @see sum
+  template<class __value_type, class __memory_space_type> unsigned int count(const tensor<__value_type, __memory_space_type, column_major>& v, const __value_type& s){
+	return count(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v,s));
+  }
+  /** 
    * @brief Return the sum of a vector 
    * 
    * @param v vector

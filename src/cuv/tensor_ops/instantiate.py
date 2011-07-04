@@ -31,6 +31,7 @@ template bool has_nan<{0}::value_type,{0}::memory_space_type >(const {0}&);
 template float minimum<{0}::value_type,{0}::memory_space_type >(const {0}&);
 template float maximum<{0}::value_type,{0}::memory_space_type >(const {0}&);
 template float sum<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template unsigned int count<{0}::value_type,{0}::memory_space_type >(const {0}&, const {0}::value_type&);
 template float norm1<{0}::value_type,{0}::memory_space_type >(const {0}&);
 template float norm2<{0}::value_type,{0}::memory_space_type >(const {0}&);
 template float mean<{0}::value_type,{0}::memory_space_type >(const {0}&);
