@@ -40,6 +40,7 @@
 #include <thrust/transform_reduce.h>
 #include <thrust/generate.h>
 #include <thrust/logical.h>
+#include <thrust/count.h>
 
 #include <cuv/tools/cuv_general.hpp>
 
@@ -427,6 +428,13 @@ sum(const tensor<__value_type, __memory_space_type>& v){
 	ptr_type v_ptr(const_cast<__value_type*>(v.ptr()));
 	float init=0.0;
 	return   thrust::reduce(v_ptr, v_ptr+v.size(), init, bf_plus<float,float,__value_type>());
+}
+template<class __value_type, class __memory_space_type>
+unsigned int
+count(const tensor<__value_type, __memory_space_type>& v, const __value_type& s){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(const_cast<__value_type*>(v.ptr()));
+	return   thrust::count(v_ptr, v_ptr+v.size(), s);
 }
 template<class __value_type, class __memory_space_type>
 float
