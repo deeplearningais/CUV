@@ -253,6 +253,12 @@ namespace python_wrapping {
 		    return result;
 	    }
     };
+    template <class value_type, class memspace_type, class memlayout_type>
+    tensor<value_type,memspace_type,memlayout_type> rsub(const tensor<value_type,memspace_type,memlayout_type> & arr, const value_type& s){
+        tensor<value_type,memspace_type,memlayout_type> tmp(arr.shape());
+        apply_scalar_functor(tmp, arr, SF_RSUB, s);
+        return tmp;
+    }
     
 };
 
@@ -297,13 +303,16 @@ export_tensor_common(const char* name){
 		//.def(s - s) // incompatible with pyublas. god knows why.
 		.def(s * s)
 		.def(s / s)
-		.def("__add__", ( arr (*) (const arr&,const value_type&))operator+<value_type,memspace_type,memlayout_type>)
-                .def("__radd__", ( arr (*) (const arr&, const value_type&))operator+<value_type,memspace_type,memlayout_type>)
+                .def("__add__", ( arr (*) (const arr&,const value_type&))operator+<value_type,memspace_type,memlayout_type>)
 		.def("__sub__", ( arr (*) (const arr&,const value_type&))operator-<value_type,memspace_type,memlayout_type>)
-		//.def(s + value_type()) // incompatible with pyublas. god knows why.
+                .def("__radd__", ( arr (*) (const arr&, const value_type&))operator+<value_type,memspace_type,memlayout_type>)
+                .def("__rsub__", ( arr (*) (const arr&, const value_type&))python_wrapping::rsub<value_type,memspace_type,memlayout_type>)
+                //.def(s + value_type()) // incompatible with pyublas. god knows why.
 		//.def(s - value_type()) // incompatible with pyublas. god knows why.
 		.def(s * value_type())
+		.def(value_type() * s)
 		.def(s / value_type())
+		.def(value_type() / s)
 		.def("__neg__", ( arr (*) (const arr&))operator-<value_type,memspace_type,memlayout_type>)
 		//.def(-s) // incompatible with pyublas. god knows why.
 		;
