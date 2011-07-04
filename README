@@ -1,6 +1,6 @@
 CUV Documentation
 
-0.9.0
+0.9.201107041204
 
 Summary
 
@@ -12,11 +12,14 @@ Features
 Supported Platforms:
 
   • This library was only tested on Ubuntu Karmic, Lucid and Maverick. It uses
-    only standard components and should run without major modification on any
-    current linux system.
+    mostly standard components (except PyUBLAS) and should run without major
+    modification on any current linux system.
 
 Supported GPUs:
 
+  • By default, code is generated for the lowest compute architecture. We
+    recommend you change this to match your hardware. Using ccmake you can set
+    the build variable "CUDA_ARCHITECTURE" for example to --arch=compute_20
   • All GT 9800 and GTX 280 and above
   • GT 9200 without convolutions. It might need some minor modifications to
     make the rest work. If you want to use that card and have problems, just
@@ -26,7 +29,7 @@ Supported GPUs:
 Structure:
 
   • Like for example Matlab, CUV assumes that everything is an n-dimensional
-    matrix called "tensor"
+    array called "tensor"
   • Tensors can have an arbitrary data-type and can be on the host (CPU-memory)
     or device (GPU-memory)
   • Tensors can be column-major or row-major (1-dimensional tensors are, by
@@ -64,7 +67,10 @@ Documentation
 Contact
 
   • We are eager to help you getting started with CUV and improve the library
-    continuously! http://www.ais.uni-bonn.de/deep_learning/index.html
+    continuously! If you have any questions, feel free to contact Hannes Schulz
+    (schulz at ais dot uni-bonn dot de) or Andreas Mueller (amueller at ais dot
+    uni-bonn dot de). You can find the website of our group at http://
+    www.ais.uni-bonn.de/deep_learning/index.html.
 
 Installation
 
@@ -72,11 +78,13 @@ Requirements
 
 For C++ libs, you will need:
 
+  • cmake (and cmake-curses-gui for easy configuration)
   • libboost-dev >= 1.37
   • libblas-dev
   • libtemplate-perl -- (we might get rid of this dependency soon)
   • NVIDIA CUDA (tm), including SDK. We support versions 3.X and 4.0
-  • thrust library (from http://code.google.com/p/thrust/)
+  • thrust library - included in CUDA since 4.0 (otherwise available from http:
+    //code.google.com/p/thrust/)
   • doxygen (if you want to build the documentation yourself)
 
 For Python Integration, you additionally have to install
@@ -107,7 +115,8 @@ Building a debug version:
                      # turn on/off optional libraries (CImg, ...)
  $ make -j
  $ ctest             # run tests to see if it went well
- $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
+ $ sudo make install
+ $ export PYTHONPATH=`pwd`/src      # only if you want python bindings
 
 Building a release version:
 
@@ -119,7 +128,14 @@ Building a release version:
                      # turn on/off optional libraries (CImg, ...)
  $ make -j
  $ ctest             # run tests to see if it went well
- $ export PYTHONPATH=`pwd`/src/python_bindings      # only if you want python bindings
+ $ sudo make install
+ $ export PYTHONPATH=`pwd`/src      # only if you want python bindings
+
+On Debian/Ubuntu systems, you can skip the sudo make install step and instead
+do
+
+ $ cpack -G DEB
+ $ sudo dpkg -i cuv-VERSION.deb
 
 Building the documentation
 
@@ -135,26 +151,25 @@ Pushing and pulling of memory
 
 C++ Code:
 
- #include <cuv/basics/tensor.hpp>
- #include <cuv/tensor_ops/tensor_ops.hpp>
- using namespace cuv;
+ #include <cuv.hpp>
+     using namespace cuv;
 
- int main(void){
-     tensor<float,host_memory_space> h(256);  // reserves space in host memory
-     tensor<float,dev_memory_space>  d(256);  // reserves space in device memory
+     int main(void){
+         tensor<float,host_memory_space> h(256);  // reserves space in host memory
+         tensor<float,dev_memory_space>  d(256);  // reserves space in device memory
 
-     fill(h,0);                          // terse form
-     apply_0ary_functor(h,NF_FILL,0.f);    // more verbose
+         fill(h,0);                          // terse form
+         apply_0ary_functor(h,NF_FILL,0.f);    // more verbose
 
-     d=h;                                // push to device
-     sequence(d);                        // fill device vector with a sequence
+         d=h;                                // push to device
+         sequence(d);                        // fill device vector with a sequence
 
-     h=d;                                // pull to host
-     for(int i=0;i<h.size();i++)
-     {
-         assert(d[i] == h[i]);
+         h=d;                                // pull to host
+         for(int i=0;i<h.size();i++)
+         {
+             assert(d[i] == h[i]);
+         }
      }
- }
 
 Python Code:
 
@@ -178,8 +193,7 @@ Simple Matrix operations
 
 C++-Code
 
- #include <cuv/basics/tensor.hpp>
- #include <cuv/matrix_ops/matrix_ops.hpp>
+ #include <cuv.hpp>
  using namespace cuv;
 
  int main(void){
@@ -210,5 +224,4 @@ Python Code
 
 The examples can be found in the "examples/" folder under "python" and "cpp"
 
-
-Generated on Fri Apr 15 19:53:13 2011 for CUV by  doxygen 1.6.3
+Generated on Mon Jul 4 2011 12:04:53 for CUV by  doxygen 1.7.1
