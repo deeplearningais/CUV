@@ -35,8 +35,6 @@ class MNIST_data:
         tmp = np.vstack((self.test_labels.T, np.arange(10000).T))
         #assigning correct label
         label[tmp[0], tmp[1]] = 0.90
-        data = data.copy('F')
-        label = label.copy('F')
         return data, label
 
     def get_train_data(self):
@@ -49,6 +47,4 @@ class MNIST_data:
 
         #assigning positive value to row in each clolumn based on corresponding data label
         label[tmp[0], tmp[1]] = 0.90
-        data = data.copy('F')
-        label = label.copy('F')
         return data, label
