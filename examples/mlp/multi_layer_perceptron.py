@@ -3,12 +3,14 @@ import numpy as np
 from neuron_layer import neuron_layer
 from weight_layer import weight_layer
 
+
 class MLP:
     """
-		A Multi-Layer Perceptron
-		"""
+    A Multi-Layer Perceptron
+    """
     def __init__(self, neurons, batch_size):
-        """Constructor
+        """
+        Constructor
 
         @param neurons -- array of sizes of layers.
         @param batch_size -- size of batch being used for training.
@@ -27,7 +29,8 @@ class MLP:
                 self.neuron_layer[i+1]))
 
     def train(self, input_matrix, teacher_matrix, number_of_epochs):
-        """Function to train the network
+        """
+        Function to train the network
 
         @param input_matrix -- matrix consisting of input data
            to the network.
@@ -78,12 +81,13 @@ class MLP:
                 teachbatch.dealloc()
                 self.neuron_layer[0].activations.dealloc()
 
-            print "MSE: ",     (mse/number_of_pictures)
-            print "ClassErr: ", (ce/number_of_pictures)
+            print "MSE: ",     (mse / number_of_pictures)
+            print "ClassErr: ", (ce / number_of_pictures)
         squared_errors.dealloc()
 
     def test(self, input_matrix, teacher_matrix):
-        """Function to test the network
+        """
+        Function to test the network
 
         @param input_matrix -- matrix consisting of input
            data to the network.

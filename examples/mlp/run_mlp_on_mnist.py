@@ -1,9 +1,9 @@
 import sys
-#import cProfile
 from multi_layer_perceptron import MLP
 import cuv_python as cp
 from switchtohost import switchtohost
 from MNIST_data import MNIST_data
+
 
 def _tmp(dim1, dim2, value):
     """Function to create a filled matrix.
@@ -49,12 +49,12 @@ if __name__ == "__main__":
 
     print('Initializing training of  MLP...')
     try:
-	    mlp.train(train_data, train_labels, 100)
+        mlp.train(train_data, train_labels, 100)
     except KeyboardInterrupt:
-	    pass
+        pass
 
     print('Initializing testing of MLP...')
-    mlp.test(test_data,test_labels)
+    mlp.test(test_data, test_labels)
 
     print('done.')
     #cp.exitCUDA()
