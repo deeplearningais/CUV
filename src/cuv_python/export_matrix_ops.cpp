@@ -55,8 +55,8 @@ void export_blas3() {
 	def("prod",(void (*)(R&,const R&,const R&,char, char, const float&, const float& ))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
 				arg("C"), arg("A"), arg("B"), arg("transA")='n', arg("transB")='n', arg("factAB")=1.f, arg("factC")=0.f
 				));
-	def("prod",(R (*)(const R&,const R&,char, char, const float&, const float& ))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
-				arg("A"), arg("B"), arg("transA")='n', arg("transB")='n', arg("factAB")=1.f, arg("factC")=0.f));
+	def("prod",(R (*)(const R&,const R&,char, char, const float&))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
+				arg("A"), arg("B"), arg("transA")='n', arg("transB")='n', arg("factAB")=1.f));
         // convenience for use of layout instead of "n" and "t"
         typedef typename switch_memory_layout_type<R, typename other_memory_layout<typename R::memory_layout_type>::type >::type S;
         typedef typename switch_memory_layout_type<R, row_major >::type R_rm;
@@ -66,8 +66,8 @@ void export_blas3() {
         def("prod",(void (*)(R&,const R&,const S&, const float&, const float& ))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
                                 arg("C"), arg("A"), arg("B"), arg("factAB")=1.f, arg("factC")=0.f
                                 ));
-	def("prod",(R_rm (*)(const R&,const S&, const float&, const float& ))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
-				arg("A"), arg("B"), arg("factAB")=1.f, arg("factC")=0.f));
+	def("prod",(R_rm (*)(const R&,const S&, const float&))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
+				arg("A"), arg("B"), arg("factAB")=1.f));
         // convenience prod that returns dst
 
 }

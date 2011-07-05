@@ -152,13 +152,26 @@ namespace cuv{
    */
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
 	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
-  /// @see prod
 
-// convenience: create and return dst
+  /** 
+   * @brief Simple matrix multiplication that allocates a new tensor as the result.
+   * 
+   * @param A First matrix for product 
+   * @param B Second matrix for product 
+   * @param transA Whether to transpose A before calculating the matix product. Possible values 'n' for "do Not transpose" and 't' for "Transpose". 
+   * @param transB Whether to transpose B befor calculating the matrix product. Possible values 'n' for "do Not transpose" and 't' for "Transpose". 
+   * @param factAB Scalar factor to multiply the product of A and B with. 
+   * 
+   * Calculates C = factAB * transA(A)*transB(B)
+   * Here transA(A) is the transpose of A if transA = 't' and transA(A) is A if transA = 'n'.
+   * The analogue is true for transB(B).
+   * In the above transA(A)*transB(B) is the matrix product.
+   * This is a thin wrapper of CUBLAS.
+   */
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
 	 tensor<__value_type,__memory_space_type, __memory_layout_type> prod( const tensor<__value_type,__memory_space_type, __memory_layout_type>& A,
                 const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', 
-                const float& factAB=1.f, const float& factC=0.f){
+                const float& factAB=1.f){
                    int shape[2];
                    if (transA=='n')
                         shape[0] = A.shape()[0];
@@ -170,16 +183,32 @@ namespace cuv{
                         shape[1] = B.shape()[0];
         
                    tensor<__value_type,__memory_space_type, __memory_layout_type> C(extents[shape[0]][shape[1]]);
-                   prod(C, A, B, transA, transB, factAB, factC);
+                   prod(C, A, B, transA, transB, factAB, 0.f);
                    return C;
 }
 // convenience: create and return dst: if memory layout does not agree, default to row major
+  /** 
+   * @brief Simple matrix multiplication that allocates a new tensor as the result.
+   *
+   * @param A First matrix for product 
+   * @param B Second matrix for product 
+   * @param factAB Scalar factor to multiply the product of A and B with. 
+   * 
+   * This function is called only if A and B have different memory layouts.
+   * It does not allow transposing of the matrices, since that would be too confusing.
+   * The returned matrix is always row-major.
+   *
+   *
+   * Calculates C = factAB * A*B
+   *
+   * This is a thin wrapper of CUBLAS.
+   */
   template<class __value_type, class __memory_space_type, class __memory_layout_typeA, class __memory_layout_typeB>
 	tensor<__value_type,__memory_space_type, row_major> prod( const tensor<__value_type,__memory_space_type, __memory_layout_typeA>& A,
                 const tensor<__value_type,__memory_space_type,__memory_layout_typeB>& B,
-                const float& factAB=1.f, const float& factC=0.f){
+                const float& factAB=1.f){
                    tensor<__value_type,__memory_space_type, row_major> C(extents[A.shape()[0]][B.shape()[1]]);
-                   prod(C, A, B, factAB, factC);
+                   prod(C, A, B, factAB, 0.f);
                    return C;
 }
   /// @see prod
