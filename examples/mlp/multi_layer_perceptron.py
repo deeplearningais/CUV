@@ -54,9 +54,9 @@ class MLP:
 
                 # Push input and teacher to GPU memory
                 self.neuron_layer[0].activations = cp.dev_tensor_float_cm(
-                    input_matrix[:, index_begin:index_end].astype('float32').copy('F'))
+                    input_matrix[:, index_begin:index_end].copy('F'))
                 teachbatch_host = teacher_matrix[:, index_begin:index_end]
-                teachbatch = cp.dev_tensor_float_cm(teachbatch_host.astype('float32').copy('F'))
+                teachbatch = cp.dev_tensor_float_cm(teachbatch_host.copy('F'))
 
                 # Forward-Pass
                 for i in xrange(self.number_of_layers):
@@ -104,9 +104,9 @@ class MLP:
             index_begin = self.batch_size * batch
             index_end = index_begin + self.batch_size
             self.neuron_layer[0].activations = cp.dev_tensor_float_cm(input_matrix[:,
-                index_begin:index_end].astype('float32').copy('F'))
+                index_begin:index_end].copy('F'))
             teachbatch = cp.dev_tensor_float_cm(teacher_matrix[:,
-                index_begin:index_end].astype('float32').copy('F'))
+                index_begin:index_end].copy('F'))
             for i in xrange(self.number_of_layers):
                 self.weight_layer[i].forward()
             cp.copy(squared_errors, self.neuron_layer[-1].deltas)
