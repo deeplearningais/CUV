@@ -20,13 +20,14 @@ class MLP:
         self.batch_size = batch_size
         self.neuron_layer = []
         self.weight_layer = []
-        for i in xrange(self.number_of_layers+1):
+        print("Training MLP with %d hidden layer(s)." % (self.number_of_layers - 1))
+        for i in xrange(self.number_of_layers + 1):
             dim1 = neurons[i]
             self.neuron_layer.append(neuron_layer(dim1,
-                self.batch_size ))
+                self.batch_size))
         for i in xrange(self.number_of_layers):
             self.weight_layer.append(weight_layer(self.neuron_layer[i],
-                self.neuron_layer[i+1]))
+                self.neuron_layer[i + 1]))
 
     def train(self, input_matrix, teacher_matrix, number_of_epochs):
         """
@@ -44,17 +45,17 @@ class MLP:
         squared_errors = cp.dev_tensor_float_cm([self.neuron_layer[-1].deltas.shape[0],
         self.neuron_layer[-1].deltas.shape[1]])
         for r in xrange(number_of_epochs):
-            print "Epoch ", r+1, "/", number_of_epochs
+            print "Epoch ", r + 1, "/", number_of_epochs
             mse = 0.0
-            ce  = 0.0
-            for batch in xrange(number_of_pictures/self.batch_size):
+            ce = 0.0
+            for batch in xrange(number_of_pictures / self.batch_size):
                 index_begin = self.batch_size * batch
-                index_end   = self.batch_size + index_begin
+                index_end = self.batch_size + index_begin
 
                 # Push input and teacher to GPU memory
                 self.neuron_layer[0].activations = cp.dev_tensor_float_cm(
-                    input_matrix[:,index_begin:index_end].astype('float32').copy('F'))
-                teachbatch_host = teacher_matrix[:,index_begin:index_end]
+                    input_matrix[:, index_begin:index_end].astype('float32').copy('F'))
+                teachbatch_host = teacher_matrix[:, index_begin:index_end]
                 teachbatch = cp.dev_tensor_float_cm(teachbatch_host.astype('float32').copy('F'))
 
                 # Forward-Pass
@@ -69,20 +70,19 @@ class MLP:
                 cp.copy(squared_errors, self.neuron_layer[-1].deltas)
                 cp.apply_scalar_functor(squared_errors, cp.scalar_functor.SQUARE)
                 mse += cp.sum(squared_errors)
-                ce  += float(np.sum(np.argmax(teachbatch_host,axis=0)
-			!=          np.argmax(self.neuron_layer[-1].activations.np,axis=0)))
-
+                ce += float(np.sum(np.argmax(teachbatch_host, axis=0)
+                        != np.argmax(self.neuron_layer[-1].activations.np, axis=0)))
 
                 # Backward-Pass
                 for i in xrange(self.number_of_layers):
-                    self.weight_layer[self.number_of_layers-i-1].backward()
+                    self.weight_layer[self.number_of_layers - i - 1].backward()
 
                 # Don't wait for garbage collector
                 teachbatch.dealloc()
                 self.neuron_layer[0].activations.dealloc()
 
             print "MSE: ",     (mse / number_of_pictures)
-            print "ClassErr: ", (ce / number_of_pictures)
+            print "Classification Error Training: ", (ce / number_of_pictures)
         squared_errors.dealloc()
 
     def test(self, input_matrix, teacher_matrix):
@@ -97,13 +97,13 @@ class MLP:
         """
         number_of_pictures = input_matrix.shape[-1]
         mse = 0.0
-        ce  = 0.0
+        ce = 0.0
         squared_errors = cp.dev_tensor_float_cm([self.neuron_layer[-1].deltas.shape[0],
             self.neuron_layer[-1].deltas.shape[1]])
-        for batch in xrange(number_of_pictures/self.batch_size):
+        for batch in xrange(number_of_pictures / self.batch_size):
             index_begin = self.batch_size * batch
             index_end = index_begin + self.batch_size
-            self.neuron_layer[0].activations = cp.dev_tensor_float_cm( input_matrix[:,
+            self.neuron_layer[0].activations = cp.dev_tensor_float_cm(input_matrix[:,
                 index_begin:index_end].astype('float32').copy('F'))
             teachbatch = cp.dev_tensor_float_cm(teacher_matrix[:,
                 index_begin:index_end].astype('float32').copy('F'))
@@ -112,9 +112,9 @@ class MLP:
             cp.copy(squared_errors, self.neuron_layer[-1].deltas)
             cp.apply_scalar_functor(squared_errors, cp.scalar_functor.SQUARE)
             mse += cp.sum(squared_errors)
-            ce  += float(np.sum(np.argmax(teachbatch.np,axis=0)
-                    !=          np.argmax(self.neuron_layer[-1].activations.np,axis=0)))
+            ce += float(np.sum(np.argmax(teachbatch.np, axis=0)
+                    != np.argmax(self.neuron_layer[-1].activations.np, axis=0)))
             teachbatch.dealloc()
-        print "MSE: ", (mse/number_of_pictures)
-        print "ClassErr: ", (ce/number_of_pictures)
+        print "MSE: ", (mse / number_of_pictures)
+        print "Classification Error Test: ", (ce / number_of_pictures)
         squared_errors.dealloc()
