@@ -52,6 +52,7 @@ class MLP:
                 index_end = self.batch_size + index_begin
 
                 # Push input and teacher to GPU memory
+                # .copy("F") is needed since memory is non-contiguous
                 self.neuron_layers[0].activations = cp.dev_tensor_float_cm(
                     input_matrix[:, index_begin:index_end].copy('F'))
                 teacher_batch_host = teacher_matrix[:, index_begin:index_end]

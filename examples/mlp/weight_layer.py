@@ -48,8 +48,9 @@ class weight_layer:
                 learnrate / batch_size, decay, l1decay)
         dw.dealloc()
 
-        h = cp.dev_tensor_float(self.target.activations.shape[0])
-        cp.fill(h, 0)
-        cp.reduce_to_col(h, self.target.deltas)
-        cp.learn_step_weight_decay(self.bias, h, learnrate / batch_size, decay)
-        h.dealloc()
+        db = cp.dev_tensor_float(self.target.activations.shape[0])
+        cp.fill(db, 0)
+        cp.reduce_to_col(db, self.target.deltas)
+        cp.learn_step_weight_decay(self.bias, db,
+                        learnrate / batch_size, decay)
+        db.dealloc()

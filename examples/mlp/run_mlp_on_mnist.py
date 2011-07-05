@@ -44,16 +44,16 @@ if __name__ == "__main__":
     # determine layer sizes
     sizes = [train_data.shape[0], 128, train_labels.shape[0]]
 
-    print('Initializing creation of MLP...')
+    print('Initializing MLP...')
     mlp = MLP(sizes, 96)
 
-    print('Initializing training of  MLP...')
+    print('Training MLP...')
     try:
         mlp.train(train_data, train_labels, 100)
     except KeyboardInterrupt:
         pass
 
-    print('Initializing testing of MLP...')
+    print('Testing MLP...')
     mlp.test(test_data, test_labels)
 
     print('done.')
