@@ -94,6 +94,33 @@ namespace cuv{
   template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
 	  void reduce_to_row(tensor<__value_type, __memory_space_type>& dst, const tensor<__value_type2, __memory_space_type, __memory_layout_type>& src, reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f);
 
+  /** 
+   * @brief Convenience function that creates a new vector and performs reduction by summing along given axis
+   * 
+   * @param src Source matrix
+   * @param axis Along which axis (0 = reduce to row, 1 = reduce to col)
+   *	 
+   */
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+          tensor<__value_type, __memory_space_type> sum(const tensor<__value_type, __memory_space_type, __memory_layout_type>& src, const int& axis){
+              cuvAssert(src.ndim()==2);
+              int tensor_length = 0;
+              if (axis==0){
+                  tensor_length = src.shape()[1];
+              } else if (axis==1) {
+                  tensor_length = src.shape()[0];
+              } else cuvAssert(false);
+
+              tensor<__value_type, __memory_space_type> dst(tensor_length);
+              if (axis==0){
+                  reduce_to_row(dst, src);
+              } else if (axis==1) {
+                  reduce_to_col(dst, src);
+              }
+              return dst;
+              
+          }
+
 
  /** @} */ // end of group reductions
 

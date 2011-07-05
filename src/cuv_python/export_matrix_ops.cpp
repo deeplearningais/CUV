@@ -164,6 +164,7 @@ template <class M>
 void export_reductions(){
 	//typedef typename switch_value_type<M, typename M::index_type>::type::vec_type idx_vec;
 	//typedef typename switch_value_type<M, float>::type::vec_type float_vec;
+	typedef typename switch_memory_layout_type<M,row_major>::type VECT;
 	typedef typename M::value_type value_type;
 	typedef typename M::memory_space_type memory_space_type;
 	typedef typename M::memory_layout_type memory_layout_type;
@@ -176,6 +177,7 @@ void export_reductions(){
 	def("minimum",(float (*)(const M&)) minimum<value_type,typename M::memory_space_type>);
 	def("mean", (float (*)(const M&)) mean<value_type,typename M::memory_space_type>);
 	def("var", (float (*)(const M&)) var<value_type,typename M::memory_space_type>);
+	def("sum",(VECT (*)(const M&, const int&)) sum<value_type,typename M::memory_space_type>);
         def("reduce_to_col", reduce_to_col<value_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
         def("reduce_to_row", reduce_to_row<value_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
         def("reduce_to_col", reduce_to_col<typename M::index_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
