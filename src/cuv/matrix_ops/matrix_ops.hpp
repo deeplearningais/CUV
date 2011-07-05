@@ -153,6 +153,26 @@ namespace cuv{
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
 	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
   /// @see prod
+
+// convenience: create and return dst
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	 tensor<__value_type,__memory_space_type, __memory_layout_type> prod( const tensor<__value_type,__memory_space_type, __memory_layout_type>& A,
+                const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', 
+                const float& factAB=1.f, const float& factC=0.f){
+                   tensor<__value_type,__memory_space_type, __memory_layout_type> C(extents[A.shape()[0]][B.shape()[1]]);
+                   prod(C, A, B, transA, transB, factAB, factC);
+                   return C;
+}
+// convenience: create and return dst: if memory layout does not agree, default to row major
+  template<class __value_type, class __memory_space_type, class __memory_layout_typeA, class __memory_layout_typeB>
+	tensor<__value_type,__memory_space_type, row_major> prod( const tensor<__value_type,__memory_space_type, __memory_layout_typeA>& A,
+                const tensor<__value_type,__memory_space_type,__memory_layout_typeB>& B,
+                const float& factAB=1.f, const float& factC=0.f){
+                   tensor<__value_type,__memory_space_type, row_major> C(extents[A.shape()[0]][B.shape()[1]]);
+                   prod(C, A, B, factAB, factC);
+                   return C;
+}
+  /// @see prod
 // convenience: use transposed view instead of "t" and "n"
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
 	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type, typename other_memory_layout<__memory_layout_type>::type >& B, const float& factAB=1.f, const float& factC=0.f){
