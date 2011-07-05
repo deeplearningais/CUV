@@ -159,7 +159,17 @@ namespace cuv{
 	 tensor<__value_type,__memory_space_type, __memory_layout_type> prod( const tensor<__value_type,__memory_space_type, __memory_layout_type>& A,
                 const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', 
                 const float& factAB=1.f, const float& factC=0.f){
-                   tensor<__value_type,__memory_space_type, __memory_layout_type> C(extents[A.shape()[0]][B.shape()[1]]);
+                   int shape[2];
+                   if (transA=='n')
+                        shape[0] = A.shape()[0];
+                   else
+                        shape[0] = A.shape()[1];
+                   if (transB=='n')
+                        shape[1] = B.shape()[1];
+                   else
+                        shape[1] = B.shape()[0];
+        
+                   tensor<__value_type,__memory_space_type, __memory_layout_type> C(extents[shape[0]][shape[1]]);
                    prod(C, A, B, transA, transB, factAB, factC);
                    return C;
 }
