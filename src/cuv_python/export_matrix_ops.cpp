@@ -50,11 +50,20 @@ using namespace boost::python;
 using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
-template<class R, class S, class T>
+template<class R>
 void export_blas3() {
-	def("prod",(void (*)(R&,const S&,const T&,char, char, const float&, const float& ))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
+	def("prod",(void (*)(R&,const R&,const R&,char, char, const float&, const float& ))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
 				arg("C"), arg("A"), arg("B"), arg("transA")='n', arg("transB")='n', arg("factAB")=1.f, arg("factC")=0.f
 				));
+        // convenience for use of layout instead of "n" and "t"
+        typedef typename switch_memory_layout_type<R, typename other_memory_layout<typename R::memory_layout_type>::type >::type S;
+        def("prod",(void (*)(R&,const S&,const R&, const float&, const float& ))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
+                                arg("C"), arg("A"), arg("B"), arg("factAB")=1.f, arg("factC")=0.f
+                                ));
+        def("prod",(void (*)(R&,const R&,const S&, const float&, const float& ))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
+                                arg("C"), arg("A"), arg("B"), arg("factAB")=1.f, arg("factC")=0.f
+                                ));
+
 }
 
 template<class M>
@@ -261,10 +270,10 @@ void export_matrix_ops(){
 	typedef tensor<unsigned char,dev_memory_space,row_major> ucdevr;
 	typedef tensor<unsigned char,host_memory_space,row_major> uchostr;
 
-	export_blas3<fdev,fdev,fdev>();
-	export_blas3<fhost,fhost,fhost>();
-	export_blas3<fdevr,fdevr,fdevr>();
-	export_blas3<fhostr,fhostr,fhostr>();
+	export_blas3<fdev>();
+	export_blas3<fhost>();
+	export_blas3<fdevr>();
+	export_blas3<fhostr>();
 	export_nullary_functor<fhost>();
 	export_nullary_functor<fdev>();
 	export_nullary_functor<uhost>();

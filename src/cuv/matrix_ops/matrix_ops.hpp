@@ -153,6 +153,21 @@ namespace cuv{
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
 	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
   /// @see prod
+// convenience: use transposed view instead of "t" and "n"
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type, typename other_memory_layout<__memory_layout_type>::type >& B, const float& factAB=1.f, const float& factC=0.f){
+               prod(C, A, *transposed_view_p(B), 'n', 't', factAB, factC);
+}
+  /// @see prod
+// convenience: use transposed view instead of "t" and "n"
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C,
+                const tensor<__value_type,__memory_space_type, typename other_memory_layout<__memory_layout_type>::type >& A,
+                const tensor<__value_type,__memory_space_type,__memory_layout_type>& B,
+                const float& factAB=1.f, const float& factC=0.f){
+                   prod(C, *transposed_view_p(A), B, 't', 'n', factAB, factC);
+}
+  /// @see prod
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
 	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const dia_matrix<__value_type,__memory_space_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
 
