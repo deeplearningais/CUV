@@ -4,44 +4,6 @@ import cuv_python as cp
 from minibatch_provider import MiniBatchProviderEmpty
 
 
-#class WeightLayer:
-#    def __init__(self,upper_layer,lower_layer,weights,bias):
-#        self.upper_layer=upper_layer
-#        self.lower_layer=lower_layer
-#        self.weights=weights
-#        self.bias=bias
-
-#        #self.d_w=cp.dev_dia_matrix_f(self.weights)
-
-#        #self.d_bias=cp.dev_dia_matrix_f(self.bias)
-
-#    def initialize_rprop(self,initial_learnrate):
-#        #self.d_w_old=cp.dev_dia_matrix_f(self.weights)
-#        #self.d_bias_old=cp.dev_dia_matrix_f(self.bias)
-
-#        #self.learnrate_w=cp.dev_dia_matrix_f(self.weights)
-#        #self.learnrate_bias=cp.dev_dia_matrix_f(self.bias)
-
-#        cp.fill(self.learnreate_w,initial_learnrate)
-#        cp.fill(self.learnreate_bias,initial_learnrate)
-
-#    def forward_pass(self):
-#        cp.prod(upper_layer.act,self.weights,lower_layer.act,'t','n')
-#        cp.matrix_plus_col(upper_layer.act,self.bias)
-#        upper_layer.nonlinearity()
-
-#    def backward_pass(self):
-#        cp.prod(lower_layer.delta,self.weights,upper_layer.delta,'n','n')
-#        cp.matrix_plus_col(upper_layer.act,self.bias)
-#        upper_layer.nonlinearity()
-
-#class NodeLayer:
-#    def __init__(self,size,batchsize):
-#        self.act=cp.dev_tensor_float_cm([size,batchsize])
-#        self.delta=cp.dev_tensor_float_cm([size,batchsize])
-
-#    def nonlinearity(self):
-#        cp.apply_scalar_functor(self.act,cp.scalar_functor.SIGM)
 
 class MLP:
   def __init__(self, cfg, weights,biases):

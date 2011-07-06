@@ -1,15 +1,15 @@
 import time
 import cPickle
 import sys, os
-import cuv_python as cp
 import numpy as np
 import math
+
+import cuv_python as cp
+
 from minibatch_provider import MiniBatchProviderEmpty
-
-# debugging libs
-
-from helper_classes import UnitType, CDType, LearnRateSchedule, UpdateQ, LoadType, repList, EvalStartType
+from helper_classes import UnitType, CDType, LearnRateSchedule, LoadType, EvalStartType, Dataset
 import minibatch_provider
+
 
 class WeightLayer(object):
     def __init__(self,layer1,layer2,cfg,layernum):
@@ -21,10 +21,8 @@ class WeightLayer(object):
             # the 0.5 stems from the fact that our upper layer has activation 0.5 on average, not 0, if we use binary hidden units.
             fact = 0.5
 
-        cp.apply_scalar_functor(self.mat,cp.scalar_functor.MULT,
-                                fact/math.sqrt(max(layer1.size, layer2.size)))
+        self.mat *= fact/math.sqrt(max(layer1.size, layer2.size))
         self.allocBias(layer1,layer2)
-        self.num_params = self.mat.size + len(self.bias_lo) + len(self.bias_hi)
 
     def allocBias(self,layer1,layer2):
         self.bias_lo=cp.dev_tensor_float(layer1.size)
@@ -166,7 +164,7 @@ class RBMStack:
             self.downPass(layernum+1,sample=sample)
         if layernum==len(self.layers)-1:
             self.upPass(layernum-1,sample)
-        if layernum<len(self.layers)-1 and layernum>0: 
+        if layernum<len(self.layers)-1 and layernum>0:
             hi = self.layers[layernum+1]
             lo = self.layers[layernum-1]
             wlo = self.weights[layernum-1]
@@ -226,89 +224,6 @@ class RBMStack:
         self.upPass(layernum,sample=True)
         self.weights[layernum].updateGradientNeg(self.layers[layernum],self.layers[layernum+1],self.cfg.batchsize)
 
-    def trainDBM(self, mbatch_provider, itermax):
-        try:
-            """ Train all layers of a RBM-Stack as a DBM using minibatches provided by mbatch_provider for itermax minibatches """
-            ### if pcd get starting point for fantasies 
-            if self.cfg.cd_type == CDType.pcd:
-                self.resetPChain(mbatch_provider)
-                mbatch_provider.forgetOriginalData()
-
-            ### temporary matrix to save update
-            for weightlayer in self.weights:
-                weightlayer.allocUpdateMatrix()
-
-            ### iterate over updates
-            for iter in xrange(1,itermax):
-                # carry over non-completed requests
-                for k in self.matrequests.keys():
-                    self.matrequests_new[k] = self.matrequests[k]
-                    del self.matrequests[k]
-                # add new requests
-                self.matrequests, self.matrequests_new = self.matrequests_new, {}
-                ### new learnrate if schedule
-                learnrate=self.getLearnrate(iter,itermax)/100
-                sys.stdout.write('.')
-                sys.stdout.flush()
-                ### positive phase
-                mbatch_provider.getMiniBatch(self.cfg.batchsize,self.layers[0].act)
-                for layernum in xrange(len(self.weights)):
-                    self.upPass(layernum,sample=False)
-                uq = UpdateQ(len(self.layers))
-                uq.push([1]) # must start w/ 0-th layer
-                while uq.minupdates([0]) < self.cfg.dbm_minupdates:
-                    layernum = uq.pop(firstlayer=1)
-                    self.updateLayer(layernum,sample=False)
-                for layernum in xrange(len(self.weights)):
-                    self.weights[layernum].updateGradientPos(self.layers[layernum],self.layers[layernum+1])
-
-                ### output stuff
-                if iter != 0 and (iter%100) == 0:
-                    self.downPass(1,sample=False)
-                    err=self.getErr(0,mbatch_provider.sampleset)
-                    self.reconstruction_error.append(err)
-                    print "Iter: ",iter, "Err: %02.06f"%err, "|W|: %02.06f"%cp.norm2(self.weights[0].mat)
-                    print self.cfg.workdir,
-                    if self.cfg.save_every!=0 and iter % self.cfg.save_every == 0 and iter>0 :
-                        for layernum in xrange(len(self.weights)):
-                            self.saveLayer(layernum,self.cfg.workdir,"-%010d"%iter)
-                #if iter != 0 and (iter%50) == 0:
-                #    #print "resetting pchain"
-                #    self.resetPChain(mbatch_provider)
-
-                ### negative phase
-                ### replace layer nodes with pcd-chain or do initial uppass 
-                if self.cfg.cd_type == CDType.cdn:
-                    for layernum in xrange(len(self.weights)):
-                        self.upPass(layernum,sample=True)
-                else:
-                    for layer in self.layers:
-                        layer.switchToPChain()
-
-                uq = UpdateQ(len(self.layers))
-                uq.push([1])
-                while uq.minupdates() < self.cfg.dbm_minupdates:
-                    layernum = uq.pop(firstlayer=0)
-                    self.updateLayer(layernum,sample=True)
-
-                ### update gradients
-                for layernum in xrange(len(self.weights)):
-                    self.weights[layernum].updateGradientNeg(self.layers[layernum],self.layers[layernum+1],self.cfg.batchsize)
-                ### update weights and biases
-                for weightlayer in self.weights:
-                    weightlayer.updateStep(learnrate,self.cfg.cost)
-
-                ### put original layer back in place
-                if self.cfg.cd_type == CDType.pcd:
-                    for layer in self.layers:
-                        layer.switchToOrg()
-                mbatch_provider.forgetOriginalData()
-
-        finally:
-            for weightlayer in self.weights:
-                if "w_tmp" in weightlayer.__dict__:
-                    weightlayer.deallocUpdateMatrix()
-
     def trainLayer(self, mbatch_provider, iterstart, itermax, layernum): # 
         """ Train one layer of a RBM-Stack using minibatches provided by mbatch_provider for itermax minibatches """
         try:
@@ -354,9 +269,8 @@ class RBMStack:
 
         mbatch_provider.forgetOriginalData()
         mbatch_provider.getMiniBatch(self.cfg.batchsize,self.layers[layer].act)
-        
-        self.upPass(layer,sample=False);     
-        self.downPass(layer+1,sample=False);     
+        self.upPass(layer,sample=False);
+        self.downPass(layer+1,sample=False);
         for l in reversed(xrange(1,layer+1)):
             self.downPass(l,sample=False)
 
@@ -381,7 +295,6 @@ class RBMStack:
             #for i,image in enumerate(pchain[:,:10].T):
                 #plt.matshow(image.reshape((28,28)))
                 #plt.savefig(os.path.join(self.cfg.workdir,"figure-pchain-%010d-chain%05d.png"%(iter,i)))
-             
 
         self.err.append(err)
         self.last_time_stamp = time.clock()
@@ -414,7 +327,6 @@ class RBMStack:
         """ Trains all levels of the RBM stack for itermax epochs. Lowest-level data comes from mbatch_provider. """
         self.mbp = mbatch_provider
         self.err = []
-        mbatch_provider_orig=mbatch_provider
         for layer in xrange( self.cfg.num_layers-1 ):
             if layer >= self.cfg.continue_learning-1:
                 try:
@@ -428,15 +340,6 @@ class RBMStack:
             if layer < self.cfg.num_layers-2:
                 mbatch_provider = self.getHiddenRep(layer,mbatch_provider)
                 print "Got ", len(mbatch_provider.dataset), "batches"
-        if self.cfg.dbm:
-            print("Starting DBM training")
-            try:
-                self.trainDBM(mbatch_provider_orig,itermax)
-            except KeyboardInterrupt:
-                print("Done doing DBM training")
-            finally:
-                for layernum in xrange(len(self.weights)):
-                    self.saveLayer(layernum,self.cfg.workdir,"-dbm")
 
     def load(self, prefix,load_type):
         """ Load saved weight matrices """
@@ -457,28 +360,6 @@ class RBMStack:
 
         for layer in xrange( self.cfg.num_layers-1 ):
             self.loadLayer(layer,prefix,postfix)
-
-    def getHiddenRepDBM(self,mbatch_provider):
-        """ Get hidden representation of the visible layer in all hidden layers of a DBM """
-        rep_list=repList (len(self.layers),mbatch_provider.teacher)
-        id=0
-        while True:
-            try:
-                mbatch_provider.getMiniBatch(self.cfg.batchsize, self.layers[0].act, id=id)
-            except MiniBatchProviderEmpty:
-                return rep_list
-            mbatch_provider.forgetOriginalData()
-            uq = UpdateQ(len(self.layers))
-            uq.push([1]) # must start w/ 0-th layer
-            while uq.minupdates([0]) < 10:
-                layernum = uq.pop(firstlayer=1)
-                self.updateLayer(layernum,sample=False)
-
-            for i in xrange(1,len(self.layers)):
-                rep_list.appendRep(i-1,self.layers[i].act.np)
-                id +=1
-        return rep_list
-
 
     def getHiddenRep(self, layer, mbatch_provider):
         """ Get hidden representation of a level in the RBM """
@@ -542,16 +423,6 @@ class RBMStack:
             cp.fill_rnd_uniform(self.layers[1].act)
             cp.apply_scalar_functor(self.layers[1].act,cp.scalar_functor.MULT,0.3)
             self.downPass(1,sample=True)
-        elif eval_start == EvalStartType.incomplete:
-            print "Andy was to lazy to implement this yet"
-            #self.layers[0].act.np()
-            #vis_=cp.create_numpy_from_mat_copy(self.layers[0].act)
-            #vis=cp.create_mat_from_numpy_view("vis_hack",vis_) 
-            #self.layers[0].act.dealloc()
-            #self.layers[0].act=vis
-            #save_vis=vis_[0:int(vis_.shape[0]/2),:].copy()
-            #vis_[int(vis_.shape[0]/2):-1,:]=0
-            #self.layers[0].act.push()
         self.dbg_datout    = []
         video              = self.cfg.video
         for layer_num,layer in enumerate(self.layers[0:-1]):
@@ -559,38 +430,22 @@ class RBMStack:
             if layer_num+2 < len(self.layers):
                 assert(False)
 
-        if self.cfg.dbm:
-            uq = UpdateQ(len(self.layers))
-            uq.push([1]) # start with some layer in between
-            step = 0
-            while uq.minupdates([]) < nsteps:
-                layernum = uq.pop(firstlayer=0)
-                if video and layernum == 0:
-                    self.updateLayer(layernum,sample=False)
-                    self.save_fantasy(step, Npoint,save_callback, self.layers[0].act)
-                self.updateLayer(layernum,sample=True)
-                step+=1
-            while uq.minupdates([]) < nsteps+2:
-                layernum = uq.pop(firstlayer=0)
-                self.updateLayer(layernum,sample=False)
-            self.updateLayer(0,sample=False)
-        else:
-            num_meanfield=100
-            for step in xrange(nsteps+num_meanfield):
-                sample=not step>nsteps
-                self.upPass(self.cfg.num_layers-2, sample=sample)
-                if video:
-                    for lay_num in reversed(xrange(1,self.cfg.num_layers)):
-                          self.downPass(lay_num, sample=False)
-                    self.save_fantasy(step, Npoint,save_callback, self.layers[0].act)
+        num_meanfield=100
+        for step in xrange(nsteps+num_meanfield):
+            sample=not step>nsteps
+            self.upPass(self.cfg.num_layers-2, sample=sample)
+            if video:
+                for lay_num in reversed(xrange(1,self.cfg.num_layers)):
+                      self.downPass(lay_num, sample=False)
+                self.save_fantasy(step, Npoint,save_callback, self.layers[0].act)
 
-                self.downPass(self.cfg.num_layers-1,sample=sample)
-            for layer_num in reversed(xrange(1,self.cfg.num_layers)):
-              self.downPass(layer_num, sample=False)
-              layer=self.layers[layer_num-1]
-            #for bla in xrange(1):
-            #    self.downPass(1,sample=False)
-            #    self.upPass(0,sample=False)
+            self.downPass(self.cfg.num_layers-1,sample=sample)
+        for layer_num in reversed(xrange(1,self.cfg.num_layers)):
+          self.downPass(layer_num, sample=False)
+          layer=self.layers[layer_num-1]
+        #for bla in xrange(1):
+        #    self.downPass(1,sample=False)
+        #    self.upPass(0,sample=False)
         # pass up again before we save fantasies -- assures that we see bottom-up activities!
         for layer_num,layer in enumerate(self.layers[0:-1]):
             self.upPass(layer_num, sample=False)

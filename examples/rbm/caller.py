@@ -1,6 +1,4 @@
 #!/usr/bin/python
-import warnings
-warnings.filterwarnings("ignore")
 import sys
 import time
 import os
@@ -10,15 +8,14 @@ from datasets import MNISTData, MNISTOneMinusData, MNISTPadded, MNISTTwiceData, 
         CaltechData, ShifterData, BarsAndStripesData, ImagePatchesData
 from sensibleconfig import Config, Option
 
-import base as pyrbm # uses sys.path
+import base as pyrbm
+from dbm import DBM
 import minibatch_provider
 import cuv_python as cp
-from helper_functions import visualize_rows, make_img_name, cut_filters_func
+from helper_functions import visualize_rows, make_img_name
 
 def make_img(x, px,py,maps,mbs,isweight=False):
     #if not isweight and cfg.utype[0] != pyrbm.UnitType.binary:
-        #x = np.vstack(x) * cp.pull(mbs.std)
-        #x = np.vstack(x) - cp.pull(mbs.negative_mean)
     if (cfg.utype[0]!=pyrbm.UnitType.binary) and not isweight:
         if maps > 1:
             out= x.reshape((px,py,maps))
@@ -50,7 +47,7 @@ options = [
     Option('learnrate',  'learnrate of weights [%default]', 0.010, converter=float),
     Option('cost',       'cost of weights (=weight decay) [%default]', 0.0000, converter=float),
 
-    Option('eval_start', 'start evaluation using trainingset/vnoise/h1noise/incomplete [%default]', 'vnoise', converter=lambda x: eval("pyrbm.EvalStartType."+x, loc)),
+    Option('eval_start', 'start evaluation using trainingset/vnoise/h1noise [%default]', 'vnoise', converter=lambda x: eval("pyrbm.EvalStartType."+x, loc)),
     Option('eval_steps', 'number of sampling steps for visualization [%default]', 100, converter=int),
     Option('video', 'whether to write [eval_steps] frames to files [%default]', False, converter=int),
 
@@ -75,18 +72,15 @@ options = [
     Option('finetune_momentum', 'momentum for finetuning when backprop used [%default]', 0.5, converter=float),
     Option('finetune_onlylast', 'epochs where only not-pretrained upper layer is updated [%default]', 0, converter=int),
     Option('finetune_online_learning', 'online learning [%default]', '0', converter=int),
-    Option('finetune_intermediate_outputs', 'whether to use intermediate outputs [%default]', '1', converter=int),
-    Option('finetune_timesteps', 'recurrent timesteps [%default]', '5', converter=int),
-    #Option('finetune_translation_max', 'translating training images by as most x pixels [%default]', '0', converter=int),
-    #Option('finetune_noise_std', 'add noise with this standard dev BEFORE Normalization of minibatches [%default]', '0.0', converter=float),
 ]
 
 cfg = Config(options, usage = "usage: %prog [options]")
+
 try:
     sys.path.insert(0,os.path.join(os.getenv('HOME'),'bin'))
     import optcomplete
     optcomplete.autocomplete(cfg._parser)
-except ImportError: 
+except ImportError:
     pass
 
 
@@ -157,7 +151,11 @@ print "Initializing RBM..."
 pyrbm.initialize(cfg)
 print "ready."
 
-rbmstack = pyrbm.RBMStack(cfg)
+if cfg.dbm:
+    rbmstack = DBM(cfg)
+else:
+    rbmstack = pyrbm.RBMStack(cfg)
+
 rbmstack.saveOptions(cfg.get_serialization_obj())
 
 mbp = minibatch_provider.MNISTMiniBatchProvider(dataset.data, dataset.teacher)
@@ -180,7 +178,7 @@ if cfg.load!=pyrbm.LoadType.none:
     if cfg.project_down:
         rbmstack.project_down()
     if cfg.gethidrep:
-        print "Saving rbm hidden reps...",
+        print "Saving rbm hidden representations...",
         x = dict([[v,k] for k,v in pyrbm.Dataset.__dict__.items()])
         descr = x[cfg.dataset]
         f=open(os.path.join(cfg.workdir,"%s.pickle"%descr),'w')
@@ -195,8 +193,7 @@ if cfg.load!=pyrbm.LoadType.none:
                 hid_rep_list.appendRep(i,np.hstack(mbp2.dataset))
             pickle.dump(hid_rep_list,f,-1)
         f.close()
-        os.chmod(os.path.join(cfg.workdir,"%s.pickle"%descr),0644)
-    
+
         if "test_data" in dataset.__dict__:
             print "Saving rbm hidden reps for test set"
             descr = descr+"_test"
@@ -212,7 +209,6 @@ if cfg.load!=pyrbm.LoadType.none:
                     hid_rep_list.appendRep(i,np.hstack(mbp2.dataset))
                 pickle.dump(hid_rep_list,f,-1)
             f.close()
-            os.chmod(os.path.join(cfg.workdir,"%s.pickle"%descr),0644)
             print "done."
         cfg.continue_learning=0
         cfg.finetune=0
@@ -241,9 +237,6 @@ if cfg.finetune:
     from mlp import MLP
     pymlp = MLP(cfg, weights,biases)
 
-    #mbp.set_translation_max(cfg.finetune_translation_max)
-    #mbp.set_noise_std(cfg.finetune_noise_std)
-
     pymlp.preEpochHook = lambda mlp,epoch: epoch%10==0 and mlp.runMLP(mbp_test, cfg.test_batchsize,epoch)
     try:
         pymlp.teachMLP(mbp,cfg.finetune_epochs, cfg.finetune_batch_size, cfg.finetune_rprop)
@@ -254,10 +247,10 @@ if cfg.finetune:
     rbmstack.saveAllLayers("-finetune")
     pymlp.saveLastLayer()
 
-PLT_NUM=1
 if cfg.headless:
    cp.exitCUDA()
    sys.exit(0)
+PLT_NUM=1
 import matplotlib.pyplot as plt
 
 #### calculate maps_bottom into py. yeah it's a dirty hack, i know
@@ -269,8 +262,7 @@ if "projection_results" in rbmstack.__dict__:
         filters = rbmstack.projection_results[layernum].T
         print "Saving projections from layer %d (%d x %d)" % (layernum,filters.shape[0],filters.shape[1])
         img_name = make_img_name("filter_layer%d.png"%(layernum))
-        #visualize_rows(PLT_NUM,filters,range(20), lambda x:make_img(x,px,py,cfg.maps_bottom,True), title='Projection W Layer %d'%layernum, use_imshow=cfg.maps_bottom>1, save=True, save_filename=img_name, normalize=False)
-        visualize_rows(PLT_NUM,filters,xrange(filters.shape[0]), cut_filters_func(px,py,cfg.maps_bottom,dividers=False), title='Projection W Layer %d'%layernum, use_imshow=cfg.maps_bottom>1, save=True, save_filename=img_name, normalize=True, cb=False,separate_files=False)
+        visualize_rows(PLT_NUM,filters,range(20), lambda x:make_img(x,px,py,cfg.maps_bottom,True), title='Projection W Layer %d'%layernum, use_imshow=cfg.maps_bottom>1, save=True, save_filename=img_name, normalize=False)
         PLT_NUM+=1
     sys.exit(0)
 
