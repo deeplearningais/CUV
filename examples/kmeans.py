@@ -1,5 +1,4 @@
 import cuv_python as cp
-import pyublas
 import numpy as np
 import os
 
@@ -18,7 +17,7 @@ def kmeans(dataset,num_clusters,iters):
     nearest_dist= cp.dev_tensor_float(dataset_dev.shape[1])
 
     for i in xrange(iters):
-        cp.reduce_to_row(norms_clusters,clusters_dev,cp.reduce_functor.ADD_SQUARED)
+        cp.reduce_to_row(norms_clusters,clusters_dev,cp.reduce_functor.ADD_SQUARED) # norms_cluster = cp.sum(clusters_dev * clusters_dev, axis=0) would also be possible, though less efficient
         cp.prod(dists, dataset_dev, clusters_dev, 't','n',-2, 0)
         cp.matrix_plus_row(dists,norms_clusters)
         cp.matrix_plus_col(dists,norms)
