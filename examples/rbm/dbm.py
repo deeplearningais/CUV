@@ -64,8 +64,6 @@ class DBM(RBMStack):
         video              = self.cfg.video
         for layer_num,layer in enumerate(self.layers[0:-1]):
             self.upPass(layer_num, sample=False)
-            if layer_num+2 < len(self.layers):
-                assert(False)
 
         uq = UpdateQ(len(self.layers))
         uq.push([1]) # start with some layer in between
@@ -84,8 +82,6 @@ class DBM(RBMStack):
         # pass up again before we save fantasies -- assures that we see bottom-up activities!
         for layer_num,layer in enumerate(self.layers[0:-1]):
             self.upPass(layer_num, sample=False)
-            if layer_num+2 < len(self.layers):
-                assert(False)
         self.save_fantasy(nsteps+1,Npoint,save_callback, self.layers[0].act)
         self.dbg_sampleset = mbatch_provider.sampleset_[:, 0:Npoint].T
         print "Pulling Layer-Activations..."
@@ -141,7 +137,6 @@ class DBM(RBMStack):
                 if iter != 0 and (iter%100) == 0:
                     self.downPass(1,sample=False)
                     err=self.getErr(0,mbatch_provider.sampleset)
-                    self.reconstruction_error.append(err)
                     print "Iter: ",iter, "Err: %02.06f"%err, "|W|: %02.06f"%cp.norm2(self.weights[0].mat)
                     print self.cfg.workdir,
                     if self.cfg.save_every!=0 and iter % self.cfg.save_every == 0 and iter>0 :
