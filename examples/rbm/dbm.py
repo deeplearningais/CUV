@@ -9,10 +9,10 @@ from base import RBMStack
 
 class DBM(RBMStack):
     def __init__(self, cfg):
-        super(self,DBM).__init__(self,cfg)
+        super(DBM, self).__init__(cfg)
 
     def run(self,isterstart, itermax, mbatch_provider):
-        super(self,DBM).run(self,isterstart, itermax, mbatch_provider)
+        super(DBM, self).run(isterstart, itermax, mbatch_provider)
         mbatch_provider_orig=mbatch_provider
         print("Starting DBM training")
         try:
@@ -121,12 +121,6 @@ class DBM(RBMStack):
 
             ### iterate over updates
             for iter in xrange(1,itermax):
-                # carry over non-completed requests
-                for k in self.matrequests.keys():
-                    self.matrequests_new[k] = self.matrequests[k]
-                    del self.matrequests[k]
-                # add new requests
-                self.matrequests, self.matrequests_new = self.matrequests_new, {}
                 ### new learnrate if schedule
                 learnrate=self.getLearnrate(iter,itermax)/100
                 sys.stdout.write('.')

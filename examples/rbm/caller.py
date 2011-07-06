@@ -13,6 +13,7 @@ from dbm import DBM
 import minibatch_provider
 import cuv_python as cp
 from helper_functions import visualize_rows, make_img_name
+from helper_classes import Dataset
 
 def make_img(x, px,py,maps,mbs,isweight=False):
     #if not isweight and cfg.utype[0] != pyrbm.UnitType.binary:
@@ -57,7 +58,7 @@ options = [
     Option('dbm', 'whether to use unsupervised finetuning', False, converter=int),
     Option('dbm_minupdates', 'how many updates per layer before moving to next minibatch [%default]', 5, converter=int),
     Option('save_every', 'Save weights every ... iters [%default]', 0, converter=int),
-    Option('dataset', 'whether to use mnist or image patches or caltech [%default]', 'mnist', converter=lambda x: eval("pyrbm.Dataset."+x, loc)),
+    Option('dataset', 'whether to use mnist or image patches or caltech [%default]', 'mnist', converter=lambda x: eval("Dataset."+x, loc)),
     Option('continue_learning', 'whether to use loaded weights to continue learning [%default]', 0, converter=int),
     Option('gethidrep', 'whether to dump hidden rep after loading [%default]', False, converter=int),
 
@@ -110,27 +111,27 @@ if cfg.dbm==1 and cfg.num_layers==2:
 
 cfg.maps_bottom=1
 
-if cfg.dataset==pyrbm.Dataset.mnist:
+if cfg.dataset==Dataset.mnist:
     dataset = MNISTData(cfg,"/home/local/datasets/MNIST")
-elif cfg.dataset==pyrbm.Dataset.one_minus_mnist:
+elif cfg.dataset==Dataset.one_minus_mnist:
     dataset = MNISTOneMinusData(cfg,"/home/local/datasets/MNIST")
-elif cfg.dataset==pyrbm.Dataset.mnist_padded:
+elif cfg.dataset==Dataset.mnist_padded:
     dataset = MNISTPadded(cfg,"/home/local/datasets/MNIST")
-elif cfg.dataset==pyrbm.Dataset.mnist_twice:
+elif cfg.dataset==Dataset.mnist_twice:
     dataset = MNISTTwiceData(cfg,"/home/local/datasets/MNIST")
-elif cfg.dataset==pyrbm.Dataset.mnist_test:
+elif cfg.dataset==Dataset.mnist_test:
     dataset = MNISTTestData(cfg,"/home/local/datasets/MNIST")
-elif cfg.dataset==pyrbm.Dataset.image_patches:
+elif cfg.dataset==Dataset.image_patches:
     dataset = ImagePatchesData(cfg,os.getenv("HOME"))
-elif cfg.dataset==pyrbm.Dataset.caltech or cfg.dataset==pyrbm.Dataset.caltech_big:
+elif cfg.dataset==Dataset.caltech or cfg.dataset==Dataset.caltech_big:
     dataset = CaltechData(cfg,"/home/local/datasets/batches","gray",0)
-elif cfg.dataset==pyrbm.Dataset.caltech_color:
+elif cfg.dataset==Dataset.caltech_color:
     dataset = CaltechData(cfg,"/home/local/datasets/batches","color",0)
-elif cfg.dataset==pyrbm.Dataset.shifter:
+elif cfg.dataset==Dataset.shifter:
     dataset = ShifterData(cfg,"/home/local/datasets/")
     if cfg.batchsize!=768:
         print("WARNING: Batchsize %d != 768 but 768 recommended for Shifter dataset."%cfg.batchsize)
-elif cfg.dataset==pyrbm.Dataset.bars_and_stripes:
+elif cfg.dataset==Dataset.bars_and_stripes:
     dataset = BarsAndStripesData(cfg,"/home/local/datasets/")
     if cfg.batchsize!=32:
         print("WARNING: Batchsize %d != 32 but 32 recommended for Bars and Stripes dataset."%cfg.batchsize)
@@ -179,7 +180,7 @@ if cfg.load!=pyrbm.LoadType.none:
         rbmstack.project_down()
     if cfg.gethidrep:
         print "Saving rbm hidden representations...",
-        x = dict([[v,k] for k,v in pyrbm.Dataset.__dict__.items()])
+        x = dict([[v,k] for k,v in Dataset.__dict__.items()])
         descr = x[cfg.dataset]
         f=open(os.path.join(cfg.workdir,"%s.pickle"%descr),'w')
         if cfg.dbm==1:
