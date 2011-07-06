@@ -11,19 +11,12 @@ def kmeans(dataset,num_clusters,iters):
     norms = cp.dev_tensor_float(dataset_dev.shape[1])
     cp.reduce_to_row(norms,dataset_dev,cp.reduce_functor.ADD_SQUARED)
 
-    norms_clusters=cp.dev_tensor_float(num_clusters)
-    dists  = cp.dev_tensor_float_cm([dataset_dev.shape[1], num_clusters])
-    nearest= cp.dev_tensor_uint(dataset_dev.shape[1])
-    nearest_dist= cp.dev_tensor_float(dataset_dev.shape[1])
+    dists = cp.dev_tensor_float([dataset_dev.shape[1], num_clusters])
+    nearest = cp.dev_tensor_uint(dataset_dev.shape[1])
 
     for i in xrange(iters):
-        cp.reduce_to_row(norms_clusters,clusters_dev,cp.reduce_functor.ADD_SQUARED) # norms_cluster = cp.sum(clusters_dev * clusters_dev, axis=0) would also be possible, though less efficient
-        cp.prod(dists, dataset_dev, clusters_dev, 't','n',-2, 0)
-        cp.matrix_plus_row(dists,norms_clusters)
-        cp.matrix_plus_col(dists,norms)
+        cp.pdist2(dists, dataset_dev.T,clusters_dev.T)
         cp.reduce_to_col(nearest,dists,cp.reduce_functor.ARGMIN)
-        cp.reduce_to_col(nearest_dist,dists,cp.reduce_functor.MIN) # as stopping criterion
-        #print("Average dist to cluster: %f"%cp.mean(nearest_dist))
         cp.compute_clusters(clusters_dev,dataset_dev,nearest)
     return [clusters_dev.np, nearest.np]
 
