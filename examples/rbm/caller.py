@@ -240,7 +240,7 @@ if cfg.finetune:
 
     pymlp.preEpochHook = lambda mlp,epoch: epoch%10==0 and mlp.runMLP(mbp_test, cfg.test_batchsize,epoch)
     try:
-        pymlp.teachMLP(mbp,cfg.finetune_epochs, cfg.finetune_batch_size, cfg.finetune_rprop)
+        pymlp.train(mbp,cfg.finetune_epochs, cfg.finetune_batch_size, cfg.finetune_rprop)
     except KeyboardInterrupt:
         pass
     map(lambda x:x.alloc(),     rbmstack.layers)
