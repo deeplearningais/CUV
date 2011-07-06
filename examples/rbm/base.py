@@ -8,8 +8,7 @@ from minibatch_provider import MiniBatchProviderEmpty
 
 # debugging libs
 
-from helper_functions import *
-from helper_classes import *
+from helper_classes import UnitType, CDType, LearnRateSchedule, UpdateQ, LoadType, repList, EvalStartType
 import minibatch_provider
 
 class WeightLayer(object):
@@ -558,7 +557,7 @@ class RBMStack:
         for layer_num,layer in enumerate(self.layers[0:-1]):
             self.upPass(layer_num, sample=False)
             if layer_num+2 < len(self.layers):
-                layer_above=self.layers[layer_num+1]
+                assert(False)
 
         if self.cfg.dbm:
             uq = UpdateQ(len(self.layers))
@@ -597,7 +596,6 @@ class RBMStack:
             self.upPass(layer_num, sample=False)
             if layer_num+2 < len(self.layers):
                 assert(False)
-                layer_above=self.layers[layer_num+1]
         self.save_fantasy(nsteps+1,Npoint,save_callback, self.layers[0].act)
         self.dbg_sampleset = mbatch_provider.sampleset_[:, 0:Npoint].T
         print "Pulling Layer-Activations..."

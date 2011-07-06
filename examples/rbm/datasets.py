@@ -1,5 +1,3 @@
-#from scipy.cluster.vq import whiten
-#import mdp
 import base as pyrbm
 import os
 import numpy as np

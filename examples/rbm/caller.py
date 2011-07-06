@@ -6,16 +6,14 @@ import time
 import os
 import numpy as np
 import cPickle as pickle
-from datasets import *
+from datasets import MNISTData, MNISTOneMinusData, MNISTPadded, MNISTTwiceData, MNISTTestData, \
+        CaltechData, ShifterData, BarsAndStripesData, ImagePatchesData
 from sensibleconfig import Config, Option
 
-release = False
 import base as pyrbm # uses sys.path
 import minibatch_provider
 import cuv_python as cp
 from helper_functions import visualize_rows, make_img_name, cut_filters_func
-
-class WhiteningType: none, whiten, rotback = xrange(3)
 
 def make_img(x, px,py,maps,mbs,isweight=False):
     #if not isweight and cfg.utype[0] != pyrbm.UnitType.binary:
