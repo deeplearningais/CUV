@@ -13,7 +13,7 @@ from sensibleconfig import Config, Option
 import base as pyrbm # uses sys.path
 import minibatch_provider
 import cuv_python as cp
-from helper_functions import visualize_rows, make_img_name, cut_filters_func
+from helper_functions import visualize_rows, make_img_name
 
 def make_img(x, px,py,maps,mbs,isweight=False):
     #if not isweight and cfg.utype[0] != pyrbm.UnitType.binary:
@@ -269,8 +269,7 @@ if "projection_results" in rbmstack.__dict__:
         filters = rbmstack.projection_results[layernum].T
         print "Saving projections from layer %d (%d x %d)" % (layernum,filters.shape[0],filters.shape[1])
         img_name = make_img_name("filter_layer%d.png"%(layernum))
-        #visualize_rows(PLT_NUM,filters,range(20), lambda x:make_img(x,px,py,cfg.maps_bottom,True), title='Projection W Layer %d'%layernum, use_imshow=cfg.maps_bottom>1, save=True, save_filename=img_name, normalize=False)
-        visualize_rows(PLT_NUM,filters,xrange(filters.shape[0]), cut_filters_func(px,py,cfg.maps_bottom,dividers=False), title='Projection W Layer %d'%layernum, use_imshow=cfg.maps_bottom>1, save=True, save_filename=img_name, normalize=True, cb=False,separate_files=False)
+        visualize_rows(PLT_NUM,filters,range(20), lambda x:make_img(x,px,py,cfg.maps_bottom,True), title='Projection W Layer %d'%layernum, use_imshow=cfg.maps_bottom>1, save=True, save_filename=img_name, normalize=False)
         PLT_NUM+=1
     sys.exit(0)
 

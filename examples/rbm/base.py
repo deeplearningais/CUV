@@ -8,7 +8,7 @@ from minibatch_provider import MiniBatchProviderEmpty
 
 # debugging libs
 
-from helper_classes import UnitType, CDType, LearnRateSchedule, UpdateQ, LoadType, repList, EvalStartType
+from helper_classes import UnitType, CDType, LearnRateSchedule, UpdateQ, LoadType, repList, EvalStartType, Dataset
 import minibatch_provider
 
 class WeightLayer(object):
