@@ -5,7 +5,7 @@ class CDType:            pcd, cdn, mpfl               = range(3)
 class WeightUpdateMeth:  rprop, backprop              = range(2)
 class UnitType:          cont, gaussian, binary       = range(3)
 class LearnRateSchedule: static, linear, exponential, divide  = range(4)
-class EvalStartType:     trainingset, h1noise, vnoise, incomplete = range(4)
+class EvalStartType:     trainingset, h1noise, vnoise = range(3)
 class LoadType:          none,pretraining, dbm, finetuning,latest = range(5)
 class Dataset:           image_patches, mnist, mnist_padded, mnist_test,caltech,caltech_color,caltech_big,mnist_twice,mnist_trans,one_minus_mnist,shifter,bars_and_stripes = range(12)
 
