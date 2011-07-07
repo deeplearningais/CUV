@@ -16,8 +16,8 @@ template<class V, class M, class L>
 void export_kernels(){
         typedef tensor<V,M,L> R;
         // pairwise euclidean distance between two datasets
-        def("pdist2",(void(*)(R&, const R&, const R&)) libs::kernels::pairwise_distance_l2<V,M,L>);
-        def("pdist2",(R(*)(const R&, const R&)) libs::kernels::pairwise_distance_l2<V,M,L>);
+        def("pdist2",(void(*)(R&, const R&, const R&, const bool &)) libs::kernels::pairwise_distance_l2<V,M,L>,(arg("dist"),arg("X"),arg("Y"),arg("squared")=false));
+        def("pdist2",(R(*)(const R&, const R&, const bool &)) libs::kernels::pairwise_distance_l2<V,M,L>,(arg("X"),arg("Y"),arg("squared")=false));
 }
 
 void export_libs_kernels(){

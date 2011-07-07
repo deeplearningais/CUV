@@ -106,7 +106,7 @@ namespace libs{
 	}
 
         template <class __value_type, class __memory_space_type, class __memory_layout_type>
-        void pairwise_distance_l2(tensor<__value_type,__memory_space_type,__memory_layout_type>& result, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B){
+        void pairwise_distance_l2(tensor<__value_type,__memory_space_type,__memory_layout_type>& result, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, const bool & squared){
                 cuvAssert(result.ndim() ==2);
                 cuvAssert(A.ndim() ==2);
                 cuvAssert(B.ndim() ==2);
@@ -123,14 +123,15 @@ namespace libs{
                 matrix_plus_col(result,A_sqr_norm);
                 matrix_plus_row(result,B_sqr_norm);
                 apply_scalar_functor(result,SF_MAX,0.);
-                apply_scalar_functor(result,SF_SQRT);
+                if (!squared)
+                    apply_scalar_functor(result,SF_SQRT);
 	}
 
 typedef tensor<float, dev_memory_space, row_major> t_rmf;
 typedef tensor<float, dev_memory_space, column_major> t_cmf;
 
 template void pairwise_distance_custom<float, dev_memory_space, row_major>(t_rmf&, const t_rmf &, const t_rmf&);
-template void pairwise_distance_l2(t_rmf&, const t_rmf &, const t_rmf&);
-template void pairwise_distance_l2(t_cmf&, const t_cmf &, const t_cmf&);
+template void pairwise_distance_l2(t_rmf&, const t_rmf &, const t_rmf&, const bool&);
+template void pairwise_distance_l2(t_cmf&, const t_cmf &, const t_cmf&, const bool&);
 
 }}}
