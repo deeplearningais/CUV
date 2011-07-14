@@ -469,17 +469,17 @@ BOOST_AUTO_TEST_CASE( logaddexp_reduce ){
 	const int n = 25;
 	const int m = 1;
 
-	tensor<float,host_memory_space> A(extents[n][m]);
+	tensor<float,host_memory_space> A(extents[m][n]);
 	tensor<float,host_memory_space> r(extents[m]);
 	sequence(A);
 	A /= 25.f;
-	reduce_to_row(r,A,RF_LOGADDEXP);
+	reduce_to_col(r,A,RF_LOGADDEXP);
 	double sum = 0;
 	for(int i=0;i<25;i++){
 		sum += exp(((double)i)/25.0);
 	}
-	sum = log(sum);
-	BOOST_CHECK_CLOSE(sum,log(42.103634), 0.01);
+	//sum = log(sum);
+	BOOST_CHECK_CLOSE(sum,exp((float)r[0]), 0.01);
 }
 BOOST_AUTO_TEST_CASE( all_reduce )
 {

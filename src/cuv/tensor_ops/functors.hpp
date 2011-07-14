@@ -480,6 +480,13 @@ struct reduce_functor_traits<bf_min<T,T,T> >{
 	static const bool returns_index = false;
 };
 
+/// specialization of reduce_functor_traits for logaddexp functor: initial value is negative infinity
+template<class T>
+struct reduce_functor_traits<bf_logaddexp<T> >{
+	static const T init_value(){return -std::numeric_limits<T>::infinity();}
+	static const bool returns_index = false;
+};
+
 
 //template<class T>
 //struct reduce_functor_traits<bf_logaddexp<T> >{  // this one is symmetric!!!
