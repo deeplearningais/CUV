@@ -177,9 +177,9 @@ namespace cuv{
 				//Offset to the upper halo edge
 				const int baseX = blockIdx.x * COLUMNS_BLOCKDIM_X + threadIdx.x;
 				const int baseY = (blocky * COLUMNS_RESULT_STEPS - COLUMNS_HALO_STEPS) * COLUMNS_BLOCKDIM_Y + threadIdx.y;
-				if(basez<=imageD) return;
-				if(baseX<=imageW) return;
-				if(baseY<=imageH) return;
+				if(basez>=imageD) return;
+				if(baseX>=imageW) return;
+				if(baseY>=imageH) return;
 				d_Src += basez*imageH*imageW + baseY * imageH + baseX;
 				d_Dst += basez*imageH*imageW + baseY * imageH + baseX;
 

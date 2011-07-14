@@ -27,7 +27,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
 
-#define BOOST_TEST_MODULE lib_intimg
+#define BOOST_TEST_MODULE lib_nlmeans
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 
@@ -35,6 +35,7 @@
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/libs/nlmeans/nlmeans.hpp>
+#include <cuv/libs/nlmeans/conv3d.hpp>
 #include <cuv/tools/timing.hpp>
 #include <cuv/tools/cuv_test.hpp>
 
@@ -76,15 +77,32 @@ struct Fix{
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
-/** 
- * @test
- * @brief create dense device matrix.
- */
+BOOST_AUTO_TEST_CASE( test_conv3d )
+{
+	static const int filter_radius = 5;
+	cuv::tensor<float,host_memory_space> kernel(2*filter_radius+1);
+	for(int i=-filter_radius; i<=filter_radius;i++)
+		kernel(i+filter_radius) = (float) exp(-i*i);
+	kernel /= (float)cuv::sum(kernel);
+	kernel = 1.f/kernel.size();
+
+	tensor<float,host_memory_space> mh;
+	libs::cimg::load(mh,"src/tests/data/colored_square.jpg");
+	cuv::libs::nlmeans::setConvolutionKernel_horizontal(kernel);
+	cuv::libs::nlmeans::setConvolutionKernel_vertical(kernel);
+	cuv::libs::nlmeans::setConvolutionKernel_depth(kernel);
+	tensor<float,dev_memory_space> md(mh), m(mh.shape());
+	m=0.f;
+	libs::nlmeans::convolutionColumns(m,md,filter_radius);
+
+	libs::cimg::show(mh,"original image");
+	libs::cimg::show(mh=m,"filtered image");
+}
 BOOST_AUTO_TEST_CASE( test_nlmeans )
 {
 	tensor<float,host_memory_space,row_major> mh(extents[410][192][192]), mhorig;
 
-#define LENA 0
+#define LENA 1
 #if !LENA
 	FILE* pFile = fopen("/home/VI/staff/schulz/checkout/git/wurzel/data/GersteLA_192x192x410_normal-upsampled.dat","r");
 	unsigned int s = fread(mh.ptr(),sizeof(float),mh.size(),pFile);
