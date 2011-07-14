@@ -426,7 +426,10 @@ struct bf_logaddexp : binary_functor<float,T, T> {
 		uf_log1p<float,float> log1p;
 		if(diff > 0)
 			return t + log1p(expf(-diff));
-		return u + log1p(expf(diff));
+		else if(diff<=0)
+			return u + log1p(expf(diff));
+		else
+			return t+u;
 	} 
 };
 
