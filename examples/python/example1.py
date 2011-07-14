@@ -12,4 +12,5 @@ cp.apply_nullary_functor(d,cp.nullary_functor.FILL,1)   # verbose form
 
 h = d.np                                                # pull and convert to numpy
 assert(np.sum(h) == 256)
+assert(cp.sum(d) == 256)
 d.dealloc()                                             # explicitly deallocate memory (optional)

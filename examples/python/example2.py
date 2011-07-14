@@ -1,5 +1,4 @@
 import cuv_python as cp
-import numpy as np
 
 C = cp.dev_tensor_float_cm([2048,2048])   # column major tensor
 A = cp.dev_tensor_float_cm([2048,2048])
@@ -10,3 +9,4 @@ cp.sequence(B)
 cp.apply_binary_functor(B,A,cp.binary_functor.MULT) # elementwise multiplication
 B *= A                                              # operators also work (elementwise)
 cp.prod(C,A,B,'n','t')                              # matrix multiplication
+C = cp.prod(A, B.T)                                 # numpy-like form, allocates new matrix for result

@@ -1,5 +1,6 @@
 import cuv_python as cp
 
+
 class weight_layer:
     """ weight layer of the MLP represented by a matrix."""
 
@@ -10,8 +11,8 @@ class weight_layer:
         @param target_layer pointer to the next neuron layer.
 
         """
-        self.source=source_layer
-        self.target=target_layer
+        self.source = source_layer
+        self.target = target_layer
         dim1 = self.target.activations.shape[0]
         dim2 = self.source.activations.shape[0]
         self.weight = cp.get_filled_matrix(dim1, dim2, 0.0)
@@ -28,37 +29,26 @@ class weight_layer:
         cp.matrix_plus_col(self.target.activations, self.bias)
         self.target.nonlinearity(self.target.activations)
 
-    def backward(self):
+    def backward(self, learnrate=0.01, decay=0.0, l1decay=0.0):
         """Backward pass, calculates the deltas of lower layer
-           and later updates the weights."""
-        cp.prod(self.source.deltas, self.weight, self.target.deltas,
-            't',  'n')
-        h = cp.dev_tensor_float_cm([self.source.activations.shape[0],
-                              self.source.activations.shape[1]])
-        cp.apply_scalar_functor(h,  self.source.activations,
-                                cp.scalar_functor.COPY)
-        self.source.d_nonlinearity(h)
-        self.source.deltas *= h
-        h.dealloc()
-        self.weight_update()
-
-    def weight_update(self, learnrate=0.01, decay=0.0, l1decay=0.0):
-        """Updates the weights and the bias
-           using source activations and target deltas.
-
+           and later updates the weights.
            @param learnrate  how strongly the gradient influences the weights
            @param decay      large values result in a regularization with
                              to the squared weight value"""
-        batch_size=self.source.activations.shape[1]
-        h = cp.dev_tensor_float_cm([self.weight.shape[0], self.weight.shape[1]])
-        cp.prod(h, self.target.deltas, self.source.activations, 'n', 't')
-        #cp.learn_step_weight_decay(self.weight, h, learnrate/batch_size, decay)
-        cp.learn_step_weight_decay(self.weight, h, learnrate/batch_size, decay, l1decay)
-        h.dealloc()
-        h = cp.dev_tensor_float(self.target.activations.shape[0])
-        cp.fill(h,0)
-        cp.reduce_to_col(h, self.target.deltas)
-        cp.learn_step_weight_decay(self.bias, h, learnrate/batch_size, decay)
+        cp.prod(self.source.deltas, self.weight, self.target.deltas,
+            't',  'n')
+        h = self.source.activations.copy()
+        self.source.d_nonlinearity(h)
+        self.source.deltas *= h
         h.dealloc()
 
+        batch_size = self.source.activations.shape[1]
+        dw = cp.prod(self.target.deltas, self.source.activations, 'n', 't')
+        cp.learn_step_weight_decay(self.weight, dw,
+                learnrate / batch_size, decay, l1decay)
+        dw.dealloc()
 
+        db = cp.sum(self.target.deltas, 1)
+        cp.learn_step_weight_decay(self.bias, db,
+                        learnrate / batch_size, decay)
+        db.dealloc()

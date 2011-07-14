@@ -1,5 +1,6 @@
 import cuv_python as cp
 
+
 class neuron_layer:
     """Neuron layer of MLP consisting of activations and deltas."""
 
@@ -22,12 +23,9 @@ class neuron_layer:
         cp.apply_scalar_functor(input_, cp.scalar_functor.TANH)
 
     def d_nonlinearity(self, input_):
-			"""Function applies nonlinear derivative on every element of the input.
+        """Function applies nonlinear derivative on every element of the input.
 
-			@param input_ -- input vector/matrix
+        @param input_ -- input vector/matrix
 
-			"""
-			cp.apply_scalar_functor(input_, cp.scalar_functor.DTANH)
-
-
-
+        """
+        cp.apply_scalar_functor(input_, cp.scalar_functor.DTANH)

@@ -12,9 +12,12 @@ using namespace cuv;
 using namespace cuv::libs::kernels;
 namespace ublas = boost::numeric::ublas;
 
-template<class V, class L, class M>
+template<class V, class M, class L>
 void export_kernels(){
-	def("pairwise_distance_l2",pairwise_distance_l2<V,L,M>,(arg("distances"),arg("X"),arg("Y")));
+        typedef tensor<V,M,L> R;
+        // pairwise euclidean distance between two datasets
+        def("pdist2",(void(*)(R&, const R&, const R&, const bool &)) libs::kernels::pairwise_distance_l2<V,M,L>,(arg("dist"),arg("X"),arg("Y"),arg("squared")=false));
+        def("pdist2",(R(*)(const R&, const R&, const bool &)) libs::kernels::pairwise_distance_l2<V,M,L>,(arg("X"),arg("Y"),arg("squared")=false));
 }
 
 void export_libs_kernels(){

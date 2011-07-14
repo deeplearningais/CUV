@@ -4,45 +4,6 @@ import cuv_python as cp
 from minibatch_provider import MiniBatchProviderEmpty
 
 
-#class WeightLayer:
-#    def __init__(self,upper_layer,lower_layer,weights,bias):
-#        self.upper_layer=upper_layer
-#        self.lower_layer=lower_layer
-#        self.weights=weights
-#        self.bias=bias
-
-#        #self.d_w=cp.dev_dia_matrix_f(self.weights)
-
-#        #self.d_bias=cp.dev_dia_matrix_f(self.bias)
-
-#    def initialize_rprop(self,initial_learnrate):
-#        #self.d_w_old=cp.dev_dia_matrix_f(self.weights)
-#        #self.d_bias_old=cp.dev_dia_matrix_f(self.bias)
-
-#        #self.learnrate_w=cp.dev_dia_matrix_f(self.weights)
-#        #self.learnrate_bias=cp.dev_dia_matrix_f(self.bias)
-
-#        cp.fill(self.learnreate_w,initial_learnrate)
-#        cp.fill(self.learnreate_bias,initial_learnrate)
-
-#    def forward_pass(self):
-#        cp.prod(upper_layer.act,self.weights,lower_layer.act,'t','n')
-#        cp.matrix_plus_col(upper_layer.act,self.bias)
-#        upper_layer.nonlinearity()
-
-#    def backward_pass(self):
-#        cp.prod(lower_layer.delta,self.weights,upper_layer.delta,'n','n')
-#        cp.matrix_plus_col(upper_layer.act,self.bias)
-#        upper_layer.nonlinearity()
-
-#class NodeLayer:
-#    def __init__(self,size,batchsize):
-#        self.act=cp.dev_tensor_float_cm([size,batchsize])
-#        self.delta=cp.dev_tensor_float_cm([size,batchsize])
-
-#    def nonlinearity(self):
-#        cp.apply_scalar_functor(self.act,cp.scalar_functor.SIGM)
-
 class MLP:
   def __init__(self, cfg, weights,biases):
     self.cfg=cfg
@@ -63,7 +24,6 @@ class MLP:
     self.Bias = biases
     self.DeltaBiasOld = []
     self.BiasLearnRate = []
- 
     l = 0.001
 
     self.NumberOfNeuronsPerLayer = []
@@ -133,7 +93,7 @@ class MLP:
       for i,b in enumerate(self.Bias):
           b.save(os.path.join(path, "bias-%d-hi-mlp.npy"%i))
 
-  def teachMLP(self, mbatch_provider, numberRounds, batchSize, useRPROP = 0):
+  def train(self, mbatch_provider, numberRounds, batchSize, useRPROP = 0):
     self.useRPROP = useRPROP
 
     for r in xrange(numberRounds):
@@ -164,7 +124,7 @@ class MLP:
                    output.append(self.forward(output[i], self.Weights[i], self.Bias[i], linear=linear))
 
 
-                self.NumCorrect += self.calculateRightResults(output[-1], teachbatch)
+                self.NumCorrect += self.getCorrect(output[-1], teachbatch)
 
                 ## backward pass
                 self.backward(output, teachbatch,indices, batchSize, updateOnlyLast, batch_idx)
@@ -208,7 +168,7 @@ class MLP:
             for i in xrange(self.NumberOfLayers-1):
                 linear = self.cfg.finetune_softmax and i==self.NumberOfLayers-2 # set output layer to linear
                 output.append(self.forward(output[i], self.Weights[i], self.Bias[i],linear=linear))
-            self.NumCorrect += self.calculateRightResults(output[-1], teachbatch)
+            self.NumCorrect += self.getCorrect(output[-1], teachbatch)
 
 
         except MiniBatchProviderEmpty: # mbatch_provider empty
@@ -222,14 +182,6 @@ class MLP:
     self.testError.append((numberPictures - self.NumCorrect)/float(numberPictures)) 
     print "Test Correctly Classified:             ", self.NumCorrect, "/", numberPictures
     print "Test Error-Rate:                             %2.3f"% (100*self.testError[-1])
-
-  def printListOf(self, listMat, anzMat, name):
-    """Function for printing a list of dev_matrix"""
-    for j in xrange(anzMat):
-        print name, j
-        print(cp.pull(listMat[j]))
-
-#Forward-Pass with Input, Weights and Bias
 
   def forward(self, input, weight, bias,linear=False):
 
@@ -259,18 +211,18 @@ class MLP:
             cp.copy(dWo,dW)
             cp.copy(dBo,dB)
             if updateOnlyLast: break
-#Backward-Pass with Outputs, Teacherlabel, pictures/batch
+
   def backward(self, output, teacher, indices, batchSize, updateOnlyLast, batch_idx):
     deltaWeights = []
     deltaBias = []
     derivative = []
     if self.cfg.finetune_softmax:
-        derivative.append(self.calculateDerivativeForOutputLayerSoftMax(output[-1], teacher))
+        derivative.append(self.delta_outputSoftMax(output[-1], teacher))
     else:
-        derivative.append(self.calculateDerivativeForOutputLayer(output[-1], teacher))
+        derivative.append(self.delta_output(output[-1], teacher))
 
     for i in reversed(xrange(1,self.NumberOfLayers-1)):
-        derivative.append(self.calculateDerivativeForHiddenLayer(self.Weights[i], derivative[-1], output[i]))
+        derivative.append(self.delta_hidden(self.Weights[i], derivative[-1], output[i]))
     derivative.reverse()
 
     #DeltaWeights                    
@@ -292,8 +244,8 @@ class MLP:
         map(lambda x: cp.fill(x,0),self.dBias)
     else:
         for i in xrange(self.NumberOfLayers-1):
-            cp.apply_binary_functor(self.dWeights[i],deltaWeights[i],cp.binary_functor.ADD)
-            cp.apply_binary_functor(self.dBias[i],   deltaBias[i],   cp.binary_functor.ADD)
+            cp.apply_binary_functor(self.dWeights[i], deltaWeights[i], cp.binary_functor.ADD)
+            cp.apply_binary_functor(self.dBias[i], deltaBias[i], cp.binary_functor.ADD)
 
     da = lambda x:x.dealloc()
     map(da, deltaWeights)
@@ -307,35 +259,20 @@ class MLP:
       return result
 
 #calculating intermediary results for the Output-Layer
-  def calculateDerivativeForOutputLayer(self, calculated, correct):
+  def delta_output(self, calculated, correct):
     derivative = cp.dev_tensor_float_cm([calculated.shape[0], correct.shape[1]])
     h = cp.dev_tensor_float_cm(derivative.shape)
-
     cp.copy(derivative, calculated)
     cp.apply_scalar_functor(derivative, cp.scalar_functor.DSIGM)
-
-    cp.copy(h,  correct)
-    cp.apply_binary_functor(h,  calculated,  cp.binary_functor.SUBTRACT)
-
+    cp.copy(h, correct)
+    cp.apply_binary_functor(h, calculated, cp.binary_functor.SUBTRACT)
     cp.apply_binary_functor(derivative, h, cp.binary_functor.MULT)
-
     h.dealloc()
-
     return derivative
 
-  def calculateDerivativeForOutputLayerSoftMax(self, calculated, correct):
+  def delta_outputSoftMax(self, calculated, correct):
     derivative = calculated.copy()
-
-    # add negative maximum from each column (such that exp behaves better...)
-    #maxima = cp.dev_tensor_float_cm(calculated.w);
-    #cp.fill(maxima,0)
-    #cp.reduce_to_row(maxima,calculated, cp.reduce_functor.MAX)
-    #cp.apply_scalar_functor(maxima,cp.scalar_functor.NEGATE)
-    #cp.matrix_plus_col(cp.make_rm_view(derivative), maxima)
-
-    # exp makes sure everything is positive, still monotonous
     cp.apply_scalar_functor(derivative,  cp.scalar_functor.EXP)
-
     sums = cp.dev_tensor_float(calculated.shape[1])
     cp.fill(sums,0)
     cp.reduce_to_row(sums, derivative, cp.reduce_functor.ADD)
@@ -345,12 +282,11 @@ class MLP:
 
     cp.apply_binary_functor(derivative,  correct,  cp.binary_functor.AXPBY, -1.,1.)
     sums.dealloc()
-    #maxima.dealloc()
 
     return derivative
 
-#calculating intermediary results for a Hidden-Layer
-  def calculateDerivativeForHiddenLayer(self, weight, knownDerivative, netInput):
+  #calculating intermediary results for a Hidden-Layer
+  def delta_hidden(self, weight, knownDerivative, netInput):
     deltaLo = cp.dev_tensor_float_cm([weight.shape[0], netInput.shape[1]])
 
     cp.prod(deltaLo, weight, knownDerivative, 'n', 'n')
@@ -362,7 +298,7 @@ class MLP:
     return deltaLo
 
 #calculating number of right results
-  def calculateRightResults(self, calculated, correct):
+  def getCorrect(self, calculated, correct):
     corr_idx = correct.np.argmax(axis=0)
     calc_idx = calculated.np.argmax(axis=0)
     return (corr_idx==calc_idx).sum()
@@ -373,7 +309,7 @@ class MLP:
   def loadLastLayer(self,dim1,dim2):
     fn=os.path.join(self.cfg.workdir,"weights-%d-finetune.npy"%(self.NumberOfLayers-1))
     fn_bias=os.path.join(self.cfg.workdir,"bias-%d-finetune.npy"%(self.NumberOfLayers-1))
-    if os.path.exists(fn) and os.path.exists(fn_bias):  
+    if os.path.exists(fn) and os.path.exists(fn_bias):
         top_weights=np.load(fn)
         assert((dim1,dim2)==top_weights.shape)
         self.Weights.append(cp.push(top_weights))
