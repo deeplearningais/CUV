@@ -225,7 +225,7 @@ namespace cuv{
 				/*cuvAssert( imageW % COLUMNS_BLOCKDIM_X == 0 );*/
 				/*cuvAssert( imageH % (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y) == 0 );*/
 
-				dim3 blocks(imageW / COLUMNS_BLOCKDIM_X, imageD * imageH / (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y));
+				dim3 blocks(divup(imageW , COLUMNS_BLOCKDIM_X), divup(imageD * imageH , (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y)));
 				dim3 threads(COLUMNS_BLOCKDIM_X, COLUMNS_BLOCKDIM_Y);
 
 				convolutionColumnsKernel<<<blocks, threads>>>(
