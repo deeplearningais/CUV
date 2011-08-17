@@ -87,6 +87,11 @@ namespace cuv{
 		cuvSafeCall(cudaGetDeviceCount( &nDevCount ));
 		return nDevCount;
 	}
+        int getCurrentDevice(){
+                int dev;
+                cuvSafeCall(cudaGetDevice(&dev));
+                return dev;
+        }
 
 
 }

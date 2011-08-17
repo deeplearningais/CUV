@@ -48,5 +48,6 @@ void export_tools(){
 	def("getFreeMem",(int (*)(int))getFreeDeviceMemory,(arg("dev_idx")=0));
 	def("getMaxMem",(int (*)(int))getMaxDeviceMemory,(arg("dev_idx")=0));
 	def("setDevice",(void (*)(int))useDevice,(arg("dev_idx")=0));
-	def("countDevices",(int (*)(int))countDevices);
+	def("countDevices",countDevices);
+	def("getCurrentDevice",getCurrentDevice);
 }
