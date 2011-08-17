@@ -23,7 +23,6 @@
 namespace cuv{
 	int getFreeDeviceMemory(int dev_idx=0);
 	int getMaxDeviceMemory(int dev_idx=0);
-	void useDevice(int dev_idx=0);
 	int countDevices();
         int getCurrentDevice();
 }

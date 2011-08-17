@@ -78,10 +78,6 @@ namespace cuv{
 		}
 	}
 
-	void useDevice(int dev_idx){
-		cuvSafeCall(cudaSetDevice(dev_idx));
-	}
-
 	int countDevices(){
 		int nDevCount = 0;
 		cuvSafeCall(cudaGetDeviceCount( &nDevCount ));
