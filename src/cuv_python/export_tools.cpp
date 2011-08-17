@@ -36,7 +36,7 @@
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/convolution_ops/convolution_ops.hpp>
-#include <cuv/tools/device_tools.h>
+#include <cuv/tools/device_tools.hpp>
 
 
 //using namespace std;

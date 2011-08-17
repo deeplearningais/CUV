@@ -5,7 +5,7 @@
  *      Author: gerharda
  */
 
-#include "device_tools.h"
+#include "device_tools.hpp"
 
 namespace cuv{
 
