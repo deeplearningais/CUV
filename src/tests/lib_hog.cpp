@@ -82,10 +82,10 @@ BOOST_AUTO_TEST_CASE( cuv_hog )
 
 	m = bins;
 	m.reshape(extents[bincnt*h][w]);
-	m -= cuv::minimum(m);
-	m *= 255.f / cuv::maximum(m);
 	std::cout << DBG(cuv::maximum(m));
 	std::cout << DBG(cuv::minimum(m));
+	m -= cuv::minimum(m);
+	m *= 255.f / cuv::maximum(m);
 	//libs::cimg::show(m, "bins.png");
 	libs::cimg::save(m, "/tmp/bins.png");
 }
