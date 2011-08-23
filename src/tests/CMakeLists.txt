@@ -88,6 +88,9 @@ IF(CUV_CIMG_BINDINGS)
 	ADD_EXECUTABLE( test_nlmeans lib_nlmean.cpp )
 	TARGET_LINK_LIBRARIES( test_nlmeans cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_nlmeans cuv_cimg cuv_matrix_ops X11 pthread ${PNG_LIBRARIES})
 
+	ADD_EXECUTABLE( test_hog lib_hog.cpp )
+	TARGET_LINK_LIBRARIES( test_hog cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_separable_conv hog cuv_nlmeans cuv_cimg cuv_matrix_ops X11 pthread ${PNG_LIBRARIES})
+
         FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 ENDIF(CUV_CIMG_BINDINGS)
