@@ -221,16 +221,18 @@ namespace cuv{ namespace libs{ namespace hog{
 				// normalization
 				bins.reshape(extents[steps][width*height]);
 				tens_t norms(width*height);
-				reduce_to_row(norms,bins,RF_ADD);
-				norms += 0.001f;
+				reduce_to_row(norms,bins,RF_ADD_SQUARED);
+				norms += 0.0001f;
+				apply_scalar_functor(norms,SF_SQRT);
 				matrix_divide_row(bins,norms);
 
 				// clip
 				apply_scalar_functor(bins,SF_MIN, 0.2f);
 
 				// renormalize
-				reduce_to_row(norms,bins,RF_ADD);
-				norms += 0.001f;
+				reduce_to_row(norms,bins,RF_ADD_SQUARED);
+				norms += 0.0001f;
+				apply_scalar_functor(norms,SF_SQRT);
 				matrix_divide_row(bins,norms);
 
 				bins.reshape(extents[steps][width][height]);
