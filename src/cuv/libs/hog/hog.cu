@@ -43,12 +43,15 @@ void select_arg_kernel(V* dst, const V* src, const I* arg, unsigned int w){
 
 template<class V>
 __global__
-void atan2_abs_kernel(V* dst, const V* gy, const V* gx, unsigned int w){
+void atan2_abs_and_norm_kernel(V* angle, V* norm, const V* gy, const V* gx, unsigned int w){
 	const unsigned int id = blockIdx.x * blockDim.x + threadIdx.x;
 	if(id>=w) return;
-	V tmp = atan2(gy[id],gx[id]);
+	V gyval=gy[id];
+	V gxval=gx[id];
+	V tmp = atan2(gyval,gxval);
 	if(tmp<0) tmp += (float) M_PI;
-	dst[id] = tmp;
+	norm[id] = sqrt(gyval*gyval + gxval*gxval);
+	angle[id] = tmp;
 }
 
 
@@ -125,12 +128,13 @@ namespace cuv{ namespace libs{ namespace hog{
 		/** determine angle of gradient disregarding polarisation
 		  */
 		template<class V>
-		void atan2_abs(cuv::tensor<V,dev_memory_space>& dst, const cuv::tensor<V,dev_memory_space>& gy, const cuv::tensor<V,dev_memory_space>& gx){
+		void atan2_abs_and_norm(cuv::tensor<V,dev_memory_space>& angle, cuv::tensor<V,dev_memory_space>& norm, const cuv::tensor<V,dev_memory_space>& gy, const cuv::tensor<V,dev_memory_space>& gx){
 			cuvAssert(equal_shape(gx,gy));
-			cuvAssert(equal_shape(gx,dst));
-			dim3 blocks(divup(dst.size(),256));
+			cuvAssert(equal_shape(gx,angle));
+			cuvAssert(equal_shape(gx,norm));
+			dim3 blocks(divup(norm.size(),256));
 			dim3 threads(256);
-			atan2_abs_kernel<<<blocks,threads>>>(dst.ptr(),gy.ptr(),gx.ptr(),dst.size());
+			atan2_abs_and_norm_kernel<<<blocks,threads>>>(angle.ptr(),norm.ptr(),gy.ptr(),gx.ptr(),norm.size());
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 
@@ -164,7 +168,6 @@ namespace cuv{ namespace libs{ namespace hog{
 				unsigned int width  = src.shape()[2];
 				unsigned int steps  = bins.shape()[0];
 
-
 				tens_t magnitude(extents[height][width]);
 				tens_t angle    (extents[height][width]);
 				{       tens_t  gradx(src.shape()), 
@@ -184,8 +187,7 @@ namespace cuv{ namespace libs{ namespace hog{
 					cuv::libs::nlmeans::convolutionColumns(gradx,src,1);
 
 					// calculate the gradient norms and directions
-					cuv::apply_binary_functor(allmagnitudes, gradx,grady, BF_NORM);
-					atan2_abs(allangles, gradx,grady);
+					atan2_abs_and_norm(allangles,allmagnitudes, gradx,grady);
 
 					// determine channel with maximal magnitude
 					allmagnitudes.reshape(chann,height*width);
@@ -205,11 +207,14 @@ namespace cuv{ namespace libs{ namespace hog{
 				{
 					cuv::tensor<float,host_memory_space> kernel(2*spatialpool+1);
 					float sigma = spatialpool/2.f;
+					float sum   = 0.f;
 					for(int i = 0; i < 2*spatialpool+1; i++){
 						float dist = (float)(i - (int)spatialpool);
-						kernel[i]  = expf(- dist * dist / (2*sigma*sigma));
+						float val  = expf(- dist * dist / (2*sigma*sigma));
+						kernel[i]  = val;
+						sum       += val;
 					}
-					kernel /= cuv::sum(kernel);
+					kernel /= sum;
 					cuv::libs::nlmeans::setConvolutionKernel_horizontal(kernel);
 					cuv::libs::nlmeans::setConvolutionKernel_vertical(kernel);
 
@@ -260,6 +265,7 @@ namespace cuv{ namespace libs{ namespace hog{
 	template void hog(TENS(V, M)&, const TENS(V, M)&, unsigned int);
 
 INSTANTIATE(float,dev_memory_space)
+INSTANTIATE(float,host_memory_space)
 	
 			
 } } }
