@@ -73,6 +73,12 @@ namespace cuv{
 	void checkCudaError(const char *msg);
 
 	/// initialize cuda to work on dev X
+    /** 
+     * @brief Initializes CUDA context
+     * 
+     * @param dev Device to use. If passed dev<0, does not call cudaInit.
+     *  Then CUDA tries to automatically find a free device.
+     */
 	void initCUDA(int dev=0);
 
 	/// quit cuda
