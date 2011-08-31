@@ -85,7 +85,7 @@ void lswd_optimization(int N){
 }
 
 template<class M>
-void rprop_optimization(int N){
+void rprop_optimization_decay_l1(int N){
 	tensor<signed char,M> dW_old(N);
 	tensor<float,M>       W(N);
 	tensor<float,M>       dW(N);
@@ -94,6 +94,46 @@ void rprop_optimization(int N){
 	// we will optimize the function f(W) = 2 * (W-optimum)^2
 	tensor<float,M>       optimum(N);
 	fill_rnd_uniform(optimum);
+	optimum -= 0.5f;
+
+	// start at random value
+	fill_rnd_uniform(W);
+	W -= 0.5f;
+	fill(dW_old, 0);    // initialize gradient
+	fill(rate, 0.001f); // initialize learning rates
+	
+	for (int iter = 0; iter < 300; ++iter) {
+		dW = optimum-W;
+		rprop(W,dW,dW_old,rate,0.00,0.001);
+	}
+
+	std::cout << "L1-Norm of W (w/ l1-reg'n): " << cuv::norm1(W)<<std::endl;
+	std::cout << "number exact zeros: " << cuv::count(W, 0.f)<<std::endl;
+	BOOST_CHECK_GT(cuv::count(W, 0.f), 0); // number of exact zeros should be >0 in l1-optimization!
+	tensor<float,M>   f = W-optimum;
+	double tendency = norm1(f*f) - norm1(optimum*optimum);
+	BOOST_CHECK_LT(tendency,0); // weights should be a bit too cose to 0
+	f *= f;
+	f *= 2.f;
+	double error = mean(f);
+	BOOST_CHECK_CLOSE(error+1.0,1.0,0.01);
+
+	for(int i=0;i<N;i++){
+	       BOOST_CHECK_CLOSE((float)W[i] + 10.f,(float)optimum[i]+ 10.f,0.1f);
+	}
+}
+
+template<class M>
+void rprop_optimization(int N){
+	tensor<float,M> dW_old(N);
+	tensor<float,M>       W(N);
+	tensor<float,M>       dW(N);
+	tensor<float,M>       rate(N);
+
+	// we will optimize the function f(W) = 2 * (W-optimum)^2
+	tensor<float,M>       optimum(N);
+	fill_rnd_uniform(optimum);
+	optimum -= 0.5f;
 
 	// start at random value
 	fill_rnd_uniform(W);
@@ -104,6 +144,8 @@ void rprop_optimization(int N){
 		dW = optimum-W;
 		rprop(W,dW,dW_old,rate);
 	}
+
+	std::cout << "L1-Norm of W (no l1-reg'n): " << cuv::norm1(W)<<std::endl;
 
 	tensor<float,M>       f = (W-optimum);
 	f *= f;
@@ -150,5 +192,13 @@ BOOST_AUTO_TEST_CASE( test_lswd_optimization_dev )
 	lswd_optimization<dev_memory_space>(N);
 }
 
+BOOST_AUTO_TEST_CASE( test_rprop_optimization_l1_host )
+{
+	rprop_optimization_decay_l1<host_memory_space>(N);
+}
+BOOST_AUTO_TEST_CASE( test_rprop_optimization_l1_dev )
+{
+	rprop_optimization_decay_l1<dev_memory_space>(N);
+}
 
 BOOST_AUTO_TEST_SUITE_END()
