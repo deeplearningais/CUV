@@ -175,7 +175,7 @@ Annealed Importance Sampling
 	This is an implementation of the method described in this paper. It works together with the RBM implementation by
 	reading parameters from a given work directory.
 	Usually it can simply be called with:
-	> python ais/ais.py -p <directory> -d 0
+	> python ais/ais.py --dir <directory>
 	where <directory> is the working directory of the RBM.
 	The output is the estimated partition function and the resulting data likelihood under the model.
 	The result of the computation is saved in a pickle in the working directory and the calculation is not repeated
