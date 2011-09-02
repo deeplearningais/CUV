@@ -198,13 +198,13 @@ BOOST_AUTO_TEST_CASE( local_maxima_index )
 	fill_rnd_uniform(d_img);
 	convert(h_img, d_img);
 
-	tensor<int,host_memory_space,row_major> h_indices(c,o*o);
-	tensor<int,dev_memory_space,row_major> d_indices(c,o*o);
+	tensor<unsigned char,host_memory_space> h_indices(c,o*o);
+	tensor<unsigned char,dev_memory_space> d_indices(c,o*o);
 
 	max_pooling(h_pooled, h_img, p, 0, &h_indices);
 	max_pooling(d_pooled, d_img, p, 0, &d_indices);
 
-	tensor<int, host_memory_space, row_major> indices2(d_indices.shape()[0], d_indices.shape()[1]);
+	tensor<unsigned char, host_memory_space, row_major> indices2(d_indices.shape()[0], d_indices.shape()[1]);
 	convert(indices2,d_indices);
 
 	for(int i=0;i<d_indices.shape()[0];i++){
@@ -238,11 +238,11 @@ BOOST_AUTO_TEST_CASE( max_pool_res )
 
 	tensor<float,host_memory_space,row_major> h_img(c,n*n);
 	tensor<float,host_memory_space,row_major> h_dst(c,m*m);
-	tensor<int,host_memory_space,row_major> h_indices(c,m*m);
+	tensor<unsigned char,host_memory_space,row_major> h_indices(c,m*m);
 
 	tensor<float,dev_memory_space,row_major> d_img(c,n*n);
 	tensor<float,dev_memory_space,row_major> d_dst(c,m*m);
-	tensor<int,dev_memory_space,row_major> d_indices(c,m*m);
+	tensor<unsigned char,dev_memory_space,row_major> d_indices(c,m*m);
 
 	fill_rnd_uniform(h_img);
 	convert(d_img, h_img);

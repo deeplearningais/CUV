@@ -386,8 +386,8 @@ BOOST_AUTO_TEST_CASE( maxima_plus_index_speed )
 	tensor<float,host_memory_space, row_major> img_dev(c,n*n);
 	tensor<float,host_memory_space, row_major> pooled_host(c,o*o);
 	tensor<float,host_memory_space, row_major> pooled_dev(c,o*o);
-	tensor<int,host_memory_space, row_major> indices_host(c,o*o);
-	tensor<int,host_memory_space, row_major> indices_dev(c,o*o);
+	tensor<unsigned char,host_memory_space, row_major> indices_host(c,o*o);
+	tensor<unsigned char,host_memory_space, row_major> indices_dev(c,o*o);
 
 
 	initialize_mersenne_twister_seeds();
@@ -425,11 +425,11 @@ BOOST_AUTO_TEST_CASE( max_pool_with_overlap )
 
 	tensor<float,host_memory_space, row_major> img_host(c,n*n);
 	tensor<float,host_memory_space, row_major> dst_host(c,m*m);
-	tensor<int,host_memory_space, row_major> indices_host(c,m*m);
+	tensor<unsigned char,host_memory_space, row_major> indices_host(c,m*m);
 
 	tensor<float,host_memory_space, row_major> img_dev(c,n*n);
 	tensor<float,host_memory_space, row_major> dst_dev(c,m*m);
-	tensor<int,host_memory_space, row_major> indices_dev(c,m*m);
+	tensor<unsigned char,host_memory_space, row_major> indices_dev(c,m*m);
 
 	sequence(img_host);
 	sequence(img_dev);

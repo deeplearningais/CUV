@@ -221,7 +221,7 @@ template<class V, class M, class T>
 void supersample(tensor<V,M,T>& dst,
 		tensor<V,M,T>& img,
 		int factor,
-		tensor<int,M,row_major>* indices = NULL);
+		tensor<unsigned char,M,row_major>* indices = NULL);
 
 
 /**
@@ -305,7 +305,7 @@ void super_to_max(tensor<V,M,T>& dst,
 		tensor<V,M,T>& img,
 		int poolSize,
 		int overlap = 0,
-		tensor<int,M,row_major>* indices = NULL,
+		tensor<unsigned char,M,row_major>* indices = NULL,
 		tensor<V,M,T>* filter = NULL);
 
 
@@ -369,7 +369,7 @@ void max_pooling(tensor<V,M,T>& dst,
 		tensor<V,M,T>& img,
 		unsigned int poolSize,
 		unsigned int overlap = 0,
-		tensor<int,M,row_major>* indices = NULL,
+		tensor<unsigned char,M,row_major>* indices = NULL,
 		tensor<V,M,T>* filter = NULL);
 
 template<class V, class M, class T>

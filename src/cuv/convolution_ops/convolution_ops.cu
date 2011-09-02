@@ -424,8 +424,9 @@ template<>
 }
 
 
+template<class IndexType>
 __global__
-void supersample_kernel(float*dst, float* src, int* indices, int len, int factor, int smallLen) {
+void supersample_kernel(float*dst, float* src, IndexType* indices, int len, int factor, int smallLen) {
 	int tx = threadIdx.x; // ty = threadIdx.y;
 	int bx = blockIdx.x, by = blockIdx.y;
 
@@ -433,9 +434,9 @@ void supersample_kernel(float*dst, float* src, int* indices, int len, int factor
 	indices += by * smallLen * smallLen + tx * smallLen + bx;
 	src += by * smallLen * smallLen + tx * smallLen + bx;
 
-	int idx = indices[0]; // coalesced???
-	int row = idx % factor;
-	int col = idx / factor;
+	IndexType idx = indices[0]; // coalesced???
+	IndexType row = idx % factor;
+	IndexType col = idx / factor;
 
 	dst[row*len + col] = *src;
 }
@@ -444,7 +445,7 @@ template<>
 void supersample(tensor<float,dev_memory_space,row_major>& dst,
 		tensor<float,dev_memory_space,row_major>& img,
 		int factor,
-		tensor<int,dev_memory_space,row_major>* indices) {
+		tensor<unsigned char,dev_memory_space,row_major>* indices) {
 	int numImages = img.shape()[0];
 	int imgPixels = img.shape()[1];
 	int dstPixels = imgPixels * (factor * factor);
@@ -477,7 +478,7 @@ template<>
 void supersample(tensor<float,host_memory_space,row_major>& dst,
 		tensor<float,host_memory_space,row_major>& img,
 		int factor,
-		tensor<int,host_memory_space,row_major>* indices) {
+		tensor<unsigned char,host_memory_space,row_major>* indices) {
 	int numImages = img.shape()[0];
 	int imgSize = sqrt(img.shape()[1]);
 	int dstSize = imgSize * factor;
@@ -493,9 +494,9 @@ void supersample(tensor<float,host_memory_space,row_major>& dst,
 		for(int i = 0; i < numImages; i++) {
 			for(int r = 0; r < imgSize; r++)
 				for(int c = 0; c < imgSize; c++) {
-					int idx = (*indices)[r*imgSize+c + i*imgSize*imgSize];
-					int row = idx % factor;
-					int col = idx / factor;
+					unsigned char idx = (*indices)[r*imgSize+c + i*imgSize*imgSize];
+					unsigned char row = idx % factor;
+					unsigned char col = idx / factor;
 					target[(r*factor+row)*dstSize + c*factor+col] = image[r*imgSize + c];
 				}
 			target += dst.shape()[1];
@@ -518,9 +519,9 @@ void supersample(tensor<float,host_memory_space,row_major>& dst,
 #define CONST_SIZE 8192
 __device__ __constant__ float c_filter[CONST_SIZE];
 
-template<bool FILTER>
+template<bool FILTER, class IndexType>
 __global__
-void super_to_max_kernel(float*dst, float* src, int* indices, int imgSize, int dstSize, int poolSize, int stepSize, int patchSize, int numPatches, int batch) {
+void super_to_max_kernel(float*dst, float* src, IndexType* indices, int imgSize, int dstSize, int poolSize, int stepSize, int patchSize, int numPatches, int batch) {
 	int tx = threadIdx.x; // ty = threadIdx.y;
 	int bx = blockIdx.x;
 	
@@ -564,7 +565,7 @@ void super_to_max(tensor<float,dev_memory_space,row_major>& dst,
 		tensor<float,dev_memory_space,row_major>& img,
 		int poolSize,
 		int overlap,
-		tensor<int,dev_memory_space,row_major>* indices,
+		tensor<unsigned char,dev_memory_space,row_major>* indices,
 		tensor<float,dev_memory_space,row_major>* filter) {
 	cuvAssert(indices->shape()[1] == img.shape()[1]);
 	cuvAssert(indices->shape()[0] == img.shape()[0]);
@@ -623,7 +624,7 @@ void super_to_max(tensor<float,host_memory_space,row_major>& dst,
 		tensor<float,host_memory_space,row_major>& img,
 		int poolSize,
 		int overlap,
-		tensor<int,host_memory_space,row_major>* indices,
+		tensor<unsigned char,host_memory_space,row_major>* indices,
 		tensor<float,host_memory_space,row_major>* filter) {
 	cuvAssert(poolSize > overlap);
 	int numImages = dst.shape()[0];
@@ -638,15 +639,15 @@ void super_to_max(tensor<float,host_memory_space,row_major>& dst,
 	fill(dst, 0.0f);
 
 	float* img_ptr = img.ptr();
-	int* idx_ptr = indices->ptr();
+	unsigned char* idx_ptr = indices->ptr();
 	float* dst_ptr = dst.ptr();
 
 	for(int i = 0; i < numImages; i++) {
 		for(int r = 0; r < imgSize; r++) {
 			for(int c = 0; c < imgSize; c++) {
-				int idx = *idx_ptr;
-				int row = idx % poolSize;
-				int col = idx / poolSize;
+				unsigned char idx = *idx_ptr;
+				unsigned char row = idx % poolSize;
+				unsigned char col = idx / poolSize;
 				float val = *img_ptr;
 				if(filter != NULL)
 					val *= (float) (filter->ptr())[row*poolSize+col];
@@ -710,7 +711,7 @@ template<>
 			tensor<float,host_memory_space,row_major>& img,
 			unsigned int poolSize,
 			unsigned int overlap,
-			tensor<int,host_memory_space,row_major>* indices,
+			tensor<unsigned char,host_memory_space,row_major>* indices,
 			tensor<float,host_memory_space,row_major>* filter) {
 	if (indices!=NULL) {
 		cuvAssert(indices->shape()[1] == dst.shape()[1]);
@@ -762,9 +763,9 @@ template<>
 
 // naive, but flexible implementation
 // better distinguish between different cases and load image into shared memory
-template<bool INDEX, bool FILTER>
+template<bool INDEX, bool FILTER, class IndexType>
 __global__
-void max_pooling_kernel(float* dst, float* img, int* indices, int imgSize, int dstSize, int poolSize, int stepSize) {
+void max_pooling_kernel(float* dst, float* img, IndexType* indices, int imgSize, int dstSize, int poolSize, int stepSize) {
 	int tx = threadIdx.x; // ty = threadIdx.y;
 	int bx = blockIdx.x, by = blockIdx.y;
 
@@ -902,7 +903,7 @@ template<>
 			tensor<float,dev_memory_space,row_major>& img,
 			unsigned int poolSize,
 			unsigned int overlap,
-			tensor<int,dev_memory_space,row_major>* indices,
+			tensor<unsigned char,dev_memory_space,row_major>* indices,
 			tensor<float,dev_memory_space,row_major>* filter) {
 
 	if (indices!=NULL) {
@@ -934,9 +935,9 @@ template<>
 	dim3 grid(numBlocksX, numBlocksY);
 	dim3 threads(numThreads);
 	if(indices==NULL && filter==NULL)
-		max_pooling_kernel<false, false><<<grid,threads>>>(dst.ptr(), img.ptr(), NULL, imgSize, dstSize, poolSize, stepSize);
+		max_pooling_kernel<false, false><<<grid,threads>>>(dst.ptr(), img.ptr(), (unsigned char*)NULL, imgSize, dstSize, poolSize, stepSize);
 	else if(indices==NULL && filter!=NULL)
-		max_pooling_kernel<false, true><<<grid,threads>>>(dst.ptr(), img.ptr(), NULL, imgSize, dstSize, poolSize, stepSize);
+		max_pooling_kernel<false, true><<<grid,threads>>>(dst.ptr(), img.ptr(), (unsigned char*)NULL, imgSize, dstSize, poolSize, stepSize);
 	else if(indices!=NULL && filter==NULL)
 		max_pooling_kernel<true, false><<<grid,threads>>>(dst.ptr(), img.ptr(), indices->ptr(), imgSize, dstSize, poolSize, stepSize);
 	else if(indices!=NULL && filter!=NULL)
