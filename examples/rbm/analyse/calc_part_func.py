@@ -2,7 +2,6 @@
 import warnings
 warnings.filterwarnings("ignore")
 import cuv_python as cp
-import pyublas
 from progressbar import ProgressBar, Percentage, Bar, RotatingMarker, ETA
 import numpy as np
 import cPickle
@@ -15,15 +14,15 @@ from time import strftime
 
 sys.path.append(".")
 sys.path.append("..")
-from datasets import *
+from datasets import MNISTData, ShifterData, BarsAndStripesData
 from helper_classes import Dataset
 import minibatch_provider
 
 class PartitionFunction(object):
     def __init__(self, weight, bv,bh):
-        self.weight = cp.push(weight)
-        self.bv     = cp.push(bv)
-        self.bh     = cp.push(bh)
+        self.weight = cp.dev_tensor_float_cm(weight)
+        self.bv     = cp.dev_tensor_float(bv)
+        self.bh     = cp.dev_tensor_float(bh)
 
     def partialsumV(self,actv, acth, row):
         """
@@ -32,23 +31,22 @@ class PartitionFunction(object):
         """
         # acth = bv + actv*W
         cp.prod(acth,self.weight,actv,'t','n')
-        cp.matrix_plus_col(acth,self.bh.vec)
+        cp.matrix_plus_col(acth,self.bh)
 
         # acth = log(exp(acth)+1)
         cp.apply_scalar_functor(acth,cp.scalar_functor.RECT,1.0)
 
         # row = actv.sum(axis=0)
-        cp.reduce_to_row(row.vec,acth,cp.reduce_functor.ADD)
+        cp.reduce_to_row(row,acth,cp.reduce_functor.ADD)
 
         # row += h*bh
-        cp.matrix_times_col(actv,self.bv.vec)
-        cp.reduce_to_row(row.vec,actv,cp.reduce_functor.ADD,1.0,1.0)
-        #cp.prod(row,self.bv,actv,'t','n',1.0,1.0)
+        cp.matrix_times_col(actv,self.bv)
+        cp.reduce_to_row(row,actv,cp.reduce_functor.ADD,1.0,1.0)
 
         # exp(row)
-        m=cp.pull(row).astype("float64")
+        m=row.np.astype("float64")
 
-        return math.fsum(m.flatten())/actv.w
+        return math.fsum(m.flatten())/actv.shape[1]
 
     def partialsum(self,acth, actv, row):
         """
@@ -57,29 +55,29 @@ class PartitionFunction(object):
         """
         # actv = bv + acth*W
         cp.prod(actv,self.weight,acth,'n','n')
-        cp.matrix_plus_col(actv,self.bv.vec)
+        cp.matrix_plus_col(actv,self.bv)
 
         # actv = log(exp(actv)+1)
         cp.apply_scalar_functor(actv,cp.scalar_functor.RECT,1.0)
 
         # row = actv.sum(axis=0)
-        cp.reduce_to_row(row.vec,actv,cp.reduce_functor.ADD)
+        cp.reduce_to_row(row,actv,cp.reduce_functor.ADD)
 
         # row += h*bh
-        cp.matrix_times_col(acth,self.bh.vec)
-        cp.reduce_to_row(row.vec,acth,cp.reduce_functor.ADD,1.0,1.0)
+        cp.matrix_times_col(acth,self.bh)
+        cp.reduce_to_row(row,acth,cp.reduce_functor.ADD,1.0,1.0)
         #cp.prod(row,self.bv,actv,'t','n',1.0,1.0)
 
         # exp(row)
-        m=cp.pull(row).astype("float64")
+        m=row.np.astype("float64")
 
         return math.fsum(np.exp(m).flatten())
 
     def numerator(self,mbp,batchsize):
         sid = 0
-        actv = cp.dev_matrix_cmf(self.weight.h,batchsize)
-        acth = cp.dev_matrix_cmf(self.weight.w,batchsize)
-        row  = cp.dev_matrix_cmf(            1,batchsize)
+        actv = cp.dev_tensor_float_cm([self.weight.shape[0],batchsize])
+        acth = cp.dev_tensor_float_cm([self.weight.shape[1],batchsize])
+        row  = cp.dev_tensor_float([batchsize])
         cp.fill(acth,0.0)
         cp.fill(actv,0.0)
         cp.fill(row,0)
@@ -101,13 +99,13 @@ class PartitionFunction(object):
         return math.fsum(L) / (len(L))
 
     def denominator(self,batchsize):
-        acth = cp.dev_matrix_cmf(self.weight.w,batchsize)
-        actv = cp.dev_matrix_cmf(self.weight.h,batchsize)
-        row  = cp.dev_matrix_cmf(            1,batchsize)
-        cp.fill(acth,0.0)
-        cp.fill(actv,0.0)
-        cp.fill(row,0.0)
-        n    = acth.h
+        acth = cp.dev_tensor_float_cm([self.weight.shape[1], batchsize])
+        actv = cp.dev_tensor_float_cm([self.weight.shape[0], batchsize])
+        row  = cp.dev_tensor_float([batchsize])
+        cp.fill(acth, 0.0)
+        cp.fill(actv, 0.0)
+        cp.fill(row, 0.0)
+        n    = acth.shape[0]
         nmax = 2**n
         if nmax%batchsize != 0:
             print "Error: 2**n=%d must be dividable by batchsize=%d!"%(nmax,batchsize)
@@ -115,10 +113,10 @@ class PartitionFunction(object):
         L    = []
         widgets = ["Denominator: ", Percentage(), ' ', Bar(marker=RotatingMarker()), ' ', ETA()]
         pbar = ProgressBar(widgets=widgets, maxval=nmax)
-        for i in xrange(0,nmax,acth.w):
+        for i in xrange(0,nmax,acth.shape[1]):
             cp.set_binary_sequence(acth,i)
             L.append(self.partialsum(acth,actv,row))
-            if (i/acth.w) % 100 == 0:
+            if (i/acth.shape[1]) % 100 == 0:
                 pbar.update(i)
         pbar.finish()
         for m in [actv,acth,row]: m.dealloc()
@@ -127,8 +125,8 @@ class PartitionFunction(object):
 def get_mbp(cfg):
     if cfg.dataset == Dataset.mnist:
         dataset = MNISTData(cfg,"/home/local/datasets/MNIST")
-        mbp = minibatch_provider.MovedMiniBatchProvider(dataset.data,cfg.px,cfg.px,[4,1][cfg.maps_bottom==1],teacher=dataset.teacher,maxmov=0,noise_std=0)
-        act = cp.dev_matrix_cmf(cfg.px*cfg.py, cfg.batchsize)
+        mbp = minibatch_provider.MNISTMiniBatchProvider(dataset.data)
+        act = cp.dev_tensor_float_cm([cfg.px*cfg.py, cfg.batchsize])
         mbs = minibatch_provider.MiniBatchStatistics(mbp,act)
         mbp.norm = lambda x: mbs.normalize_255(x)
         mbp.mbs = mbs # allows visualization of mean, range, etc
