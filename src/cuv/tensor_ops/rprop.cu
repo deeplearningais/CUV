@@ -38,7 +38,7 @@
 
 #define ETA_P 1.2f
 #define ETA_M 0.5f
-#define DELTA_MAX 50.0f
+#define DELTA_MAX 5.0f
 #define DELTA_MIN (1.0E-8)
 
 #ifdef __CDT_PARSER__
@@ -50,25 +50,45 @@ __global__ void rprop_kernel(T*W, T* dW, S* dW_old, T* rate, int n, T decay, T s
 	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	int off = blockDim.x * gridDim.x;
 	for (unsigned int i = idx; i < n; i += off){
-		S sn = (S)sgn(dW[i] - decay*W[i] - sgn(W[i])*min(sparsedecay, fabs(W[i])));
+                /*
+                        for l1-norm, use ``Orthant-Wise Limited-memory Quasi-Newton Optimizer for L1-regularized Objectives''
+
+			http://research.microsoft.com/en-us/downloads/b1eb1016-1738-4bd5-83a9-370c9d498a03/
+                */
+
+		T pg   = dW[i]; // projected gradient
+		T oldW = W[i];
+		S sdW  = sgn(pg);
+		pg    -= decay * oldW;
+
+		S snW  = sgn(oldW);
+		S tmp  = (snW==0) ? sgn(pg) : 0;
+		pg    -= snW * sparsedecay;                  // if snW==0, apply to gradient instead...
+		pg    -= tmp * min(sparsedecay, fabs(   pg));// ... keeping W at zero!
+
+		S sn = (S)sgn(pg);
 		S s  = dW_old[i] * sn;
-		T dwn, rn=rate[i];
+		T delta=0, step=rate[i];
 
 		if ( s > 0) {
-			rn = min( ETA_P * rn, DELTA_MAX );
-			dwn = sn * rn;
+			step = min( ETA_P * step, DELTA_MAX );
+			delta = sdW * step;
+			if(sparsedecay!=0 && delta*pg<=(T)0) // we changed direction while projecting the gradient, don't execute step!
+				delta = (T)0;
 		}
 		else if ( s < 0) {
-			rn = max( ETA_M * rn, DELTA_MIN);
-			dwn = 0;
-		}   
+			step = max( ETA_M * step, DELTA_MIN);
+			sdW  = 0;
+		}
 		else {
-			dwn = sn * rn;
-		}   
+			if(sparsedecay==(T)0) // do not make a move when sparse decay is on (pg==0)
+				delta = sn * step;
+		}
 		__syncthreads();
-		rate[i]   = rn;
-		dW_old[i] = (S)sgn(dwn);
-		W[i]      = W[i] + dwn;
+		rate[i]   = step;
+		dW_old[i] = sdW;
+		T newW    = oldW+delta;
+		W[i]      = (newW*oldW<(T)0) ? (T)0 : newW;
 	}
 } 
 
@@ -97,32 +117,50 @@ namespace cuv{
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
-	template<class V, class S>
+	template<class T, class S>
 	void
-	rprop_impl(tensor<V,host_memory_space>& W, tensor<V,host_memory_space>& dW, tensor<S,host_memory_space>& dW_old, tensor<V,host_memory_space>& rate, V decay, V sparsedecay){
+	rprop_impl(tensor<T,host_memory_space>& W, tensor<T,host_memory_space>& dW, tensor<S,host_memory_space>& dW_old, tensor<T,host_memory_space>& rate, T decay, T sparsedecay){
 		cuvAssert(decay >=0);
 		cuvAssert(sparsedecay >=0);
 		for (unsigned int i = 0; i < dW.size(); i++){
-			S sn = (S)sgn(dW[i] - decay*W[i] - min(sparsedecay, W[i]));
-			S s  = dW_old[i] * sn;
-			V dwn,rn = rate[i];
+			/*
+			   for l1-norm, use ``Orthant-Wise Limited-memory Quasi-Newton Optimizer for L1-regularized Objectives''
 
-			if (s > 0) {
-				rn = min( ETA_P * rn , DELTA_MAX );
-				dwn = sn * rn;
+				http://research.microsoft.com/en-us/downloads/b1eb1016-1738-4bd5-83a9-370c9d498a03/
+			 */
+
+			T pg   = dW[i]; // projected gradient
+			T oldW = W[i];
+			S sdW  = sgn(pg);
+			pg    -= decay * oldW;
+
+			S snW  = sgn(oldW);
+			S tmp  = (snW==0) ? sgn(pg) : 0;
+			pg    -= snW * sparsedecay;                  // if snW==0, apply to gradient instead...
+			pg    -= tmp * min(sparsedecay, fabs(   pg));// ... keeping W at zero!
+
+			S sn = (S)sgn(pg);
+			S s  = dW_old[i] * sn;
+			T delta=0, step=rate[i];
+
+			if ( s > 0) {
+				step = min( ETA_P * step, DELTA_MAX );
+				delta = sdW * step;
+				if(sparsedecay!=0 && delta*pg<=(T)0) // we changed direction while projecting the gradient, don't execute step!
+					delta = (T)0;
 			}
-			else if (s < 0) {
-				rn = max( ETA_M * rn, DELTA_MIN);
-				dwn = 0;
-			}   
+			else if ( s < 0) {
+				step = max( ETA_M * step, DELTA_MIN);
+				sdW  = 0;
+			}
 			else {
-				dwn = sn * rn;
+				if(sparsedecay==(T)0) // do not make a move when sparse decay is on (pg==0)
+					delta = sn * step;
 			}
-			/*__synchthreads();*/
-			rate[i]=rn;
-			dW_old[i]=(S)sgn(dwn);
-			W[i]=W[i] + dwn;
-			
+			rate[i]   = step;
+			dW_old[i] = sdW;
+			T newW    = oldW+delta;
+			W[i]      = (newW*oldW<(T)0) ? (T)0 : newW;
 		}
 	}
 

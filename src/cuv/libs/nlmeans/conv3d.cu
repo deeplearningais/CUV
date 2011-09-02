@@ -18,7 +18,7 @@
 namespace cuv{
 	namespace libs{
 		namespace nlmeans{
-			inline unsigned int divup(unsigned int a, unsigned int b)
+			inline unsigned int __host__ __device__ divup(unsigned int a, unsigned int b)
 			{
 				if (a % b)  /* does a divide b leaving a remainder? */
 					return a / b + 1; /* add in additional block */
@@ -170,18 +170,18 @@ namespace cuv{
 					){
 				__shared__ float s_Data[COLUMNS_BLOCKDIM_X][(COLUMNS_RESULT_STEPS + 2 * COLUMNS_HALO_STEPS) * COLUMNS_BLOCKDIM_Y + 1];
 
-				int n_blocks_per_column = imageH/(COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y);
-				int basez = floor(float(blockIdx.y)/n_blocks_per_column);
-				int blocky = blockIdx.y - basez*n_blocks_per_column;
+				int n_blocks_per_column = divup(imageH,(COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y));
+				int baseZ = floor(float(blockIdx.y)/n_blocks_per_column);
+				int blocky = blockIdx.y - baseZ*n_blocks_per_column;
 
 				//Offset to the upper halo edge
 				const int baseX = blockIdx.x * COLUMNS_BLOCKDIM_X + threadIdx.x;
 				const int baseY = (blocky * COLUMNS_RESULT_STEPS - COLUMNS_HALO_STEPS) * COLUMNS_BLOCKDIM_Y + threadIdx.y;
-				if(basez<=imageD) return;
-				if(baseX<=imageW) return;
-				if(baseY<=imageH) return;
-				d_Src += basez*imageH*imageW + baseY * imageH + baseX;
-				d_Dst += basez*imageH*imageW + baseY * imageH + baseX;
+				if(baseZ>=imageD) return;
+				if(baseX>=imageW) return;
+				if(baseY>=imageH) return;
+				d_Src += baseZ*imageH*imageW + baseY * imageH + baseX;
+				d_Dst += baseZ*imageH*imageW + baseY * imageH + baseX;
 
 				//Main data
 #pragma unroll
@@ -225,7 +225,7 @@ namespace cuv{
 				/*cuvAssert( imageW % COLUMNS_BLOCKDIM_X == 0 );*/
 				/*cuvAssert( imageH % (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y) == 0 );*/
 
-				dim3 blocks(imageW / COLUMNS_BLOCKDIM_X, imageD * imageH / (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y));
+				dim3 blocks(divup(imageW , COLUMNS_BLOCKDIM_X), imageD * divup(imageH , COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y));
 				dim3 threads(COLUMNS_BLOCKDIM_X, COLUMNS_BLOCKDIM_Y);
 
 				convolutionColumnsKernel<<<blocks, threads>>>(

@@ -426,7 +426,10 @@ struct bf_logaddexp : binary_functor<float,T, T> {
 		uf_log1p<float,float> log1p;
 		if(diff > 0)
 			return t + log1p(expf(-diff));
-		return u + log1p(expf(diff));
+		else if(diff<=0)
+			return u + log1p(expf(diff));
+		else
+			return t+u;
 	} 
 };
 
@@ -474,6 +477,13 @@ struct reduce_functor_traits<bf_max<T,T,T> >{
 template<class T>
 struct reduce_functor_traits<bf_min<T,T,T> >{  
 	static const T init_value(){return boost::numeric::bounds<T>::highest();}
+	static const bool returns_index = false;
+};
+
+/// specialization of reduce_functor_traits for logaddexp functor: initial value is negative infinity
+template<class T>
+struct reduce_functor_traits<bf_logaddexp<T> >{
+	static const T init_value(){return -std::numeric_limits<T>::infinity();}
 	static const bool returns_index = false;
 };
 

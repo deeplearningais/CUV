@@ -36,7 +36,7 @@
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/convolution_ops/convolution_ops.hpp>
-#include <cuv/tools/device_tools.h>
+#include <cuv/tools/device_tools.hpp>
 
 
 //using namespace std;
@@ -47,6 +47,6 @@ namespace ublas = boost::numeric::ublas;
 void export_tools(){
 	def("getFreeMem",(int (*)(int))getFreeDeviceMemory,(arg("dev_idx")=0));
 	def("getMaxMem",(int (*)(int))getMaxDeviceMemory,(arg("dev_idx")=0));
-	def("setDevice",(void (*)(int))useDevice,(arg("dev_idx")=0));
-	def("countDevices",(int (*)(int))countDevices);
+	def("countDevices",countDevices);
+	def("getCurrentDevice",getCurrentDevice);
 }

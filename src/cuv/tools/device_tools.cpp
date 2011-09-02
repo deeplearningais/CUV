@@ -5,7 +5,7 @@
  *      Author: gerharda
  */
 
-#include "device_tools.h"
+#include "device_tools.hpp"
 
 namespace cuv{
 
@@ -78,15 +78,16 @@ namespace cuv{
 		}
 	}
 
-	void useDevice(int dev_idx){
-		cuvSafeCall(cudaSetDevice(dev_idx));
-	}
-
 	int countDevices(){
 		int nDevCount = 0;
 		cuvSafeCall(cudaGetDeviceCount( &nDevCount ));
 		return nDevCount;
 	}
+        int getCurrentDevice(){
+                int dev;
+                cuvSafeCall(cudaGetDevice(&dev));
+                return dev;
+        }
 
 
 }

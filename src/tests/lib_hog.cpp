@@ -27,57 +27,67 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
 
-
-
-
-
-#include <string>
-#include <boost/python.hpp>
-#include <boost/python/extract.hpp>
-
+#define BOOST_TEST_MODULE example
+#include <boost/test/included/unit_test.hpp>
 
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/random/random.hpp>
+#include <cuv/convert/convert.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
+#include <cuv/libs/hog/hog.hpp>
+#include <cuv/libs/cimg/cuv_cimg.hpp>
+#include <cuv/libs/separable_conv/separable_convolution.hpp>
 
-using namespace boost::python;
 using namespace cuv;
 
-void export_tensor();
-void export_tensor_ops();
-//void export_dense_matrix();
-void export_cuda_array();
-void export_matrix_ops();
-void export_random();
-void export_dia_matrix();
-void export_convolution_ops();
-void export_image_ops();
-void export_tools();
-void export_libs_rbm();
-void export_libs_kmeans();
-void export_libs_kernels();
-void export_libs_cimg();
-void export_libs_hog();
+struct MyConfig {
+	static const int dev = CUDA_TEST_DEVICE;
+	MyConfig()   { 
+		printf("Testing on device=%d\n",dev);
+		//initCUDA(dev); 
+	}
+	~MyConfig()  { exitCUDA();  }
+};
 
-BOOST_PYTHON_MODULE(_cuv_python){
-        def("initCUDA", initCUDA);
-        def("exitCUDA", exitCUDA);
-        def("safeThreadSync", safeThreadSync);
-        def("initialize_mersenne_twister_seeds", initialize_mersenne_twister_seeds);
-        export_tensor();
-        export_tensor_ops();
-        //export_dense_matrix();
-        export_cuda_array();
-        export_matrix_ops();
-        export_random();
-        export_dia_matrix();
-        export_convolution_ops();
-        export_image_ops();
-        export_tools();
-        export_libs_rbm();
-        export_libs_kmeans();
-        export_libs_kernels();
-        export_libs_cimg();
-        export_libs_hog();
+BOOST_GLOBAL_FIXTURE( MyConfig );
+
+struct Fix{
+	Fix()
+	{
+	}
+	~Fix(){
+	}
+};
+
+BOOST_FIXTURE_TEST_SUITE( s, Fix )
+
+/** 
+ * @test
+ * @brief create dense device matrix.
+ */
+BOOST_AUTO_TEST_CASE( cuv_hog )
+{
+	tensor<float,host_memory_space,row_major> m;
+	typedef tensor<float,dev_memory_space> dev_t;
+	static const int bincnt = 9;
+	
+	//libs::cimg::load(m,"src/tests/data/colored_square.jpg");
+	libs::cimg::load(m,"src/tests/data/lena_gray.png");
+	unsigned int h = m.shape()[1];
+	unsigned int w = m.shape()[2];
+	dev_t md=m;
+
+	dev_t bins(cuv::extents[bincnt][h][w]);
+
+	libs::hog::hog(bins,md,6);
+
+	m = bins;
+	m.reshape(extents[bincnt*h][w]);
+	std::cout << DBG(cuv::maximum(m));
+	std::cout << DBG(cuv::minimum(m));
+	m -= cuv::minimum(m);
+	m *= 255.f / cuv::maximum(m);
+	//libs::cimg::show(m, "bins.png");
+	libs::cimg::save(m, "/tmp/bins.png");
 }
 
-
+BOOST_AUTO_TEST_SUITE_END()

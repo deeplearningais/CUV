@@ -60,6 +60,8 @@ namespace cuv{
 		}                         
 	}
 	void initCUDA(int dev){
+        // if we get a negative device, do nothing.
+        if (dev<0) return;
 		cuvSafeCall(cudaSetDevice(dev));
 		cudaDeviceProp prop;
 		cudaGetDeviceProperties(&prop, 0);

@@ -1,3 +1,4 @@
+add_subdirectory(hog)
 add_subdirectory(rbm)
 add_subdirectory(kmeans)
 add_subdirectory(nlmeans)

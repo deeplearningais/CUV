@@ -27,57 +27,20 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
 
+#ifndef __HOG_HPP__
+#     define __HOG_HPP__
+#     include<cuv/basics/tensor.hpp>
 
+namespace cuv{ namespace libs{ namespace hog{
 
+	/**
+	 * calculate hog descriptor of src
+	 * @param dst   bins x h x w descriptors
+	 * @param src   chan x h x w image
+	 * @param spatialpool kernel radius for spatial pooling
+	 */
+	template<class V, class M>
+	void hog(cuv::tensor<V, M>& dst, const cuv::tensor<V,M>& src, unsigned int spatialpool=3);
+}}}
 
-
-#include <string>
-#include <boost/python.hpp>
-#include <boost/python/extract.hpp>
-
-
-#include <cuv/tools/cuv_general.hpp>
-#include <cuv/random/random.hpp>
-
-using namespace boost::python;
-using namespace cuv;
-
-void export_tensor();
-void export_tensor_ops();
-//void export_dense_matrix();
-void export_cuda_array();
-void export_matrix_ops();
-void export_random();
-void export_dia_matrix();
-void export_convolution_ops();
-void export_image_ops();
-void export_tools();
-void export_libs_rbm();
-void export_libs_kmeans();
-void export_libs_kernels();
-void export_libs_cimg();
-void export_libs_hog();
-
-BOOST_PYTHON_MODULE(_cuv_python){
-        def("initCUDA", initCUDA);
-        def("exitCUDA", exitCUDA);
-        def("safeThreadSync", safeThreadSync);
-        def("initialize_mersenne_twister_seeds", initialize_mersenne_twister_seeds);
-        export_tensor();
-        export_tensor_ops();
-        //export_dense_matrix();
-        export_cuda_array();
-        export_matrix_ops();
-        export_random();
-        export_dia_matrix();
-        export_convolution_ops();
-        export_image_ops();
-        export_tools();
-        export_libs_rbm();
-        export_libs_kmeans();
-        export_libs_kernels();
-        export_libs_cimg();
-        export_libs_hog();
-}
-
-
+#endif /* __HOG_HPP__ */
