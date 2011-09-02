@@ -31,7 +31,7 @@ class weight_layer:
 
     def backward(self, learnrate=0.01, decay=0.0, l1decay=0.0):
         """Backward pass, calculates the deltas of lower layer
-           and later updates the weights.
+           and updates the weights.
            @param learnrate  how strongly the gradient influences the weights
            @param decay      large values result in a regularization with
                              to the squared weight value"""
