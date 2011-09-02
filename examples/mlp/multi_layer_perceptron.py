@@ -29,7 +29,7 @@ class MLP:
             self.weight_layers.append(weight_layer(self.neuron_layers[i],
                 self.neuron_layers[i + 1]))
 
-    def train(self, input_matrix, teacher_matrix, n_epochs):
+    def train(self, input_matrix, teacher_matrix, n_epochs, learnrate = 0.10):
         """
         Function to train the network
 
@@ -73,7 +73,7 @@ class MLP:
 
                 # Backward-Pass
                 for i in xrange(self.n_layers):
-                    self.weight_layers[self.n_layers - i - 1].backward()
+                    self.weight_layers[self.n_layers - i - 1].backward(learnrate, decay = .01)
 
                 # Don't wait for garbage collector
                 teacher_batch.dealloc()
