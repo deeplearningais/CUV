@@ -98,7 +98,8 @@ __global__ void learn_step_weight_decay_kernel(T* A, T* dA, T alpha, T beta, T s
 	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	int off = blockDim.x * gridDim.x;
 	for (unsigned int i = idx; i < n; i += off){
-		A[i] = alpha*dA[i] + beta*A[i] - sgn(A[i])*min(sparsedecay,fabs(A[i]));
+		T f  = alpha*dA[i] + beta*A[i];
+		A[i] = sgn(f)*min(sparsedecay,fabs(f));
 	}
 }
 
@@ -188,7 +189,8 @@ namespace cuv{
 		V* dwptr = dW.ptr();
 		V* wptr  = W.ptr();
 		for (unsigned int i = 0; i < W.size(); i++){
-			wptr[i] = alpha*dwptr[i] + beta*wptr[i] - sgn(wptr[i])* min(sparsedecay,fabs(wptr[i]));
+			wptr[i]  = alpha*dwptr[i] + beta*wptr[i];
+			wptr[i] -= sgn(wptr[i])* min(sparsedecay,fabs(wptr[i]));
 		}
 	}
         template<class __value_type, class __memory_space_type>
