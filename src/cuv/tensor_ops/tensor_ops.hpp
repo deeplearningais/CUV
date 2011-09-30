@@ -60,6 +60,7 @@ namespace cuv{
 	 *  @li SF_SMAX computes (1/x -1) * x
 	 *
 	 * With one scalar parameter a:
+	 *  @li SF_POW computes pow(x,a)
 	 *  @li SF_ADD computes x + a
 	 *  @li SF_SUBTRACT computes x - a
 	 *  @li SF_RSUB computes a - x
@@ -105,6 +106,7 @@ namespace cuv{
 		SF_COPY,
 
 		// with param
+		SF_POW,
 		SF_ADD,
 		SF_SUBTRACT,
 		SF_RSUB,
@@ -130,6 +132,7 @@ namespace cuv{
 	 * 	@li BF_AND computes  x && y
 	 * 	@li BF_OR  computes  x || y
 	 * 	@li BF_ADD computes  x += y
+	 * 	@li BF_POW computes  pow(x,y)
 	 * 	@li BF_SUBTRACT computes x -= y
 	 * 	@li BF_MULT computes x *= y
 	 * 	@li BF_DIV computes x /= y
@@ -149,6 +152,7 @@ namespace cuv{
 	  // w/o params
 	  BF_AND,
 	  BF_OR,
+	  BF_POW,
 	  BF_ADD,
 	  BF_SUBTRACT,
 	  BF_MULT,
@@ -667,6 +671,59 @@ namespace cuv{
         apply_binary_functor(temp, v1, v2, cuv::BF_DIV);
         return temp;
   }
+
+/*
+ * Boolean binary operators
+ */
+  template<class T, class V, class M>
+    cuv::tensor<unsigned char, V, M>
+    operator>=(const cuv::tensor<T, V, M>& v, const T cmp){
+        cuv::tensor<unsigned char, V, M> temp(v.shape());
+  	cuv::apply_scalar_functor(temp, v, cuv::SF_GEQ, cmp);
+  	return temp;
+  }
+  template<class T, class V, class M>
+    cuv::tensor<unsigned char, V, M>
+    operator<=(const cuv::tensor<T, V, M>& v, const T cmp){
+        cuv::tensor<unsigned char, V, M> temp(v.shape());
+  	cuv::apply_scalar_functor(temp, v, cuv::SF_LEQ, cmp);
+  	return temp;
+  }
+  template<class T, class V, class M>
+    cuv::tensor<unsigned char, V, M>
+    operator>(const cuv::tensor<T, V, M>& v, const T cmp){
+        cuv::tensor<unsigned char, V, M> temp(v.shape());
+  	cuv::apply_scalar_functor(temp, v, cuv::SF_GT, cmp);
+  	return temp;
+  }
+  template<class T, class V, class M>
+    cuv::tensor<unsigned char, V, M>
+    operator<(const cuv::tensor<T, V, M>& v, const T cmp){
+        cuv::tensor<unsigned char, V, M> temp(v.shape());
+  	cuv::apply_scalar_functor(temp, v, cuv::SF_LT, cmp);
+  	return temp;
+  }
+  template<class T, class V, class M>
+    cuv::tensor<unsigned char, V, M>
+    operator==(const cuv::tensor<T, V, M>& v, const T cmp){
+        cuv::tensor<unsigned char, V, M> temp(v.shape());
+  	cuv::apply_scalar_functor(temp, v, cuv::SF_EQ, cmp);
+  	return temp;
+  }
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>
+    operator&&(const cuv::tensor<T, V, M>& v, const cuv::tensor<T,V,M>& w){
+        cuv::tensor<T, V, M> temp(v.shape());
+  	cuv::apply_binary_functor(temp, v, w, cuv::BF_AND);
+  	return temp;
+  }
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>
+    operator||(const cuv::tensor<T, V, M>& v, const cuv::tensor<T,V,M>& w){
+        cuv::tensor<T, V, M> temp(v.shape());
+  	cuv::apply_binary_functor(temp, v, w, cuv::BF_OR);
+  	return temp;
+  }
         
 /*
  * compound binary operators (tensor, tensor)
@@ -695,6 +752,19 @@ namespace cuv{
     cuv::tensor<T, V, M>& 
     operator+=(cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
   	cuv::apply_binary_functor(v1,v2, cuv::BF_ADD);
+  	return v1;
+  }
+
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>& 
+    operator|=(cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
+  	cuv::apply_binary_functor(v1,v2, cuv::BF_OR);
+  	return v1;
+  }
+  template<class T, class V, class M>
+    cuv::tensor<T, V, M>& 
+    operator&=(cuv::tensor<T, V, M>& v1, const cuv::tensor<T, V, M>& v2){
+  	cuv::apply_binary_functor(v1,v2, cuv::BF_AND);
   	return v1;
   }
 
@@ -736,6 +806,14 @@ namespace cuv{
     operator-(const cuv::tensor<T, V, M>& v){
         cuv::tensor<T, V, M> temp(v.shape());
   	cuv::apply_scalar_functor(temp, v, cuv::SF_NEGATE);
+  	return temp;
+  }
+  template<class V, class M>
+    cuv::tensor<unsigned char, V, M>
+    operator!(const cuv::tensor<unsigned char, V, M>& v){
+        cuv::tensor<unsigned char, V, M> temp(v.shape());
+	temp  = (unsigned char) 1;
+	temp -= v;
   	return temp;
   }
 
