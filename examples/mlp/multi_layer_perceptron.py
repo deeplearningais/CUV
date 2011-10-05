@@ -3,6 +3,18 @@ import numpy as np
 from neuron_layer import neuron_layer
 from weight_layer import weight_layer
 
+def _tmp(dim1, dim2, value):
+    """Function to create a filled matrix.
+       This demonstrates how CUV can be extended using python.
+
+    @param dim1 -- number of rows.
+    @param dim2 -- number of columns.
+
+    """
+    mat = cp.dev_tensor_float_cm([dim1, dim2])
+    cp.fill(mat,  value)
+    return mat
+cp.get_filled_matrix = _tmp
 
 class MLP:
     """
