@@ -157,7 +157,7 @@ namespace cuv{
   /***************************************************
    * BLAS3 stuff
    ***************************************************/
- /** @defgroup blas3 BLAS3
+ /** @defgroup blas3 BLAS3 -- Matrix-Matrix operations
   * @{
   */
   /** 
@@ -262,7 +262,7 @@ namespace cuv{
   /***************************************************
    * BLAS2 stuff
    ***************************************************/
- /** @defgroup blas2 BLAS2
+ /** @defgroup blas2 BLAS2 -- Matrix-Vector Operations
   * @{
   */
   /** 

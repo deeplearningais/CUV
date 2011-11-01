@@ -45,6 +45,11 @@
 namespace cuv{
 
 	/**
+	 * @defgroup image_ops Operations on Images
+	 * @{
+	 */
+
+	/**
 	 * @brief image pyramid decreasing in size logarithmically.
 	 */
 	template <class __matrix_type>
@@ -211,6 +216,8 @@ void gaussian(
 	tensor<T,S,row_major>& dst,
 	const cuda_array<T,S,I>& src
 );
+
+/** @} */ // end group image_ops
 
 }
 #endif /* __IMAGE_PYRAMID_HPP__ */
