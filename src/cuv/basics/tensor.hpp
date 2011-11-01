@@ -441,6 +441,12 @@ namespace cuv
 				return m_shape;
 			}
 			/**
+			 * returns a the size of the n-th dimension of the tensor
+			 */
+			const unsigned int& shape(unsigned int i)const{
+				return m_shape[i];
+			}
+			/**
 			 * returns a vector whose values represent the number of dimensions of the tensor
 			 */
 			index_type ndim()const{
