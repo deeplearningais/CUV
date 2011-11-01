@@ -157,9 +157,16 @@ namespace cuv
 			 * construct tensor view using extents object and a pointer to the wrappable memory
 			 *
 			 * @deprecated you should use a constructor which knows about the spatial layout of the ptr
+			 * @warning    despite the flexibility of index_range, only finish() is used, strides are NOT supported currently.
 			 *
 			 * @param eg   determines shape of new tensor
 			 * @param ptr  determines start of data in memory
+			 *
+			 * Example usage:
+			 * @code
+			 * tensor<float,host_memory_space> v(extents[10][20]);
+			 * tensor<float,host_memory_space> w(indices[index_range(0,3)][index_range(0,20)], v.ptr());
+			 * @endcode
 			 */
 			template<int D, int E>
 			explicit const_tensor(const index_gen<D,E>& eg, pointer_type ptr){
@@ -171,6 +178,9 @@ namespace cuv
 
 			/**
 			 * construct tensor view using extents object and a pointer to the wrappable memory
+			 *
+			 * @param eg the size of the dimensions of this tensor
+			 * @param ptr where the data is stored (the tensor will not free this memory!)
 			 */
 			explicit const_tensor(const std::vector<index_type> eg, pointer_type ptr)
 				:m_shape(eg)
@@ -179,7 +189,10 @@ namespace cuv
 			}
 
 			/**
-			 * construct tensor view using int
+			 * construct 1-dimensional tensor view using int
+			 *
+			 * @param _size number of elements this tensor should contain
+			 * @param ptr where the data is stored (the tensor will not free this memory!)
 			 */
 			const_tensor(int _size, pointer_type ptr){
 				m_shape.push_back(_size);
@@ -187,7 +200,10 @@ namespace cuv
 			}
 
 			/**
-			 * construct tensor view using uint
+			 * construct 1-dimensional tensor view using uint
+			 *
+			 * @param _size number of elements this tensor should contain
+			 * @param ptr where the data is stored (the tensor will not free this memory!)
 			 */
 			const_tensor(unsigned int _size, pointer_type ptr){
 				m_shape.push_back(_size);
@@ -195,7 +211,9 @@ namespace cuv
 			}
 
 			/**
-			 * construct tensor using uint
+			 * construct 1-dimensional tensor using uint
+			 *
+			 * @param _size number of elements this tensor should contain
 			 */
 			const_tensor(unsigned int _size){
 				m_shape.push_back(_size);
@@ -203,7 +221,9 @@ namespace cuv
 			}
 
 			/**
-			 * construct tensor using vector of sizes
+			 * construct 1-dimensional tensor using vector of sizes
+			 *
+			 * @param _size size of the dimensions of this tensor
 			 */
 			const_tensor(const std::vector<index_type>& _size)
                             : m_shape(_size)
@@ -213,7 +233,9 @@ namespace cuv
 			}
 
 			/**
-			 * construct tensor using int
+			 * construct 1-dimensional tensor using int
+			 *
+			 * @param _size number of elements this tensor should contain
 			 */
 			explicit const_tensor(const int& _size){
 				m_shape.push_back(_size);
@@ -230,7 +252,8 @@ namespace cuv
 			}
 
 			/**
-			 * Copy constructor
+			 * @overload
+			 *
 			 * also accepts assignment from other memoryspace type
 			 * and convertible pointers
 			 */
@@ -242,6 +265,34 @@ namespace cuv
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
 					std::reverse(m_shape.begin(),m_shape.end());
 			}
+
+			/**
+			 * construct tensor as view of another (sub) tensor
+			 *
+			 * @warning you must ensure that o lives longer than this view!
+			 *
+			 * @warning if a dimension has size 1, the resulting tensor has fewer dimensions than the original one.
+			 *
+			 * @warning currently only works if the subtensor is a connected area in memory, NO strides are supported.
+			 *          Basically this means that you can only slice in the first dimension which has size>1.
+			 *
+			 * @param eg  the indices of the subtensor
+			 * @param o   the original tensor
+			 *
+			 * Example:
+			 * @code
+			 * tensor<float,host_memory_space> v(extents[5][10]);
+			 *
+			 * // these are equivalent:
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range(0,10)]);
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range()]);
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range() < index(10)]);
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index(0) < index_range() < index(10)]);
+			 *
+			 * // yields a 1D-tensor corresponding to the 2nd slice in the 1st dimension:
+			 * tensor<float,host_memory_space> w0(indices[1][index_range()]);
+			 * @endcode
+			 */
 			template<int D, int E, class P, class OM, class OL, class OA>
 			explicit const_tensor(const index_gen<D,E>& eg, const const_tensor<__value_type,OM,OL,P,OA>& o){
 				m_shape.reserve(D);
@@ -277,7 +328,8 @@ namespace cuv
 			}
 
 			/**
-			 * Assignment operator
+			 * @overload
+			 *
 			 * also accepts assignment from other memoryspace type
 			 * and convertible pointers
 			 */
@@ -303,6 +355,8 @@ namespace cuv
 
 			/**
 			 * returns the index in linear memory of start point of index-range
+			 *
+			 * This is mainly for internal use in constructors based on indices[...]
 			 */
 			template<int D, int E>
 			index_type
@@ -351,6 +405,8 @@ namespace cuv
 				return m_data[d0];
 			}
 			/**
+			 * @overload
+			 *
 			 * return a reference to the value at this position in 2D memory
 			 */
 			const_reference_type operator()(index_type d0, index_type d1)const{
@@ -363,6 +419,8 @@ namespace cuv
 			}
 
 			/**
+			 * @overload
+			 *
 			 * return a reference to the value at this position in 3D memory
 			 */
 			const_reference_type operator()(index_type d0, index_type d1, index_type d2)const{
@@ -375,6 +433,8 @@ namespace cuv
 			}
 
 			/**
+			 * @overload
+			 *
 			 * return a reference to the value at this position in 4D memory
 			 */
 			const_reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3)const{
@@ -387,6 +447,8 @@ namespace cuv
 			}
 
 			/**
+			 * @overload
+			 *
 			 * return a reference to the value at this position in 5D memory
 			 */
 			const_reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3, index_type d4)const{
