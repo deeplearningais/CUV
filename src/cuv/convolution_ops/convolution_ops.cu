@@ -45,13 +45,10 @@
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/random/random.hpp>
-#include <3rd_party/CudaConv/conv_util.cuh>
-#include <3rd_party/CudaConv/nvmatrix.cuh>
-#include <3rd_party/CudaConv/conv.cuh>
-#include <3rd_party/CudaConv/conv2.cuh>
-#include <3rd_party/CudaConv/conv3.cuh>
-#include <3rd_party/CudaConv/conv_util.cuh>
-#include <3rd_party/CudaConv/convCPU.h>
+#include <3rd_party/cudaconv2/include/cudaconv2/conv_util.cuh>
+#include <3rd_party/cudaconv2/include/cudaconv2/cudaconv2.cuh>
+#include <3rd_party/cudaconv2/include/nvmatrix/nvmatrix.cuh>
+/*#include <3rd_party/cudaconv2/include/convCPU.h>*/
 #include <iostream>
 using namespace std;
 #ifdef __CDT_PARSER__
@@ -83,12 +80,15 @@ template<>
 	cuvAssert(dstSize == imgSize - filterSize + 1);
 
 	// make NVMatrices with this data
-	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], false);
-	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], false);
-	NVMatrix nv_filter(filter.ptr(), filter.shape()[0], filter.shape()[1], false);
+	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], dst.shape()[1],false);
+	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], img.shape()[1], false);
+	NVMatrix nv_filter(filter.ptr(), filter.shape()[0], filter.shape()[1], filter.shape()[1], false);
 
 	// execute convolution
-	convolve(&nv_img, &nv_filter, &nv_dst, numGroups, false);
+	int padding = 0, stride=0;
+	int modulesX = 1 + int(ceil((2 * padding + imgSize - filterSize) / float(stride)));
+	// convFilterActs(*v[0], *_weights, _outputs, _modulesX, _padding, _stride, _channels, _groups);
+	convFilterActs( &nv_img, &nv_filter, &nv_dst,  modulesX,  padding,  stride,  numChannels,  numGroups);
 	cuvSafeCall(cudaThreadSynchronize());
 	}
 
@@ -155,9 +155,9 @@ template<>
 	cuvAssert(dstSize == imgSize - filterSize + 1);
 
 	// make NVMatrices with this data
-	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], false);
-	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], false);
-	NVMatrix nv_filter(filter.ptr(), filter.shape()[0], filter.shape()[1], false);
+	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], dst.shape()[1], false);
+	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], dst.shape()[1], false);
+	NVMatrix nv_filter(filter.ptr(), filter.shape()[0], filter.shape()[1], filter.shape()[1],false);
 
 	// execute convolution
     convolve2(&nv_img, &nv_filter, &nv_dst, filterSize, numGroups, false);
@@ -194,8 +194,8 @@ void grid_to_matrix(tensor<float,dev_memory_space,row_major>& mat,
 	cuvAssert(mat.shape()[1] == poolSize*poolSize);
 
 	// make nvMatrices with this data
-	NVMatrix nv_mat(mat.ptr(), mat.shape()[0], mat.shape()[1], false);
-	NVMatrix nv_grid(grid.ptr(), grid.shape()[0], grid.shape()[1], false);
+	NVMatrix nv_mat(mat.ptr(), mat.shape()[0], mat.shape()[1], mat.shape()[1], false);
+	NVMatrix nv_grid(grid.ptr(), grid.shape()[0], grid.shape()[1], grid.shape()[1], false);
 	fill(mat,0);
 
 	gridToMatrix(&nv_grid, &nv_mat, poolSize, true);
@@ -218,8 +218,8 @@ void matrix_to_grid(tensor<float,dev_memory_space,row_major>& grid,
 	cuvAssert(mat.shape()[1] == poolSize*poolSize);
 
 	// make nvMatrices with this data
-	NVMatrix nv_mat(mat.ptr(), mat.shape()[0], mat.shape()[1], false);
-	NVMatrix nv_grid(grid.ptr(), grid.shape()[0], grid.shape()[1], false);
+	NVMatrix nv_mat(mat.ptr(), mat.shape()[0], mat.shape()[1], mat.shape()[1], false);
+	NVMatrix nv_grid(grid.ptr(), grid.shape()[0], grid.shape()[1], grid.shape()[1],false);
 	fill(grid,0);
 
 	// transform and calculate maximum
@@ -234,8 +234,8 @@ void sample_multinomial(tensor<float,dev_memory_space,row_major>& grid){
    tensor<float,dev_memory_space,row_major> rnd(grid.shape()[0]);
    fill_rnd_uniform(rnd);
 
-   NVMatrix nv_grid(grid.ptr(),grid.shape()[0],grid.shape()[1],false);
-   NVMatrix nv_rnd(rnd.ptr(),rnd.shape()[0],rnd.shape()[1],false);
+   NVMatrix nv_grid(grid.ptr(),grid.shape()[0],grid.shape()[1],grid.shape()[1],false);
+   NVMatrix nv_rnd(rnd.ptr(),rnd.shape()[0],rnd.shape()[1],rnd.shape()[1],false);
    /*NVMatrix nv_tmp(tmp.ptr(),tmp.shape()[0],tmp.shape()[1],false);*/
 
    /*sampleMultinomial(&nv_tmp,&nv_rnd,&nv_grid); */
@@ -292,9 +292,9 @@ template<>
 	int numImages = img.shape()[0];
 
 	// make NVMatrices with this data
-	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], false);
-	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], false);
-	NVMatrix nv_filter(filter.ptr(), filter.shape()[0], filter.shape()[1], false);
+	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], dst.shape()[1], false);
+	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], img.shape()[1], false);
+	NVMatrix nv_filter(filter.ptr(), filter.shape()[0], filter.shape()[1], filter.shape()[1], false);
 
 	// execute convolution
 	convolve3(&nv_img, &nv_filter, &nv_dst, numGroups, false);
@@ -397,8 +397,8 @@ template<>
 			  int factor,
 			  bool avoidBankConflicts) {
 	// make NVMatrices with this data
-	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], false);
-	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], false);
+	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], dst.shape()[1], false);
+	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], img.shape()[1], false);
 
 	if (dst.shape()[1]*dst.shape()[0] != img.shape()[1]* img.shape()[0] / (factor*factor)){
 		std::cout << dst.shape()[1] << "*" << dst.shape()[0] << "==" << img.shape()[1] << "*" << img.shape()[0] << "/" << factor << "*" << factor << "==" << dst.shape()[1]*dst.shape()[0] << "!=" << img.shape()[1]* img.shape()[0] / (factor*factor);
@@ -457,8 +457,8 @@ void supersample(tensor<float,dev_memory_space,row_major>& dst,
 	cuvAssert(img.shape()[1]  *factor * factor == dst.shape()[1]);
 	cuvAssert(img.shape()[0]== dst.shape()[0]);
 
-	NVMatrix nv_img(img.ptr(), numImages, imgPixels, false);
-	NVMatrix nv_dst(dst.ptr(), numImages, dstPixels, false);
+	NVMatrix nv_img(img.ptr(), numImages, imgPixels,imgPixels, false);
+	NVMatrix nv_dst(dst.ptr(), numImages, dstPixels,dstPixels, false);
 
 	if(indices == NULL) {
 		supersample(&nv_img, &nv_dst, factor);
@@ -674,8 +674,8 @@ template<>
 	cuvAssert(img.shape()[0] == dst.shape()[0]);
 
 	// make NVMatrices with this data
-	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1], false);
-	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1], false);
+	NVMatrix nv_dst(dst.ptr(), dst.shape()[0], dst.shape()[1],dst.shape()[1], false);
+	NVMatrix nv_img(img.ptr(), img.shape()[0], img.shape()[1],img.shape()[1], false);
 
 	copyInto(&nv_img, &nv_dst, padding, false);
 }
