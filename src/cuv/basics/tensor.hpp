@@ -377,9 +377,18 @@ namespace cuv
 			}
 
 			/**
+			 * return a reference to the value at this position in 5D memory
+			 */
+			const_reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3, index_type d4)const{
 #ifndef NDEBUG
 				cuvAssert(ndim()==5);
 #endif
+				index_type arr[5] = {d0,d1,d2,d3,d4};
+				index_type idx = index_of<5>(memory_layout_type(),arr);
+				return m_data[idx];
+			}
+
+			/**
 			 * return reference to underlying memory object
 			 */
 			const memory_container_type& data()const{return m_data;}
