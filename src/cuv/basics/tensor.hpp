@@ -743,6 +743,24 @@ namespace cuv
 				index_type idx = super_type::template index_of<4>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
+
+			/**
+			 * @overload
+			 * returns a reference to this position in 5D memory
+			 */
+			reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3, index_type d4){
+#ifndef NDEBUG
+				cuvAssert(this->ndim()==5);
+				cuvAssert(d0 <  m_shape[0]);
+				cuvAssert(d1 <  m_shape[1]);
+				cuvAssert(d2 <  m_shape[2]);
+				cuvAssert(d3 <  m_shape[3]);
+				cuvAssert(d4 <  m_shape[4]);
+#endif
+				index_type arr[5] = {d0,d1,d2,d3,d4};
+				index_type idx = super_type::template index_of<5>(memory_layout_type(),arr);
+				return m_data[idx];
+			}
 			
 			/**
 			 * change the shape of this tensor (product must be the same as before)
