@@ -690,6 +690,10 @@ namespace cuv
 			 * returns a reference to this position in linear memory
 			 */
 			reference_type operator()(index_type d0){
+#ifndef NDEBUG
+				cuvAssert(this->ndim()==1);
+				cuvAssert(d0 <  m_shape[0]);
+#endif
 				//index_type arr[1] = {d0};
 				//index_type idx = super_type::template index_of<1>(memory_layout_type(),arr);
 				//return m_data[idx];
@@ -699,6 +703,11 @@ namespace cuv
 			 * returns a reference to this position in 2D memory
 			 */
 			reference_type operator()(index_type d0, index_type d1){
+#ifndef NDEBUG
+				cuvAssert(this->ndim()==2);
+				cuvAssert(d0 <  m_shape[0]);
+				cuvAssert(d1 <  m_shape[1]);
+#endif
 				index_type arr[2] = {d0,d1};
 				index_type idx = super_type::template index_of<2>(memory_layout_type(),arr);
 				return m_data[idx];
@@ -708,6 +717,12 @@ namespace cuv
 			 * returns a reference to this position in 3D memory
 			 */
 			reference_type operator()(index_type d0, index_type d1, index_type d2){
+#ifndef NDEBUG
+				cuvAssert(this->ndim()==3);
+				cuvAssert(d0 <  m_shape[0]);
+				cuvAssert(d1 <  m_shape[1]);
+				cuvAssert(d2 <  m_shape[2]);
+#endif
 				index_type arr[3] = {d0,d1,d2};
 				index_type idx = super_type::template index_of<3>(memory_layout_type(),arr);
 				return m_data[idx];
@@ -717,6 +732,13 @@ namespace cuv
 			 * returns a reference to this position in 4D memory
 			 */
 			reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3){
+#ifndef NDEBUG
+				cuvAssert(this->ndim()==4);
+				cuvAssert(d0 <  m_shape[0]);
+				cuvAssert(d1 <  m_shape[1]);
+				cuvAssert(d2 <  m_shape[2]);
+				cuvAssert(d3 <  m_shape[3]);
+#endif
 				index_type arr[4] = {d0,d1,d2,d3};
 				index_type idx = super_type::template index_of<4>(memory_layout_type(),arr);
 				return m_data[idx];
