@@ -1,9 +1,6 @@
 #ifndef __META_PROGRAMMING_HPP__
 #define __META_PROGRAMMING_HPP__
 namespace cuv{
-// is same template metaprogramming
-// checks whether two types are the same
-// usage: IsSame<FirstClass,SecondClass>::Result::value
 
 /**
  * @defgroup MetaProgramming
@@ -22,6 +19,7 @@ struct TrueType { enum { value = true }; };
 template <typename T1, typename T2>
 struct IsSame
 {
+	/// is true only if T1==T2
 	typedef FalseType Result;
 };
 
@@ -32,7 +30,29 @@ struct IsSame
 template <typename T>
 struct IsSame<T,T>
 {
+	/// T==T, therefore Result==TrueType
 	typedef TrueType Result;
+};
+
+/** 
+ * @brief Checks whether two types are different
+ */
+template <typename T1, typename T2>
+struct IsDifferent
+{
+	/// is true only if T1!=T2
+	typedef TrueType Result;
+};
+
+
+/** 
+ * @see IsDifferent
+ */
+template <typename T>
+struct IsDifferent<T,T>
+{
+	/// T==T, therefore Result==FalseType
+	typedef FalseType Result;
 };
 
 /** 
@@ -40,6 +60,7 @@ struct IsSame<T,T>
  */
 template <typename T>
 struct unconst{
+	/// no change
 	typedef T type;
 };
 
@@ -48,6 +69,7 @@ struct unconst{
  */
 template <typename T>
 struct unconst<const T>{
+	/// T without the const
 	typedef T type;
 };
 
@@ -56,6 +78,7 @@ struct unconst<const T>{
  */
 template <bool Condition, class Then, class Else>
 struct If{
+	/// assume condition is true
 	typedef Then result;
 };
 /**
@@ -63,9 +86,29 @@ struct If{
  */
 template<class Then, class Else>
 struct If<false,Then,Else>{
+	/// condition is false
 	typedef Else result;
 };
 
+/**
+ * @brief enable-if controlled creation of SFINAE conditions
+ */
+template <bool B, class T = void>
+struct EnableIfC {
+  typedef T type; /// enabling succeeded :-)
+};
+
+/// @see EnableIfC
+template <class T>
+struct EnableIfC<false, T> {};
+
+/// @see EnableIfC
+template <class Cond, class T = void>
+struct EnableIf : public EnableIfC<Cond::value, T> {};
+
+/// @see EnableIfC
+template <class Cond, class T = void>
+struct DisableIf : public EnableIfC<!Cond::value, T> {};
 
 /**
  * @}
