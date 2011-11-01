@@ -210,7 +210,7 @@ namespace impl{
 		num_threads = 32 * ((num_threads+32-1)/32); // make sure it can be divided by 32
 		unsigned int num_blocks  = min(65536-1,data_num);
 
-		reorder_kernel<<<num_blocks,num_threads>>>(data.ptr(),sorted.ptr(),seq.ptr(),data_length, data_num); 
+		reorder_kernel<<<num_blocks,num_threads>>>(sorted.ptr(),data.ptr(),seq.ptr(),data_length, data_num); 
 		cuvSafeCall(cudaThreadSynchronize());
 		/*thrust::sort(thrust_ptr(indices),thrust_ptr(indices)+indices.size());*/ // thrust sorts BOTH, indices AND seq.
 	}
