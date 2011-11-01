@@ -672,6 +672,24 @@ namespace cuv
 			}
 
 			/**
+			 * @overload
+			 * assignment operator for other value types
+			 *
+			 * @internal
+			 * the EnableIf ensures that this version is only used when value-types differ.
+			 * otherwise, the compiler cannot decide which version to call when both
+			 * memory_space_type and value_type are equal.
+			 */
+			template<class OV, class OL, class OA>
+				typename EnableIf<typename IsDifferent<OV,value_type>::Result,tensor>::type&
+			operator=(const tensor<OV, memory_space_type, OL, OA>& o){
+				//if(this == &o)   // is different type, anyway.
+				//        return *this;
+				super_type::operator=(o);
+				return *this;
+			}
+
+			/**
 			 * assignment operator for scalars
 			 */
                         tensor& operator=(const __value_type & f);
