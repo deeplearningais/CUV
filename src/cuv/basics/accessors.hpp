@@ -10,8 +10,18 @@ namespace cuv
 			void alloc( value_type** ptr, index_type memsize)const; /// allocate memory 
 			void alloc2d( value_type** ptr, index_type& pitch, index_type height, index_type width)const; /// allocate memory 
 			void dealloc( value_type** ptr)const;                   /// free memory
+
+			/**
+			 * copy from host
+			 */
 			void copy(value_type* dst, const value_type*src,index_type size, host_memory_space); /// copy from host_memory_space
-			void copy(value_type* dst, const value_type*src,index_type size, dev_memory_space);  /// copy from dev_memory_space
+
+			/**
+			 * @overload
+			 * copy from device to device when valuetype differs
+			 */
+			template<class value_type2>
+			void copy(value_type* dst, const value_type2*src,index_type size, dev_memory_space); 
 
 			void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, host_memory_space); /// copy from host_memory_space
 			void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, dev_memory_space);  /// copy from dev_memory_space
@@ -135,6 +145,14 @@ namespace cuv
 			/// copy from host to host
 			void copy(value_type* dst, const value_type*src,index_type size, host_memory_space){
 				memcpy(dst,src,size*sizeof(value_type));
+			}
+			/** @overload
+			 * copy from host to host (different memory types)
+			 */
+			template<class value_type2>
+			void copy(value_type* dst, const value_type2*src,index_type size, host_memory_space){
+				for(unsigned int i=0;i<size;i++)
+					dst[i] = (value_type)src[i];
 			}
 			/// copy from device to host
 			void copy(value_type* dst, const value_type*src,index_type size, dev_memory_space);

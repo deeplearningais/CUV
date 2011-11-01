@@ -257,4 +257,26 @@ BOOST_AUTO_TEST_CASE( tensor_view )
 	BOOST_CHECK_EQUAL(a.ptr(), b.ptr());
 }
 
+BOOST_AUTO_TEST_CASE( tensor_value_convert )
+{
+	{
+		tensor<float,host_memory_space> t(100);
+		for(int i=0;i<100;i++) t[i] = (float) i;
+		tensor<int,host_memory_space> t_int;
+		t_int = t;
+		for(int i=0;i<100;i++){
+			BOOST_CHECK_EQUAL((float)t[i], (float)(int)t_int[i]);
+		}
+	}
+	{
+		tensor<float,dev_memory_space> t(100);
+		for(int i=0;i<100;i++) t[i] = (float) i;
+		tensor<int,dev_memory_space> t_int;
+		t_int = t;
+		for(int i=0;i<100;i++){
+			BOOST_CHECK_EQUAL((float)t[i], (float)(int)t_int[i]);
+		}
+	}
+}
+
 BOOST_AUTO_TEST_SUITE_END()

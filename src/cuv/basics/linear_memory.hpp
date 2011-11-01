@@ -269,6 +269,8 @@ class linear_memory
 		  }
 
 	  /** 
+	   * @overload
+	   *
 	   * @brief Copy linear_memory from other memory type.
 	   * 
 	   * @param o Source linear_memory
@@ -289,6 +291,35 @@ class linear_memory
 		  }
 
 	  /** 
+	   * @overload
+	   *
+	   * @brief Copy linear_memory from other value type
+	   * 
+	   * @param o Source linear_memory
+	   * 
+	   * @return copy to *this
+	   *
+	   * @internal
+	   * We need the DisableIf here, since the compiler otherwise
+	   * cannot know which version of operator= to call when both
+	   * value_type and memory_space_type are the same.
+	   *
+	   */
+	  template<class OV, class OP>
+		  typename EnableIf<typename IsDifferent<OV,value_type>::Result,my_type>::type&
+		  operator=(const linear_memory<OV, memory_space_type, OP,index_type>& o){
+			  if(this->size() != o.size()){
+				  this->dealloc();
+				  m_size = o.size();
+				  this->alloc();
+			  }
+			  m_allocator.copy(this->m_ptr,o.ptr(),size(),memory_space_type());
+			  return *this;
+		  }
+
+	  /** 
+	   * @overload
+	   *
 	   * @brief Copy linear_memory from memory2d type.
 	   * 
 	   * @param o Source linear_memory
@@ -297,7 +328,7 @@ class linear_memory
 	   *
 	   */
 	  template<class OM, class OP>
-		  my_type& 
+		  my_type&
 		  operator=(const memory2d<value_type, OM, OP,index_type>& o){
 			  dealloc();
 			  m_size = o.width()*o.height();
@@ -321,6 +352,28 @@ class linear_memory
 		  }
 
 	  /**
+	   * @overload
+	   * assign another linear memory (shape parameter is ignored)
+	   *
+	   * @param oshape    shape of o, ignored
+	   * @param o         source linear memory
+	   *
+	   * @internal
+	   * We need the DisableIf here, since the compiler otherwise
+	   * cannot know which version of assign to call when both
+	   * value_type and memory_space_type are the same.
+	   */
+	  template<class OV, class OP>
+		  typename EnableIf<typename IsDifferent<OV,value_type>::Result,my_type>::type&
+		  assign(index_type& pitch, const std::vector<index_type>& oshape, const linear_memory<OV,memory_space_type,OP,index_type>& o, bool inner_is_last ){
+			  operator=(o);
+			  get_size_pitch(pitch,oshape,inner_is_last);
+			  return *this;
+		  }
+
+	  /**
+	   * @overload
+	   *
 	   * assign memory2d (shape parameter is ignored)
 	   *
 	   * @param oshape    shape of o, ignored, instead width/height/pitch of o is used
@@ -329,6 +382,27 @@ class linear_memory
 	  template<class OM, class OP>
 		  my_type&
 		  assign(index_type& pitch, const std::vector<index_type>& oshape, const memory2d<value_type,OM,OP,index_type>& o, bool inner_is_last ){
+			  operator=(o);
+			  get_size_pitch(pitch,oshape,inner_is_last);
+			  return *this;
+		  }
+
+	  /**
+	   * @overload
+	   *
+	   * assign memory2d (shape parameter is ignored)
+	   *
+	   * @param oshape    shape of o, ignored, instead width/height/pitch of o is used
+	   * @param o         source linear memory
+	   *
+	   * @internal
+	   * We need the DisableIf here, since the compiler otherwise
+	   * cannot know which version of assign to call when both
+	   * value_type and memory_space_type are the same.
+	   */
+	  template<class OV, class OP>
+		  typename EnableIf<typename IsDifferent<OV,value_type>::Result,my_type>::type&
+		  assign(index_type& pitch, const std::vector<index_type>& oshape, const memory2d<OV,memory_space_type,OP,index_type>& o, bool inner_is_last ){
 			  operator=(o);
 			  get_size_pitch(pitch,oshape,inner_is_last);
 			  return *this;

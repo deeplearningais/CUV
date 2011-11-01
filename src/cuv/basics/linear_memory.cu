@@ -37,6 +37,7 @@
 #include <thrust/device_ptr.h>
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/basics/linear_memory.hpp>
+#include <cuv/tools/meta_programming.hpp>
 
 
 namespace cuv{
@@ -64,8 +65,18 @@ struct allocator<value_type,index_type,dev_memory_space>{
 	void copy(value_type* dst, const value_type*src,index_type size, host_memory_space){
 		cuvSafeCall(cudaMemcpy( dst, src, size*sizeof( value_type ), cudaMemcpyHostToDevice ));
 	}
-	void copy(value_type* dst, const value_type*src,index_type size, dev_memory_space){
-		cuvSafeCall(cudaMemcpy( dst, src, size*sizeof( value_type ), cudaMemcpyDeviceToDevice ));
+	template<class value_type2>
+	void
+	copy(value_type* dst, const value_type2*src,index_type size, dev_memory_space){
+		if(IsSame<value_type,value_type2>::Result::value){
+			cuvSafeCall(cudaMemcpy( dst, src, size*sizeof( value_type ), cudaMemcpyDeviceToDevice ));
+		}
+		else{
+			thrust::copy(thrust::device_ptr<value_type2>(const_cast<value_type2*>(src)),
+					thrust::device_ptr<value_type2>(const_cast<value_type2*>(src)) + size,
+					thrust::device_ptr<value_type>(dst));
+			cuvSafeCall(cudaThreadSynchronize());
+		}
 	}
 	void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, host_memory_space){
 		cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(value_type),h,cudaMemcpyHostToDevice));
@@ -116,6 +127,11 @@ template struct allocator<T, I, dev_memory_space>; \
 template struct allocator<T, I, host_memory_space>; \
 template void entry_set(T*, I, T, dev_memory_space); \
 template T entry_get(const T*, I, dev_memory_space); \
+template void allocator<T, I, dev_memory_space>::copy<        float>(T* dst, const         float*src,I size, dev_memory_space); \
+template void allocator<T, I, dev_memory_space>::copy<unsigned char>(T* dst, const unsigned char*src,I size, dev_memory_space); \
+template void allocator<T, I, dev_memory_space>::copy<  signed char>(T* dst, const signed   char*src,I size, dev_memory_space); \
+template void allocator<T, I, dev_memory_space>::copy<          int>(T* dst, const int          *src,I size, dev_memory_space); \
+template void allocator<T, I, dev_memory_space>::copy<unsigned  int>(T* dst, const unsigned int *src,I size, dev_memory_space);
 
 VECTOR_INST(float, unsigned int);
 VECTOR_INST(unsigned char, unsigned int);
