@@ -332,6 +332,9 @@ namespace cuv
 			 * return a reference to the value at this position in linear memory
 			 */
 			const_reference_type operator()(index_type d0)const{
+#ifndef NDEBUG
+				cuvAssert(ndim()==1);
+#endif
 				//index_type arr[1] = {d0};
 				//index_type idx = index_of<1>(memory_layout_type(),arr);
 				//return m_data[idx];
@@ -341,6 +344,9 @@ namespace cuv
 			 * return a reference to the value at this position in 2D memory
 			 */
 			const_reference_type operator()(index_type d0, index_type d1)const{
+#ifndef NDEBUG
+				cuvAssert(ndim()==2);
+#endif
 				index_type arr[2] = {d0,d1};
 				index_type idx = index_of<2>(memory_layout_type(),arr);
 				return m_data[idx];
@@ -350,6 +356,9 @@ namespace cuv
 			 * return a reference to the value at this position in 3D memory
 			 */
 			const_reference_type operator()(index_type d0, index_type d1, index_type d2)const{
+#ifndef NDEBUG
+				cuvAssert(ndim()==3);
+#endif
 				index_type arr[3] = {d0,d1,d2};
 				index_type idx = index_of<3>(memory_layout_type(),arr);
 				return m_data[idx];
@@ -359,12 +368,18 @@ namespace cuv
 			 * return a reference to the value at this position in 4D memory
 			 */
 			const_reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3)const{
+#ifndef NDEBUG
+				cuvAssert(ndim()==4);
+#endif
 				index_type arr[4] = {d0,d1,d2,d3};
 				index_type idx = index_of<4>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 
 			/**
+#ifndef NDEBUG
+				cuvAssert(ndim()==5);
+#endif
 			 * return reference to underlying memory object
 			 */
 			const memory_container_type& data()const{return m_data;}
