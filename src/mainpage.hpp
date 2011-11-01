@@ -264,3 +264,7 @@
 
 namespace cuv{
 }
+
+/**
+ * @defgroup tools  Miscellaneous tools
+ */

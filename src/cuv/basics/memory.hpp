@@ -64,9 +64,15 @@ namespace cuv
 		typedef TPtr                pointer_type;      ///< Type of stored pointer, should be const or not-const char*
 		typedef reference<value_type, memory_space_type,index_type> reference_type; ///< Type of references returned by operators
 		typedef const reference_type const_reference_type; ///< Type of references returned by operators
-		allocator<value_type, index_type, memory_space_type> m_allocator;
+		allocator<value_type, index_type, memory_space_type> m_allocator; ///< how stored memory was allocated
 
+		/// Default Constructor
 		memory() :m_ptr(NULL),m_is_view(false){}
+		/**
+		 * Constructor from pointer
+		 * @param p pointer to data
+		 * @param is_view whether we own the data
+		 */
 		memory(pointer_type p, bool is_view) :m_ptr(p),m_is_view(is_view){}
 
 
@@ -95,8 +101,10 @@ namespace cuv
 	};
 	
 
+	/// a datastructure which holds information about the memory in a container
 	template<class V, class M, class P, class I, class MemoryContainer>
 	struct memory_traits{
+		/// dummy entry to be specialized by derived data types
 		typedef memory<V,M,P,I> type;
 	};
 

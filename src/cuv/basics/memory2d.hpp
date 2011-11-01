@@ -382,7 +382,9 @@ class memory2d
 
 }; // memory2d
 
+/// a tag which can be used to dispatch algorithms based on the memory-type of a tensor
 struct memory2d_tag{};
+/// specialization of memory_traits for memory2d
 template<class V,class M, class P, class I>
 struct memory_traits<V,M,P,I,memory2d_tag>{
 	typedef memory2d<V,M,P,I> type;

@@ -83,11 +83,43 @@ namespace cuv
 
 	using boost::detail::multi_array::extent_gen;
 	using boost::detail::multi_array::index_gen;
+	/**
+	 * defines an index range, stolen from boost::multi_array
+	 *
+	 * examples:
+	 * @code
+	 * index_range(1,3)
+	 * index(1) <= index_range() < index(3)
+	 * @endcode
+	 */
 	typedef boost::detail::multi_array::index_range<boost::detail::multi_array::index,boost::detail::multi_array::size_type> index_range;
+	/**
+	 * the index type used in index_range, useful for comparator syntax in @see index_range
+	 */
 	typedef index_range::index index;
 #ifndef CUV_DONT_CREATE_EXTENTS_OBJ
 	namespace{
+		/**
+		 * extents object, can be used to generate a multi-dimensional array conveniently.
+		 *
+		 * stolen from boost::multi_array.
+		 *
+		 * Example:
+		 * @code
+		 * tensor<...> v(extents[5][6][7]); // 3-dimensional tensor
+		 * @endcode
+		 */
 		extent_gen<0> extents;
+		/**
+		 * indices object, can be used to generate multi-dimensional views conveniently.
+		 *
+		 * stolen form boost::multi_array.
+		 *
+		 * Example:
+		 * @code
+		 * tensor<...> v(indices[index_range(1,3)][index_range()], other_tensor);
+		 * @endcode
+		 */
 		index_gen<0,0> indices;
 	}
 #endif
@@ -517,7 +549,7 @@ namespace cuv
 				return m_data.memsize();
 			}
 			/**
-			 * @ptr if ptr!=NULL, create a view on this pointer instead of allocating memory
+			 * reserve memory for the desired shape
 			 */
 			void allocate(){ 
 				m_data.set_size(m_pitch,m_shape,inner_is_last()); 

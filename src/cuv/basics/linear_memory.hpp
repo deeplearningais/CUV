@@ -60,7 +60,7 @@ class linear_memory
 : public memory<__value_type,__memory_space_type,TPtr,__index_type>
 {
 	public:
-	  typedef memory<__value_type,__memory_space_type,TPtr,__index_type> super_type;
+	  typedef memory<__value_type,__memory_space_type,TPtr,__index_type> super_type; ///< Base class we're deriving from
 
 	  typedef typename super_type::value_type value_type; ///< Type of the entries of memory
 	  typedef typename super_type::const_value_type const_value_type; ///< Type of the entries of memory
@@ -72,13 +72,16 @@ class linear_memory
 	  typedef linear_memory<value_type, memory_space_type, TPtr, index_type> my_type; ///< Type of this linear_memory
 	  typedef memory2d<value_type, memory_space_type, TPtr, index_type> mem2d_type; ///< Type of 2d memory with similar properties
 	protected:
-	  using super_type::m_ptr;
-	  using super_type::m_is_view;
-	  using super_type::m_allocator;
-	  index_type m_size;
+	  using super_type::m_ptr;      ///< pointer to stored data
+	  using super_type::m_is_view;  ///< whether we own the data in m_ptr
+	  using super_type::m_allocator; ///< how data was allocated
+	  index_type m_size;            ///< number of elements in data
 
 	  /**
 	   * get size and set pitch
+	   * @param pitch OUT pitch of the resulting memory
+	   * @param shape shape of the desired memory
+	   * @param inner_is_last whether the last component of shape denotes the inner-most=pitched dimension
 	   */
 	  index_type get_size_pitch(index_type& pitch, const std::vector<index_type>& shape, bool inner_is_last){
 		  pitch = sizeof(value_type) * (inner_is_last ? shape.back() : shape.front());
@@ -97,6 +100,10 @@ class linear_memory
 	  /**
 	   * @brief set length of linear_memory. If this is longer than the
 	   * original size, this will destroy the content due to reallocation!
+	   *
+	   * @param pitch OUT pitch of the resulting memory
+	   * @param shape shape of the desired memory
+	   * @param inner_is_last whether the last component of shape denotes the inner-most=pitched dimension
 	   */
 	  void set_size(index_type& pitch, const std::vector<index_type>& shape, bool inner_is_last) {
 		  int s = get_size_pitch(pitch,shape,inner_is_last);
@@ -126,6 +133,7 @@ class linear_memory
 	  }
 	  /** 
 	   * @brief Copy-Constructor
+	   * @param o source
 	   */
 	  explicit linear_memory(const my_type& o):m_size(o.size()) {
 		  alloc();
@@ -133,6 +141,7 @@ class linear_memory
 	  }
 	  /** 
 	   * @brief Copy-Constructor for other linear memory spaces
+	   * @param o source
 	   */
 	  template<class OM, class OP>
 	  explicit linear_memory(const linear_memory<__value_type, OM, OP,__index_type>& o):m_size(o.size()) {
@@ -141,6 +150,7 @@ class linear_memory
 	  }
 	  /** 
 	   * @brief Copy-Constructor for other memory spaces
+	   * @param o source
 	   */
 	  template<class OM, class OP>
 	  explicit linear_memory(const memory2d<__value_type, OM, OP,__index_type>& o):m_size(o.width()*o.height()) {
@@ -163,7 +173,13 @@ class linear_memory
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   *
-	   * WARNING: ptr should not be a pitched pointer!!!
+	   * @warning ptr should not be a pitched pointer!!!
+	   *
+	   * @param pitch OUT pitch of the resulting memory
+	   * @param ptr_offset IN offset relative to o.ptr()
+	   * @param shape shape of the desired memory
+	   * @param p Pointer to entries 
+	   * @param inner_is_last whether the last component of shape denotes the inner-most=pitched dimension
 	   */
 	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, pointer_type p, bool inner_is_last){ 
 		  dealloc();
@@ -173,9 +189,16 @@ class linear_memory
 	  }
 
 	  /**
+	   * @overload
 	   * @brief Make an already existing linear_memory a view on another linear_memory.
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
+	   *
+	   * @param pitch OUT pitch of the resulting memory
+	   * @param ptr_offset IN offset relative to o.ptr()
+	   * @param shape shape of the desired memory
+	   * @param o source
+	   * @param inner_is_last whether the last component of shape denotes the inner-most=pitched dimension
 	   */
 	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const linear_memory& o, bool inner_is_last ){ 
 		  dealloc();
@@ -185,9 +208,16 @@ class linear_memory
 		  cuvAssert(o.size()>= m_size + ptr_offset);
 	  }
 	  /**
+	   * @overload
 	   * @brief Make an already existing linear_memory a view on a memory2d.
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
+	   *
+	   * @param pitch OUT pitch of the resulting memory
+	   * @param ptr_offset IN offset relative to o.ptr()
+	   * @param shape shape of the desired memory
+	   * @param o source
+	   * @param inner_is_last whether the last component of shape denotes the inner-most=pitched dimension
 	   */
 	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const memory2d<value_type, memory_space_type, TPtr,index_type>& o, bool inner_is_last){ 
 		  dealloc();
