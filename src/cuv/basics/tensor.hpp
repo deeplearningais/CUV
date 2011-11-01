@@ -343,6 +343,30 @@ namespace cuv
 			}
 
 			/**
+			 * @overload
+			 *
+			 * @warning if memory_layout differs, the dimensions are inversed. 
+			 *          If you want to convert between column_major and row_major,
+			 *          you need a (generalized) tranpose as well!
+			 *
+			 * accepts assignment from other valuetype
+			 *
+			 * @internal
+			 * the EnableIf ensures that this version is only used when value-types differ.
+			 * otherwise, the compiler cannot decide which version to call when both
+			 * memory_space_type and value_type are equal.
+			 */
+			template<class P, class OV, class OL, class OA>
+			typename EnableIf<typename IsDifferent<OV,value_type>::Result,const_tensor>::type&
+			operator=(const const_tensor<OV,memory_space_type,OL,P,OA>& o){
+				m_shape = o.shape();
+				m_data.assign(m_pitch,o.shape(),o.data(),inner_is_last());
+				if(! IsSame<OL,__memory_layout_type>::Result::value)
+					std::reverse(m_shape.begin(),m_shape.end());
+				return *this;
+			}
+
+			/**
 			 * construct tensor using some collection
 			 */
 			//template<class Collection>
@@ -718,6 +742,7 @@ namespace cuv
 				return m_data[d0];
 			}
 			/**
+			 * @overload
 			 * returns a reference to this position in 2D memory
 			 */
 			reference_type operator()(index_type d0, index_type d1){
