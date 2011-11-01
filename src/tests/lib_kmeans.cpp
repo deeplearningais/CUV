@@ -28,10 +28,12 @@
 //*LE*
 
 #define BOOST_TEST_MODULE example
+#include <numeric>
 #include <boost/test/included/unit_test.hpp>
+#include <cuv/tools/cuv_test.hpp>
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/basics/tensor.hpp>
-#include <cuv/basics/memory2d.hpp>
+#include <cuv/libs/kmeans/kmeans.hpp>
 using namespace cuv;
 
 struct MyConfig {
@@ -53,196 +55,63 @@ struct Fix{
 	}
 };
 
+
+template<class M>
+void
+test_sort_by_idx_impl(){
+	unsigned int data_num = 16;
+	unsigned int data_len = 4;
+	tensor<float,M> data(extents[data_num][data_len]);
+	tensor<unsigned int, M> indices(data_num);
+
+	std::vector<unsigned int> hidx(data_num);
+	for (unsigned int i = 0; i < data_num; ++i)
+		hidx[i] = i;
+	std::random_shuffle(hidx.begin(), hidx.end());
+
+	for (unsigned int i = 0; i < data_num; ++i)
+		indices[i] = hidx[i];
+
+	for (unsigned int i = 0; i < data_num; ++i)
+	{
+		tensor<float,M> tmp(cuv::indices[i][index_range(0,data_len)],data); 
+		tmp = (float) hidx[i];
+	}
+
+	tensor<float, M> sorted(data.shape());
+	cuv::libs::kmeans::sort_by_index(sorted,indices,data);
+
+
+	for (unsigned int i = 0; i < data_num; ++i)
+	{
+		for (unsigned int j = 0; j < data_len; ++j)
+		{
+			BOOST_CHECK_EQUAL(sorted(i,j),i);
+		}
+		BOOST_CHECK_EQUAL(indices(i),i);
+	}
+
+}
+
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 /** 
  * @test
- * @brief create tensor
+ * @brief test reordering of a dataset according to indices
  */
-BOOST_AUTO_TEST_CASE( create_tensor )
+BOOST_AUTO_TEST_CASE( test_sort_by_idx_host )
 {
-	// column_major
-	tensor<float,host_memory_space,column_major> m(extents[2][3][4]);
-	BOOST_CHECK_EQUAL(24,m.size());
-	BOOST_CHECK_EQUAL(2ul,m.shape()[0]);
-	BOOST_CHECK_EQUAL(3ul,m.shape()[1]);
-	BOOST_CHECK_EQUAL(4ul,m.shape()[2]);
-
-	BOOST_CHECK_EQUAL(0ul,m.index_of(extents[0][0][0]));  // column major test
-	BOOST_CHECK_EQUAL(1ul,m.index_of(extents[1][0][0]));
-	BOOST_CHECK_EQUAL(2ul,m.index_of(extents[0][1][0]));
-
-
-	// row_major
-	tensor<float,host_memory_space,row_major> n(extents[2][3][4]);
-	BOOST_CHECK_EQUAL(24,m.size());
-	BOOST_CHECK_EQUAL(2ul,n.shape()[0]);
-	BOOST_CHECK_EQUAL(3ul,n.shape()[1]);
-	BOOST_CHECK_EQUAL(4ul,n.shape()[2]);
-
-	BOOST_CHECK_EQUAL(0ul,n.index_of(extents[0][0][0]));  // row major test
-	BOOST_CHECK_EQUAL(1ul,n.index_of(extents[0][0][1]));
-	BOOST_CHECK_EQUAL(2ul,n.index_of(extents[0][0][2]));
-	BOOST_CHECK_EQUAL(4ul,n.index_of(extents[0][1][0]));
+	test_sort_by_idx_impl<host_memory_space>();
 }
 
-BOOST_AUTO_TEST_CASE( tensor_data_access )
+/** 
+ * @test
+ * @brief test reordering of a dataset according to indices
+ */
+BOOST_AUTO_TEST_CASE( test_sort_by_idx_dev )
 {
-	tensor<float,host_memory_space,column_major> m(extents[2][3][4]);
-	tensor<float,host_memory_space,row_major>    n(extents[2][3][4]);
-
-	tensor<float,host_memory_space,column_major> o(extents[2][3][4]);
-	tensor<float,host_memory_space,row_major>    p(extents[2][3][4]);
-	for (int i = 0; i < 2; ++i) {
-		for (int j = 0; j < 3; ++j) {
-			for (int k = 0; k < 4; ++k) {
-				m(i,j,k)=i*j+k;
-				n(i,j,k)=i*j+k;
-
-				o(i,j,k)=i*j+k;
-				p(i,j,k)=i*j+k;
-			}
-		}
-	}
-	BOOST_CHECK_EQUAL(1*2+3,m(1,2,3));
-	BOOST_CHECK_EQUAL(1*2+3,n(1,2,3));
-	BOOST_CHECK_EQUAL(1*2+3,o(1,2,3));
-	BOOST_CHECK_EQUAL(1*2+3,p(1,2,3));
-
-	BOOST_CHECK_EQUAL(1*2+3-1,--p(1,2,3));
-	BOOST_CHECK_EQUAL(1*2+3,  p(1,2,3)+=1);
+	test_sort_by_idx_impl<dev_memory_space>();
 }
 
-BOOST_AUTO_TEST_CASE( tensor_assignment )
-{
-	tensor<float,host_memory_space,column_major> m(extents[2][3][4]);
-	tensor<float,host_memory_space,column_major> n(extents[2][3][4]);
-
-	tensor<float,host_memory_space,column_major> o(extents[2][3][4]);
-
-	for (int i = 0; i < 2*3*4; ++i)
-		m[i] = i;
-	n = m;
-	o = m;
-
-	tensor<float,host_memory_space,column_major> s(n);
-	tensor<float,dev_memory_space,column_major> t(n);
-
-	for (int i = 0; i < 2*3*4; ++i){
-		BOOST_CHECK_EQUAL(m[i], i);
-		BOOST_CHECK_EQUAL(n[i], i);
-		BOOST_CHECK_EQUAL(o[i], i);
-		BOOST_CHECK_EQUAL(s[i], i);
-		BOOST_CHECK_EQUAL(t[i], i);
-	}
-
-
-}
-
-template<class V,class M1,class M2, class A1, class A2>
-void test_pushpull_2d()
-{
-	static const int h=123,w=247;
-	tensor<V,M1,row_major,A1> t1;
-	tensor<V,M2,row_major,A2> t2(extents[h][w]);
-	
-	for(int i=0;i<h; i++)
-		for(int j=0;j<w; j++){
-			t2(i,j) = (float) drand48();
-		}
-	t1 = t2;
-	BOOST_CHECK(equal_shape(t1,t2));
-	for(int i=0;i<h; i++)
-		for(int j=0;j<w; j++)
-			BOOST_CHECK_EQUAL( (V) t1(i,j) , (V) t2(i,j) );
-}
-template<class V,class M1,class M2, class A1, class A2>
-void test_pushpull_3d()
-{
-	static const int d=3,h=123,w=247;
-	tensor<V,M1,row_major,A1> t1;
-	tensor<V,M2,row_major,A2> t2(extents[d][h][w]);
-	
-	// ***************************************
-	// assignment 2D --> 1D
-	// ***************************************
-	for(int k=0;k<d;k++)
-		for(int i=0;i<h; i++)
-			for(int j=0;j<w; j++){
-				t2(k,i,j) = (float) drand48();
-			}
-	t1 = t2;
-	BOOST_CHECK(equal_shape(t1,t2));
-	for (int k = 0; k < d; ++k)
-		for(int i=0;i<h; i++)
-			for(int j=0;j<w; j++)
-				BOOST_CHECK_EQUAL( (V) t1(k,i,j) , (V) t2(k,i,j) );
-
-}
-
-template<class V, class M>
-void test_lowdim_views(){
-	static const int d=3,h=123,w=247;
-	tensor<V,M,row_major>              t1d(extents[d][h][w]);
-	tensor<V,M,row_major,memory2d_tag> t2d(extents[d][h][w]);
-
-	for(int k=0;k<d;k++)
-		for(int i=0;i<h; i++)
-			for(int j=0;j<w; j++){
-				t2d(k,i,j) = (float) drand48();
-			}
-
-	// ***************************************
-	// 2D View on 3D tensor
-	// ***************************************
-	for(int k=0;k<d;++k){
-		tensor<V,M,row_major,memory2d_tag> view(indices[k][index_range(0,h)][index_range(0,w)], t2d);
-		for(int i=0;i<h; i++)
-			for(int j=0;j<w; j++)
-				BOOST_CHECK_EQUAL( (V) view(i,j) , (V) t2d(k,i,j) );
-	}
-
-	// ***************************************
-	// 1D View on 3D tensor
-	// ***************************************
-	for(int k=0;k<d;++k){
-		for (int i = 0; i < h; ++i) {
-		       tensor<V,M,row_major,linear_memory_tag> view(indices[k][i][index_range(0,w)], t2d);
-		       for(int j=0;j<w; j++)
-			      BOOST_REQUIRE_EQUAL( (V) view(j) , (V) t2d(k,i,j) );
-		}
-	}
-}
-
-BOOST_AUTO_TEST_CASE( lowdim_views ) {
-	test_lowdim_views<float,host_memory_space>();
-	test_lowdim_views<float,dev_memory_space>();
-}
-BOOST_AUTO_TEST_CASE( pushpull_nd )
-{
-	// same memory space, linear container
-	test_pushpull_2d<float,host_memory_space,host_memory_space,linear_memory_tag,linear_memory_tag>();
-	test_pushpull_2d<float, dev_memory_space, dev_memory_space,linear_memory_tag,linear_memory_tag>();
-
-	// same memory space, 2d container
-	test_pushpull_2d<float,host_memory_space,host_memory_space,memory2d_tag,memory2d_tag>();
-	test_pushpull_2d<float, dev_memory_space, dev_memory_space,memory2d_tag,memory2d_tag>();
-
-	// same memory space, 2d vs. 1d
-	test_pushpull_2d<float,host_memory_space,host_memory_space,memory2d_tag,linear_memory_tag>();
-	test_pushpull_2d<float, dev_memory_space, dev_memory_space,memory2d_tag,linear_memory_tag>();
-	test_pushpull_2d<float,host_memory_space,host_memory_space,linear_memory_tag,memory2d_tag>();
-	test_pushpull_2d<float, dev_memory_space, dev_memory_space,linear_memory_tag,memory2d_tag>();
-}
-BOOST_AUTO_TEST_CASE( tensor_view )
-{
-	linear_memory<float,host_memory_space,float*> l(100);
-	const linear_memory<float,host_memory_space,float*> k(100, l.ptr(),true);
-	BOOST_CHECK_EQUAL(l.ptr(), k.ptr());
-	
-	tensor<float,host_memory_space,column_major> a(extents[2][3][4]);
-	tensor<float,host_memory_space,column_major> b(indices[2][3][4],a.ptr());
-	BOOST_CHECK_EQUAL(a.ptr(), b.ptr());
-}
 
 BOOST_AUTO_TEST_SUITE_END()

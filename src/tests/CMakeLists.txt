@@ -74,7 +74,8 @@ ADD_EXECUTABLE( test_lib_rbm lib_rbm.cpp )
 TARGET_LINK_LIBRARIES( test_lib_rbm cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_rbm ${CUDA_CUBLAS_LIBRARIES} )
 
 ADD_EXECUTABLE( test_lib_kmeans lib_kmeans.cpp )
-TARGET_LINK_LIBRARIES( test_lib_kmeans cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_rbm ${CUDA_CUBLAS_LIBRARIES} )
+#TARGET_LINK_LIBRARIES( test_lib_kmeans cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_kmeans ${CUDA_CUBLAS_LIBRARIES} )
+TARGET_LINK_LIBRARIES( test_lib_kmeans cuv ${CUDA_CUBLAS_LIBRARIES} )
 
 IF(CUV_CIMG_BINDINGS)
 	FIND_PACKAGE( PNG REQUIRED)
