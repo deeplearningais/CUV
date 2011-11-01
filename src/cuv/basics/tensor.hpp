@@ -48,6 +48,10 @@
 
 namespace cuv
 {
+/**
+ * @defgroup basics Basic datastructures
+ * @{
+ */
 	/// Parent struct for row and column major tags
 	struct memory_layout_tag{};
 	/// Tag for column major matrices
@@ -329,6 +333,10 @@ namespace cuv
 
 			/**
 			 * @overload
+			 *
+			 * @warning if memory_layout differs, the dimensions are inversed. 
+			 *          If you want to convert between column_major and row_major,
+			 *          you need a (generalized) tranpose as well!
 			 *
 			 * also accepts assignment from other memoryspace type
 			 * and convertible pointers
@@ -674,6 +682,7 @@ namespace cuv
 
 
 			/**
+			 * @overload
 			 * assignment operator
 			 */
 			tensor&
@@ -684,6 +693,7 @@ namespace cuv
 				return *this;
 			}
 			/**
+			 * @overload
 			 * assignment operator for other memory spaces
 			 */
 			template<class OM, class OL, class OA>
@@ -757,6 +767,7 @@ namespace cuv
 			}
 
 			/**
+			 * @overload
 			 * returns a reference to this position in 3D memory
 			 */
 			reference_type operator()(index_type d0, index_type d1, index_type d2){
@@ -772,6 +783,7 @@ namespace cuv
 			}
 
 			/**
+			 * @overload
 			 * returns a reference to this position in 4D memory
 			 */
 			reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3){
@@ -821,12 +833,14 @@ namespace cuv
 					m_shape.push_back(eg.ranges_[i].finish());
 			}
 			/**
+			 * @overload
 			 * convenience overloading for matrices: change the shape of this tensor (product must be the same as before)
 			 */
                         void reshape(index_type i, index_type j){
                                 reshape(extents[i][j]);
                         }
 			/**
+			 * @overload
 			 * change the shape of this tensor (product must be the same as before)
 			 */
                         void reshape(const std::vector<index_type>& new_shape){
@@ -839,6 +853,10 @@ namespace cuv
 			 * return reference to underlying memory object
 			 */
 			memory_container_type&       data()     {return m_data;}
+			/**
+			 * @overload
+			 * const version
+			 */
 			const memory_container_type& data()const{return m_data;}
 
 			/**
@@ -898,6 +916,7 @@ namespace cuv
 		}
 		return true;
 	}
+	/** @} */ // end group basics
 }
 
 #include <iostream>
