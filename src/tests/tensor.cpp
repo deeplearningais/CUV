@@ -197,9 +197,21 @@ void test_lowdim_views(){
 	// ***************************************
 	for(int k=0;k<d;++k){
 		tensor<V,M,row_major,memory2d_tag> view(indices[k][index_range(0,h)][index_range(0,w)], t2d);
+		BOOST_CHECK_EQUAL(  view.ndim() , 2);
+		BOOST_CHECK_EQUAL(  view.shape(0) , h);
+		BOOST_CHECK_EQUAL(  view.shape(1) , w);
 		for(int i=0;i<h; i++)
 			for(int j=0;j<w; j++)
 				BOOST_CHECK_EQUAL( (V) view(i,j) , (V) t2d(k,i,j) );
+
+		// alternative spec
+		tensor<V,M,row_major,memory2d_tag> view_(indices[k][index_range()][index_range()<cuv::index(w)], t2d);
+		BOOST_CHECK_EQUAL(  view_.ndim() , 2);
+		BOOST_CHECK_EQUAL(  view_.shape(0) , h);
+		BOOST_CHECK_EQUAL(  view_.shape(1) , w);
+		for(int i=0;i<h; i++)
+			for(int j=0;j<w; j++)
+				BOOST_CHECK_EQUAL( (V) view_(i,j) , (V) t2d(k,i,j) );
 	}
 
 	// ***************************************
