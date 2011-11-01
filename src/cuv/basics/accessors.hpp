@@ -4,6 +4,10 @@
 
 namespace cuv
 {
+	/**
+	 * @addtogroup basics
+	 * @{
+	 */
 	/// Allocator allows allocation, deallocation and copying depending on memory_space_type
 	template <class value_type, class index_type, class memory_space_type>
 		struct allocator{
@@ -170,6 +174,7 @@ namespace cuv
 			void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, dev_memory_space);  /// copy from dev_memory_space
 		};
 
+	/** @} */ // end group basics
 }
 
 

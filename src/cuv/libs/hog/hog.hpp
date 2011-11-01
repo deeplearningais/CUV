@@ -31,9 +31,15 @@
 #     define __HOG_HPP__
 #     include<cuv/basics/tensor.hpp>
 
-namespace cuv{ namespace libs{ namespace hog{
+namespace cuv{ namespace libs{ 
+	/// histogram of oriented gradients (HOG)
+	namespace hog{
 
 	/**
+	 * @addtogroup libs
+	 * @{
+	 * @addtogroup hog
+	 * @{
 	 * calculate hog descriptor of src
 	 * @param dst   bins x h x w descriptors
 	 * @param src   chan x h x w image
@@ -41,6 +47,10 @@ namespace cuv{ namespace libs{ namespace hog{
 	 */
 	template<class V, class M>
 	void hog(cuv::tensor<V, M>& dst, const cuv::tensor<V,M>& src, unsigned int spatialpool=3);
+	/**
+	 * @}
+	 * @}
+	 */
 }}}
 
 #endif /* __HOG_HPP__ */

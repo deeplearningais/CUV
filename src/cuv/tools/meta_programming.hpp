@@ -3,7 +3,7 @@
 namespace cuv{
 
 /**
- * @defgroup MetaProgramming
+ * @addtogroup MetaProgramming
  * @{
  */
 

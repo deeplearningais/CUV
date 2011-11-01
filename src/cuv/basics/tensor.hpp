@@ -49,7 +49,7 @@
 namespace cuv
 {
 /**
- * @defgroup basics Basic datastructures
+ * @addtogroup basics Basic datastructures
  * @{
  */
 	/// Parent struct for row and column major tags

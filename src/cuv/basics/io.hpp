@@ -45,7 +45,31 @@ namespace boost
 	namespace serialization
 	{
 		/**
-		 * @addtogroup io input and output functions
+		 * @addtogroup io 
+		 *
+		 * \section sec_io Loading and saving of CUV data structures
+		 *
+		 * File and string I/O is implemented using boost::serialization.
+		 * Nothing surprising here.
+		 *
+		 * Example usage:
+		 * @code 
+		 * tensor<...> m, n; // ...
+		 *
+		 * {
+		 *   std::ofstream os("test.dat");
+		 *   boost::archive::binary_oarchive oa(os);
+		 *   oa << m;
+		 * }
+		 * {
+		 *   std::ifstream is("test.dat");
+		 *   boost::archive::binary_iarchive ia(is);
+		 *   ia >> n;
+		 * }
+		 * @endcode
+		 *
+		 * @warning This probably will not work in .cu files which are processed by nvcc.
+		 *
 		 * @{
 		 */
 

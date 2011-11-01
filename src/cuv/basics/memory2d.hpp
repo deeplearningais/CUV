@@ -53,6 +53,8 @@ class linear_memory;
 /**
  * @brief Basic 2D memory class
  *
+ * @ingroup basics
+ *
  * This memory2d class is the generic storage classes and is repsonsible for allocation/deletion.
  */
 template<class __value_type, class __memory_space_type, class TPtr=const __value_type*, class __index_type=unsigned int>

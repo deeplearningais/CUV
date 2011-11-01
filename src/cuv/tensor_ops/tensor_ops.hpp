@@ -35,7 +35,7 @@
 
 namespace cuv{
 /**
- * @defgroup BLAS1 BLAS1 -- Vector-Operations
+ * @addtogroup blas1 
  * @{
  */
 

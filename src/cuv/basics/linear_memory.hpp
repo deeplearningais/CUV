@@ -53,6 +53,8 @@ namespace cuv{
 /**
  * @brief Basic linear memory class
  *
+ * @ingroup basics
+ *
  * This linear memory class is the generic storage classes and is repsonsible for allocation/deletion.
  */
 template<class __value_type, class __memory_space_type, class TPtr=const __value_type*, class __index_type=unsigned int>
@@ -438,13 +440,23 @@ class linear_memory
 			  return *this;
 		  }
 
+	  /**
+	   * @return a reference to memory at a position
+	   * @param idx position
+	   */
 	  reference_type
-		  operator[](const index_type& idx)     ///< Return entry at position t
+		  operator[](const index_type& idx)    
 		  {
 			  return reference_type(this->m_ptr+idx);
 		  }
+	  /**
+	   * @overload
+	   * 
+	   * @return a reference to memory at a position
+	   * @param idx position
+	   */
 	  const_reference_type
-		  operator[](const index_type& idx)const///< Return entry at position t
+		  operator[](const index_type& idx)const
 		  {
 			  return const_reference_type(this->m_ptr+idx);
 		  }
@@ -462,9 +474,12 @@ class linear_memory
 }; // linear_memory
 
 
+/// a tag identifying linear memory for tag-dispatching of operations on tensors
 struct linear_memory_tag{};
+/// specialization of memory_traits for linear_memory_tag
 template<class V,class M, class P, class I>
 struct memory_traits<V,M,P,I,linear_memory_tag>{
+	/// the linear memory
 	typedef linear_memory<V,M,P,I> type;
 };
 

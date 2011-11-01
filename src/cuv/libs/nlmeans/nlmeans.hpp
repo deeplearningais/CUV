@@ -35,12 +35,23 @@
 namespace cuv{
 	namespace libs
 	{
+		/// non-local means
 		namespace nlmeans
 		{
+			/**
+			 * @addtogroup libs
+			 * @{
+			 * @addtogroup nlmeans
+			 * @{
+			 */
 			template<class T>
 				void filter_nlmean(cuv::tensor<T,dev_memory_space>& dst, const cuv::tensor<T,dev_memory_space>& src, bool threeDim=false);
 			template<class T>
 				void filter_nlmean(cuv::tensor<T,dev_memory_space,row_major>& dst, const cuv::tensor<T,dev_memory_space,row_major,memory2d_tag>& src, int search_radius, int filter_radius, float sigma, float dist_sigma=0.f, float step_size=1.f, bool threeDim=false, bool verbose=false);
+			/**
+			 * @}
+			 * @}
+			 */
 			
 		}
 	}

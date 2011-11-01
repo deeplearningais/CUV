@@ -32,13 +32,24 @@
 #include<cuv/basics/tensor.hpp>
 
 namespace cuv{
+	/// integral image computation
 	namespace integral_img
 	{
+		/**
+		 * @addtogroup libs
+		 * @{
+		 * @addtogroup integral_img
+		 * @{
+		 */
 		template<class V1, class V2, class T, class M, class A>
 		void integral_image(cuv::tensor<V1, T, M, A>& dst, const cuv::tensor<V2, T, M, A>& src);
 
 		template<class V1, class V2, class T, class M, class A, class A2>
 		void scan(cuv::tensor<V1, T, M, A>& dst, const cuv::tensor<V2, T, M, A2>& src);
+		/**
+		 * @}
+		 * @}
+		 */
 	}
 };
 

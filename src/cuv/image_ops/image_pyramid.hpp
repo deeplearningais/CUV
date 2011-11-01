@@ -45,7 +45,7 @@
 namespace cuv{
 
 	/**
-	 * @defgroup image_ops Operations on Images
+	 * @addtogroup image_ops Operations on Images
 	 * @{
 	 */
 

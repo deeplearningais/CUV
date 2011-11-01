@@ -4,9 +4,16 @@
 #include <cuv/basics/tensor.hpp>
 namespace cuv{
 namespace libs{
+	/// K-Means algorithm
 namespace kmeans{
 	/** 
 	 * @namespace cuv::libs::kmeans
+	 *
+	 * @addtogroup libs
+	 * @{
+	 * @addtogroup kmeans
+	 * @{
+	 *
 	 * Utility functions for k-means clustering
 	 */
 
@@ -31,5 +38,9 @@ namespace kmeans{
 	void sort_by_index(cuv::tensor<__data_value_type, __memory_space_type, __memory_layout_type>& res,
 		       	cuv::tensor<typename cuv::tensor<__data_value_type, __memory_space_type, __memory_layout_type>::index_type,__memory_space_type>& indices,
 		       	const cuv::tensor<__data_value_type, __memory_space_type, __memory_layout_type>& data);
+	/**
+	 * @}
+	 * @}
+	 */
 } } }
 #endif /* __KMEANS__HPP__ */

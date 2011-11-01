@@ -36,7 +36,7 @@
 
 namespace cuv{
 
- /** @defgroup random Random number functions 
+ /** @addtogroup random 
   * @{
   */
 
