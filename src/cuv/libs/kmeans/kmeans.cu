@@ -188,8 +188,8 @@ namespace impl{
 		thrust::sort_by_key(thrust_ptr(indices),thrust_ptr(indices)+data_num,thrust_ptr(seq));
 		V* sorted_ptr = sorted.ptr();
 		for(I i=0;i<data.shape()[0]; i++){
-			V* src_ptr = data.ptr()   + data_length * i;
-			V* dst_ptr = sorted.ptr() + data_length * seq[i];
+			V* src_ptr = data.ptr()   + data_length * seq[i];
+			V* dst_ptr = sorted.ptr() + data_length * i;
 			for(I j=0;j<data_length; j++)
 				dst_ptr[j] = src_ptr[j];
 		}
