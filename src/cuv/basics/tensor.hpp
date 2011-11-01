@@ -244,10 +244,17 @@ namespace cuv
 			template<int D, int E, class P, class OM, class OL, class OA>
 			explicit const_tensor(const index_gen<D,E>& eg, const const_tensor<__value_type,OM,OL,P,OA>& o){
 				m_shape.reserve(D);
+				cuvAssert(o.ndim()==D);
 				for(std::size_t i=0;i<D;i++){
-					if(eg.ranges_[i].finish()-eg.ranges_[i].start()<=1)
+					int start  = eg.ranges_[i].get_start(0);
+					int finish = eg.ranges_[i].get_finish(o.shape(i));
+#ifndef NDEBUG
+					cuvAssert(finish<=o.shape()[i]);
+					cuvAssert(start >=0);
+#endif
+					if(finish-start<=1)
 						continue;
-					m_shape.push_back(eg.ranges_[i].finish()-eg.ranges_[i].start());
+					m_shape.push_back(finish-start);
 				}
 
 				index_type offset = o.index_of(eg);
@@ -300,8 +307,10 @@ namespace cuv
 			index_type
 			index_of(const index_gen<D,E>& eg)const{
 				index_type point[D];
-				for(unsigned int i=0;i<D;i++)
-					point[i]=eg.ranges_[i].start();
+				for(unsigned int i=0;i<D;i++){
+					int start  = eg.ranges_[i].get_start(0);
+					point[i]=start;
+				}
 
 				return index_of<D>(memory_layout_type(),&point[0]);
 			}
