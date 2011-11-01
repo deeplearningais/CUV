@@ -80,6 +80,7 @@ namespace cuv
 	using boost::detail::multi_array::extent_gen;
 	using boost::detail::multi_array::index_gen;
 	typedef boost::detail::multi_array::index_range<boost::detail::multi_array::index,boost::detail::multi_array::size_type> index_range;
+	typedef index_range::index index;
 #ifndef CUV_DONT_CREATE_EXTENTS_OBJ
 	namespace{
 		extent_gen<0> extents;
