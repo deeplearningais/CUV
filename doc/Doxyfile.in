@@ -613,6 +613,8 @@ EXCLUDE_SYMLINKS       = NO
 
 EXCLUDE_PATTERNS       = *.in
 EXCLUDE_PATTERNS       += *.git*
+EXCLUDE_PATTERNS       += *.cuh
+EXCLUDE_PATTERNS       += */functors.hpp
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
