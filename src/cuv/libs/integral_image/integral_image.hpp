@@ -38,12 +38,26 @@ namespace cuv{
 		/**
 		 * @addtogroup libs
 		 * @{
-		 * @addtogroup integral_img
+		 * @defgroup integral_img Integral Image
 		 * @{
+		 */
+
+		/**
+		 * calculate the integral image
+		 *
+		 * this applies \see scan twice, transposing in between.
+		 *
+		 * @param src source
+		 * @param dst destination
 		 */
 		template<class V1, class V2, class T, class M, class A>
 		void integral_image(cuv::tensor<V1, T, M, A>& dst, const cuv::tensor<V2, T, M, A>& src);
 
+		/**
+		 * integrate rows of an image
+		 * @param src source
+		 * @param dst destination
+		 */
 		template<class V1, class V2, class T, class M, class A, class A2>
 		void scan(cuv::tensor<V1, T, M, A>& dst, const cuv::tensor<V2, T, M, A2>& src);
 		/**

@@ -38,8 +38,12 @@ namespace cuv{ namespace libs{
 	/**
 	 * @addtogroup libs
 	 * @{
-	 * @addtogroup hog
+	 * @defgroup hog Histogram of Oriented Gradients (HOG)
 	 * @{
+	 *
+	 */
+
+	/**
 	 * calculate hog descriptor of src
 	 * @param dst   bins x h x w descriptors
 	 * @param src   chan x h x w image
@@ -47,6 +51,7 @@ namespace cuv{ namespace libs{
 	 */
 	template<class V, class M>
 	void hog(cuv::tensor<V, M>& dst, const cuv::tensor<V,M>& src, unsigned int spatialpool=3);
+
 	/**
 	 * @}
 	 * @}

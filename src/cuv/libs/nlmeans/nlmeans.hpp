@@ -41,7 +41,7 @@ namespace cuv{
 			/**
 			 * @addtogroup libs
 			 * @{
-			 * @addtogroup nlmeans
+			 * @defgroup nlmeans Non-Local means
 			 * @{
 			 */
 			template<class T>
