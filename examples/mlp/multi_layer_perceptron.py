@@ -41,7 +41,7 @@ class MLP:
             self.weight_layers.append(weight_layer(self.neuron_layers[i],
                 self.neuron_layers[i + 1]))
 
-    def train(self, input_matrix, teacher_matrix, n_epochs, learnrate = 0.10):
+    def fit(self, input_matrix, teacher_matrix, n_epochs=100, learnrate = 0.10):
         """
         Function to train the network
 
