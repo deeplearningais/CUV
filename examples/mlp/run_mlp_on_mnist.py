@@ -3,6 +3,7 @@ from multi_layer_perceptron import MLP
 import cuv_python as cp
 from switchtohost import switchtohost
 from MNIST_data import MNIST_data
+import numpy as np
 
 if __name__ == "__main__":
     try:
@@ -34,13 +35,13 @@ if __name__ == "__main__":
 
     print('Training MLP...')
     try:
-        mlp.train(train_data, train_labels, 100)
+        mlp.fit(train_data, train_labels, 10)
     except KeyboardInterrupt:
         pass
 
     print('Testing MLP...')
-    mlp.test(test_data, test_labels)
+    predictions = mlp.predict(test_data)
+    print("test error: %f"%np.mean((predictions != np.argmax(test_labels, axis=0))))
 
     print('done.')
     #cp.exitCUDA()
-
