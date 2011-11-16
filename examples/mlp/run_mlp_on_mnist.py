@@ -30,7 +30,7 @@ if __name__ == "__main__":
     sizes = [train_data.shape[0], 128, train_labels.shape[0]]
 
     print('Initializing MLP...')
-    mlp = MLP(sizes, 96)
+    mlp = MLP(sizes, 100)
 
     print('Training MLP...')
     try:
