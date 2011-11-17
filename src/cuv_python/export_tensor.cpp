@@ -47,6 +47,7 @@ using namespace boost::python;
 using namespace cuv;
 
 namespace python_wrapping {
+
     template <class T>
     typename T::reference_type 
     get_reference(T& tens,const boost::python::list &ind){
@@ -83,9 +84,18 @@ namespace python_wrapping {
             std::vector<value_type> stl_vector;
             int n = boost::python::len(mylist);
             for (int it=0; it < n; it++)
-                stl_vector.push_back(extract<value_type>(mylist[it]));
+                stl_vector.push_back((value_type)extract<long>(mylist[it]));
             return stl_vector;
         }
+
+    template <class T>
+    T* reshaped_view(T& tens, const boost::python::list &new_shape){
+        std::vector<typename T::index_type> shape = extract_python_list<typename T::index_type>(new_shape);
+        typename T::index_type new_size = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<typename T::index_type>());
+        cuvAssert(new_size == tens.size());
+        return new T(shape, tens.ptr());
+
+    }
 
     template <class T>
     void reshape(T& tens, const boost::python::list &shape){
@@ -273,7 +283,9 @@ export_tensor_common(const char* name){
                 .def("set",    &python_wrapping::set<T>, "set index to value")
                 .def("get",    &python_wrapping::get<T>, "set index to value")
                 .def("copy",    &python_wrapping::copy<T>, "get copy of object",return_value_policy<manage_new_object>())
-                .def("reshape",    &python_wrapping::reshape<T>, "reshape tensor in place")
+                .def("reshape_inplace", &python_wrapping::reshape<T>, "reshape tensor in place")
+                .def("reshape",    &python_wrapping::reshaped_view<T>, "return view to reshaped tensor",
+                        return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >())
                 .add_property("np", &python_wrapping::tens2npy<value_type,memspace_type,memlayout_type>::to_numpy_copy)
                 .add_property("size", &arr::size)
                 .add_property("shape", &python_wrapping::shape<T>, "get shape of tensor")
