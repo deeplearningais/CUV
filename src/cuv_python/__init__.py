@@ -3,6 +3,27 @@ import numpy as np
 import pyublas
 from _cuv_python import *
 
+
+# numpy like convenience functions
+def zeros(shape):
+    x = dev_tensor_float(shape)
+    x = 0.
+    return x
+
+def ones(shape):
+    x = dev_tensor_float(shape)
+    x = 1.
+    return x
+
+def copy(dst,src):
+    apply_scalar_functor(dst,src,scalar_functor.COPY)
+
+def exp(x):
+    apply_scalar_functor(x,scalar_functor.EXP)
+
+def tanh(x):
+    apply_scalar_functor(x,scalar_functor.TANH)
+
 def _matstr(x,typestr):
     return "%s: %s [%2.1f Mb]"%(typestr,",".join([str(s) for s in x.shape]),x.memsize/1024./1024.)
 
@@ -17,9 +38,6 @@ def __np(x):
 
 def __T(x):
     return transposed_view(x)
-
-def copy(dst,src):
-    apply_scalar_functor(dst,src,scalar_functor.COPY)
 
 def __tensor_getitem(x,key):
     if isinstance(key,int):
