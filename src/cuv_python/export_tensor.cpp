@@ -80,7 +80,7 @@ namespace python_wrapping {
     }
     
     template <class value_type>
-        std::vector<value_type> extract_python_list(const boost::python::list & mylist){
+        std::vector<value_type> extract_python_list(const boost::python::object & mylist){
             std::vector<value_type> stl_vector;
             int n = boost::python::len(mylist);
             for (int it=0; it < n; it++)
@@ -120,6 +120,9 @@ namespace python_wrapping {
 	    /// construct using shape 
 	    typedef tensor<V,M,L> T;
 	    static T* construct_tensor_shape(boost::python::list python_shape){
+		    return new T(extract_python_list<typename T::index_type>(python_shape));
+	    }
+	    static T* construct_tensor_shape(boost::python::tuple python_shape){
 		    return new T(extract_python_list<typename T::index_type>(python_shape));
 	    }
 	    /// construct a vector using a single dimension
@@ -274,7 +277,8 @@ export_tensor_common(const char* name){
 
 	class_<arr> c(name);
 	c
-		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_shape))
+		.def("__init__", make_constructor((arr*(*)(boost::python::list)) python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_shape))
+		.def("__init__", make_constructor((arr*(*)(boost::python::tuple)) python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_shape))
 		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_int))
 		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::template construct_tensor_numpy_array_copy<value_type>))
 		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::template construct_tensor_numpy_array_copy<double>))
