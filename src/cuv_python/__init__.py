@@ -5,6 +5,9 @@ from _cuv_python import *
 
 
 # numpy like convenience functions
+def pow(x, a):
+    apply_scalar_functor(x, scalar_functor.POW, a)
+
 def zeros(shape):
     x = dev_tensor_float(shape)
     fill(x, 0.)
@@ -126,3 +129,4 @@ for memory_space in ["dev","host"]:
             dense_type.__getitem__= __tensor_getitem
             dense_type.__setitem__= __tensor_setitem
             dense_type.__str__=lambda x:(_matstr(x,memory_space+"_tensor_"+value_type))
+            dense_type.__pow__ = pow

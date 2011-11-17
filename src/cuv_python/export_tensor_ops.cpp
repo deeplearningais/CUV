@@ -66,6 +66,7 @@ void export_scalar_functors() {
         .value("TANH", SF_TANH)
         .value("DTANH", SF_DTANH)
         .value("SQUARE", SF_SQUARE)
+        .value("POW", SF_POW)
         .value("SUBLIN", SF_SUBLIN)
         .value("ENERG", SF_ENERG)
         .value("INV", SF_INV)
