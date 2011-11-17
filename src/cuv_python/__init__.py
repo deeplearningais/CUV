@@ -21,11 +21,21 @@ def ones(shape):
 def copy(dst,src):
     apply_scalar_functor(dst,src,scalar_functor.COPY)
 
-def exp(x):
-    apply_scalar_functor(x,scalar_functor.EXP)
+def exp(x, dst=None):
+    if dst==None:
+        dst = empty_like(x)
+    apply_scalar_functor(dst, x, scalar_functor.EXP)
+    return dst
 
-def tanh(x):
-    apply_scalar_functor(x,scalar_functor.TANH)
+def empty_like(x):
+    return x.__class__(x.shape)
+
+def tanh(x, dst=None):
+    if dst==None:
+        dst = empty_like(x)
+    apply_scalar_functor(dst, x, scalar_functor.TANH)
+    return dst
+
 
 def _matstr(x,typestr):
     return "%s: %s [%2.1f Mb]"%(typestr,",".join([str(s) for s in x.shape]),x.memsize/1024./1024.)
