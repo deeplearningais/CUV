@@ -46,15 +46,6 @@
 using namespace boost::python;
 using namespace cuv;
 
-template<class T>
-long int this_ptr(const T& t){
-	return (long int)(&t);
-}
-template<class T>
-long int internal_ptr(const T& t){
-	return (long int)(t.ptr());
-}
-
 namespace python_wrapping {
     template <class T>
     typename T::reference_type 
@@ -321,9 +312,6 @@ export_tensor_common(const char* name){
 				return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 	}
 
-	def("this_ptr", this_ptr<arr>);
-	def("internal_ptr", internal_ptr<arr>);
-	
 }
 
 void export_tensor(){
