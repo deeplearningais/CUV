@@ -7,12 +7,12 @@ from _cuv_python import *
 # numpy like convenience functions
 def zeros(shape):
     x = dev_tensor_float(shape)
-    x = 0.
+    fill(x, 0.)
     return x
 
 def ones(shape):
     x = dev_tensor_float(shape)
-    x = 1.
+    fill(x, 1.)
     return x
 
 def copy(dst,src):
