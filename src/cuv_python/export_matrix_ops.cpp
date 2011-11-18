@@ -126,12 +126,12 @@ void export_blas3() {
     def("prod",(R* (*)(const R&,const R&,char, char, const float&))
             python_wrapping::prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>,
             (arg("A"), arg("B"), arg("transA")='n', arg("transB")='n', arg("factAB")=1.f),
-            return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
+            return_value_policy<manage_new_object>());
     // convenience prod that returns dst
     def("prod",(R_rm* (*)(const R&,const S&, const float&))
             python_wrapping::prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>,
             (arg("A"), arg("B"), arg("factAB")=1.f),
-            return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
+            return_value_policy<manage_new_object>());
 
 
 }
@@ -272,12 +272,12 @@ void export_reductions(){
     def("reduce_to_row",(Vect* (*) (const M&, reduce_functor, const value_type &, const value_type &))
             python_wrapping::reduce_to_row<value_type, value_type, memory_space_type, memory_layout_type>,
             (arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f),
-            return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
+            return_value_policy<manage_new_object>());
 
     def("reduce_to_col",(Vect* (*) (const M&, reduce_functor, const value_type &, const value_type &))
             python_wrapping::reduce_to_col<value_type, value_type, memory_space_type, memory_layout_type>,
             (arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f),
-            return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
+            return_value_policy<manage_new_object>());
 }
 
 template <class M>
