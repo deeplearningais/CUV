@@ -52,7 +52,7 @@ void export_blas3() {
 				arg("C"), arg("A"), arg("B"), arg("transA")='n', arg("transB")='n', arg("factAB")=1.f, arg("factC")=0.f
 				));
         // convenience prod that returns dst
-	def("prod",(R (*)(const R&,const R&,char, char, const float&))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
+	def("prod",(std::auto_ptr<R> (*)(const R&,const R&,char, char, const float&))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
 				arg("A"), arg("B"), arg("transA")='n', arg("transB")='n', arg("factAB")=1.f));
         // convenience for use of layout instead of "n" and "t"
         typedef typename switch_memory_layout_type<R, typename other_memory_layout<typename R::memory_layout_type>::type >::type S;
@@ -64,7 +64,7 @@ void export_blas3() {
                                 arg("C"), arg("A"), arg("B"), arg("factAB")=1.f, arg("factC")=0.f
                                 ));
         // convenience prod that returns dst
-	def("prod",(R_rm (*)(const R&,const S&, const float&))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
+	def("prod",(std::auto_ptr<R_rm> (*)(const R&,const S&, const float&))prod<typename R::value_type,typename R::memory_space_type,typename R::memory_layout_type>, (
 				arg("A"), arg("B"), arg("factAB")=1.f));
 
 
@@ -162,7 +162,9 @@ template <class M>
 void export_reductions(){
 	//typedef typename switch_value_type<M, typename M::index_type>::type::vec_type idx_vec;
 	//typedef typename switch_value_type<M, float>::type::vec_type float_vec;
-	typedef typename switch_memory_layout_type<M,row_major>::type VECT;
+	typedef typename switch_memory_layout_type<M, row_major>::type Vect;
+	typedef typename switch_value_type<Vect, typename M::index_type>::type IndexVect;
+	typedef typename switch_value_type<Vect, float>::type FloatVect;
 	typedef typename M::value_type value_type;
 	typedef typename M::memory_space_type memory_space_type;
 	typedef typename M::memory_layout_type memory_layout_type;
@@ -175,13 +177,35 @@ void export_reductions(){
 	def("minimum",(float (*)(const M&)) minimum<value_type,typename M::memory_space_type>);
 	def("mean", (float (*)(const M&)) mean<value_type,typename M::memory_space_type>);
 	def("var", (float (*)(const M&)) var<value_type,typename M::memory_space_type>);
-	def("sum",(VECT (*)(const M&, const int&)) sum<value_type,typename M::memory_space_type>,(arg("source"), arg("axis")));
-        def("reduce_to_col", reduce_to_col<value_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-        def("reduce_to_row", reduce_to_row<value_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-        def("reduce_to_col", reduce_to_col<typename M::index_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-        def("reduce_to_row", reduce_to_row<typename M::index_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-        def("reduce_to_col", reduce_to_col<float, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
-        def("reduce_to_row", reduce_to_row<float, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+	def("sum",(Vect (*)(const M&, const int&)) sum<value_type,typename M::memory_space_type>,(arg("source"), arg("axis")));
+    def("reduce_to_col",(void (*) (Vect &, const M&, reduce_functor, const value_type &, const value_type &))
+            reduce_to_col<value_type, value_type, memory_space_type, memory_layout_type>,
+            (arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+
+    def("reduce_to_row",(void (*) (Vect &, const M&, reduce_functor, const value_type &, const value_type &))
+            reduce_to_row<value_type, value_type, memory_space_type, memory_layout_type>,
+            (arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+
+    def("reduce_to_col",(void (*) (IndexVect &, const M&, reduce_functor, const value_type &, const value_type &))
+            reduce_to_col<typename M::index_type, value_type, memory_space_type, memory_layout_type>,
+            (arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+
+    def("reduce_to_row",(void (*) (IndexVect &, const M&, reduce_functor, const value_type &, const value_type &))
+            reduce_to_row<typename M::index_type, value_type, memory_space_type, memory_layout_type>,
+            (arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+
+    def("reduce_to_col",(void (*) (FloatVect &, const M&, reduce_functor, const value_type &, const value_type &))
+            reduce_to_col<float, value_type, memory_space_type, memory_layout_type>,
+            (arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+
+    def("reduce_to_row",(void (*) (FloatVect &, const M&, reduce_functor, const value_type &, const value_type &))
+            reduce_to_row<float, value_type, memory_space_type, memory_layout_type>,
+            (arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+
+    //def("reduce_to_col", reduce_to_col<typename M::index_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+    //def("reduce_to_row", reduce_to_row<typename M::index_type, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+    //def("reduce_to_col", reduce_to_col<float, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
+    //def("reduce_to_row", reduce_to_row<float, value_type, memory_space_type, memory_layout_type>,(arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
 }
 
 template <class M>
@@ -189,7 +213,6 @@ void export_blas2(){
 	typedef typename M::value_type        V1;
 	typedef typename M::memory_space_type M1;
 	typedef typename M::memory_layout_type L1;
-	typedef typename switch_memory_layout_type<M,row_major>::type VECT;
 	def("matrix_plus_col", matrix_plus_col<V1,M1,L1>);
 	def("matrix_times_col", matrix_times_col<V1,M1,L1>);
 	def("matrix_divide_col", matrix_divide_col<V1,M1,L1>);

@@ -111,7 +111,7 @@ namespace cuv{
    * This is a thin wrapper of CUBLAS.
    */
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	 tensor<__value_type,__memory_space_type, __memory_layout_type> prod( const tensor<__value_type,__memory_space_type, __memory_layout_type>& A,
+	 std::auto_ptr<tensor<__value_type,__memory_space_type, __memory_layout_type> > prod( const tensor<__value_type,__memory_space_type, __memory_layout_type>& A,
                 const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', 
                 const float& factAB=1.f){
                    int shape[2];
@@ -124,9 +124,10 @@ namespace cuv{
                    else
                         shape[1] = B.shape()[0];
         
-                   tensor<__value_type,__memory_space_type, __memory_layout_type> C(extents[shape[0]][shape[1]]);
-                   prod(C, A, B, transA, transB, factAB, 0.f);
-                   return C;
+                   tensor<__value_type,__memory_space_type, __memory_layout_type>* C = new tensor<__value_type,__memory_space_type, __memory_layout_type>(extents[shape[0]][shape[1]]);
+                   prod(*C, A, B, transA, transB, factAB, 0.f);
+                   std::auto_ptr<tensor<__value_type,__memory_space_type, __memory_layout_type> > C_ptr(C);
+                   return C_ptr;
 }
 // convenience: create and return dst: if memory layout does not agree, default to row major
   /** 
@@ -146,12 +147,13 @@ namespace cuv{
    * This is a thin wrapper of CUBLAS.
    */
   template<class __value_type, class __memory_space_type, class __memory_layout_typeA, class __memory_layout_typeB>
-	tensor<__value_type,__memory_space_type, row_major> prod( const tensor<__value_type,__memory_space_type, __memory_layout_typeA>& A,
+	std::auto_ptr<tensor<__value_type,__memory_space_type, row_major> > prod( const tensor<__value_type,__memory_space_type, __memory_layout_typeA>& A,
                 const tensor<__value_type,__memory_space_type,__memory_layout_typeB>& B,
                 const float& factAB=1.f){
-                   tensor<__value_type,__memory_space_type, row_major> C(extents[A.shape()[0]][B.shape()[1]]);
-                   prod(C, A, B, factAB, 0.f);
-                   return C;
+                   tensor<__value_type,__memory_space_type,row_major>* C = new tensor<__value_type,__memory_space_type, row_major>(extents[A.shape()[0]][B.shape()[1]]);
+                   prod(*C, A, B, factAB, 0.f);
+                   std::auto_ptr<tensor<__value_type,__memory_space_type, row_major> > C_ptr(C);
+                   return C_ptr;
 }
   /// @see prod
 // convenience: use transposed view instead of "t" and "n"
