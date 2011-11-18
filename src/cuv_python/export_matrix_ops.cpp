@@ -88,8 +88,20 @@ namespace python_wrapping {
         tensor<__value_type, __memory_space_type>*
         reduce_to_row(const tensor<__value_type2, __memory_space_type, __memory_layout_type>& src,
                 reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f){
-            tensor<__value_type, __memory_space_type>*  dst = new tensor<__value_type, __memory_space_type>(src.shape()[0]);
+            tensor<__value_type, __memory_space_type>*  dst = new tensor<__value_type, __memory_space_type>(src.shape()[1]);
             reduce_to_row(*dst, src, rf, factNew, factOld);
+            return dst;
+
+        }
+    /** 
+     * @brief Reduce a matrix to one column using specified reduce functor (or add them up by default). Return a new array.
+     */
+    template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
+        tensor<__value_type, __memory_space_type>*
+        reduce_to_col(const tensor<__value_type2, __memory_space_type, __memory_layout_type>& src,
+                reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f){
+            tensor<__value_type, __memory_space_type>*  dst = new tensor<__value_type, __memory_space_type>(src.shape()[0]);
+            reduce_to_col(*dst, src, rf, factNew, factOld);
             return dst;
 
         }
@@ -262,6 +274,10 @@ void export_reductions(){
             (arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f),
             return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 
+    def("reduce_to_col",(Vect* (*) (const M&, reduce_functor, const value_type &, const value_type &))
+            python_wrapping::reduce_to_col<value_type, value_type, memory_space_type, memory_layout_type>,
+            (arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f),
+            return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 }
 
 template <class M>
