@@ -30,6 +30,12 @@ def exp(x, dst=None):
 def empty_like(x):
     return x.__class__(x.shape)
 
+def zeros_like(x):
+    dst = x.__class__(x.shape)
+    fill(dst, 0)
+    return dst
+
+
 def tanh(x, dst=None):
     if dst==None:
         dst = empty_like(x)
