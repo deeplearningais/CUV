@@ -8,7 +8,7 @@ from nose.tools import *
 
 import unittest
 def setUpModule():
-    cp.initCUDA(0)
+    cp.initCUDA(-1)
 def tearDownModule():
     cp.exitCUDA()
 
