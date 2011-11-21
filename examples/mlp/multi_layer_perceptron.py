@@ -53,13 +53,13 @@ class MLP:
            is to be trained.
 
         """
-        number_of_pictures = input_matrix.shape[-1]
+        n_samples = input_matrix.shape[-1]
         squared_errors = cp.dev_tensor_float_cm(self.neuron_layers[-1].deltas.shape)
         for r in xrange(n_epochs):
             print "Epoch ", r + 1, "/", n_epochs
             mse = 0.0
             ce = 0.0
-            for batch in xrange(number_of_pictures / self.batch_size):
+            for batch in xrange(n_samples / self.batch_size):
                 index_begin = self.batch_size * batch
                 index_end = self.batch_size + index_begin
 
@@ -85,27 +85,25 @@ class MLP:
 
                 # Backward-Pass
                 for i in xrange(self.n_layers):
-                    self.weight_layers[self.n_layers - i - 1].backward(learnrate, decay = .01)
+                    self.weight_layers[self.n_layers - i - 1].backward(learnrate, decay=.01)
 
                 # Don't wait for garbage collector
                 teacher_batch.dealloc()
                 self.neuron_layers[0].activations.dealloc()
 
-            print "MSE: ",     (mse / number_of_pictures)
-            print "Classification Error Training: ", (ce / number_of_pictures)
+            print "MSE: ",     (mse / n_samples)
+            print "Classification Error Training: ", (ce / n_samples)
         squared_errors.dealloc()
 
     def predict(self, input_matrix):
         """
         Predict label on unseen data
 
-        @param input_matrix -- matrix consisting of input
-           data to the network.
-
+        @param input_matrix -- matrix consisting of input data to the network.
         """
-        number_of_pictures = input_matrix.shape[-1]
+        n_samples = input_matrix.shape[-1]
         predictions = []
-        for batch in xrange(number_of_pictures / self.batch_size):
+        for batch in xrange(n_samples / self.batch_size):
             index_begin = self.batch_size * batch
             index_end = index_begin + self.batch_size
             self.neuron_layers[0].activations = cp.dev_tensor_float_cm(input_matrix[:,
