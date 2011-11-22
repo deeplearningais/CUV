@@ -35,13 +35,17 @@ def zeros_like(x):
     fill(dst, 0)
     return dst
 
-
 def tanh(x, dst=None):
     if dst==None:
         dst = empty_like(x)
     apply_scalar_functor(dst, x, scalar_functor.TANH)
     return dst
 
+def cos(x, dst=None):
+    if dst==None:
+        dst = empty_like(x)
+    apply_scalar_functor(dst, x, scalar_functor.COS)
+    return dst
 
 def _matstr(x,typestr):
     return "%s: %s [%2.1f Mb]"%(typestr,",".join([str(s) for s in x.shape]),x.memsize/1024./1024.)
