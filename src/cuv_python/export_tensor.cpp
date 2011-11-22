@@ -289,7 +289,7 @@ export_tensor_common(const char* name){
                 .def("copy",    &python_wrapping::copy<T>, "get copy of object",return_value_policy<manage_new_object>())
                 .def("reshape_inplace", &python_wrapping::reshape<T>, "reshape tensor in place")
                 .def("reshape",    &python_wrapping::reshaped_view<T>, "return view to reshaped tensor",
-                        return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >())
+                        return_internal_reference<>())
                 .add_property("np", &python_wrapping::tens2npy<value_type,memspace_type,memlayout_type>::to_numpy_copy)
                 .add_property("size", &arr::size)
                 .add_property("shape", &python_wrapping::shape<T>, "get shape of tensor")
