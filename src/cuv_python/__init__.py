@@ -72,6 +72,9 @@ def __tensor_setitem(x,key,val):
         return x.set([key],val)
     x.set([x for x in key],val)
 
+def __getinitargs__(x):
+    return (x.np,)
+
 def __matrix_getitem__(x,key):
     if isinstance(key,int):
         return x.at(key)
@@ -150,3 +153,5 @@ for memory_space in ["dev","host"]:
             dense_type.__setitem__= __tensor_setitem
             dense_type.__str__=lambda x:(_matstr(x,memory_space+"_tensor_"+value_type))
             dense_type.__pow__ = pow
+            dense_type.__deepcopy__ = lambda x,*args: x.copy()
+            dense_type.__getinitargs__ = __getinitargs__

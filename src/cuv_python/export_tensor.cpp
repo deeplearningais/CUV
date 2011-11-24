@@ -277,6 +277,7 @@ export_tensor_common(const char* name){
 
 	class_<arr> c(name);
 	c
+        .enable_pickling()
 		.def("__init__", make_constructor((arr*(*)(boost::python::list)) python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_shape))
 		.def("__init__", make_constructor((arr*(*)(boost::python::tuple)) python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_shape))
 		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_int))
