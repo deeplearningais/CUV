@@ -14,7 +14,6 @@
 #include <cstring>
 #include <cuda.h>
 #include <cuda_runtime.h>
-//#include <cutil_inline.h>
 #include <vector>
 #include "cuv_general.hpp"
 
@@ -31,7 +30,7 @@ namespace cuv{
          * This function is highly discouraged and deprecated. It tries to fill the memory.
          * It should be replace by a call to the cuda API.
          */
-	int getFreeDeviceMemory(int dev_idx=0);
+	int getFreeDeviceMemory();
 
         /** 
          * @brief Get device memory
@@ -40,7 +39,7 @@ namespace cuv{
          * 
          * @return Memory of GPU in bytes.
          */
-	int getMaxDeviceMemory(int dev_idx=0);
+	int getMaxDeviceMemory();
 
         /** 
          * @brief Returns number of CUDA devices
