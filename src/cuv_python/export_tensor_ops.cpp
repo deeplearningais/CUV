@@ -59,6 +59,7 @@ void export_scalar_functors() {
         .value("COPY", SF_COPY)
         .value("EXP", SF_EXP)
         .value("LOG", SF_LOG)
+        .value("COS", SF_COS)
         .value("SIGN", SF_SIGN)
         .value("SIGM", SF_SIGM)
         //.value("EXACT_SIGM", SF_EXACT_SIGM)
@@ -66,6 +67,7 @@ void export_scalar_functors() {
         .value("TANH", SF_TANH)
         .value("DTANH", SF_DTANH)
         .value("SQUARE", SF_SQUARE)
+        .value("POW", SF_POW)
         .value("SUBLIN", SF_SUBLIN)
         .value("ENERG", SF_ENERG)
         .value("INV", SF_INV)
@@ -83,6 +85,11 @@ void export_scalar_functors() {
         .value("DIV", SF_DIV)
         .value("MIN", SF_MIN)
         .value("MAX", SF_MAX)
+        .value("EQ", SF_EQ)
+        .value("GT", SF_GT)
+        .value("LT", SF_LT)
+        .value("GEQ", SF_GEQ)
+        .value("LEQ", SF_LEQ)
         ;
 
 }

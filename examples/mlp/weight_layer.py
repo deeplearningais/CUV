@@ -7,10 +7,10 @@ class weight_layer:
     def __init__(self, source_layer, target_layer):
         """Constructor
 
-        @param source_layer pointer to the previous neuron layer.
-        @param target_layer pointer to the next neuron layer.
-
+        @param source_layer reference to previous neuron layer.
+        @param target_layer reference to next neuron layer.
         """
+
         self.source = source_layer
         self.target = target_layer
         dim1 = self.target.activations.shape[0]
@@ -29,14 +29,13 @@ class weight_layer:
         cp.matrix_plus_col(self.target.activations, self.bias)
         self.target.nonlinearity(self.target.activations)
 
-    def backward(self, learnrate=0.01, decay=0.0, l1decay=0.0):
-        """Backward pass, calculates the deltas of lower layer
-           and updates the weights.
+    def backward(self, learnrate=0.01, decay=0.0):
+        """Backward pass, calculates the deltas of lower layer and updates the
+        weights.
            @param learnrate  how strongly the gradient influences the weights
            @param decay      large values result in a regularization with
                              to the squared weight value"""
-        cp.prod(self.source.deltas, self.weight, self.target.deltas,
-            't',  'n')
+        cp.prod(self.source.deltas, self.weight, self.target.deltas, 't',  'n')
         h = self.source.activations.copy()
         self.source.d_nonlinearity(h)
         self.source.deltas *= h
@@ -44,11 +43,9 @@ class weight_layer:
 
         batch_size = self.source.activations.shape[1]
         dw = cp.prod(self.target.deltas, self.source.activations, 'n', 't')
-        cp.learn_step_weight_decay(self.weight, dw,
-                learnrate / batch_size, decay, l1decay)
+        cp.learn_step_weight_decay(self.weight, dw, learnrate / batch_size, decay)
         dw.dealloc()
 
         db = cp.sum(self.target.deltas, 1)
-        cp.learn_step_weight_decay(self.bias, db,
-                        learnrate / batch_size, decay)
+        cp.learn_step_weight_decay(self.bias, db, learnrate / batch_size, decay)
         db.dealloc()

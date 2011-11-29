@@ -45,8 +45,8 @@ using namespace cuv;
 namespace ublas = boost::numeric::ublas;
 
 void export_tools(){
-	def("getFreeMem",(int (*)(int))getFreeDeviceMemory,(arg("dev_idx")=0));
-	def("getMaxMem",(int (*)(int))getMaxDeviceMemory,(arg("dev_idx")=0));
-	def("countDevices",countDevices);
-	def("getCurrentDevice",getCurrentDevice);
+	def("get_free_mem",(int (*)())getFreeDeviceMemory);
+	def("get_max_mem",(int (*)())getMaxDeviceMemory);
+	def("count_devices",countDevices);
+	def("get_current_device",getCurrentDevice);
 }
