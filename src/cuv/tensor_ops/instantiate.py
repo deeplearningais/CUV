@@ -75,6 +75,10 @@ def instantiate_memtype(memtype):
 	for s in apply_binary_functor(zip(tensor_types,tensor_types,tensor_types,[x.value_type() for x in tensor_types])):
 		yield s
 
+	# boolean predicates
+	for s in apply_binary_functor(zip([vec_t("unsigned char", memtype) for v in tensor_types],tensor_types,tensor_types,[x.value_type() for x in tensor_types])):
+		yield s
+
 	yield False
 
 	# reductions
