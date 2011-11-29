@@ -398,6 +398,7 @@ namespace cuv{
 	 *
 	 *  Without scalar parameters:
 	 *
+	 * 	@li BF_EQ  computes  x == y
 	 * 	@li BF_AND computes  x && y
 	 * 	@li BF_OR  computes  x || y
 	 * 	@li BF_ADD computes  x += y
@@ -921,6 +922,13 @@ namespace cuv{
     operator==(const cuv::tensor<T, V, M>& v, const T cmp){
         cuv::tensor<unsigned char, V, M> temp(v.shape());
   	cuv::apply_scalar_functor(temp, v, cuv::SF_EQ, cmp);
+  	return temp;
+  }
+  template<class T, class V, class M>
+    cuv::tensor<unsigned char, V, M>
+    operator==(const cuv::tensor<T, V, M>& v, const cuv::tensor<T,V,M>& w){
+        cuv::tensor<T, V, M> temp(v.shape());
+  	cuv::apply_binary_functor(temp, v, w, cuv::BF_EQ);
   	return temp;
   }
   template<class T, class V, class M>
