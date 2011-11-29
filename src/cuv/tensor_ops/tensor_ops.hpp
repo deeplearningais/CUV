@@ -422,6 +422,7 @@ namespace cuv{
 	 */
   enum BinaryFunctor{
 	  // w/o params
+	  BF_EQ,
 	  BF_AND,
 	  BF_OR,
 	  BF_POW,
@@ -929,7 +930,7 @@ namespace cuv{
   template<class T, class V, class M>
     cuv::tensor<unsigned char, V, M>
     operator==(const cuv::tensor<T, V, M>& v, const cuv::tensor<T,V,M>& w){
-        cuv::tensor<T, V, M> temp(v.shape());
+        cuv::tensor<unsigned char, V, M> temp(v.shape());
   	cuv::apply_binary_functor(temp, v, w, cuv::BF_EQ);
   	return temp;
   }
