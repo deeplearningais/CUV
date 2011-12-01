@@ -38,14 +38,14 @@ namespace impl{
         const index_type n_variables = dst.shape( vardim);
 
         cuv::tensor<V,M> red(cuv::extents[n_variables]);
-        if(vardim==1) cuv::reduce_to_row(red, src, RF_LOGADDEXP);
-        else          cuv::reduce_to_col(red, src, RF_LOGADDEXP);
+        if(vardim==1) cuv::reduce_to_row(red, src, RF_LOGADDEXP, -1.f);
+        else          cuv::reduce_to_col(red, src, RF_LOGADDEXP, -1.f);
 
         if(dst.ptr() != src.ptr()){
             dst = src;
         }
-        if(vardim==1) cuv::matrix_plus_row(dst,-red);
-        else          cuv::matrix_plus_col(dst,-red);
+        if(vardim==1) cuv::matrix_plus_row(dst,red);
+        else          cuv::matrix_plus_col(dst,red);
         cuv::apply_scalar_functor(dst,SF_EXP);
     }
 }
