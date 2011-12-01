@@ -38,8 +38,10 @@
 
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/random/random.hpp>
+#include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/tensor_ops/rprop.hpp>
+#include <cuv/libs/opt/opt.hpp>
 
 using namespace cuv;
 
@@ -158,6 +160,74 @@ void rprop_optimization(int N){
 	}
 }
 
+template<class M,class L>
+void softmax_derivative(int n_var, int n_val){
+    const float eps = 0.001f;
+
+    tensor<float,M,L> X(extents[n_val][n_var]); fill_rnd_uniform(X); // inputs
+    tensor<float,M,L> Y(extents[n_val][n_var]); Y = 0.f; // softmax result
+    tensor<float,M,L> D(extents[n_val][n_var]); D = 0.f; // delta
+    tensor<float,M,L> R(extents[n_val][n_var]); fill_rnd_uniform(R); // residual
+    X+=0.1f;
+    R+=0.3f;
+
+    cuv::libs::opt::softmax(Y,X,1);
+    cuv::libs::opt::softmax_derivative(D,Y,R,1);
+    tensor<float,M,L> Jtilde(extents[n_var*n_val][n_var*n_val]);
+    for(int i=0;i<n_val*n_var;i++){
+            tensor<float,M,L> X_ = X;
+            tensor<float,M,L> Y_minus(X.shape());
+            tensor<float,M,L> Y_plus (X.shape());
+            X_[i] += eps;
+            cuv::libs::opt::softmax(Y_plus,X_,1);
+            X_[i] -= 2*eps;
+            cuv::libs::opt::softmax(Y_minus,X_,1);
+            tensor<float,M,L> finite_diff(indices[index_range(i,i+1)][index_range()], Jtilde);
+            finite_diff = (Y_plus-Y_minus)/(2*eps);
+    }
+    tensor<float,M,L> D2(D.shape());
+    R .reshape(extents[R.size()][1]);
+    D .reshape(extents[D.size()][1]);
+    D2.reshape(extents[D.size()][1]);
+
+    cuv::prod(D2,Jtilde,R,'t','n');
+    for(int i=0;i<D2.size();i++){
+            BOOST_CHECK_CLOSE((float)D[i], (float)D2[i], 5.0f); // usually below 1.5%, but 5% stop this from failing occasionally
+    }
+
+}
+
+double logaddexp(double x,double y){
+    double m = std::max(x,y) ;
+
+}
+template<class M,class L>
+void softmax(int n_var, int n_val){
+    const float eps = 0.001;
+
+    tensor<float,M,L> X(extents[n_val][n_var]); fill_rnd_uniform(X); X*=10.f;// inputs
+    tensor<float,M,L> Y(extents[n_val][n_var]);          // softmax result
+
+    cuv::libs::opt::softmax(Y,X, true);
+
+    for(int i=0;i<n_var;i++){
+        double normalizer = 0.f;
+        double m=-1E9;
+        for(int j=0;j<n_val;j++)
+            m = std::max(m, (double)X(j,i));
+        for(int j=0;j<n_val;j++)
+            normalizer = normalizer + exp(X(j,i)-m);
+        normalizer = m + log(normalizer);
+
+        double sum=0.0;
+        for(int j=0;j<n_val;j++){
+            sum += Y(j,i);
+            BOOST_CHECK_CLOSE(exp(X(j,i)-normalizer),  (double)(float)Y(j,i), 0.01);
+        }
+        BOOST_CHECK_CLOSE(sum, 1.0 , 0.01);
+    }
+}
+
 
 struct Fix{
 	static const int N = 8092;
@@ -172,33 +242,44 @@ struct Fix{
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
-BOOST_AUTO_TEST_CASE( test_rprop_optimization_host )
-{
-	rprop_optimization<host_memory_space>(N);
-}
+/*
+ *BOOST_AUTO_TEST_CASE( test_rprop_optimization_host )
+ *{
+ *    rprop_optimization<host_memory_space>(N);
+ *}
+ *
+ *BOOST_AUTO_TEST_CASE( test_rprop_optimization_dev )
+ *{
+ *    rprop_optimization<dev_memory_space>(N);
+ *}
+ *
+ *BOOST_AUTO_TEST_CASE( test_lswd_optimization_host )
+ *{
+ *    lswd_optimization<host_memory_space>(N);
+ *}
+ *
+ *BOOST_AUTO_TEST_CASE( test_lswd_optimization_dev )
+ *{
+ *    lswd_optimization<dev_memory_space>(N);
+ *}
+ *
+ *BOOST_AUTO_TEST_CASE( test_rprop_optimization_l1_host )
+ *{
+ *    rprop_optimization_decay_l1<host_memory_space>(N);
+ *}
+ *BOOST_AUTO_TEST_CASE( test_rprop_optimization_l1_dev )
+ *{
+ *    rprop_optimization_decay_l1<dev_memory_space>(N);
+ *}
+ */
 
-BOOST_AUTO_TEST_CASE( test_rprop_optimization_dev )
+BOOST_AUTO_TEST_CASE( test_softmax )
 {
-	rprop_optimization<dev_memory_space>(N);
+    softmax<host_memory_space,row_major>(16,10);
 }
-
-BOOST_AUTO_TEST_CASE( test_lswd_optimization_host )
+BOOST_AUTO_TEST_CASE( test_softmax_derivative )
 {
-	lswd_optimization<host_memory_space>(N);
-}
-
-BOOST_AUTO_TEST_CASE( test_lswd_optimization_dev )
-{
-	lswd_optimization<dev_memory_space>(N);
-}
-
-BOOST_AUTO_TEST_CASE( test_rprop_optimization_l1_host )
-{
-	rprop_optimization_decay_l1<host_memory_space>(N);
-}
-BOOST_AUTO_TEST_CASE( test_rprop_optimization_l1_dev )
-{
-	rprop_optimization_decay_l1<dev_memory_space>(N);
+    softmax_derivative<host_memory_space,row_major>(16,4);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -31,7 +31,7 @@ ADD_EXECUTABLE( test_tensor_op_speed tensor_op_speed.cpp )
 TARGET_LINK_LIBRARIES( test_tensor_op_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random )
 
 ADD_EXECUTABLE( test_optimize optimize.cpp )
-TARGET_LINK_LIBRARIES( test_optimize cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random )
+TARGET_LINK_LIBRARIES( test_optimize cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random cuv_opt)
 
 ADD_EXECUTABLE( test_mat_op matrix_op.cpp )
 #TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
