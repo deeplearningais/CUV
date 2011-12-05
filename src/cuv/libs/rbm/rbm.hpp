@@ -13,6 +13,7 @@ namespace rbm{
 	 * @{
 	 * @addtogroup rbm
 	 * @{
+	 */
 
 	/** 
 	 * @namespace cuv::libs::rbm
