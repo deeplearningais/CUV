@@ -88,6 +88,17 @@ struct allocator<value_type,index_type,dev_memory_space>{
 
 template<class V,class I>
 void
+allocator<V,I,host_memory_space>::alloc(V** ptr, I size)const{
+	cuvSafeCall(cudaHostAlloc(ptr,size*sizeof(V),cudaHostAllocDefault));
+}
+template<class V,class I>
+void
+allocator<V,I,host_memory_space>::dealloc(V** ptr)const{
+	cuvSafeCall(cudaFreeHost(*ptr));
+	*ptr = 0;
+}
+template<class V,class I>
+void
 allocator<V,I,host_memory_space>::alloc2d(V** ptr, I& pitch, I height, I width)const{
 	pitch = width*sizeof(V);
 	*ptr  = new V[height*width];

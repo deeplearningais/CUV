@@ -102,9 +102,7 @@ namespace cuv
 			 * 
 			 * This is the instance of the alloc function that is called by host vectors.
 			 */
-			void alloc( value_type** ptr, index_type size) const{
-				*ptr = new value_type[size];
-			}
+			void alloc( value_type** ptr, index_type size) const;
 			/**
 			 * @brief Allocate 2D memory
 			 *
@@ -121,10 +119,7 @@ namespace cuv
 			 * 
 			 * This is the instance of the dealloc function that is called by host vectors.
 			 */
-			void dealloc( value_type** ptr)const {
-				delete[] *ptr;
-				*ptr = 0;
-			}
+			void dealloc( value_type** ptr)const ;
 			/** 
 			 * @brief Allocate memory for host matrices - const allocator should never be called!
 			 * 
