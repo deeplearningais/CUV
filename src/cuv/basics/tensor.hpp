@@ -320,10 +320,10 @@ namespace cuv
 			 * tensor<float,host_memory_space> v(extents[5][10]);
 			 *
 			 * // these are equivalent:
-			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range(0,10)]);
-			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range()]);
-			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range() < index(10)]);
-			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index(0) < index_range() < index(10)]);
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range(0,10)], v);
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range()], v);
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range() < index(10)], v);
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index(0) < index_range() < index(10)], v);
 			 *
 			 * // yields a 1D-tensor corresponding to the 2nd slice in the 1st dimension:
 			 * tensor<float,host_memory_space> w0(indices[1][index_range()]);
@@ -895,6 +895,59 @@ namespace cuv
 			 * change pitch (dangerous!) primarily here for serialization
 			 */
 			void set_pitch(index_type i){ m_pitch=i; }
+
+			/**
+			 * set tensor to a view of another (sub) tensor
+			 *
+			 * @warning you must ensure that o lives longer than this view!
+			 *
+			 * @warning if a dimension has size 1, the resulting tensor has fewer dimensions than the original one.
+			 *
+			 * @warning currently only works if the subtensor is a connected area in memory, NO strides are supported.
+			 *          Basically this means that you can only slice in the first dimension which has size>1.
+			 *
+			 * @param eg  the indices of the subtensor
+			 * @param o   the original tensor
+			 *
+			 * Example:
+			 * @code
+			 * tensor<float,host_memory_space> v(extents[5][10]);
+			 *
+			 * // these are equivalent:
+			 * tensor<float,host_memory_space> w0; w0.set_view(indices[index_range(2,3)][index_range(0,10)], v);
+			 * tensor<float,host_memory_space> w0; w0.set_view(indices[index_range(2,3)][index_range()], v);
+			 * tensor<float,host_memory_space> w0; w0.set_view(indices[index_range(2,3)][index_range() < index(10)], v);
+			 * tensor<float,host_memory_space> w0; w0.set_view(indices[index_range(2,3)][index(0) < index_range() < index(10)], v);
+			 *
+			 * // yields a 1D-tensor corresponding to the 2nd slice in the 1st dimension:
+			 * tensor<float,host_memory_space> w0(indices[1][index_range()]);
+			 * @endcode
+			 */
+			template<int D, int E, class P, class OM, class OL, class OA>
+			void
+			set_view(const index_gen<D,E>& eg, const const_tensor<__value_type,OM,OL,P,OA>& o){
+				m_data.dealloc();
+				m_shape.clear();
+				m_shape.reserve(D);
+				cuvAssert(o.ndim()==D);
+				for(std::size_t i=0;i<D;i++){
+					int start  = eg.ranges_[i].get_start(0);
+					int finish = eg.ranges_[i].get_finish(o.shape(i));
+#ifndef NDEBUG
+					cuvAssert(finish<=o.shape()[i]);
+					cuvAssert(start >=0);
+#endif
+					if(finish-start<=1)
+						continue;
+					m_shape.push_back(finish-start);
+				}
+
+				index_type offset = o.index_of(eg);
+
+				if(! IsSame<OL,__memory_layout_type>::Result::value)
+					std::reverse(m_shape.begin(),m_shape.end());
+				m_data.set_view(m_pitch,offset,m_shape,o.data(),this->inner_is_last());
+			}
 	};
 
       // forward declaration of fill to implement operator= for value_type	
