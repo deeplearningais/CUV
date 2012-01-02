@@ -305,6 +305,7 @@ namespace detail{
 		else if(numparams==1){
 			switch(sf){
 				case SF_POW:       launch_unary_kernel(dst,src,make_bind2nd(bf_pow<V1,V2,S1>(),p),mask); break;
+				case SF_DPOW:      launch_unary_kernel(dst,src,make_bind2nd(bf_dpow<V1,V2,S1>(),p),mask); break;
 				case SF_SIGM:      launch_unary_kernel(dst,src,make_bind2nd(bf_sigm_temp<V1,V2>(),p),mask); break;
 				case SF_ADD:       launch_unary_kernel(dst,src,make_bind2nd(thrust::plus<V1>(),p),mask); break;
 				case SF_MULT:      launch_unary_kernel(dst,src,make_bind2nd(thrust::multiplies<V1>(),p),mask); break;
@@ -397,6 +398,7 @@ namespace detail{
 				case BF_MIN:      launch_binary_kernel(v,w,bf_min<V1,V2,V3>()); break;
 				case BF_MAX:      launch_binary_kernel(v,w,bf_max<V1,V2,V3>()); break;
 				case BF_POW:      launch_binary_kernel(v,w,bf_pow<V1,V2,V3>()); break;
+				case BF_DPOW:     launch_binary_kernel(v,w,bf_dpow<V1,V2,V3>()); break;
 				case BF_ATAN2:    launch_binary_kernel(v,w,bf_atan2<V1,V2,V3>()); break;
 				case BF_NORM:    launch_binary_kernel(v,w,bf_norm<V1,V2,V3>()); break;
 				default: cuvAssert(false);

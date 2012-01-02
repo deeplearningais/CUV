@@ -155,6 +155,7 @@ namespace cuv{
 	 *
 	 * With one scalar parameter a:
 	 *  @li SF_POW computes pow(x,a)
+	 *  @li SF_DPOW computes 1/a * pow(x,a-1)
 	 *  @li SF_ADD computes x + a
 	 *  @li SF_SUBTRACT computes x - a
 	 *  @li SF_RSUB computes a - x

@@ -194,6 +194,10 @@ struct bf_drect:binary_functor<R,T,A>{  inline __device__  __host__      R opera
 template<class R, class T, class A>
 struct bf_pow:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& x, const A& y)      const{ return pow((float)x,(float)y); } };
 
+/// calculates 1/y * x^(y-1)
+template<class R, class T, class A>
+struct bf_dpow:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& x, const A& y)      const{ return 1.f/(float)y * pow((float)x,(float)y-1.f); } };
+
 /// calculates atan2(y,x)
 template<class R, class T, class A>
 struct bf_atan2:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& y, const A& x)      const{ return atan2((float)y,(float)x); } };
