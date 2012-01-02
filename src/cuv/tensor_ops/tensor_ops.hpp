@@ -143,7 +143,6 @@ namespace cuv{
 	 *  @li SF_SIGN computes sign(x)
 	 *  @li SF_SIGM computes 1/(1+exp(-x))
 	 *  @li SF_DSIGM computes x * (1-x)
-	 *  @li SF_TANH computes tanh(x)
 	 *  @li SF_COS computes cos(x)
 	 *  @li SF_SQUARE computes x*x
 	 *  @li SF_SUBLIN computes 1-x
@@ -170,9 +169,10 @@ namespace cuv{
 	 *  @li SF_LEQ computes x <= a
 	 *  @li SF_GEQ computes x >= a
 	 *
-	 * With two scalar parameters a and b:
+	 * With zero OR two scalar parameters a and b:
 	 *
-	 *  @li SF_DTANH computes a/b * (a+x) + (a-x) 
+	 *  @li SF_DTANH computes a/b * (a+x) + (a-x), if no params given: a=b=1
+	 *  @li SF_TANH computes b*tanh(a*x), if no params given: a=b=1
 	 */
 	 
 	enum ScalarFunctor{
@@ -185,8 +185,6 @@ namespace cuv{
 		SF_SIGM,
 		//SF_EXACT_SIGM,
 		SF_DSIGM,
-		SF_TANH,
-		SF_DTANH,
 		SF_SQUARE,
 		SF_SUBLIN,
 		SF_ENERG,
@@ -215,7 +213,11 @@ namespace cuv{
 		SF_LT,
 		SF_GT,
 		SF_LEQ,
-		SF_GEQ
+		SF_GEQ,
+
+		// with two params
+		SF_TANH,
+		SF_DTANH
 	};
   namespace detail{
 	  /**
