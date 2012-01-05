@@ -202,6 +202,7 @@ namespace cuv{
 
 		// with param
 		SF_POW,
+		SF_DPOW,
 		SF_ADD,
 		SF_SUBTRACT,
 		SF_RSUB,
