@@ -190,9 +190,13 @@ struct bf_rect:binary_functor<R,T,A>{  inline __device__  __host__       R opera
 template<class R, class T, class A>
 struct bf_drect:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& x, const A& a)      const{ return 1-1/(x*expf(a)); } };
 
-/// calculates pow(y,x)
+/// calculates pow(x,y)
 template<class R, class T, class A>
-struct bf_pow:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& y, const A& x)      const{ return pow((float)y,(float)x); } };
+struct bf_pow:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& x, const A& y)      const{ return pow((float)x,(float)y); } };
+
+/// calculates 1/y * x^(y-1)
+template<class R, class T, class A>
+struct bf_dpow:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& x, const A& y)      const{ return 1.f/(float)y * pow((float)x,(float)y-1.f); } };
 
 /// calculates atan2(y,x)
 template<class R, class T, class A>
