@@ -196,7 +196,7 @@ struct bf_pow:binary_functor<R,T,A>{  inline __device__  __host__      R operato
 
 /// calculates 1/y * x^(y-1)
 template<class R, class T, class A>
-struct bf_dpow:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& x, const A& y)      const{ return 1.f/(float)y * pow((float)x,(float)y-1.f); } };
+struct bf_dpow:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& x, const A& y)      const{ return ((float)y) * pow((float)x,(float)y-1.f); } };
 
 /// calculates atan2(y,x)
 template<class R, class T, class A>
