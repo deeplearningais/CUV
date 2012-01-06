@@ -880,6 +880,37 @@ namespace cuv
                                 cuvAssert(new_size == size() );
                                 m_shape = new_shape;
                         }
+            /**
+             * change the shape of this tensor (realloc if needed)
+             */
+            template<std::size_t D>
+                void resize(const extent_gen<D>& eg){
+                    std::size_t new_size=1;	
+                    for(int i=0; i<D; i++)
+                        new_size *= eg.ranges_[i].finish();
+                    if(size()==new_size){
+                        reshape(eg);
+                        return;
+                    }
+                    m_shape.clear();
+                    m_shape.reserve(D);
+                    for(std::size_t i=0;i<D;i++)
+                        m_shape.push_back(eg.ranges_[i].finish());
+                    this->allocate();
+                }
+            /**
+             * @overload
+             * change the shape of this tensor (realloc if needed)
+             */
+            void resize(const std::vector<index_type>& new_shape){
+                index_type new_size =  std::accumulate(new_shape.begin(),new_shape.end(),(index_type)1,std::multiplies<index_type>());
+                if(size()==new_size){
+                    reshape(new_shape);
+                    return;
+                }
+                m_shape = new_shape;
+                this->allocate();
+            }
 
 			/**
 			 * return reference to underlying memory object
