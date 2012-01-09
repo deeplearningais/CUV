@@ -253,6 +253,19 @@ BOOST_AUTO_TEST_CASE( vec_ops_norms )
 	BOOST_CHECK_CLOSE(f2,f2_,0.1f);
 }
 
+BOOST_AUTO_TEST_CASE( vec_ops_diffnorm )
+{
+	sequence(v);
+	sequence(w);
+    w*=2.f;
+	float f = diff_norm2(v,w); float g = 0;
+	for(int i=0;i<N;i++){
+		g += pow(v[i]-w[i],2.f);
+	}
+	g = sqrt(g);
+	BOOST_CHECK_CLOSE(f,g,0.1f);
+}
+
 BOOST_AUTO_TEST_CASE( vec_rprop )
 {
 	tensor<signed char,dev_memory_space> dW_old(N);

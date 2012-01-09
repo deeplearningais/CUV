@@ -470,6 +470,30 @@ norm2(const tensor<__value_type, __memory_space_type>& v){
 	float init=0;
 	return  std::sqrt( thrust::transform_reduce(v_ptr, v_ptr+v.size(), uf_square<float,__value_type>(), init, bf_plus<float,float,__value_type>()) );
 }
+struct squared_diff{
+    template<typename Tuple>
+    __host__ __device__
+    float operator()(Tuple t){
+        return pow(float(thrust::get<0>(t)-thrust::get<1>(t)),2.f);
+    }
+};
+template<class __value_type, class __memory_space_type>
+float
+diff_norm2(const tensor<__value_type, __memory_space_type>& v, const tensor<__value_type, __memory_space_type>& w){
+	typedef typename memspace_cuv2thrustptr<__value_type,__memory_space_type>::ptr_type ptr_type;
+	ptr_type v_ptr(const_cast<__value_type*>(v.ptr()));
+	ptr_type w_ptr(const_cast<__value_type*>(w.ptr()));
+	float init=0;
+	return  std::sqrt( thrust::transform_reduce(
+                thrust::make_zip_iterator(thrust::make_tuple(v_ptr,w_ptr)), 
+                thrust::make_zip_iterator(
+                    thrust::make_tuple(
+                        v_ptr+v.size(),
+                        w_ptr+w.size())), 
+                squared_diff(),
+                init,
+                bf_plus<float,float,float>() ));
+}
 template<class __value_type, class __memory_space_type>
 float
 norm1(const tensor<__value_type, __memory_space_type>& v){

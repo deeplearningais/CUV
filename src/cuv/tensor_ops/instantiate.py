@@ -34,6 +34,7 @@ template float sum<{0}::value_type,{0}::memory_space_type >(const {0}&);
 template unsigned int count<{0}::value_type,{0}::memory_space_type >(const {0}&, const {0}::value_type&);
 template float norm1<{0}::value_type,{0}::memory_space_type >(const {0}&);
 template float norm2<{0}::value_type,{0}::memory_space_type >(const {0}&);
+template float diff_norm2<{0}::value_type,{0}::memory_space_type >(const {0}&, const {0}&);
 template float mean<{0}::value_type,{0}::memory_space_type >(const {0}&);
 template float var<{0}::value_type,{0}::memory_space_type >(const {0}&);
 template typename {0}::index_type     arg_max<{0}::value_type,{0}::memory_space_type >(const {0}&);

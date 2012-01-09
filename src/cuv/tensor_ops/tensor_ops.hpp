@@ -690,6 +690,19 @@ namespace cuv{
 	return norm2(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
   }
   /** 
+   * @brief Return the two-norm or of the difference of two vectors
+   * 
+   * @param v src vector
+   * @param w src vector
+   * 
+   * @return Two-norm of (v-w)
+   */
+  template<class __value_type, class __memory_space_type> float diff_norm2(const tensor<__value_type, __memory_space_type>& v, const tensor<__value_type, __memory_space_type>& w);
+  /// @see norm2
+  template<class __value_type, class __memory_space_type> float diff_norm2(const tensor<__value_type, __memory_space_type, column_major>& v, const tensor<__value_type, __memory_space_type, column_major>& w){
+	return diff_norm2(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v), *reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&w));
+  }
+  /** 
    * @brief Return the one-norm or sum-norm of a vector 
    * 
    * @param v Target vector
