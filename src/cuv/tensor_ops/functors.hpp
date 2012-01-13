@@ -152,7 +152,6 @@ struct uf_is_inf<unsigned char>:unary_functor<bool,unsigned char>{  inline __dev
 template<class R, class T>
 struct uf_poslin:unary_functor<R,T>{  inline __device__  __host__     R operator()(const T& t)      const{ return (t > 0)*t; } };
 
-
 /// calculates the logistic function with a temperature, 1/(1+exp(-x/temp))
 template<class R, class T>
 struct bf_sigm_temp:binary_functor<R,T,T>{ inline __device__  __host__       R operator()(const T& t, const T& temp)           const{ return ((T)1)/(((T)1)+expf(-t / (T)(temp))); } };
@@ -446,6 +445,14 @@ struct bf_logaddexp : binary_functor<float,T, T> {
 			return t+u;
 	} 
 };
+
+/// computes the negative log of cross-entropy \f$-x\log(z)-(1-x)\log(1-z)\f$ of logistic \f$z=1/(1+\exp(-y))\f$
+template<class R, class T, class U>
+struct bf_logce_of_logistic:binary_functor<R,T,U>{ inline __device__  __host__       R operator()(const T& x, const T& y)           const{ 
+    bf_logaddexp<float> lae;
+    return  x*lae(0.f,-y)+(1.f-x)*lae(0.f,y);
+} };
+
 
 /// calculates arg-max of two values and their indices
 template<class V, class I>

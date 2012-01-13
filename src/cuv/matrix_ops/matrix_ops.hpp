@@ -174,12 +174,14 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
    * @brief Reduce functor to reduce a matrix to a row or column
    * 
    * 	- RF_ADD adds columns/rows
+   * 	- RF_MEAN adds columns/rows, divides by number of entries
    * 	- RF_ADD_SQUARED adds squared entries of columns/rows
    * 	- RF_MAX uses maximum in colum (when reducing to row) or row (when reducing to column)
    * 	- RF_MIN uses minimum in colum (when reducing to row) or row (when reducing to column)
    */
   enum reduce_functor{
 	  RF_ADD,
+	  RF_MEAN,
 	  RF_ADD_SQUARED,
 	  RF_MAX,
 	  RF_ARGMAX,

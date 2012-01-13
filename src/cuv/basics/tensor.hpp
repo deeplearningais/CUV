@@ -977,7 +977,7 @@ namespace cuv
 
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
 					std::reverse(m_shape.begin(),m_shape.end());
-				m_data.set_view(m_pitch,offset,m_shape,o.data(),this->inner_is_last());
+				m_data.set_view(m_pitch,offset,m_shape,o.data().ptr(),this->inner_is_last());
 			}
 	};
 

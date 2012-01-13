@@ -299,6 +299,10 @@ namespace reduce_impl {
 			case RF_ADD:
 			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_plus<vec_val,vec_val,mat_val>(),bf_plus<vec_val,vec_val,vec_val>()));
 			break;
+			case RF_MEAN:
+			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_plus<vec_val,vec_val,mat_val>(),bf_plus<vec_val,vec_val,vec_val>()));
+            v /= (vec_val)m.shape(dimension);
+			break;
 			case RF_ADD_SQUARED:
 			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_add_square<vec_val,vec_val,mat_val>(),bf_plus<vec_val,vec_val,vec_val>()));
 			break;

@@ -383,6 +383,7 @@ namespace detail{
 				case BF_MAX:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_max<V1,V2,V3>()); break;
 				case BF_ATAN2:    thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_atan2<V1,V2,V3>()); break;
 				case BF_NORM:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_norm<V1,V2,V3>()); break;
+				case BF_LOGCE_OF_LOGISTIC:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logce_of_logistic<V1,V2,V3>()); break;
 				default: cuvAssert(false);
 			}
 #else

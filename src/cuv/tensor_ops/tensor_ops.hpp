@@ -414,6 +414,7 @@ namespace cuv{
 	 * 	@li BF_DIV computes x /= y
 	 * 	@li BF_MIN computes x = min(x,y)
 	 * 	@li BF_MAX computes x = max(x,y)
+     * 	@li BF_LOGCE_OF_LOGISTIC computes the negative log of cross-entropy \f$x\log(y)+(1-z)\log(1-z)\f$ of logistic \f$z=1/(1+\exp(-y))\f$
 	 *
 	 *  With one scalar parameter a:
 	 *  @li BF_AXPY computes x = a * x + y
@@ -438,6 +439,7 @@ namespace cuv{
 	  BF_MAX,
 	  BF_ATAN2,
 	  BF_NORM,
+      BF_LOGCE_OF_LOGISTIC,
 
 	  // w/ param
 	  BF_AXPY,
