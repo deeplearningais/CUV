@@ -266,6 +266,43 @@ BOOST_AUTO_TEST_CASE( vec_ops_diffnorm )
 	BOOST_CHECK_CLOSE(f,g,0.1f);
 }
 
+BOOST_AUTO_TEST_CASE( vec_ops_cross_entropy )
+{
+    for(unsigned int i=0;i<N;i++)
+    {
+        v[i] = (float)drand48(); // must be a probability
+        w[i] = (float)drand48(); // can be anything in |R
+    }
+    v[0] =  0.f; // special case
+    w[0] = -6.f; // special case: large negative value
+    v[1] =  0.f; // special case
+    w[1] =  6.f; // special case: large positive value
+    tensor<float,dev_memory_space> res(v.shape());
+
+	apply_binary_functor(res,v,w,BF_LOGCE_OF_LOGISTIC);
+	for(int i=0;i<N;i++){
+        double vi = (float)v[i];
+        double wi = (float)w[i];
+        double  g = -vi*log(1.0/(1.0+exp(-wi))) - (1.0-vi)*log(1.0-1.0/(1.0+exp(-wi)));
+        BOOST_CHECK_GT((float)res[i],0.0f);
+        BOOST_CHECK_CLOSE((float)res[i],g,0.1f);
+	}
+
+	apply_scalar_functor(res,v,SF_LOGADDEXP,0.f);
+	for(int i=0;i<N;i++){
+        double vi = (float)v[i];
+        double  g = log(1.0 + exp(vi));
+        BOOST_CHECK_CLOSE((float)res[i],g,0.1f);
+	}
+
+	apply_scalar_functor(res,v,SF_LOG1P);
+	for(int i=0;i<N;i++){
+        double vi = (float)v[i];
+        double  g = log(1.0 + vi);
+        BOOST_CHECK_CLOSE((float)res[i],g,0.1f);
+	}
+}
+
 BOOST_AUTO_TEST_CASE( vec_rprop )
 {
 	tensor<signed char,dev_memory_space> dW_old(N);
