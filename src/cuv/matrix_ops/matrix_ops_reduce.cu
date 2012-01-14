@@ -300,6 +300,8 @@ namespace reduce_impl {
 			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_plus<vec_val,vec_val,mat_val>(),bf_plus<vec_val,vec_val,vec_val>()));
 			break;
 			case RF_MEAN:
+            cuvAssert(factNew==1.f && "RF_MEAN can currently only be used when factNew==1, factOld==0");
+            cuvAssert(factOld==0.f && "RF_MEAN can currently only be used when factNew==1, factOld==0");
 			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_plus<vec_val,vec_val,mat_val>(),bf_plus<vec_val,vec_val,vec_val>()));
             v /= (vec_val)m.shape(dimension);
 			break;
