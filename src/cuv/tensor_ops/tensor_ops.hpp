@@ -152,16 +152,18 @@ namespace cuv{
 	 *  @li SF_NEGATE computes -x
 	 *  @li SF_ABS computes absolute value of x
 	 *  @li SF_SMAX computes (1/x -1) * x
+	 *  @li SF_LOG1P computes \f$\log(1 + x)\f$
 	 *
 	 * With one scalar parameter a:
-	 *  @li SF_POW computes pow(x,a)
-	 *  @li SF_DPOW computes 1/a * pow(x,a-1)
+	 *  @li SF_POW computes \f$x^a\f$
+	 *  @li SF_DPOW computes \f$1/a * x^{a-1}\f$
 	 *  @li SF_ADD computes x + a
 	 *  @li SF_SUBTRACT computes x - a
 	 *  @li SF_RSUB computes a - x
 	 *  @li SF_MULT computes x * a
 	 *  @li SF_DIV computes x / a
 	 *  @li SF_RDIV computes a / x
+	 *  @li SF_LOGADDEXP computes \f$\log(\exp(a) + \exp(x))\f$
 	 *  @li SF_MIN computes min(x,a)
 	 *  @li SF_MAX computes max(x,a)
 	 *  @li SF_EQ computes x == a
@@ -199,6 +201,7 @@ namespace cuv{
 		SF_RECT,
 		SF_DRECT,
 		SF_COPY,
+        SF_LOG1P,
 
 		// with param
 		SF_POW,
@@ -209,6 +212,7 @@ namespace cuv{
 		SF_MULT,
 		SF_DIV,
 		SF_RDIV,
+        SF_LOGADDEXP,
 		SF_MIN,
 		SF_MAX,
 		SF_EQ,
@@ -414,7 +418,8 @@ namespace cuv{
 	 * 	@li BF_DIV computes x /= y
 	 * 	@li BF_MIN computes x = min(x,y)
 	 * 	@li BF_MAX computes x = max(x,y)
-     * 	@li BF_LOGCE_OF_LOGISTIC computes the negative log of cross-entropy \f$x\log(y)+(1-z)\log(1-z)\f$ of logistic \f$z=1/(1+\exp(-y))\f$
+	 * 	@li BF_LOGADDEXP computes x = log(exp(x)+exp(y))
+     * 	@li BF_LOGCE_OF_LOGISTIC computes the negative log of cross-entropy \f$-x\log(y)-(1-x)\log(1-z)\f$ of logistic \f$z=1/(1+\exp(-y))\f$
 	 *
 	 *  With one scalar parameter a:
 	 *  @li BF_AXPY computes x = a * x + y
@@ -439,6 +444,7 @@ namespace cuv{
 	  BF_MAX,
 	  BF_ATAN2,
 	  BF_NORM,
+      BF_LOGADDEXP,
       BF_LOGCE_OF_LOGISTIC,
 
 	  // w/ param

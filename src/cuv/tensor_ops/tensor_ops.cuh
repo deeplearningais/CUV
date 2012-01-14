@@ -313,6 +313,7 @@ namespace detail{
 				case SF_RDIV:      launch_unary_kernel(dst,src,make_bind1st(thrust::divides<V1>(),p),mask); break;
 				case SF_SUBTRACT:  launch_unary_kernel(dst,src,make_bind2nd(thrust::minus<V1>(),p),mask); break;
 				case SF_RSUB:      launch_unary_kernel(dst,src,make_bind1st(thrust::minus<V1>(),p),mask); break;
+				case SF_LOGADDEXP: launch_unary_kernel(dst,src,make_bind1st(bf_logaddexp<V1>(),p),mask); break;
 				case SF_MIN:       launch_unary_kernel(dst,src,make_bind2nd(bf_min<V1,V2,S1>(),p),mask); break;
 				case SF_MAX:       launch_unary_kernel(dst,src,make_bind2nd(bf_max<V1,V2,S1>(),p),mask); break;
 				case SF_RECT:      launch_unary_kernel(dst,src,make_bind2nd(bf_rect<V1,V2,S1>(),p),mask); break;
@@ -347,6 +348,7 @@ namespace detail{
 				case SF_ABS:        launch_unary_kernel(dst,src, uf_abs<V1,V2>(),mask); break;
 				case SF_POSLIN:     launch_unary_kernel(dst,src, uf_poslin<V1,V2>(),mask); break;
 				case SF_COPY:       thrust::copy(s_ptr, s_ptr+src.size(), d_ptr); break;
+				case SF_LOG1P:      launch_unary_kernel(dst,src, uf_log1p<V1,V2>(),mask); break;
 				default:
 						    cout << "No suitable no-parameter scalar functor was found." << endl;
 						    cuvAssert(false);
@@ -383,6 +385,7 @@ namespace detail{
 				case BF_MAX:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_max<V1,V2,V3>()); break;
 				case BF_ATAN2:    thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_atan2<V1,V2,V3>()); break;
 				case BF_NORM:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_norm<V1,V2,V3>()); break;
+				case BF_LOGADDEXP:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logaddexp<V1>()); break;
 				case BF_LOGCE_OF_LOGISTIC:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logce_of_logistic<V1,V2,V3>()); break;
 				default: cuvAssert(false);
 			}
@@ -402,6 +405,8 @@ namespace detail{
 				case BF_DPOW:     launch_binary_kernel(v,w,bf_dpow<V1,V2,V3>()); break;
 				case BF_ATAN2:    launch_binary_kernel(v,w,bf_atan2<V1,V2,V3>()); break;
 				case BF_NORM:    launch_binary_kernel(v,w,bf_norm<V1,V2,V3>()); break;
+				case BF_LOGADDEXP:          launch_binary_kernel(v,w,bf_logaddexp<V1>()); break;
+				case BF_LOGCE_OF_LOGISTIC:  launch_binary_kernel(v,w,bf_logce_of_logistic<V1,V2,V3>()); break;
 				default: cuvAssert(false);
 			}
 #endif
