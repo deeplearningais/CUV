@@ -5,7 +5,15 @@
 
 namespace cuv{
 namespace libs{
+	/// Restricted Boltzmann Machine (RBM)
 namespace rbm{
+
+	/**
+	 * @addtogroup libs
+	 * @{
+	 * @addtogroup rbm
+	 * @{
+	 */
 
 	/** 
 	 * @namespace cuv::libs::rbm
@@ -90,6 +98,10 @@ namespace rbm{
               void bitflip(
               tensor<__value_type,__memory_layout,__memory_space_type> & matrix,
                               typename tensor<__value_type,__memory_layout,__memory_space_type>::index_type row);
+      /**
+       * @}
+       * @}
+       */
 } } }
 
 

@@ -31,7 +31,7 @@ ADD_EXECUTABLE( test_tensor_op_speed tensor_op_speed.cpp )
 TARGET_LINK_LIBRARIES( test_tensor_op_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random )
 
 ADD_EXECUTABLE( test_optimize optimize.cpp )
-TARGET_LINK_LIBRARIES( test_optimize cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random )
+TARGET_LINK_LIBRARIES( test_optimize cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random cuv_opt)
 
 ADD_EXECUTABLE( test_mat_op matrix_op.cpp )
 #TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
@@ -73,6 +73,9 @@ TARGET_LINK_LIBRARIES( test_memory cuv_basics cuv_tools cuv_convert cuv_tensor_o
 ADD_EXECUTABLE( test_lib_rbm lib_rbm.cpp )
 TARGET_LINK_LIBRARIES( test_lib_rbm cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_rbm ${CUDA_CUBLAS_LIBRARIES} )
 
+ADD_EXECUTABLE( test_lib_kmeans lib_kmeans.cpp )
+#TARGET_LINK_LIBRARIES( test_lib_kmeans cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_kmeans ${CUDA_CUBLAS_LIBRARIES} )
+TARGET_LINK_LIBRARIES( test_lib_kmeans cuv ${CUDA_CUBLAS_LIBRARIES} )
 
 IF(CUV_CIMG_BINDINGS)
 	FIND_PACKAGE( PNG REQUIRED)
@@ -106,6 +109,7 @@ ADD_TEST( spmv "${CMAKE_BINARY_DIR}/src/tests/test_spmv" )
 ADD_TEST( densedense_to_dia "${CMAKE_BINARY_DIR}/src/tests/test_densedense_to_dia" )
 ADD_TEST( random "${CMAKE_BINARY_DIR}/src/tests/test_random" )
 ADD_TEST( lib_rbm "${CMAKE_BINARY_DIR}/src/tests/test_lib_rbm" )
+ADD_TEST( lib_kmeans "${CMAKE_BINARY_DIR}/src/tests/test_lib_kmeans" )
 ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/src/tests/test_conv_op" )
 
 # test for memory leak. takes to long and bug was fixed

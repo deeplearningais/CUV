@@ -46,9 +46,14 @@ namespace cuv{
 	 * @param dst Destination
 	 * @param src Source
 	 *
+	 * This is a special-purpose function for weird cases. In general, you
+	 * should use operator=.
+	 *
 	 * Converts between:
-	 * 	-Column major an row major
-	 * 	-Host and device matrices - which actually copies the memory to and from the GPU!
+	 * 	- Column major an row major
+	 * 	- Host and device matrices
+	 * 	- dense and DIA format
+	 * 	- ...
 	 */
 	template<class Dst, class Src>
 	void convert(Dst& dst, const Src& src);

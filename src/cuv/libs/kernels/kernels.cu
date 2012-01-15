@@ -129,9 +129,13 @@ namespace libs{
 
 typedef tensor<float, dev_memory_space, row_major> t_rmf;
 typedef tensor<float, dev_memory_space, column_major> t_cmf;
+typedef tensor<float, host_memory_space, row_major> t_hrmf;
+typedef tensor<float, host_memory_space, column_major> t_hcmf;
 
 template void pairwise_distance_custom<float, dev_memory_space, row_major>(t_rmf&, const t_rmf &, const t_rmf&);
 template void pairwise_distance_l2(t_rmf&, const t_rmf &, const t_rmf&, const bool&);
 template void pairwise_distance_l2(t_cmf&, const t_cmf &, const t_cmf&, const bool&);
+template void pairwise_distance_l2(t_hrmf&, const t_hrmf &, const t_hrmf&, const bool&);
+template void pairwise_distance_l2(t_hcmf&, const t_hcmf &, const t_hcmf&, const bool&);
 
 }}}

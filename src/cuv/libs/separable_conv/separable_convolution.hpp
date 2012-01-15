@@ -6,8 +6,15 @@
 #include <cuv/basics/image.hpp>
 
 namespace cuv{
+	/// separable convolution
 	namespace sep_conv
 	{
+		/**
+		 * @addtogroup libs
+		 * @{
+		 * @addtogroup sep_conv
+		 * @{
+		 */
 		enum separable_filter{
 			SP_GAUSS,
 			SP_CENTERED_DERIVATIVE,
@@ -31,6 +38,10 @@ namespace cuv{
 			   const separable_filter& filt, int axis=2,
 			   const float& param=0.
 		       	);
+		/**
+		 * @}
+		 * @}
+		 */
 	}
 }
 

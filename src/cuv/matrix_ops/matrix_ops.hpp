@@ -38,6 +38,134 @@
 
 namespace cuv{
 
+
+
+
+  /***************************************************
+  * Get view on parts of matrix
+  * *************************************************/
+  /** 
+   * @brief Generate a view to a block inside an existing matrix
+   * 
+   * @param matrix Matrix to generate a view from 
+   * @param start_rows 	First row in block 
+   * @param num_rows	Number of rows in block 
+   * @param start_cols	First column in block 
+   * @param num_cols	Number of columns in block 
+   * 
+   * @return View of specified block inside matrix 
+   *
+   * 	Returns a matrix of size num_rows x num_cols that is a view to the entries of matrix,
+   * 	starting at entry start_rows,start_cols to entry start_rows+num_rows,start_cols+num_cols.
+   * 	For row major matrices, this only works with start_cols=0 and num_cols=matrix.w().
+   * 	For column major matrices, this only works with start_rows=0 and num_rows=matrix.h().
+   */
+  template<class __value_type, class __memory_space_type, class __memory_layout, class __index_type>
+	  tensor<__value_type,__memory_space_type,__memory_layout>* blockview(
+	  tensor<__value_type,__memory_space_type,__memory_layout> & matrix,
+			  __index_type start_rows,
+			  __index_type num_rows ,
+			  __index_type start_cols,
+			  __index_type num_cols);
+
+
+  /***************************************************
+   * BLAS3 stuff
+   ***************************************************/
+ /** @addtogroup blas3 
+  * @{
+  */
+  /** 
+   * @brief Matrix multiplication and other BLAS3 functionality.
+   * 
+   * @param C Destination matrix 
+   * @param A First matrix for product 
+   * @param B Second matrix for product 
+   * @param transA Whether to transpose A before calculating the matix product. Possible values 'n' for "do Not transpose" and 't' for "Transpose". 
+   * @param transB Whether to transpose B befor calculating the matrix product. Possible values 'n' for "do Not transpose" and 't' for "Transpose". 
+   * @param factAB Scalar factor to multiply the product of A and B with. 
+   * @param factC Scalar factor to multiply former entries of C with.
+   * 
+   * Calculates C = factC * C + factAB * transA(A)*transB(B)
+   * Here transA(A) is the transpose of A if transA = 't' and transA(A) is A if transA = 'n'.
+   * The analogue is true for transB(B).
+   * In the above transA(A)*transB(B) is the matrix product and all other operations are pointwise.
+   * This is a thin wrapper of CUBLAS.
+   */
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void prod(    tensor<__value_type,__memory_space_type,__memory_layout_type>& C,
+              const tensor<__value_type,__memory_space_type,__memory_layout_type>& A,
+              const tensor<__value_type,__memory_space_type,__memory_layout_type>& B,
+              char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
+
+
+  /// @see prod
+// convenience: use transposed view instead of "t" and "n"
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type, typename other_memory_layout<__memory_layout_type>::type >& B, const float& factAB=1.f, const float& factC=0.f){
+               prod(C, A, *transposed_view_p(B), 'n', 't', factAB, factC);
+}
+  /// @see prod
+// convenience: use transposed view instead of "t" and "n"
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C,
+                const tensor<__value_type,__memory_space_type, typename other_memory_layout<__memory_layout_type>::type >& A,
+                const tensor<__value_type,__memory_space_type,__memory_layout_type>& B,
+                const float& factAB=1.f, const float& factC=0.f){
+                   prod(C, *transposed_view_p(A), B, 't', 'n', factAB, factC);
+}
+  /// @see prod
+  template<class __value_type, class __memory_space_type, class __memory_layout_type>
+	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const dia_matrix<__value_type,__memory_space_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
+
+  /** 
+   * @brief Transpose a matrix
+   * 
+   * @param dst Destination matrix 
+   * @param src Source matrix 
+   * 
+   */
+template<class __value_type, class __memory_space_type, class __memory_layout_type, class __memory_container_type>
+void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __memory_container_type>& dst, const tensor<__value_type,__memory_space_type, __memory_layout_type, __memory_container_type>& src);
+
+  /** 
+   * @brief Transpose a matrix by creating a view with different storage
+   * 
+   * @param dst Destination matrix 
+   * @param src Source matrix 
+   *
+   * Creates a row major view of a column major matrix or a column major view of a row major matrix.
+   * Does not actually modify the content of the memory.
+   * 
+   */
+  template<class V, class T, class M>
+  cuv::tensor<V,T,typename other_memory_layout<M>::type > * transposed_view_p(cuv::tensor<V,T,M>&  src);
+
+  /// As in @see transposed_view_p, but here we return an auto_ptr for convenience
+  template<class V, class T, class M>
+  std::auto_ptr<cuv::tensor<V,T,typename other_memory_layout<M>::type > > transposed_view(cuv::tensor<V,T,M>&  src){
+	return std::auto_ptr<cuv::tensor<V,T,typename other_memory_layout<M>::type > >(transposed_view_p(src));
+  }
+        
+  /// Const variant of @see transposed_view_p
+  template<class V, class T, class M>
+  const cuv::tensor<V,T,typename other_memory_layout<M>::type > * transposed_view_p(const cuv::tensor<V,T,M>&  src);
+
+  /// As in @see transposed_view_p, but here we return an auto_ptr for convenience
+  template<class V, class T, class M>
+  std::auto_ptr<const cuv::tensor<V,T,typename other_memory_layout<M>::type > > transposed_view(const cuv::tensor<V,T,M>&  src){
+	return std::auto_ptr<const cuv::tensor<V,T,typename other_memory_layout<M>::type > >(transposed_view_p(src));
+  }
+
+  /** @} */ // end group blas3
+
+  /***************************************************
+   * BLAS2 stuff
+   ***************************************************/
+ /** @addtogroup blas2 
+  * @{
+  */
+
   /** @defgroup reductions Reductions from matrix to row or column
    * @{
    */
@@ -46,12 +174,14 @@ namespace cuv{
    * @brief Reduce functor to reduce a matrix to a row or column
    * 
    * 	- RF_ADD adds columns/rows
+   * 	- RF_MEAN adds columns/rows, divides by number of entries
    * 	- RF_ADD_SQUARED adds squared entries of columns/rows
    * 	- RF_MAX uses maximum in colum (when reducing to row) or row (when reducing to column)
    * 	- RF_MIN uses minimum in colum (when reducing to row) or row (when reducing to column)
    */
   enum reduce_functor{
 	  RF_ADD,
+	  RF_MEAN,
 	  RF_ADD_SQUARED,
 	  RF_MAX,
 	  RF_ARGMAX,
@@ -94,6 +224,7 @@ namespace cuv{
   template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
 	  void reduce_to_row(tensor<__value_type, __memory_space_type>& dst, const tensor<__value_type2, __memory_space_type, __memory_layout_type>& src, reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f);
 
+
   /** 
    * @brief Convenience function that creates a new vector and performs reduction by summing along given axis
    * 
@@ -124,147 +255,6 @@ namespace cuv{
 
  /** @} */ // end of group reductions
 
-
-
-  /***************************************************
-  * Get view on parts of matrix
-  * *************************************************/
-  /** 
-   * @brief Generate a view to a block inside an existing matrix
-   * 
-   * @param matrix Matrix to generate a view from 
-   * @param start_rows 	First row in block 
-   * @param num_rows	Number of rows in block 
-   * @param start_cols	First column in block 
-   * @param num_cols	Number of columns in block 
-   * 
-   * @return View of specified block inside matrix 
-   *
-   * 	Returns a matrix of size num_rows x num_cols that is a view to the entries of matrix,
-   * 	starting at entry start_rows,start_cols to entry start_rows+num_rows,start_cols+num_cols.
-   * 	For row major matrices, this only works with start_cols=0 and num_cols=matrix.w().
-   * 	For column major matrices, this only works with start_rows=0 and num_rows=matrix.h().
-   */
-  template<class __value_type, class __memory_space_type, class __memory_layout, class __index_type>
-	  tensor<__value_type,__memory_space_type,__memory_layout>* blockview(
-	  tensor<__value_type,__memory_space_type,__memory_layout> & matrix,
-			  __index_type start_rows,
-			  __index_type num_rows ,
-			  __index_type start_cols,
-			  __index_type num_cols);
-
-
-  /***************************************************
-   * BLAS3 stuff
-   ***************************************************/
- /** @defgroup blas3 BLAS3
-  * @{
-  */
-  /** 
-   * @brief Matrix multiplication and other BLAS3 functionality.
-   * 
-   * @param C Destination matrix 
-   * @param A First matrix for product 
-   * @param B Second matrix for product 
-   * @param transA Whether to transpose A before calculating the matix product. Possible values 'n' for "do Not transpose" and 't' for "Transpose". 
-   * @param transB Whether to transpose B befor calculating the matrix product. Possible values 'n' for "do Not transpose" and 't' for "Transpose". 
-   * @param factAB Scalar factor to multiply the product of A and B with. 
-   * @param factC Scalar factor to multiply former entries of C with.
-   * 
-   * Calculates C = factC * C + factAB * transA(A)*transB(B)
-   * Here transA(A) is the transpose of A if transA = 't' and transA(A) is A if transA = 'n'.
-   * The analogue is true for transB(B).
-   * In the above transA(A)*transB(B) is the matrix product and all other operations are pointwise.
-   * This is a thin wrapper of CUBLAS.
-   */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
-
-  /** 
-   * @brief Simple matrix multiplication that allocates a new tensor as the result.
-   * 
-   * @param A First matrix for product 
-   * @param B Second matrix for product 
-   * @param transA Whether to transpose A before calculating the matix product. Possible values 'n' for "do Not transpose" and 't' for "Transpose". 
-   * @param transB Whether to transpose B befor calculating the matrix product. Possible values 'n' for "do Not transpose" and 't' for "Transpose". 
-   * @param factAB Scalar factor to multiply the product of A and B with. 
-   * 
-   * Calculates C = factAB * transA(A)*transB(B)
-   * Here transA(A) is the transpose of A if transA = 't' and transA(A) is A if transA = 'n'.
-   * The analogue is true for transB(B).
-   * In the above transA(A)*transB(B) is the matrix product.
-   * This is a thin wrapper of CUBLAS.
-   */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	 tensor<__value_type,__memory_space_type, __memory_layout_type> prod( const tensor<__value_type,__memory_space_type, __memory_layout_type>& A,
-                const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', 
-                const float& factAB=1.f){
-                   int shape[2];
-                   if (transA=='n')
-                        shape[0] = A.shape()[0];
-                   else
-                        shape[0] = A.shape()[1];
-                   if (transB=='n')
-                        shape[1] = B.shape()[1];
-                   else
-                        shape[1] = B.shape()[0];
-        
-                   tensor<__value_type,__memory_space_type, __memory_layout_type> C(extents[shape[0]][shape[1]]);
-                   prod(C, A, B, transA, transB, factAB, 0.f);
-                   return C;
-}
-// convenience: create and return dst: if memory layout does not agree, default to row major
-  /** 
-   * @brief Simple matrix multiplication that allocates a new tensor as the result.
-   *
-   * @param A First matrix for product 
-   * @param B Second matrix for product 
-   * @param factAB Scalar factor to multiply the product of A and B with. 
-   * 
-   * This function is called only if A and B have different memory layouts.
-   * It does not allow transposing of the matrices, since that would be too confusing.
-   * The returned matrix is always row-major.
-   *
-   *
-   * Calculates C = factAB * A*B
-   *
-   * This is a thin wrapper of CUBLAS.
-   */
-  template<class __value_type, class __memory_space_type, class __memory_layout_typeA, class __memory_layout_typeB>
-	tensor<__value_type,__memory_space_type, row_major> prod( const tensor<__value_type,__memory_space_type, __memory_layout_typeA>& A,
-                const tensor<__value_type,__memory_space_type,__memory_layout_typeB>& B,
-                const float& factAB=1.f){
-                   tensor<__value_type,__memory_space_type, row_major> C(extents[A.shape()[0]][B.shape()[1]]);
-                   prod(C, A, B, factAB, 0.f);
-                   return C;
-}
-  /// @see prod
-// convenience: use transposed view instead of "t" and "n"
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type, typename other_memory_layout<__memory_layout_type>::type >& B, const float& factAB=1.f, const float& factC=0.f){
-               prod(C, A, *transposed_view_p(B), 'n', 't', factAB, factC);
-}
-  /// @see prod
-// convenience: use transposed view instead of "t" and "n"
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C,
-                const tensor<__value_type,__memory_space_type, typename other_memory_layout<__memory_layout_type>::type >& A,
-                const tensor<__value_type,__memory_space_type,__memory_layout_type>& B,
-                const float& factAB=1.f, const float& factC=0.f){
-                   prod(C, *transposed_view_p(A), B, 't', 'n', factAB, factC);
-}
-  /// @see prod
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const dia_matrix<__value_type,__memory_space_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
-
-  /** @} */ // end group blas3
-
-  /***************************************************
-   * BLAS2 stuff
-   ***************************************************/
- /** @defgroup blas2 BLAS2
-  * @{
-  */
   /** 
    * @brief Calculates product of a sparse matrix and a vector. 
    * 
@@ -343,45 +333,6 @@ namespace cuv{
    */
   template<class __value_type, class __memory_space_type, class __memory_layout_type>
 	  void matrix_divide_row(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
-
-  /** 
-   * @brief Transpose a matrix
-   * 
-   * @param dst Destination matrix 
-   * @param src Source matrix 
-   * 
-   */
-template<class __value_type, class __memory_space_type, class __memory_layout_type, class __memory_container_type>
-void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __memory_container_type>& dst, const tensor<__value_type,__memory_space_type, __memory_layout_type, __memory_container_type>& src);
-
-  /** 
-   * @brief Transpose a matrix by creating a view with different storage
-   * 
-   * @param dst Destination matrix 
-   * @param src Source matrix 
-   *
-   * Creates a row major view of a column major matrix or a column major view of a row major matrix.
-   * Does not actually modify the content of the memory.
-   * 
-   */
-  template<class V, class T, class M>
-  cuv::tensor<V,T,typename other_memory_layout<M>::type > * transposed_view_p(cuv::tensor<V,T,M>&  src);
-
-  /// As in @see transposed_view_p, but here we return an auto_ptr for convenience
-  template<class V, class T, class M>
-  std::auto_ptr<cuv::tensor<V,T,typename other_memory_layout<M>::type > > transposed_view(cuv::tensor<V,T,M>&  src){
-	return std::auto_ptr<cuv::tensor<V,T,typename other_memory_layout<M>::type > >(transposed_view_p(src));
-  }
-        
-  /// Const variant of @see transposed_view_p
-  template<class V, class T, class M>
-  const cuv::tensor<V,T,typename other_memory_layout<M>::type > * transposed_view_p(const cuv::tensor<V,T,M>&  src);
-
-  /// As in @see transposed_view_p, but here we return an auto_ptr for convenience
-  template<class V, class T, class M>
-  std::auto_ptr<const cuv::tensor<V,T,typename other_memory_layout<M>::type > > transposed_view(const cuv::tensor<V,T,M>&  src){
-	return std::auto_ptr<const cuv::tensor<V,T,typename other_memory_layout<M>::type > >(transposed_view_p(src));
-  }
   /** @} */ // end group blas2
 } // cuv
   

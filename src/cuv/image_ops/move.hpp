@@ -39,7 +39,9 @@ namespace cuv
 {
 
 	/** 
-	 * @defgroup imageops Operations on Images
+	 * @addtogroup image_ops Operations on Images
+	 * @{
+	 *
 	 * @brief Write a moved version of each image (a column in src) to dst.
 	 *
 	 * Assumptions: 
@@ -66,6 +68,8 @@ namespace cuv
 	 */
 	template<class __value_typeA, class __value_typeB, class __memory_space_type, class __memory_layout_type>
 	void image_move(tensor<__value_typeA,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_typeB,__memory_space_type,__memory_layout_type>& src, const unsigned int& image_width, const unsigned int& image_height, const unsigned int& num_maps, const int& xshift, const int& yshift);
+
+	/** @} */
 };
 
 

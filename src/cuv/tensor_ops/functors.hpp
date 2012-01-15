@@ -60,6 +60,9 @@ struct uf_exp:unary_functor<R,T>{  inline __host__ __device__         R operator
 /// calculates exp(x) (deprecated)
 template<class R, class T>
 struct uf_exact_exp:unary_functor<R,T>{  inline __device__ __host__   R operator()(const T& t)const{ return expf(t);    } };
+/// calculates cos(x)
+template<class R, class T>
+struct uf_cos:unary_functor<R,T>{  inline __host__ __device__         R operator()(const T& t)const{ return cosf(t);    } };
 /// calculates log(x)
 template<class R, class T>
 struct uf_log:unary_functor<R,T>{  inline __device__ __host__         R operator()(const T& t)      const{ return logf(t);    } };
@@ -149,7 +152,6 @@ struct uf_is_inf<unsigned char>:unary_functor<bool,unsigned char>{  inline __dev
 template<class R, class T>
 struct uf_poslin:unary_functor<R,T>{  inline __device__  __host__     R operator()(const T& t)      const{ return (t > 0)*t; } };
 
-
 /// calculates the logistic function with a temperature, 1/(1+exp(-x/temp))
 template<class R, class T>
 struct bf_sigm_temp:binary_functor<R,T,T>{ inline __device__  __host__       R operator()(const T& t, const T& temp)           const{ return ((T)1)/(((T)1)+expf(-t / (T)(temp))); } };
@@ -187,9 +189,13 @@ struct bf_rect:binary_functor<R,T,A>{  inline __device__  __host__       R opera
 template<class R, class T, class A>
 struct bf_drect:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& x, const A& a)      const{ return 1-1/(x*expf(a)); } };
 
-/// calculates pow(y,x)
+/// calculates pow(x,y)
 template<class R, class T, class A>
-struct bf_pow:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& y, const A& x)      const{ return pow((float)y,(float)x); } };
+struct bf_pow:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& x, const A& y)      const{ return pow((float)x,(float)y); } };
+
+/// calculates 1/y * x^(y-1)
+template<class R, class T, class A>
+struct bf_dpow:binary_functor<R,T,A>{  inline __device__  __host__      R operator()(const T& x, const A& y)      const{ return ((float)y) * pow((float)x,(float)y-1.f); } };
 
 /// calculates atan2(y,x)
 template<class R, class T, class A>
@@ -282,6 +288,9 @@ make_bind2nd3rd(const __ternary_functor& tf, const typename __ternary_functor::s
  * @{
  */
 
+/// calculates x==y
+template<class R, class T, class U>
+struct bf_equals : binary_functor<R,T,U> {  inline __device__  __host__       R operator()(const T& t, const U& u)      const{ return  t == (T)u; } };
 /// calculates x+y
 template<class R, class T, class U>
 struct bf_plus : binary_functor<R,T,U> {  inline __device__  __host__       R operator()(const T& t, const U& u)      const{ return  t + (T)u; } };
@@ -436,6 +445,14 @@ struct bf_logaddexp : binary_functor<float,T, T> {
 			return t+u;
 	} 
 };
+
+/// computes the negative log of cross-entropy \f$-x\log(z)-(1-x)\log(1-z)\f$ of logistic \f$z=1/(1+\exp(-y))\f$
+template<class R, class T, class U>
+struct bf_logce_of_logistic:binary_functor<R,T,U>{ inline __device__  __host__       R operator()(const T& x, const T& y)           const{ 
+    bf_logaddexp<float> lae;
+    return  x*lae(0.f,-y)+(1.f-x)*lae(0.f,y);
+} };
+
 
 /// calculates arg-max of two values and their indices
 template<class V, class I>

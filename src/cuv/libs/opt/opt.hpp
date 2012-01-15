@@ -27,44 +27,57 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
 
-#ifndef __CUV_INTIMG_HPP__
-#define __CUV_INTIMG_HPP__
+#ifndef __CUV_OPT_HPP__
+#define __CUV_OPT_HPP__
 #include<cuv/basics/tensor.hpp>
 
-namespace cuv{
-	/// integral image computation
-	namespace integral_img
+namespace cuv{ namespace libs{
+	/// function optimization
+	namespace opt
 	{
 		/**
 		 * @addtogroup libs
 		 * @{
-		 * @defgroup integral_img Integral Image
+		 * @defgroup opt Function Optimization
 		 * @{
 		 */
 
 		/**
-		 * calculate the integral image
-		 *
-		 * this applies \see scan twice, transposing in between.
-		 *
-		 * @param src source
-		 * @param dst destination
+		 * calculate derivative of softmax.
+         *
+         * Calculates the SoftMax function \f$S(\vec x) = exp(x_i)/Sum_k(exp(x_k))\f$
+         * for \f$m\f$ multinomial variables with \f$n\f$ values.
+         *
+         * @warning this /adds/ to the values already in dst, so you may need to zero dst first!
+         *
+		 * @param dst     the value of \f$ S(\vec x) \f$ of size \f$ n\times m\f$
+		 * @param src     the input values to be softmaxed
+         * @param vardim  the dimension in which the variables are stored
 		 */
-		template<class V1, class V2, class T, class M, class A>
-		void integral_image(cuv::tensor<V1, T, M, A>& dst, const cuv::tensor<V2, T, M, A>& src);
+		template<class V, class M, class L>
+		void softmax(cuv::tensor<V, M,L>& dst, const cuv::tensor<V, M,L>& src, unsigned int vardim=1);
 
 		/**
-		 * integrate rows of an image
-		 * @param src source
-		 * @param dst destination
+		 * calculate derivative of softmax.
+         *
+         * Calculates the derivative of SoftMax function \f$S(\vec x) = exp(x_i)/Sum_k(exp(x_k))\f$
+         * for \f$m\f$ multinomial variables with \f$n\f$ values.
+         *
+         * @warning this /adds/ to the values already in dst, so you may need to zero dst first!
+         *
+		 * @param dst         destination tensor of size \f$ n\times m \f$
+		 * @param softmax_act the value of \f$ S(\vec x) \f$ of size \f$ n\times m\f$
+         * @param residual    the residual of size \f$ S(\vec x) \f$, also size \f$ n\times m\f$
+         * @param row_var if true, variables are assumed to be in the columns
 		 */
-		template<class V1, class V2, class T, class M, class A, class A2>
-		void scan(cuv::tensor<V1, T, M, A>& dst, const cuv::tensor<V2, T, M, A2>& src);
+		template<class V, class M, class L>
+		void softmax_derivative(cuv::tensor<V, M,L>& dst, const cuv::tensor<V, M,L>& softmax_act, const cuv::tensor<V,M,L>& residual, unsigned int vardim=1);
+
 		/**
 		 * @}
 		 * @}
 		 */
 	}
-};
+} };
 
 #endif

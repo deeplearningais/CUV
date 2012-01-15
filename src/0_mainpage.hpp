@@ -33,6 +33,16 @@
 
 /**
  *
+ * @defgroup basics  CUV datastructures
+ * @defgroup blas1   BLAS1 -- Vector/Vector operations
+ * @defgroup blas2   BLAS2 -- Matrix/Vector operations
+ * @defgroup blas3   BLAS3 -- Matrix/Matrix operations
+ * @defgroup tools   Miscellaneous tools
+ * @defgroup io      Input/Output functions
+ * @defgroup random  Random number generation
+ * @defgroup typetraits  Type traits
+ * @defgroup MetaProgramming  Template meta programming tools
+ * @defgroup libs    special purpose functions
  *
  * @mainpage
  *
@@ -263,4 +273,9 @@
  */
 
 namespace cuv{
+	/**
+	 * @namespace libs
+	 * @brief contains special purpose functionality
+	 */
+	namespace libs{ }
 }

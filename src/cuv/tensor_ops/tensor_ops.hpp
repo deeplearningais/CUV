@@ -34,140 +34,19 @@
 #include <cuv/basics/tensor.hpp>
 
 namespace cuv{
+/**
+ * @addtogroup blas1 
+ * @{
+ */
 
+/** @defgroup functors_vectors Pointwise functors on vectors
+ *   @{
+ */
 
-	/** 
-	 * @brief Scalar Functors for vectors and matrices
-	 *  Applied pointwise to a vector/matrix.
-	 *  Each entry x is transformed according to the given formular.
-	 *
-	 *  Without scalar parameters:
-	 *
-	 *  @li SF_COPY computes x (the identity)
-	 *  @li SF_EXP computes exp(x)
-	 *  @li SF_LOG computes log(x)
-	 *  @li SF_SIGN computes sign(x)
-	 *  @li SF_SIGM computes 1/(1+exp(-x))
-	 *  @li SF_DSIGM computes x * (1-x)
-	 *  @li SF_TANH computes tanh(x)
-	 *  @li SF_SQUARE computes x*x
-	 *  @li SF_SUBLIN computes 1-x
-	 *  @li SF_ENERG computes -log(x) 
-	 *  @li SF_INV computes 1/x 
-	 *  @li SF_SQRT computes sqrt(x)
-	 *  @li SF_NEGATE computes -x
-	 *  @li SF_ABS computes absolute value of x
-	 *  @li SF_SMAX computes (1/x -1) * x
-	 *
-	 * With one scalar parameter a:
-	 *  @li SF_POW computes pow(x,a)
-	 *  @li SF_ADD computes x + a
-	 *  @li SF_SUBTRACT computes x - a
-	 *  @li SF_RSUB computes a - x
-	 *  @li SF_MULT computes x * a
-	 *  @li SF_DIV computes x / a
-	 *  @li SF_RDIV computes a / x
-	 *  @li SF_MIN computes min(x,a)
-	 *  @li SF_MAX computes max(x,a)
-	 *  @li SF_EQ computes x == a
-	 *  @li SF_LT computes x < a
-	 *  @li SF_GT computes x > a
-	 *  @li SF_LEQ computes x <= a
-	 *  @li SF_GEQ computes x >= a
-	 *
-	 * With two scalar parameters a and b:
-	 *
-	 *  @li SF_DTANH computes a/b * (a+x) + (a-x) 
-	 */
-	 
-	enum ScalarFunctor{
-		// w/o params
-		SF_EXP,
-		//SF_EXACT_EXP,
-		SF_LOG,
-		SF_SIGN,
-		SF_SIGM,
-		//SF_EXACT_SIGM,
-		SF_DSIGM,
-		SF_TANH,
-		SF_DTANH,
-		SF_SQUARE,
-		SF_SUBLIN,
-		SF_ENERG,
-		SF_INV,
-		SF_SQRT,
-		SF_NEGATE,
-		SF_ABS,
-		SF_SMAX,
-		SF_POSLIN,
-		// rectifying transfer function
-		SF_RECT,
-		SF_DRECT,
-		SF_COPY,
-
-		// with param
-		SF_POW,
-		SF_ADD,
-		SF_SUBTRACT,
-		SF_RSUB,
-		SF_MULT,
-		SF_DIV,
-		SF_RDIV,
-		SF_MIN,
-		SF_MAX,
-		SF_EQ,
-		SF_LT,
-		SF_GT,
-		SF_LEQ,
-		SF_GEQ
-	};
-
-	/** 
-	 * @brief Binary functors for vectors and matrices
-	 *  Applied pointwise to a vector/matrix.
-	 *  The target entry x is calculated from the two source entries x,y according to the given formular.
-	 *
-	 *  Without scalar parameters:
-	 *
-	 * 	@li BF_AND computes  x && y
-	 * 	@li BF_OR  computes  x || y
-	 * 	@li BF_ADD computes  x += y
-	 * 	@li BF_POW computes  pow(x,y)
-	 * 	@li BF_SUBTRACT computes x -= y
-	 * 	@li BF_MULT computes x *= y
-	 * 	@li BF_DIV computes x /= y
-	 * 	@li BF_MIN computes x = min(x,y)
-	 * 	@li BF_MAX computes x = max(x,y)
-	 *
-	 *  With one scalar parameter a:
-	 *  @li BF_AXPY computes x = a * x + y
-	 *  @li BF_XPBY computes x += a * y
-	 *  @li BF_SQSQLOSS computes  x*max(0,1-y-a)^2 + (1-x)*max(0,y-a)^2
-	 *
-	 *  With two scalar parameters a and b:
-	 *  @li BF_AXPBY computes x = a * x + b * y
-	 *
-	 */
-  enum BinaryFunctor{
-	  // w/o params
-	  BF_AND,
-	  BF_OR,
-	  BF_POW,
-	  BF_ADD,
-	  BF_SUBTRACT,
-	  BF_MULT,
-	  BF_DIV,
-	  BF_MIN,
-	  BF_MAX,
-	  BF_ATAN2,
-	  BF_NORM,
-
-	  // w/ param
-	  BF_AXPY,
-	  BF_XPBY,
-	  BF_AXPBY,
-	  BF_SQSQLOSS
-  };
+/**
+* @defgroup nullary_functors Functors without parameters
+* @{
+*/
 
   /** 
    * @brief Nullary functors for vectors and matrices.
@@ -179,11 +58,6 @@ namespace cuv{
 	  NF_SEQ
   };
 	
-
-/** @defgroup functors_vectors Pointwise functors on vectors
- *   @{
- */
-
  /** 
   * @brief Apply a pointwise nullary functor to a vector.
   * 
@@ -196,13 +70,15 @@ namespace cuv{
   apply_0ary_functor(tensor<__value_type, __memory_space_type>& v, const NullaryFunctor& sf);
 
  /** 
-  * @see apply_0ary_functor
+  * @overload 
   */
   template<class __value_type, class __memory_space_type>
   void apply_0ary_functor(tensor<__value_type, __memory_space_type, column_major>& v, const NullaryFunctor& sf){
       apply_0ary_functor(* reinterpret_cast<tensor<__value_type, __memory_space_type, row_major>* >(&v), sf);
   }
   /** 
+   * @overload
+   *
    * @brief Apply a pointwise nullary functor with a scalar parameter to a vector.
    * 
    * @param v	Target vector 
@@ -215,7 +91,7 @@ namespace cuv{
   apply_0ary_functor(tensor<V1, M>& v, const NullaryFunctor& sf, const V1& param);
 
  /** 
-  * @see apply_0ary_functor
+  * @overload
   */
   template<class V1, class M>
   void apply_0ary_functor(tensor<V1, M, column_major>& v, const NullaryFunctor& sf, const V1& param){
@@ -245,12 +121,110 @@ namespace cuv{
       apply_0ary_functor(v,NF_FILL,(__value_type)p);
   }
 
+/**
+* @}
+*/
 
-  /**
-   * @defgroup scalar_functors Pointwise scalar functors
-   *
-   * @{
-   */
+/**
+* @defgroup scalar_functors Pointwise scalar functors
+*
+* @{
+*/
+	/** 
+	 * @brief Scalar Functors for vectors and matrices
+	 *  Applied pointwise to a vector/matrix.
+	 *  Each entry x is transformed according to the given formular.
+	 *
+	 *  Without scalar parameters:
+	 *
+	 *  @li SF_COPY computes x (the identity)
+	 *  @li SF_EXP computes exp(x)
+	 *  @li SF_LOG computes log(x)
+	 *  @li SF_SIGN computes sign(x)
+	 *  @li SF_SIGM computes 1/(1+exp(-x))
+	 *  @li SF_DSIGM computes x * (1-x)
+	 *  @li SF_COS computes cos(x)
+	 *  @li SF_SQUARE computes x*x
+	 *  @li SF_SUBLIN computes 1-x
+	 *  @li SF_ENERG computes -log(x) 
+	 *  @li SF_INV computes 1/x 
+	 *  @li SF_SQRT computes sqrt(x)
+	 *  @li SF_NEGATE computes -x
+	 *  @li SF_ABS computes absolute value of x
+	 *  @li SF_SMAX computes (1/x -1) * x
+	 *  @li SF_LOG1P computes \f$\log(1 + x)\f$
+	 *
+	 * With one scalar parameter a:
+	 *  @li SF_POW computes \f$x^a\f$
+	 *  @li SF_DPOW computes \f$1/a * x^{a-1}\f$
+	 *  @li SF_ADD computes x + a
+	 *  @li SF_SUBTRACT computes x - a
+	 *  @li SF_RSUB computes a - x
+	 *  @li SF_MULT computes x * a
+	 *  @li SF_DIV computes x / a
+	 *  @li SF_RDIV computes a / x
+	 *  @li SF_LOGADDEXP computes \f$\log(\exp(a) + \exp(x))\f$
+	 *  @li SF_MIN computes min(x,a)
+	 *  @li SF_MAX computes max(x,a)
+	 *  @li SF_EQ computes x == a
+	 *  @li SF_LT computes x < a
+	 *  @li SF_GT computes x > a
+	 *  @li SF_LEQ computes x <= a
+	 *  @li SF_GEQ computes x >= a
+	 *
+	 * With zero OR two scalar parameters a and b:
+	 *
+	 *  @li SF_DTANH computes a/b * (a+x) + (a-x), if no params given: a=b=1
+	 *  @li SF_TANH computes b*tanh(a*x), if no params given: a=b=1
+	 */
+	 
+	enum ScalarFunctor{
+		// w/o params
+		SF_EXP,
+		SF_COS,
+		//SF_EXACT_EXP,
+		SF_LOG,
+		SF_SIGN,
+		SF_SIGM,
+		//SF_EXACT_SIGM,
+		SF_DSIGM,
+		SF_SQUARE,
+		SF_SUBLIN,
+		SF_ENERG,
+		SF_INV,
+		SF_SQRT,
+		SF_NEGATE,
+		SF_ABS,
+		SF_SMAX,
+		SF_POSLIN,
+		// rectifying transfer function
+		SF_RECT,
+		SF_DRECT,
+		SF_COPY,
+        SF_LOG1P,
+
+		// with param
+		SF_POW,
+		SF_DPOW,
+		SF_ADD,
+		SF_SUBTRACT,
+		SF_RSUB,
+		SF_MULT,
+		SF_DIV,
+		SF_RDIV,
+        SF_LOGADDEXP,
+		SF_MIN,
+		SF_MAX,
+		SF_EQ,
+		SF_LT,
+		SF_GT,
+		SF_LEQ,
+		SF_GEQ,
+
+		// with two params
+		SF_TANH,
+		SF_DTANH
+	};
   namespace detail{
 	  /**
 	   * These functions do the actual work for apply_scalar_functor and are instantiated in the .cu file.
@@ -277,14 +251,41 @@ namespace cuv{
           }
   }
 
-  /// @brief in-place, no parameters
+  /**
+   * apply a scalar functor to all elements of v.
+   *
+   * Pseudocode:
+   * @code
+   * forall i:
+   *   if !mask or mask[i]:
+   *      v[i] = sf(v[i]);
+   * @endcode
+   *
+   * in-place, no parameters
+   *
+   * @param v   where we read from and write to
+   * @param sf  the applied scalar functor
+   * @param mask optional
+   * 
+   */
   template<class D>
   void
   apply_scalar_functor(D& v, const ScalarFunctor& sf, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>* mask=NULL){
 	  typedef typename D::value_type V;
 	  detail::apply_scalar_functor(v,v,sf,0,mask,V(),V());
   }
-  /// @brief no parameters
+  /**
+   * @overload
+   *
+   * apply a scalar functor to all elements of src
+   *
+   * no parameters
+   *
+   * @param dst destination
+   * @param src source
+   * @param sf  the scalar functor to be applied
+   * @param mask optional mask
+   */
   template<class D, class S>
   void
   apply_scalar_functor(D& dst, const S& src, const ScalarFunctor& sf, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
@@ -292,14 +293,48 @@ namespace cuv{
 	  detail::apply_scalar_functor(dst,src,sf,0,mask,V(),V());
   }
 
-  /// @brief in-place, one parameter
+  /**
+   * @overload
+   *
+   * in-place, one parameter. This function applies a binary functor,
+   * fixing the second argument to a constant.
+   *
+   * Pseudocode:
+   * @code
+   * forall i:
+   *   if !mask or mask[i]:
+   *      v[i] = bf(v[i],p);
+   * @endcode
+   *
+   * @param v   source and destination
+   * @param sf  the scalar functor to be applied
+   * @param p   parameter for binary functor
+   * @param mask optional mask
+   */
   template<class D>
   void
-  apply_scalar_functor(D& dst,const ScalarFunctor& sf, const typename D::value_type& p, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
+  apply_scalar_functor(D& v,const ScalarFunctor& sf, const typename D::value_type& p, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
 	  typedef typename D::value_type V;
-	  detail::apply_scalar_functor(dst,dst,sf,1,mask,p,V());
+	  detail::apply_scalar_functor(v,v,sf,1,mask,p,V());
   }
-  /// @brief one parameter
+  /**
+   * @overload
+   * one parameter. This function applies a binary functor,
+   * fixing the second argument to a constant.
+   *
+   * Pseudocode:
+   * @code
+   * forall i:
+   *   if !mask or mask[i]:
+   *      dst[i] = bf(src[i],p);
+   * @endcode
+   *
+   * @param dst destination
+   * @param src source
+   * @param sf  the scalar functor to be applied
+   * @param p   parameter for binary functor
+   * @param mask optional mask
+   */
   template<class D, class S>
   void
   apply_scalar_functor(D& dst,const S& src, const ScalarFunctor& sf, const typename S::value_type& p,const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
@@ -307,26 +342,118 @@ namespace cuv{
 	  detail::apply_scalar_functor(dst,src,sf,1,mask,p,V());
   }
   
-  /// @brief in-place, two parameters
+  /**
+   * @overload
+   * in-place, two parameters. This function applies a ternary functor,
+   * fixing the second and third argument to a constant.
+   *
+   * Pseudocode:
+   * @code
+   * forall i:
+   *   if !mask or mask[i]:
+   *      v[i] = tf(v[i],p,p2);
+   * @endcode
+   *
+   * @param v   source and destination
+   * @param sf  the scalar functor to be applied
+   * @param p   2nd parameter for ternary functor
+   * @param p2  3rd parameter for ternary functor
+   * @param mask optional mask
+   */
   template<class D>
   void
-  apply_scalar_functor(D& dst, const ScalarFunctor& sf, const typename D::value_type& p, const typename D::value_type& p2, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
-	  detail::apply_scalar_functor(dst,dst,sf,2,mask,p,p2);
+  apply_scalar_functor(D& v, const ScalarFunctor& sf, const typename D::value_type& p, const typename D::value_type& p2, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
+	  detail::apply_scalar_functor(v,v,sf,2,mask,p,p2);
   }
-  /// @brief two parameters
+
+  /**
+   * @overload
+   * @brief two parameters. This function applies a ternary functor,
+   * fixing the second and third argument to a constant.
+   *
+   * Pseudocode:
+   * @code
+   * forall i:
+   *   if !mask or mask[i]:
+   *      dst[i] = tf(src[i],p,p2);
+   * @endcode
+   *
+   * @param dst destination
+   * @param src source
+   * @param sf  the scalar functor to be applied
+   * @param p   2nd parameter for ternary functor
+   * @param p2  3rd parameter for ternary functor
+   * @param mask optional mask
+   */
   template<class D, class S>
   void
   apply_scalar_functor(D& dst, const S& src, const ScalarFunctor& sf, const typename S::value_type& p, const typename S::value_type& p2, const tensor<unsigned char,typename D::memory_space_type, typename D::memory_layout_type>*mask=NULL){
 	  detail::apply_scalar_functor(dst,src,sf,2,mask,p,p2);
   }
 
-  /// @}
+/**
+ * @}
+ */
 
-  /**
-   * @defgroup binary_functors Pointwise binary functors
-   *
-   * @{
-   */
+/**
+* @defgroup binary_functors Pointwise binary functors
+*
+* @{
+*/
+	/** 
+	 * @brief Binary functors for vectors and matrices
+	 *
+	 *  Applied pointwise to a vector/matrix.
+	 *  The target entry x is calculated from the two source entries x,y according to the given formular.
+	 *
+	 *  Without scalar parameters:
+	 *
+	 * 	@li BF_EQ  computes  x == y
+	 * 	@li BF_AND computes  x && y
+	 * 	@li BF_OR  computes  x || y
+	 * 	@li BF_ADD computes  x += y
+	 * 	@li BF_POW computes  pow(x,y)
+	 * 	@li BF_SUBTRACT computes x -= y
+	 * 	@li BF_MULT computes x *= y
+	 * 	@li BF_DIV computes x /= y
+	 * 	@li BF_MIN computes x = min(x,y)
+	 * 	@li BF_MAX computes x = max(x,y)
+	 * 	@li BF_LOGADDEXP computes x = log(exp(x)+exp(y))
+     * 	@li BF_LOGCE_OF_LOGISTIC computes the negative log of cross-entropy \f$-x\log(y)-(1-x)\log(1-z)\f$ of logistic \f$z=1/(1+\exp(-y))\f$
+	 *
+	 *  With one scalar parameter a:
+	 *  @li BF_AXPY computes x = a * x + y
+	 *  @li BF_XPBY computes x += a * y
+	 *  @li BF_SQSQLOSS computes  x*max(0,1-y-a)^2 + (1-x)*max(0,y-a)^2
+	 *
+	 *  With two scalar parameters a and b:
+	 *  @li BF_AXPBY computes x = a * x + b * y
+	 *
+	 */
+  enum BinaryFunctor{
+	  // w/o params
+	  BF_EQ,
+	  BF_AND,
+	  BF_OR,
+	  BF_POW,
+	  BF_ADD,
+	  BF_SUBTRACT,
+	  BF_MULT,
+	  BF_DIV,
+	  BF_MIN,
+	  BF_MAX,
+	  BF_ATAN2,
+	  BF_NORM,
+      BF_LOGADDEXP,
+      BF_LOGCE_OF_LOGISTIC,
+
+	  // w/ param
+	  BF_AXPY,
+	  BF_XPBY,
+	  BF_AXPBY,
+	  BF_SQSQLOSS
+  };
+
   namespace detail{
 	  /**
 	   * These functions do the actual work for apply_binary_functor and are instantiated in the .cu file.
@@ -348,14 +475,44 @@ namespace cuv{
               apply_binary_functor(*reinterpret_cast<tensor<V1, M, row_major>* >(&dst), * reinterpret_cast<const tensor<V2, M, row_major>*>(&src1), * reinterpret_cast<const tensor<V3, M, row_major>*>(&src2), bf, numparams, p, p2); 
           }
   }
-  /// @brief in-place, no parameters
+  /**
+   *
+   * in-place, no parameters. 
+   * Applies a binary functor pointwise.
+   * 
+   * Pseudocode:
+   * @code
+   * forall i:
+   *   v[i] = bf(v[i],w[i]);
+   * @endcode
+   *
+   * @param v source and destination
+   * @param w second source
+   * @param bf binary functor to be applied
+   */
   template<class D, class S>
   void
   apply_binary_functor(D& v,  const S& w, const BinaryFunctor& bf){
 	  typedef typename S::value_type V;
 	  detail::apply_binary_functor(v,v,w,bf,0,V(),V());
   }
-  /// @brief no parameters
+  /** 
+   * @overload 
+   * @brief no parameters.
+   *
+   * Applies a binary functor pointwise.
+   * 
+   * Pseudocode:
+   * @code
+   * forall i:
+   *   dst[i] = bf(w[i],w2[i]);
+   * @endcode
+   *
+   * @param v destination
+   * @param w first source
+   * @param w2 second source
+   * @param bf binary functor to be applied
+   */
   template<class D, class S, class S2>
   void
   apply_binary_functor(D& v,  const S& w, const S2& w2, const BinaryFunctor& bf){
@@ -363,34 +520,102 @@ namespace cuv{
 	  detail::apply_binary_functor(v,w,w2,bf,0,V(),V());
   }
 
-  /// @brief in-place, one parameter
+  /** 
+   * @overload
+   * @brief in-place, one parameter.
+   *
+   * Applies a ternary functor pointwise, fixing the 3rd argument to a constant.
+   * 
+   * Pseudocode:
+   * @code
+   * forall i:
+   *   v[i] = tf(v[i],w[i],param);
+   * @endcode
+   *
+   * @param v source and destination
+   * @param w second source
+   * @param bf binary functor to be applied
+   * @param param third parameter of ternary functor
+   */
   template<class D, class S>
   void
   apply_binary_functor(D& v,const  S& w, const BinaryFunctor& bf, const typename S::value_type& param){
 	  typedef typename S::value_type V;
 	  detail::apply_binary_functor(v,v,w,bf,1,param,V());
   }
-  /// @brief one parameter
+
+  /**
+   * @overload
+   * @brief one parameter.
+   *
+   * Applies a ternary functor pointwise, fixing the 3rd argument to a constant.
+   * 
+   * Pseudocode:
+   * @code
+   * forall i:
+   *   v[i] = tf(w[i],w2[i],param);
+   * @endcode
+   *
+   * @param v destination
+   * @param w first source
+   * @param w2 second source
+   * @param bf binary functor to be applied
+   * @param param third parameter of ternary functor
+   */
   template<class D, class S, class S2>
   void
   apply_binary_functor(D& v,const  S& w, const S2& w2, const BinaryFunctor& bf, const typename S::value_type& param){
 	  detail::apply_binary_functor(v,w,w2,bf,1,param,param);
   }
 
-  /// @brief in-place, two parameters
+  /**
+   * @overload
+   * @brief in-place, two parameters.
+   *
+   * Applies a four-ary functor pointwise, fixing the 3rd and 4th argument to constants.
+   * 
+   * Pseudocode:
+   * @code
+   * forall i:
+   *   v[i] = ff(v[i],w[i],param, param2);
+   * @endcode
+   *
+   * @param v source and destination
+   * @param w second source
+   * @param bf binary functor to be applied
+   * @param param third parameter of four-ary functor
+   * @param param2 fourth parameter of four-ary functor
+   */
   template<class D, class S>
   void
   apply_binary_functor(D& v, const S& w, const BinaryFunctor& bf, const typename S::value_type& param, const typename S::value_type& param2){
 	  detail::apply_binary_functor(v,v,w,bf,2,param,param2);
   }
-  /// @brief two parameters
+
+  /**
+   * @overload
+   * @brief two parameters.
+   *
+   * Applies a four-ary functor pointwise, fixing the 3rd and 4th argument to constants.
+   * 
+   * Pseudocode:
+   * @code
+   * forall i:
+   *   v[i] = ff(w[i],w2[i],param, param2);
+   * @endcode
+   *
+   * @param v destination
+   * @param w first source
+   * @param w2 second source
+   * @param bf binary functor to be applied
+   * @param param third parameter of four-ary functor
+   * @param param2 third parameter of four-ary functor
+   */
   template<class D, class S, class S2>
   void
   apply_binary_functor(D& v, const S& w, const S2& w2, const BinaryFunctor& bf, const typename S::value_type& param, const typename S::value_type& param2){
 	  detail::apply_binary_functor(v,w,w2,bf,2,param,param2);
   }
-  /// @}
-
   /** 
    * @brief Copy one vector into another. 
    * 
@@ -403,7 +628,9 @@ namespace cuv{
   void copy(tensor<__value_type, __memory_space_type, __memory_layout_type>& dst, const  tensor<__value_type, __memory_space_type, __memory_layout_type>& src){
 	  apply_scalar_functor(dst,src,SF_COPY);
   }
- /** @} */ //end group functors_vectors
+/** @} */ //end group binary_functors
+
+/** @} */ //end group functors_vectors
 
 /** @defgroup reductions_vectors Functors reducing a vector to a scalar
  *   @{
@@ -469,6 +696,19 @@ namespace cuv{
   /// @see norm2
   template<class __value_type, class __memory_space_type> float norm2(const tensor<__value_type, __memory_space_type, column_major>& v){
 	return norm2(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v));
+  }
+  /** 
+   * @brief Return the two-norm or of the difference of two vectors
+   * 
+   * @param v src vector
+   * @param w src vector
+   * 
+   * @return Two-norm of (v-w)
+   */
+  template<class __value_type, class __memory_space_type> float diff_norm2(const tensor<__value_type, __memory_space_type>& v, const tensor<__value_type, __memory_space_type>& w);
+  /// @see norm2
+  template<class __value_type, class __memory_space_type> float diff_norm2(const tensor<__value_type, __memory_space_type, column_major>& v, const tensor<__value_type, __memory_space_type, column_major>& w){
+	return diff_norm2(*reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&v), *reinterpret_cast<const tensor<__value_type,__memory_space_type>* >(&w));
   }
   /** 
    * @brief Return the one-norm or sum-norm of a vector 
@@ -565,6 +805,8 @@ namespace cuv{
   }
 
  /** @} */ //end group reductions_vectors
+
+  /** @} */ // end group BLAS1
 
 } // cuv
 
@@ -708,6 +950,13 @@ namespace cuv{
     operator==(const cuv::tensor<T, V, M>& v, const T cmp){
         cuv::tensor<unsigned char, V, M> temp(v.shape());
   	cuv::apply_scalar_functor(temp, v, cuv::SF_EQ, cmp);
+  	return temp;
+  }
+  template<class T, class V, class M>
+    cuv::tensor<unsigned char, V, M>
+    operator==(const cuv::tensor<T, V, M>& v, const cuv::tensor<T,V,M>& w){
+        cuv::tensor<unsigned char, V, M> temp(v.shape());
+  	cuv::apply_binary_functor(temp, v, w, cuv::BF_EQ);
   	return temp;
   }
   template<class T, class V, class M>

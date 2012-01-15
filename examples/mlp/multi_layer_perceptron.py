@@ -41,7 +41,7 @@ class MLP:
             self.weight_layers.append(weight_layer(self.neuron_layers[i],
                 self.neuron_layers[i + 1]))
 
-    def train(self, input_matrix, teacher_matrix, n_epochs, learnrate = 0.10):
+    def fit(self, input_matrix, teacher_matrix, n_epochs=100, learnrate = 0.10):
         """
         Function to train the network
 
@@ -53,13 +53,13 @@ class MLP:
            is to be trained.
 
         """
-        number_of_pictures = input_matrix.shape[-1]
+        n_samples = input_matrix.shape[-1]
         squared_errors = cp.dev_tensor_float_cm(self.neuron_layers[-1].deltas.shape)
         for r in xrange(n_epochs):
             print "Epoch ", r + 1, "/", n_epochs
             mse = 0.0
             ce = 0.0
-            for batch in xrange(number_of_pictures / self.batch_size):
+            for batch in xrange(n_samples / self.batch_size):
                 index_begin = self.batch_size * batch
                 index_end = self.batch_size + index_begin
 
@@ -85,45 +85,31 @@ class MLP:
 
                 # Backward-Pass
                 for i in xrange(self.n_layers):
-                    self.weight_layers[self.n_layers - i - 1].backward(learnrate, decay = .01)
+                    self.weight_layers[self.n_layers - i - 1].backward(learnrate, decay=.01)
 
                 # Don't wait for garbage collector
                 teacher_batch.dealloc()
                 self.neuron_layers[0].activations.dealloc()
 
-            print "MSE: ",     (mse / number_of_pictures)
-            print "Classification Error Training: ", (ce / number_of_pictures)
+            print "MSE: ",     (mse / n_samples)
+            print "Classification Error Training: ", (ce / n_samples)
         squared_errors.dealloc()
 
-    def test(self, input_matrix, teacher_matrix):
+    def predict(self, input_matrix):
         """
-        Function to test the network
+        Predict label on unseen data
 
-        @param input_matrix -- matrix consisting of input
-           data to the network.
-        @param teacher_matrix -- matrix consisting of labels
-           of input data .
-
+        @param input_matrix -- matrix consisting of input data to the network.
         """
-        number_of_pictures = input_matrix.shape[-1]
-        mse = 0.0
-        ce = 0.0
-        squared_errors = cp.dev_tensor_float_cm(self.neuron_layers[-1].deltas.shape)
-        for batch in xrange(number_of_pictures / self.batch_size):
+        n_samples = input_matrix.shape[-1]
+        predictions = []
+        for batch in xrange(n_samples / self.batch_size):
             index_begin = self.batch_size * batch
             index_end = index_begin + self.batch_size
             self.neuron_layers[0].activations = cp.dev_tensor_float_cm(input_matrix[:,
                 index_begin:index_end].copy('F'))
-            teacher_batch = cp.dev_tensor_float_cm(teacher_matrix[:,
-                index_begin:index_end].copy('F'))
             for i in xrange(self.n_layers):
                 self.weight_layers[i].forward()
-            cp.copy(squared_errors, self.neuron_layers[-1].deltas)
-            cp.apply_scalar_functor(squared_errors, cp.scalar_functor.SQUARE)
-            mse += cp.sum(squared_errors)
-            ce += float(np.sum(np.argmax(teacher_batch.np, axis=0)
-                    != np.argmax(self.neuron_layers[-1].activations.np, axis=0)))
-            teacher_batch.dealloc()
-        print "MSE: ", (mse / number_of_pictures)
-        print "Classification Error Test: ", (ce / number_of_pictures)
-        squared_errors.dealloc()
+            prediction_batch = np.argmax(self.neuron_layers[-1].activations.np, axis=0)
+            predictions.append(prediction_batch)
+        return np.hstack(predictions)

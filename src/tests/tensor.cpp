@@ -197,9 +197,21 @@ void test_lowdim_views(){
 	// ***************************************
 	for(int k=0;k<d;++k){
 		tensor<V,M,row_major,memory2d_tag> view(indices[k][index_range(0,h)][index_range(0,w)], t2d);
+		BOOST_CHECK_EQUAL(  view.ndim() , 2);
+		BOOST_CHECK_EQUAL(  view.shape(0) , h);
+		BOOST_CHECK_EQUAL(  view.shape(1) , w);
 		for(int i=0;i<h; i++)
 			for(int j=0;j<w; j++)
 				BOOST_CHECK_EQUAL( (V) view(i,j) , (V) t2d(k,i,j) );
+
+		// alternative spec
+		tensor<V,M,row_major,memory2d_tag> view_(indices[k][index_range()][index_range()<cuv::index(w)], t2d);
+		BOOST_CHECK_EQUAL(  view_.ndim() , 2);
+		BOOST_CHECK_EQUAL(  view_.shape(0) , h);
+		BOOST_CHECK_EQUAL(  view_.shape(1) , w);
+		for(int i=0;i<h; i++)
+			for(int j=0;j<w; j++)
+				BOOST_CHECK_EQUAL( (V) view_(i,j) , (V) t2d(k,i,j) );
 	}
 
 	// ***************************************
@@ -243,6 +255,28 @@ BOOST_AUTO_TEST_CASE( tensor_view )
 	tensor<float,host_memory_space,column_major> a(extents[2][3][4]);
 	tensor<float,host_memory_space,column_major> b(indices[2][3][4],a.ptr());
 	BOOST_CHECK_EQUAL(a.ptr(), b.ptr());
+}
+
+BOOST_AUTO_TEST_CASE( tensor_value_convert )
+{
+	{
+		tensor<float,host_memory_space> t(100);
+		for(int i=0;i<100;i++) t[i] = (float) i;
+		tensor<int,host_memory_space> t_int;
+		t_int = t;
+		for(int i=0;i<100;i++){
+			BOOST_CHECK_EQUAL((float)t[i], (float)(int)t_int[i]);
+		}
+	}
+	{
+		tensor<float,dev_memory_space> t(100);
+		for(int i=0;i<100;i++) t[i] = (float) i;
+		tensor<int,dev_memory_space> t_int;
+		t_int = t;
+		for(int i=0;i<100;i++){
+			BOOST_CHECK_EQUAL((float)t[i], (float)(int)t_int[i]);
+		}
+	}
 }
 
 BOOST_AUTO_TEST_SUITE_END()

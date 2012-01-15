@@ -5,7 +5,14 @@
 
 namespace cuv{
 namespace libs{	
+	/// kernels
 	namespace kernels{
+	/**
+	 * @addtogroup libs
+	 * @{
+	 * @addtogroup kernels
+	 * @{
+	 */
 	template <class __value_type, class __memory_space_type, class __memory_layout_type>
 	void pairwise_distance_l2(tensor<__value_type,__memory_space_type,__memory_layout_type>& result, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, const bool & squared=false);
 
@@ -18,5 +25,9 @@ namespace libs{
              pairwise_distance_l2(result, A, B, squared);
              return result;
         }
+	/**
+	 * @}
+	 * @}
+	 */
 	}}}
 #endif

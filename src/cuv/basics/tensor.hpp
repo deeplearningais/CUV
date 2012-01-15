@@ -48,6 +48,10 @@
 
 namespace cuv
 {
+/**
+ * @addtogroup basics Basic datastructures
+ * @{
+ */
 	/// Parent struct for row and column major tags
 	struct memory_layout_tag{};
 	/// Tag for column major matrices
@@ -79,10 +83,43 @@ namespace cuv
 
 	using boost::detail::multi_array::extent_gen;
 	using boost::detail::multi_array::index_gen;
+	/**
+	 * defines an index range, stolen from boost::multi_array
+	 *
+	 * examples:
+	 * @code
+	 * index_range(1,3)
+	 * index(1) <= index_range() < index(3)
+	 * @endcode
+	 */
 	typedef boost::detail::multi_array::index_range<boost::detail::multi_array::index,boost::detail::multi_array::size_type> index_range;
+	/**
+	 * the index type used in index_range, useful for comparator syntax in @see index_range
+	 */
+	typedef index_range::index index;
 #ifndef CUV_DONT_CREATE_EXTENTS_OBJ
 	namespace{
+		/**
+		 * extents object, can be used to generate a multi-dimensional array conveniently.
+		 *
+		 * stolen from boost::multi_array.
+		 *
+		 * Example:
+		 * @code
+		 * tensor<...> v(extents[5][6][7]); // 3-dimensional tensor
+		 * @endcode
+		 */
 		extent_gen<0> extents;
+		/**
+		 * indices object, can be used to generate multi-dimensional views conveniently.
+		 *
+		 * stolen form boost::multi_array.
+		 *
+		 * Example:
+		 * @code
+		 * tensor<...> v(indices[index_range(1,3)][index_range()], other_tensor);
+		 * @endcode
+		 */
 		index_gen<0,0> indices;
 	}
 #endif
@@ -156,9 +193,16 @@ namespace cuv
 			 * construct tensor view using extents object and a pointer to the wrappable memory
 			 *
 			 * @deprecated you should use a constructor which knows about the spatial layout of the ptr
+			 * @warning    despite the flexibility of index_range, only finish() is used, strides are NOT supported currently.
 			 *
 			 * @param eg   determines shape of new tensor
 			 * @param ptr  determines start of data in memory
+			 *
+			 * Example usage:
+			 * @code
+			 * tensor<float,host_memory_space> v(extents[10][20]);
+			 * tensor<float,host_memory_space> w(indices[index_range(0,3)][index_range(0,20)], v.ptr());
+			 * @endcode
 			 */
 			template<int D, int E>
 			explicit const_tensor(const index_gen<D,E>& eg, pointer_type ptr){
@@ -170,6 +214,9 @@ namespace cuv
 
 			/**
 			 * construct tensor view using extents object and a pointer to the wrappable memory
+			 *
+			 * @param eg the size of the dimensions of this tensor
+			 * @param ptr where the data is stored (the tensor will not free this memory!)
 			 */
 			explicit const_tensor(const std::vector<index_type> eg, pointer_type ptr)
 				:m_shape(eg)
@@ -178,7 +225,10 @@ namespace cuv
 			}
 
 			/**
-			 * construct tensor view using int
+			 * construct 1-dimensional tensor view using int
+			 *
+			 * @param _size number of elements this tensor should contain
+			 * @param ptr where the data is stored (the tensor will not free this memory!)
 			 */
 			const_tensor(int _size, pointer_type ptr){
 				m_shape.push_back(_size);
@@ -186,7 +236,10 @@ namespace cuv
 			}
 
 			/**
-			 * construct tensor view using uint
+			 * construct 1-dimensional tensor view using uint
+			 *
+			 * @param _size number of elements this tensor should contain
+			 * @param ptr where the data is stored (the tensor will not free this memory!)
 			 */
 			const_tensor(unsigned int _size, pointer_type ptr){
 				m_shape.push_back(_size);
@@ -194,7 +247,9 @@ namespace cuv
 			}
 
 			/**
-			 * construct tensor using uint
+			 * construct 1-dimensional tensor using uint
+			 *
+			 * @param _size number of elements this tensor should contain
 			 */
 			const_tensor(unsigned int _size){
 				m_shape.push_back(_size);
@@ -202,7 +257,9 @@ namespace cuv
 			}
 
 			/**
-			 * construct tensor using vector of sizes
+			 * construct 1-dimensional tensor using vector of sizes
+			 *
+			 * @param _size size of the dimensions of this tensor
 			 */
 			const_tensor(const std::vector<index_type>& _size)
                             : m_shape(_size)
@@ -212,7 +269,9 @@ namespace cuv
 			}
 
 			/**
-			 * construct tensor using int
+			 * construct 1-dimensional tensor using int
+			 *
+			 * @param _size number of elements this tensor should contain
 			 */
 			explicit const_tensor(const int& _size){
 				m_shape.push_back(_size);
@@ -229,7 +288,8 @@ namespace cuv
 			}
 
 			/**
-			 * Copy constructor
+			 * @overload
+			 *
 			 * also accepts assignment from other memoryspace type
 			 * and convertible pointers
 			 */
@@ -241,13 +301,48 @@ namespace cuv
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
 					std::reverse(m_shape.begin(),m_shape.end());
 			}
+
+			/**
+			 * construct tensor as view of another (sub) tensor
+			 *
+			 * @warning you must ensure that o lives longer than this view!
+			 *
+			 * @warning if a dimension has size 1, the resulting tensor has fewer dimensions than the original one.
+			 *
+			 * @warning currently only works if the subtensor is a connected area in memory, NO strides are supported.
+			 *          Basically this means that you can only slice in the first dimension which has size>1.
+			 *
+			 * @param eg  the indices of the subtensor
+			 * @param o   the original tensor
+			 *
+			 * Example:
+			 * @code
+			 * tensor<float,host_memory_space> v(extents[5][10]);
+			 *
+			 * // these are equivalent:
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range(0,10)], v);
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range()], v);
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index_range() < index(10)], v);
+			 * tensor<float,host_memory_space> w0(indices[index_range(2,3)][index(0) < index_range() < index(10)], v);
+			 *
+			 * // yields a 1D-tensor corresponding to the 2nd slice in the 1st dimension:
+			 * tensor<float,host_memory_space> w0(indices[1][index_range()]);
+			 * @endcode
+			 */
 			template<int D, int E, class P, class OM, class OL, class OA>
 			explicit const_tensor(const index_gen<D,E>& eg, const const_tensor<__value_type,OM,OL,P,OA>& o){
 				m_shape.reserve(D);
+				cuvAssert(o.ndim()==D);
 				for(std::size_t i=0;i<D;i++){
-					if(eg.ranges_[i].finish()-eg.ranges_[i].start()<=1)
+					int start  = eg.ranges_[i].get_start(0);
+					int finish = eg.ranges_[i].get_finish(o.shape(i));
+#ifndef NDEBUG
+					cuvAssert(finish<=o.shape()[i]);
+					cuvAssert(start >=0);
+#endif
+					if(finish-start<=1)
 						continue;
-					m_shape.push_back(eg.ranges_[i].finish()-eg.ranges_[i].start());
+					m_shape.push_back(finish-start);
 				}
 
 				index_type offset = o.index_of(eg);
@@ -269,12 +364,41 @@ namespace cuv
 			}
 
 			/**
-			 * Assignment operator
+			 * @overload
+			 *
+			 * @warning if memory_layout differs, the dimensions are inversed. 
+			 *          If you want to convert between column_major and row_major,
+			 *          you need a (generalized) tranpose as well!
+			 *
 			 * also accepts assignment from other memoryspace type
 			 * and convertible pointers
 			 */
 			template<class P, class OM, class OL, class OA>
 			const_tensor& operator=(const const_tensor<value_type,OM,OL,P,OA>& o){
+				m_shape = o.shape();
+				m_data.assign(m_pitch,o.shape(),o.data(),inner_is_last());
+				if(! IsSame<OL,__memory_layout_type>::Result::value)
+					std::reverse(m_shape.begin(),m_shape.end());
+				return *this;
+			}
+
+			/**
+			 * @overload
+			 *
+			 * @warning if memory_layout differs, the dimensions are inversed. 
+			 *          If you want to convert between column_major and row_major,
+			 *          you need a (generalized) tranpose as well!
+			 *
+			 * accepts assignment from other valuetype
+			 *
+			 * @internal
+			 * the EnableIf ensures that this version is only used when value-types differ.
+			 * otherwise, the compiler cannot decide which version to call when both
+			 * memory_space_type and value_type are equal.
+			 */
+			template<class P, class OV, class OL, class OA>
+			typename EnableIf<typename IsDifferent<OV,value_type>::Result,const_tensor>::type&
+			operator=(const const_tensor<OV,memory_space_type,OL,P,OA>& o){
 				m_shape = o.shape();
 				m_data.assign(m_pitch,o.shape(),o.data(),inner_is_last());
 				if(! IsSame<OL,__memory_layout_type>::Result::value)
@@ -295,13 +419,17 @@ namespace cuv
 
 			/**
 			 * returns the index in linear memory of start point of index-range
+			 *
+			 * This is mainly for internal use in constructors based on indices[...]
 			 */
 			template<int D, int E>
 			index_type
 			index_of(const index_gen<D,E>& eg)const{
 				index_type point[D];
-				for(unsigned int i=0;i<D;i++)
-					point[i]=eg.ranges_[i].start();
+				for(unsigned int i=0;i<D;i++){
+					int start  = eg.ranges_[i].get_start(0);
+					point[i]=start;
+				}
 
 				return index_of<D>(memory_layout_type(),&point[0]);
 			}
@@ -332,35 +460,67 @@ namespace cuv
 			 * return a reference to the value at this position in linear memory
 			 */
 			const_reference_type operator()(index_type d0)const{
+#ifndef NDEBUG
+				cuvAssert(ndim()==1);
+#endif
 				//index_type arr[1] = {d0};
 				//index_type idx = index_of<1>(memory_layout_type(),arr);
 				//return m_data[idx];
 				return m_data[d0];
 			}
 			/**
+			 * @overload
+			 *
 			 * return a reference to the value at this position in 2D memory
 			 */
 			const_reference_type operator()(index_type d0, index_type d1)const{
+#ifndef NDEBUG
+				cuvAssert(ndim()==2);
+#endif
 				index_type arr[2] = {d0,d1};
 				index_type idx = index_of<2>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 
 			/**
+			 * @overload
+			 *
 			 * return a reference to the value at this position in 3D memory
 			 */
 			const_reference_type operator()(index_type d0, index_type d1, index_type d2)const{
+#ifndef NDEBUG
+				cuvAssert(ndim()==3);
+#endif
 				index_type arr[3] = {d0,d1,d2};
 				index_type idx = index_of<3>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 
 			/**
+			 * @overload
+			 *
 			 * return a reference to the value at this position in 4D memory
 			 */
 			const_reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3)const{
+#ifndef NDEBUG
+				cuvAssert(ndim()==4);
+#endif
 				index_type arr[4] = {d0,d1,d2,d3};
 				index_type idx = index_of<4>(memory_layout_type(),arr);
+				return m_data[idx];
+			}
+
+			/**
+			 * @overload
+			 *
+			 * return a reference to the value at this position in 5D memory
+			 */
+			const_reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3, index_type d4)const{
+#ifndef NDEBUG
+				cuvAssert(ndim()==5);
+#endif
+				index_type arr[5] = {d0,d1,d2,d3,d4};
+				index_type idx = index_of<5>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 
@@ -389,7 +549,7 @@ namespace cuv
 				return m_data.memsize();
 			}
 			/**
-			 * @ptr if ptr!=NULL, create a view on this pointer instead of allocating memory
+			 * reserve memory for the desired shape
 			 */
 			void allocate(){ 
 				m_data.set_size(m_pitch,m_shape,inner_is_last()); 
@@ -405,6 +565,12 @@ namespace cuv
 			 */
 			const std::vector<index_type>& shape()const{
 				return m_shape;
+			}
+			/**
+			 * returns a the size of the n-th dimension of the tensor
+			 */
+			const unsigned int& shape(unsigned int i)const{
+				return m_shape[i];
 			}
 			/**
 			 * returns a vector whose values represent the number of dimensions of the tensor
@@ -548,6 +714,7 @@ namespace cuv
 
 
 			/**
+			 * @overload
 			 * assignment operator
 			 */
 			tensor&
@@ -558,11 +725,30 @@ namespace cuv
 				return *this;
 			}
 			/**
+			 * @overload
 			 * assignment operator for other memory spaces
 			 */
 			template<class OM, class OL, class OA>
 			tensor&
 			operator=(const tensor<__value_type, OM, OL, OA>& o){
+				//if(this == &o)   // is different type, anyway.
+				//        return *this;
+				super_type::operator=(o);
+				return *this;
+			}
+
+			/**
+			 * @overload
+			 * assignment operator for other value types
+			 *
+			 * @internal
+			 * the EnableIf ensures that this version is only used when value-types differ.
+			 * otherwise, the compiler cannot decide which version to call when both
+			 * memory_space_type and value_type are equal.
+			 */
+			template<class OV, class OL, class OA>
+				typename EnableIf<typename IsDifferent<OV,value_type>::Result,tensor>::type&
+			operator=(const tensor<OV, memory_space_type, OL, OA>& o){
 				//if(this == &o)   // is different type, anyway.
 				//        return *this;
 				super_type::operator=(o);
@@ -588,35 +774,78 @@ namespace cuv
 			 * returns a reference to this position in linear memory
 			 */
 			reference_type operator()(index_type d0){
+#ifndef NDEBUG
+				cuvAssert(this->ndim()==1);
+				cuvAssert(d0 <  m_shape[0]);
+#endif
 				//index_type arr[1] = {d0};
 				//index_type idx = super_type::template index_of<1>(memory_layout_type(),arr);
 				//return m_data[idx];
 				return m_data[d0];
 			}
 			/**
+			 * @overload
 			 * returns a reference to this position in 2D memory
 			 */
 			reference_type operator()(index_type d0, index_type d1){
+#ifndef NDEBUG
+				cuvAssert(this->ndim()==2);
+				cuvAssert(d0 <  m_shape[0]);
+				cuvAssert(d1 <  m_shape[1]);
+#endif
 				index_type arr[2] = {d0,d1};
 				index_type idx = super_type::template index_of<2>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 
 			/**
+			 * @overload
 			 * returns a reference to this position in 3D memory
 			 */
 			reference_type operator()(index_type d0, index_type d1, index_type d2){
+#ifndef NDEBUG
+				cuvAssert(this->ndim()==3);
+				cuvAssert(d0 <  m_shape[0]);
+				cuvAssert(d1 <  m_shape[1]);
+				cuvAssert(d2 <  m_shape[2]);
+#endif
 				index_type arr[3] = {d0,d1,d2};
 				index_type idx = super_type::template index_of<3>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 
 			/**
+			 * @overload
 			 * returns a reference to this position in 4D memory
 			 */
 			reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3){
+#ifndef NDEBUG
+				cuvAssert(this->ndim()==4);
+				cuvAssert(d0 <  m_shape[0]);
+				cuvAssert(d1 <  m_shape[1]);
+				cuvAssert(d2 <  m_shape[2]);
+				cuvAssert(d3 <  m_shape[3]);
+#endif
 				index_type arr[4] = {d0,d1,d2,d3};
 				index_type idx = super_type::template index_of<4>(memory_layout_type(),arr);
+				return m_data[idx];
+			}
+
+			/**
+			 * @overload
+			 * returns a reference to this position in 5D memory
+			 */
+			reference_type operator()(index_type d0, index_type d1, index_type d2, index_type d3, index_type d4){
+#ifndef NDEBUG
+				cuvAssert(this->ndim()==5);
+				cuvAssert(d0 <  m_shape[0]);
+				cuvAssert(d1 <  m_shape[1]);
+				cuvAssert(d2 <  m_shape[2]);
+				cuvAssert(d3 <  m_shape[3]);
+				cuvAssert(d4 <  m_shape[4]);
+#endif
+				index_type arr[5] = {d0,d1,d2,d3,d4};
+				index_type idx = super_type::template index_of<5>(memory_layout_type(),arr);
 				return m_data[idx];
 			}
 			
@@ -636,12 +865,14 @@ namespace cuv
 					m_shape.push_back(eg.ranges_[i].finish());
 			}
 			/**
+			 * @overload
 			 * convenience overloading for matrices: change the shape of this tensor (product must be the same as before)
 			 */
                         void reshape(index_type i, index_type j){
                                 reshape(extents[i][j]);
                         }
 			/**
+			 * @overload
 			 * change the shape of this tensor (product must be the same as before)
 			 */
                         void reshape(const std::vector<index_type>& new_shape){
@@ -649,17 +880,105 @@ namespace cuv
                                 cuvAssert(new_size == size() );
                                 m_shape = new_shape;
                         }
+            /**
+             * change the shape of this tensor (realloc if needed)
+             */
+            template<std::size_t D>
+                void resize(const extent_gen<D>& eg){
+                    std::size_t new_size=1;	
+                    for(int i=0; i<D; i++)
+                        new_size *= eg.ranges_[i].finish();
+                    if(size()==new_size){
+                        reshape(eg);
+                        return;
+                    }
+                    m_shape.clear();
+                    m_shape.reserve(D);
+                    for(std::size_t i=0;i<D;i++)
+                        m_shape.push_back(eg.ranges_[i].finish());
+                    this->allocate();
+                }
+            /**
+             * @overload
+             * change the shape of this tensor (realloc if needed)
+             */
+            void resize(const std::vector<index_type>& new_shape){
+                index_type new_size =  std::accumulate(new_shape.begin(),new_shape.end(),(index_type)1,std::multiplies<index_type>());
+                if(size()==new_size){
+                    reshape(new_shape);
+                    return;
+                }
+                m_shape = new_shape;
+                this->allocate();
+            }
 
 			/**
 			 * return reference to underlying memory object
 			 */
 			memory_container_type&       data()     {return m_data;}
+			/**
+			 * @overload
+			 * const version
+			 */
 			const memory_container_type& data()const{return m_data;}
 
 			/**
 			 * change pitch (dangerous!) primarily here for serialization
 			 */
 			void set_pitch(index_type i){ m_pitch=i; }
+
+			/**
+			 * set tensor to a view of another (sub) tensor
+			 *
+			 * @warning you must ensure that o lives longer than this view!
+			 *
+			 * @warning if a dimension has size 1, the resulting tensor has fewer dimensions than the original one.
+			 *
+			 * @warning currently only works if the subtensor is a connected area in memory, NO strides are supported.
+			 *          Basically this means that you can only slice in the first dimension which has size>1.
+			 *
+			 * @param eg  the indices of the subtensor
+			 * @param o   the original tensor
+			 *
+			 * Example:
+			 * @code
+			 * tensor<float,host_memory_space> v(extents[5][10]);
+			 *
+			 * // these are equivalent:
+			 * tensor<float,host_memory_space> w0; w0.set_view(indices[index_range(2,3)][index_range(0,10)], v);
+			 * tensor<float,host_memory_space> w0; w0.set_view(indices[index_range(2,3)][index_range()], v);
+			 * tensor<float,host_memory_space> w0; w0.set_view(indices[index_range(2,3)][index_range() < index(10)], v);
+			 * tensor<float,host_memory_space> w0; w0.set_view(indices[index_range(2,3)][index(0) < index_range() < index(10)], v);
+			 *
+			 * // yields a 1D-tensor corresponding to the 2nd slice in the 1st dimension:
+			 * tensor<float,host_memory_space> w0(indices[1][index_range()]);
+			 * @endcode
+			 */
+			template<int D, int E, class P, class OM, class OL, class OA>
+			void
+			set_view(const index_gen<D,E>& eg, const const_tensor<__value_type,OM,OL,P,OA>& o){
+				m_data.dealloc();
+				m_shape.clear();
+				m_shape.reserve(D);
+				cuvAssert(o.ndim()==D);
+				for(std::size_t i=0;i<D;i++){
+					int start  = eg.ranges_[i].get_start(0);
+					int finish = eg.ranges_[i].get_finish(o.shape(i));
+#ifndef NDEBUG
+					cuvAssert(finish<=o.shape()[i]);
+					cuvAssert(start >=0);
+#endif
+					if(finish-start<=1)
+						continue;
+					m_shape.push_back(finish-start);
+				}
+
+				index_type offset = o.index_of(eg);
+
+				if(! IsSame<OL,__memory_layout_type>::Result::value)
+					std::reverse(m_shape.begin(),m_shape.end());
+				m_data.set_view(m_pitch,offset,m_shape,o.data().ptr(),this->inner_is_last());
+			}
 	};
 
       // forward declaration of fill to implement operator= for value_type	
@@ -713,6 +1032,7 @@ namespace cuv
 		}
 		return true;
 	}
+	/** @} */ // end group basics
 }
 
 #include <iostream>

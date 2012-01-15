@@ -46,16 +46,8 @@
 using namespace boost::python;
 using namespace cuv;
 
-template<class T>
-long int this_ptr(const T& t){
-	return (long int)(&t);
-}
-template<class T>
-long int internal_ptr(const T& t){
-	return (long int)(t.ptr());
-}
-
 namespace python_wrapping {
+
     template <class T>
     typename T::reference_type 
     get_reference(T& tens,const boost::python::list &ind){
@@ -88,13 +80,22 @@ namespace python_wrapping {
     }
     
     template <class value_type>
-        std::vector<value_type> extract_python_list(const boost::python::list & mylist){
+        std::vector<value_type> extract_python_list(const boost::python::object & mylist){
             std::vector<value_type> stl_vector;
             int n = boost::python::len(mylist);
             for (int it=0; it < n; it++)
-                stl_vector.push_back(extract<value_type>(mylist[it]));
+                stl_vector.push_back((value_type)extract<long>(mylist[it]));
             return stl_vector;
         }
+
+    template <class T>
+    T* reshaped_view(T& tens, const boost::python::list &new_shape){
+        std::vector<typename T::index_type> shape = extract_python_list<typename T::index_type>(new_shape);
+        typename T::index_type new_size = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<typename T::index_type>());
+        cuvAssert(new_size == tens.size());
+        return new T(shape, tens.ptr());
+
+    }
 
     template <class T>
     void reshape(T& tens, const boost::python::list &shape){
@@ -119,6 +120,9 @@ namespace python_wrapping {
 	    /// construct using shape 
 	    typedef tensor<V,M,L> T;
 	    static T* construct_tensor_shape(boost::python::list python_shape){
+		    return new T(extract_python_list<typename T::index_type>(python_shape));
+	    }
+	    static T* construct_tensor_shape(boost::python::tuple python_shape){
 		    return new T(extract_python_list<typename T::index_type>(python_shape));
 	    }
 	    /// construct a vector using a single dimension
@@ -273,7 +277,9 @@ export_tensor_common(const char* name){
 
 	class_<arr> c(name);
 	c
-		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_shape))
+        .enable_pickling()
+		.def("__init__", make_constructor((arr*(*)(boost::python::list)) python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_shape))
+		.def("__init__", make_constructor((arr*(*)(boost::python::tuple)) python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_shape))
 		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::construct_tensor_int))
 		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::template construct_tensor_numpy_array_copy<value_type>))
 		.def("__init__", make_constructor(&python_wrapping::tensor_constructor<value_type,memspace_type,memlayout_type>::template construct_tensor_numpy_array_copy<double>))
@@ -282,7 +288,9 @@ export_tensor_common(const char* name){
                 .def("set",    &python_wrapping::set<T>, "set index to value")
                 .def("get",    &python_wrapping::get<T>, "set index to value")
                 .def("copy",    &python_wrapping::copy<T>, "get copy of object",return_value_policy<manage_new_object>())
-                .def("reshape",    &python_wrapping::reshape<T>, "reshape tensor in place")
+                .def("reshape_inplace", &python_wrapping::reshape<T>, "reshape tensor in place")
+                .def("reshape",    &python_wrapping::reshaped_view<T>, "return view to reshaped tensor",
+                        return_internal_reference<>())
                 .add_property("np", &python_wrapping::tens2npy<value_type,memspace_type,memlayout_type>::to_numpy_copy)
                 .add_property("size", &arr::size)
                 .add_property("shape", &python_wrapping::shape<T>, "get shape of tensor")
@@ -321,9 +329,6 @@ export_tensor_common(const char* name){
 				return_value_policy<manage_new_object, with_custodian_and_ward_postcall<1, 0> >());
 	}
 
-	def("this_ptr", this_ptr<arr>);
-	def("internal_ptr", internal_ptr<arr>);
-	
 }
 
 void export_tensor(){

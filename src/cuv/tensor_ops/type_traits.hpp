@@ -2,7 +2,7 @@
 namespace cuv
 {
 	/**
-	 * @defgroup typetraits
+	 * @addtogroup typetraits
 	 * @{
 	 */
 

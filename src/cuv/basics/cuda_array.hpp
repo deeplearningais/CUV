@@ -58,9 +58,9 @@ namespace cuv
 		  typedef typename base_type::value_type 					  value_type; 		///< Type of matrix entries
 		  typedef typename base_type::index_type 					  index_type;		///< Type of indices
 		  typedef cuda_array<value_type,memory_space_type,index_type>  my_type;	        ///< Type of this object
-		  using base_type::m_width;
-		  using base_type::m_height;
-		  index_type m_depth;
+		  using base_type::m_width;    ///< width of the array
+		  using base_type::m_height;   ///< height of the array
+		  index_type m_depth;          ///< depth of the array
 
 		private:
 		  cudaArray*         m_ptr;   ///< data storage in cudaArray

@@ -36,7 +36,7 @@
 
 namespace cuv{
 
- /** @defgroup random Random functions for matrices and vectors
+ /** @addtogroup random 
   * @{
   */
 

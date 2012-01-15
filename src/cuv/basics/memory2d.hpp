@@ -53,6 +53,8 @@ class linear_memory;
 /**
  * @brief Basic 2D memory class
  *
+ * @ingroup basics
+ *
  * This memory2d class is the generic storage classes and is repsonsible for allocation/deletion.
  */
 template<class __value_type, class __memory_space_type, class TPtr=const __value_type*, class __index_type=unsigned int>
@@ -60,7 +62,7 @@ class memory2d
 : public memory<__value_type,__memory_space_type,TPtr,__index_type>
 {
 	public:
-	  typedef memory<__value_type,__memory_space_type,TPtr,__index_type> super_type;
+	  typedef memory<__value_type,__memory_space_type,TPtr,__index_type> super_type; ///< The type of the class we derived from
 	  typedef typename super_type::value_type value_type; ///< Type of the entries of memory
 	  typedef typename super_type::const_value_type const_value_type; ///< Type of the entries of memory
 	  typedef typename super_type::index_type index_type; ///< Type indices/dimensions
@@ -75,15 +77,18 @@ class memory2d
 	  using super_type::m_is_view;
 	  using super_type::m_allocator;
 
-	  index_type m_width;
-	  index_type m_pitch;
-	  index_type m_height;
+	  index_type m_width; ///< width of a "row" (in elements)
+	  index_type m_pitch; ///< number of bytes in a row
+	  index_type m_height; ///< number of rows
 
 	  /**
 	   * Set width and height of memory2d using a shape
 	   *
 	   * For 3D-shapes, we assume that the outermost dimension is the depth
 	   * Actual height is therefore shape1*shape2
+	   *
+	   * @param shape         the shape of the tensor this is used to allocate
+	   * @param inner_is_last whether the last component of shape denotes the inner-most=pitched dimension
 	   */ 
 	  void set_width_and_height(const std::vector<index_type>&shape, bool inner_is_last){
 		  m_width          = inner_is_last ? shape.back() : shape.back();
@@ -95,15 +100,16 @@ class memory2d
 	  /*
 	   * Member Access
 	   */
-	  index_type width() const{return m_width;}
-	  index_type height()const{return m_height;}
-	  index_type pitch() const{return m_pitch;}
+	  index_type width() const{return m_width;} ///< @return width of a "row" in Elements
+	  index_type height()const{return m_height;} ///< @return number  of rows
+	  index_type pitch() const{return m_pitch;} ///< @return the number of bytes in a "row"
 
 	  /**
 	   * @brief set length of memory2d. 
 	   *
 	   * @param pitch   OUT the stride in bytes for each dimension
 	   * @param shape      IN the shape  in value_types
+	   * @param inner_is_last whether the last component of shape denotes the inner-most=pitched dimension
 	   *
 	   */
 	  void set_size(index_type& pitch, const std::vector<index_type>& shape, bool inner_is_last) {
@@ -129,7 +135,8 @@ class memory2d
 	  /** 
 	   * @brief Creates memory2d of lenght s and allocates memory
 	   * 
-	   * @param s Length of memory2d
+	   * @param h number of rows
+	   * @param w number of elements in a row
 	   */
 	  memory2d(index_type h, index_type w) : m_width(w), m_height(h){
 		  alloc();
@@ -147,7 +154,8 @@ class memory2d
 	  /** 
 	   * @brief Creates memory2d from pointer to entries.
 	   * 
-	   * @param s Length of memory2d
+	   * @param h number of rows
+	   * @param w number of elements in a row
 	   * @param p Pointer to entries 
 	   * @param is_view If true will not take responsibility of memory at p. Otherwise will dealloc p on destruction.
 	   */
@@ -191,7 +199,7 @@ class memory2d
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
 	   *
-	   * WARNING: ptr should not be a pitched pointer!!!
+	   * @warning  ptr should not be a pitched pointer!!!
 	   */
 	  void set_view(index_type& pitch, const std::vector<index_type>& shape, pointer_type ptr, bool inner_is_last){ 
 		  dealloc();
@@ -201,9 +209,17 @@ class memory2d
 		  m_pitch = pitch = m_width*sizeof(value_type);
 	  }
 	  /**
+	   * @overload
+	   *
 	   * @brief Make an already existing memory2d a view on a linear_memory.
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
+	   *
+	   * @param pitch OUT pitch of the resulting view
+	   * @param ptr_offset IN offset relative to o.ptr()
+	   * @param shape desired shape of the view
+	   * @param o     target of view
+	   * @param inner_is_last whether the last component of shape denotes the inner-most=pitched dimension
 	   */
 	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const linear_memory<value_type,memory_space_type,TPtr,index_type>& o, bool inner_is_last){ 
 		  dealloc();
@@ -215,9 +231,17 @@ class memory2d
 	  }
 
 	  /**
+	   * @overload
+	   *
 	   * @brief Make an already existing memory2d a view on another memory2d.
 	   *
 	   * this is a substitute for operator=, when you do NOT want to copy.
+	   *
+	   * @param pitch OUT pitch of the resulting view
+	   * @param ptr_offset IN offset relative to o.ptr()
+	   * @param shape desired shape of the view
+	   * @param o     target of view
+	   * @param inner_is_last whether the last component of shape denotes the inner-most=pitched dimension
 	   */
 	  void set_view(index_type& pitch, index_type ptr_offset, const std::vector<index_type>& shape, const memory2d& o, bool inner_is_last){ 
 		  dealloc();
@@ -267,6 +291,8 @@ class memory2d
 		  }
 
 		/** 
+		 * @overload
+		 *
 		 * @brief Copy memory2d from other memory type.
 		 * 
 		 * @param o Source memory2d
@@ -310,6 +336,7 @@ class memory2d
 			  return *this;
 		  }
 	  /** 
+	   * @overload
 	   * @brief Assign memory2d.
 	   * 
 	   * @param o      Source memory
@@ -330,15 +357,25 @@ class memory2d
 	   * @}
 	   */
 
+	  /**
+	   * @param idx  index
+	   * @return value at position idx
+	   */
 	  reference_type
-		  operator[](const index_type& idx)     ///< Return entry at position t
+		  operator[](const index_type& idx)     
 		  {
 			  int x = idx % m_width;
 			  int y = idx / m_width;
 			  return reference_type((value_type*)((char*)this->m_ptr+y*m_pitch)+x);
 		  }
+
+	  /**
+	   * @overload
+	   * @param idx  index
+	   * @return value at position idx
+	   */
 	  const_reference_type
-		  operator[](const index_type& idx)const///< Return entry at position t
+		  operator[](const index_type& idx)const
 		  {
 			  int x = idx % m_width;
 			  int y = idx / m_width;
@@ -347,7 +384,9 @@ class memory2d
 
 }; // memory2d
 
+/// a tag which can be used to dispatch algorithms based on the memory-type of a tensor
 struct memory2d_tag{};
+/// specialization of memory_traits for memory2d
 template<class V,class M, class P, class I>
 struct memory_traits<V,M,P,I,memory2d_tag>{
 	typedef memory2d<V,M,P,I> type;

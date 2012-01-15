@@ -4,6 +4,14 @@
 #include <cuv/tools/meta_programming.hpp>
 #include <cuv/libs/kmeans/kmeans.hpp>
 
+/*#include <thrust/count.h>*/
+#include<thrust/functional.h>
+/*#include<thrust/scan.h>*/
+/*#include<thrust/copy.h>*/
+#include <thrust/sort.h>
+/*#include <thrust/sequence.h>*/
+/*#include <thrust/gather.h>*/
+
 using cuv::column_major;
 using cuv::dev_memory_space;
 using cuv::host_memory_space;
@@ -139,9 +147,74 @@ void compute_clusters_impl(tensor<V,host_memory_space,M>& clusters,
 	delete[] points_in_cluster;
 }
 
+
+
+
+
 namespace cuv{
 namespace libs{
 namespace kmeans{
+
+namespace impl{
+
+	template<class V, class L>
+	thrust::device_ptr<V>
+	thrust_ptr(const cuv::tensor<V,dev_memory_space,L>& m){ return thrust::device_ptr<V>(m.ptr()); }
+
+	template<class V, class L>
+	V*
+	thrust_ptr(const cuv::tensor<V,host_memory_space,L>& m){ return m.ptr(); }
+
+	template<class value_type, class index_type>
+	__global__
+	void reorder_kernel(value_type* dst, value_type* src, index_type* index,index_type dataDim, index_type rows){
+		for(unsigned int row = blockIdx.x; row<rows; row+=gridDim.x){
+			const unsigned int off = threadIdx.x;
+			const unsigned int index_row = index[row];
+			for (unsigned int col = off; col < dataDim; col += blockDim.x)
+				dst[row*dataDim+col] = src[index_row*dataDim+col ];
+		}
+	}
+	template<class V, class I, class M>
+	void sort_by_index(tensor<V,host_memory_space,M>& sorted,
+			tensor<I,host_memory_space>& indices,
+			const tensor<V,host_memory_space,M>& data){
+
+		const I data_length = cuv::IsSame<M,column_major>::Result::value ? data.shape()[0] : data.shape()[1];
+		const I  data_num   = cuv::IsSame<M,column_major>::Result::value ? data.shape()[1] : data.shape()[0];
+
+		cuv::tensor<I,host_memory_space> seq(indices.shape());
+		thrust::sequence(thrust_ptr(seq),thrust_ptr(seq)+data_num);
+		thrust::sort_by_key(thrust_ptr(indices),thrust_ptr(indices)+data_num,thrust_ptr(seq));
+		V* sorted_ptr = sorted.ptr();
+		for(I i=0;i<data.shape()[0]; i++){
+			V* src_ptr = data.ptr()   + data_length * seq[i];
+			V* dst_ptr = sorted.ptr() + data_length * i;
+			for(I j=0;j<data_length; j++)
+				dst_ptr[j] = src_ptr[j];
+		}
+	}
+	template<class V, class I, class M>
+	void sort_by_index(tensor<V,dev_memory_space,M>& sorted,
+			tensor<I,dev_memory_space>& indices,
+			const tensor<V,dev_memory_space,M>& data){
+		tensor<unsigned int,dev_memory_space> seq(indices.shape());
+
+		const I data_length = cuv::IsSame<M,column_major>::Result::value ? data.shape()[0] : data.shape()[1];
+		const I  data_num   = cuv::IsSame<M,column_major>::Result::value ? data.shape()[1] : data.shape()[0];
+
+		thrust::sequence(thrust_ptr(seq),thrust_ptr(seq)+data.shape()[0]);
+		thrust::sort_by_key(thrust_ptr(indices),thrust_ptr(indices)+data.shape()[0],thrust_ptr(seq));
+
+		unsigned int num_threads = min(256,data_length);
+		num_threads = 32 * ((num_threads+32-1)/32); // make sure it can be divided by 32
+		unsigned int num_blocks  = min(65536-1,data_num);
+
+		reorder_kernel<<<num_blocks,num_threads>>>(sorted.ptr(),data.ptr(),seq.ptr(),data_length, data_num); 
+		cuvSafeCall(cudaThreadSynchronize());
+		/*thrust::sort(thrust_ptr(indices),thrust_ptr(indices)+indices.size());*/ // thrust sorts BOTH, indices AND seq.
+	}
+} // namespace impl
 
 template<class __data_value_type, class __memory_space_type, class __memory_layout_type>
 void compute_clusters(cuv::tensor<__data_value_type, __memory_space_type, __memory_layout_type>& clusters,
@@ -160,11 +233,40 @@ void compute_clusters(cuv::tensor<__data_value_type, __memory_space_type, __memo
 	compute_clusters_impl(clusters,data,indices);
 	}
 
+template<class __data_value_type, class __memory_space_type, class __memory_layout_type>
+void sort_by_index(cuv::tensor<__data_value_type, __memory_space_type, __memory_layout_type>& sorted,
+		cuv::tensor<typename cuv::tensor<__data_value_type, __memory_space_type, __memory_layout_type>::index_type,__memory_space_type>& indices,
+		const cuv::tensor<__data_value_type, __memory_space_type, __memory_layout_type>& data){
+        cuvAssert(sorted.ndim()==2);
+        cuvAssert(data.ndim()==2);
+        cuvAssert(indices.ndim()==1);
+
+	if(IsSame<__memory_layout_type,column_major>::Result::value){
+		cuvAssert(data.shape()[1]==indices.size());
+#ifndef NDEBUG
+		cuvAssert(cuv::maximum(indices)<sorted.shape()[1]); // indices start with 0.
+#endif
+	}else{
+		cuvAssert(data.shape()[0]==indices.size());
+#ifndef NDEBUG
+		cuvAssert(cuv::maximum(indices)<sorted.shape()[0]); // indices start with 0.
+#endif
+	}
+	impl::sort_by_index(sorted,indices,data);
+	}
+
 typedef tensor<float, host_memory_space>::index_type __standard_index_type;
 template void compute_clusters<float,host_memory_space,row_major>(tensor<float, host_memory_space>&, const tensor<float, host_memory_space>&,const tensor<__standard_index_type, host_memory_space>&);
 template void compute_clusters<float, dev_memory_space,row_major>(tensor<float,  dev_memory_space>&, const tensor<float,  dev_memory_space>&,const tensor<__standard_index_type,  dev_memory_space>&);
 
 template void compute_clusters<float,host_memory_space,column_major>(tensor<float, host_memory_space, column_major>&, const tensor<float, host_memory_space, column_major>&,const tensor<__standard_index_type, host_memory_space>&);
 template void compute_clusters<float, dev_memory_space,column_major>(tensor<float,  dev_memory_space, column_major>&, const tensor<float,  dev_memory_space, column_major>&,const tensor<__standard_index_type,  dev_memory_space>&);
+
+
+template void sort_by_index<float,host_memory_space,row_major>(tensor<float, host_memory_space>&,tensor<__standard_index_type, host_memory_space>&, const tensor<float, host_memory_space>&);
+template void sort_by_index<float, dev_memory_space,row_major>(tensor<float,  dev_memory_space>&,tensor<__standard_index_type,  dev_memory_space>&, const tensor<float,  dev_memory_space>&);
+
+template void sort_by_index<float,host_memory_space,column_major>(tensor<float, host_memory_space, column_major>&,tensor<__standard_index_type, host_memory_space>&, const tensor<float, host_memory_space, column_major>&);
+template void sort_by_index<float, dev_memory_space,column_major>(tensor<float,  dev_memory_space, column_major>&,tensor<__standard_index_type,  dev_memory_space>&, const tensor<float,  dev_memory_space, column_major>&);
 
 } } }

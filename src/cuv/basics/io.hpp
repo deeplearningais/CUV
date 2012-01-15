@@ -38,14 +38,51 @@
 #include <boost/serialization/split_free.hpp>
 #include <cuv/basics/tensor.hpp>
 
+/// cuv additions to the boost namespace
 namespace boost
 {
+	/// serialization functions for cuv data structures
 	namespace serialization
 	{
+		/**
+		 * @addtogroup io 
+		 *
+		 * \section sec_io Loading and saving of CUV data structures
+		 *
+		 * File and string I/O is implemented using boost::serialization.
+		 * Nothing surprising here.
+		 *
+		 * Example usage:
+		 * @code 
+		 * tensor<...> m, n; // ...
+		 *
+		 * {
+		 *   std::ofstream os("test.dat");
+		 *   boost::archive::binary_oarchive oa(os);
+		 *   oa << m;
+		 * }
+		 * {
+		 *   std::ifstream is("test.dat");
+		 *   boost::archive::binary_iarchive ia(is);
+		 *   ia >> n;
+		 * }
+		 * @endcode
+		 *
+		 * @warning This probably will not work in .cu files which are processed by nvcc.
+		 *
+		 * @{
+		 */
+
 		/****************************************************
 		 * serialize linear memory
 		 ****************************************************/
-		// host linear memory
+		/**
+		 * save host linear memory
+		 *
+		 * @param ar an archive to save to
+		 * @param m a memory to be stored
+		 * @param version (unused) protocol version
+		 */
 		template<class Archive, class V, class TPtr, class I>
 		void save(Archive& ar, const cuv::linear_memory<V,cuv::host_memory_space,TPtr,I>& m, const unsigned int version){
 			unsigned int size = m.size();
@@ -53,6 +90,13 @@ namespace boost
 			if(size>0)
 				ar << make_array(m.ptr(), m.size());
 		}
+		/**
+		 * load host linear memory
+		 *
+		 * @param ar an archive to save to
+		 * @param m a memory to be stored
+		 * @param version (unused) protocol version
+		 */
 		template<class Archive, class V, class TPtr, class I>
 		void load(Archive& ar, cuv::linear_memory<V,cuv::host_memory_space,TPtr, I>& m, const unsigned int version){
 			unsigned int size;
@@ -64,7 +108,13 @@ namespace boost
 				m.dealloc();
 			}
 		}
-		// dev linear memory
+		/**
+		 * save device linear memory
+		 *
+		 * @param ar an archive to save to
+		 * @param m a memory to be stored
+		 * @param version (unused) protocol version
+		 */
 		template<class Archive, class V, class TPtr, class I>
 		void save(Archive& ar, const cuv::linear_memory<V,cuv::dev_memory_space,TPtr, I>& m, const unsigned int version){
 			unsigned int size = m.size();
@@ -74,6 +124,13 @@ namespace boost
 				ar << make_array(mh.ptr(), mh.size());
 			}
 		}
+		/**
+		 * load device linear memory
+		 *
+		 * @param ar an archive to save to
+		 * @param m a memory to be stored
+		 * @param version (unused) protocol version
+		 */
 		template<class Archive, class V, class TPtr, class I>
 		void load(Archive& ar, cuv::linear_memory<V,cuv::dev_memory_space,TPtr, I>& m, const unsigned int version){
 			unsigned int size;
@@ -86,6 +143,13 @@ namespace boost
 				m.dealloc();
 			}
 		}
+		/**
+		 * load/save linear memory (dispatch to load/save)
+		 *
+		 * @param ar an archive to save to
+		 * @param m a memory to be stored
+		 * @param version (unused) protocol version
+		 */
 		template<class Archive, class V, class MS, class TPtr, class I>
 		void serialize(Archive& ar, cuv::linear_memory<V,MS,TPtr, I>& m, const unsigned int version){
 			boost::serialization::split_free(ar, m, version);
@@ -95,7 +159,13 @@ namespace boost
 		/****************************************************
 		 * serialize tensor
 		 ****************************************************/
-		// tensor
+		/**
+		 * serialize a tensor
+		 *
+		 * @param ar an archive to save to
+		 * @param t a memory to be stored
+		 * @param version (unused) protocol version
+		 */
 		template<class Archive, class V, class MS,class ML, class MC>
 		void save(Archive& ar, const cuv::tensor<V,MS, ML, MC>& t, const unsigned int version){
 			ar << t.shape();
@@ -105,6 +175,13 @@ namespace boost
 				ar << t.data();
 			}
 		}
+		/**
+		 * deserialize a tensor
+		 *
+		 * @param ar an archive to save to
+		 * @param t a memory to be restored
+		 * @param version (unused) protocol version
+		 */
 		template<class Archive, class V, class MS, class ML, class MC>
 		void load(Archive& ar, cuv::tensor<V,MS, ML, MC>& t, const unsigned int version){
 			std::vector<unsigned int> shape;
@@ -119,9 +196,18 @@ namespace boost
 				t.dealloc();
 			}
 		}
+		/**
+		 * load/save tensor (dispatch to load/save)
+		 *
+		 * @param ar an archive to save to
+		 * @param t a memory to be stored/restored
+		 * @param version (unused) protocol version
+		 */
 		template<class Archive, class V, class MS, class ML, class MC>
 		void serialize(Archive& ar, cuv::tensor<V,MS, ML, MC>& t, const unsigned int version){
 			boost::serialization::split_free(ar, t, version);
 		}
+
+		/** @} */
 	}
 }

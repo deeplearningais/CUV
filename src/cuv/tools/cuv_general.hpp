@@ -49,42 +49,73 @@
 #  define cuvSafeCall(X) X; cuv::checkCudaError(#X); 
 #endif
 
-// use this macro to ensure that a condition is true.
-//  in contrast to assert(), this will throw a runtime_exception, 
-//  which can be translated to python.
-//  Additionally, when using Linux, you get a full stack trace printed
+/**
+ * @def cuvAssert
+ * @ingroup tools
+ * use this macro to ensure that a condition is true.
+ * in contrast to assert(), this will throw a runtime_exception, 
+ * which can be translated to python.
+ * Additionally, when using Linux, you get a full stack trace printed
+ */
 #define cuvAssert(X)  \
   if(!(X)){ cuv::cuvAssertFailed(#X); } 
 
+/**
+ * @def DBG
+ * @ingroup tools
+ * print the argument and its value to a stream
+ *
+ * Example:
+ * @code
+ * int a = 4, b = 5;
+ * cout << DBG(a)<<DBG(b)<<endl; // prints a:4 b:5
+ * @endcode
+ */
 #define DBG(X) #X <<":"<<(X)<<"  "
 
 namespace cuv{
-	/// Parent struct for host and device memory tags
+	/**
+	 * Parent struct for host and device memory tags
+	 * @ingroup basics
+	 */
 	struct memory_space{};
-	/// Tag for host memory
+	/** Tag for host memory
+	 * @ingroup basics
+	 */
 	struct host_memory_space : public memory_space {};
-	/// Tag for device memory
+	/** Tag for device memory
+	 * @ingroup basics
+	 */
 	struct dev_memory_space  : public memory_space {};
 
-	/// fail with an error message, a stack trace and a runtime_exception (the nicest failures you've seen ^^!)
+	/** fail with an error message, a stack trace and a runtime_exception (the nicest failures you've seen ^^!)
+	 * @ingroup tools
+	 */
 	void cuvAssertFailed(const char *msg);
 	
-	/// check whether cuda thinks there was an error and fail with msg, if this is the case
+	/** check whether cuda thinks there was an error and fail with msg, if this is the case
+	 * @ingroup tools
+	 */
 	void checkCudaError(const char *msg);
 
-	/// initialize cuda to work on dev X
     /** 
      * @brief Initializes CUDA context
+     *
+     * @ingroup tools
      * 
      * @param dev Device to use. If passed dev<0, does not call cudaInit.
      *  Then CUDA tries to automatically find a free device.
      */
 	void initCUDA(int dev=0);
 
-	/// quit cuda
+	/** quit cuda
+	 * @ingroup tools
+	 */
 	void exitCUDA();
 
-	/// synch threads from plain (non-cuda) C++
+	/** synch threads from plain (non-cuda) C++
+	 * @ingroup tools
+	 */
 	void safeThreadSync();
 }
 

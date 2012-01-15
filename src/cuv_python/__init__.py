@@ -3,6 +3,50 @@ import numpy as np
 import pyublas
 from _cuv_python import *
 
+
+# numpy like convenience functions
+def pow(x, a):
+    apply_scalar_functor(x, scalar_functor.POW, a)
+
+def zeros(shape):
+    x = dev_tensor_float(shape)
+    fill(x, 0.)
+    return x
+
+def ones(shape):
+    x = dev_tensor_float(shape)
+    fill(x, 1.)
+    return x
+
+def copy(dst,src):
+    apply_scalar_functor(dst,src,scalar_functor.COPY)
+
+def exp(x, dst=None):
+    if dst==None:
+        dst = empty_like(x)
+    apply_scalar_functor(dst, x, scalar_functor.EXP)
+    return dst
+
+def empty_like(x):
+    return x.__class__(x.shape)
+
+def zeros_like(x):
+    dst = x.__class__(x.shape)
+    fill(dst, 0)
+    return dst
+
+def tanh(x, dst=None):
+    if dst==None:
+        dst = empty_like(x)
+    apply_scalar_functor(dst, x, scalar_functor.TANH)
+    return dst
+
+def cos(x, dst=None):
+    if dst==None:
+        dst = empty_like(x)
+    apply_scalar_functor(dst, x, scalar_functor.COS)
+    return dst
+
 def _matstr(x,typestr):
     return "%s: %s [%2.1f Mb]"%(typestr,",".join([str(s) for s in x.shape]),x.memsize/1024./1024.)
 
@@ -18,9 +62,6 @@ def __np(x):
 def __T(x):
     return transposed_view(x)
 
-def copy(dst,src):
-    apply_scalar_functor(dst,src,scalar_functor.COPY)
-
 def __tensor_getitem(x,key):
     if isinstance(key,int):
         return x.get([key])
@@ -30,6 +71,9 @@ def __tensor_setitem(x,key,val):
     if isinstance(key,int):
         return x.set([key],val)
     x.set([x for x in key],val)
+
+def __getinitargs__(x):
+    return (x.np,)
 
 def __matrix_getitem__(x,key):
     if isinstance(key,int):
@@ -108,3 +152,6 @@ for memory_space in ["dev","host"]:
             dense_type.__getitem__= __tensor_getitem
             dense_type.__setitem__= __tensor_setitem
             dense_type.__str__=lambda x:(_matstr(x,memory_space+"_tensor_"+value_type))
+            dense_type.__pow__ = pow
+            dense_type.__deepcopy__ = lambda x,*args: x.copy()
+            dense_type.__getinitargs__ = __getinitargs__

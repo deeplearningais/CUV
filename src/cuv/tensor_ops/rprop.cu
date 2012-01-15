@@ -94,7 +94,7 @@ __global__ void rprop_kernel(T*W, T* dW, S* dW_old, T* rate, int n, T decay, T s
 
 
 template<class T>
-__global__ void learn_step_weight_decay_kernel(T* A, T* dA, T alpha, T beta, T sparsedecay, int n) {
+__global__ void learn_step_weight_decay_kernel(T* A, const T* dA, T alpha, T beta, T sparsedecay, int n) {
 	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	int off = blockDim.x * gridDim.x;
 	for (unsigned int i = idx; i < n; i += off){
@@ -179,14 +179,14 @@ namespace cuv{
 
 
 	template<class V>
-	void learn_step_weight_decay_impl(tensor<V,dev_memory_space>& W,tensor<V,dev_memory_space>& dW, const float& alpha, const float& beta, const float& sparsedecay){
+	void learn_step_weight_decay_impl(tensor<V,dev_memory_space>& W, const tensor<V,dev_memory_space>& dW, const float& alpha, const float& beta, const float& sparsedecay){
 		int num_threads = 512;
 		int num_blocks  = min(512,(int)ceil((float)dW.size() / num_threads));
 		learn_step_weight_decay_kernel<<< num_threads, num_blocks>>>(W.ptr(), dW.ptr(), alpha, beta, sparsedecay, W.size());
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V>
-	void learn_step_weight_decay_impl(tensor<V,host_memory_space>& W,tensor<V,host_memory_space>& dW, const float& alpha, const float& beta, const float& sparsedecay){
+	void learn_step_weight_decay_impl(tensor<V,host_memory_space>& W, const tensor<V,host_memory_space>& dW, const float& alpha, const float& beta, const float& sparsedecay){
 		V* dwptr = dW.ptr();
 		V* wptr  = W.ptr();
 		for (unsigned int i = 0; i < W.size(); i++){
@@ -195,7 +195,7 @@ namespace cuv{
 		}
 	}
         template<class __value_type, class __memory_space_type>
-	void learn_step_weight_decay(tensor<__value_type,__memory_space_type>& W, tensor<__value_type,__memory_space_type>& dW, const float& learnrate, const float& decay, const float& sparsedecay){
+	void learn_step_weight_decay(tensor<__value_type,__memory_space_type>& W, const tensor<__value_type,__memory_space_type>& dW, const float& learnrate, const float& decay, const float& sparsedecay){
 		cuvAssert(dW.ptr());
 		cuvAssert(W.ptr());
 		cuvAssert(W.size() == dW.size());
@@ -206,8 +206,8 @@ namespace cuv{
 	template void rprop<V,host_memory_space,S>( tensor<V,host_memory_space>&, tensor<V,host_memory_space>&, tensor<S,host_memory_space>&, tensor<V,host_memory_space>&m, const float&, const float&); \
 	template void rprop<V,dev_memory_space,S>( tensor<V,dev_memory_space>&,  tensor<V,dev_memory_space>&, tensor<S,dev_memory_space>&, tensor<V,dev_memory_space>&, const float&, const float&);
 #define LSWD_INSTANTIATE(V) \
-	template void learn_step_weight_decay( tensor<V,host_memory_space>&, tensor<V,host_memory_space>&, const float&,const float&, const float&); \
-	template void learn_step_weight_decay( tensor<V,dev_memory_space>&,  tensor<V,dev_memory_space>&, const float&,const float&, const float&);
+	template void learn_step_weight_decay( tensor<V,host_memory_space>&, const tensor<V,host_memory_space>&, const float&,const float&, const float&); \
+	template void learn_step_weight_decay( tensor<V,dev_memory_space>&,  const tensor<V,dev_memory_space>&, const float&,const float&, const float&);
 
 	RPROP_INSTANTIATE(float,float);
 	RPROP_INSTANTIATE(float,signed char);
