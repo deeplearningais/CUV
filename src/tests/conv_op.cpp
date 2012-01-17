@@ -46,6 +46,18 @@
 #include <cuv/random/random.hpp>
 #include <cuv/convert/convert.hpp>
 
+#define MEASURE_TIME(MSG, OPERATION, ITERS)     \
+	float MSG;                                  \
+	if(1){                                      \
+		Timing tim;                             \
+		for(int i=0;i<ITERS;i++){               \
+			OPERATION ;                         \
+		}                                       \
+		tim.update(ITERS);                      \
+		printf("%s [%s] took %4.4f us/pass\n", #MSG, #OPERATION, 1000000.0f*tim.perf()); \
+		MSG = 1000000.0f*tim.perf();            \
+	}
+
 using namespace cuv;
 
 struct MyConfig {
@@ -61,18 +73,7 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	static const int c = 2;  // # patterns (images)
-	static const int n = 32;  // image size
-	static const int f = 16;   // # filters
-	static const int p = 8;	   // pooling size
-	static const int g = 8;    // filter size
-	static const int k = n-g+1;// target image size
-	static const int o = n/p;  // pooling output size
-	tensor<float, dev_memory_space, row_major>  d_img,d_filter,d_dst,d_pooled;
-	tensor<float, host_memory_space, row_major> h_img,h_filter,h_dst,h_pooled;
 	Fix()
-	:   d_img(c,n*n), d_filter(f,g*g), d_dst(f,c*k*k), d_pooled(c,o*o)
-	,   h_img(c,n*n), h_filter(f,g*g), h_dst(f,c*k*k), h_pooled(c,o*o)
 	{
 		//MEASURE_TIME("warmup", apply_scalar_functor(v, SF_EXP), 100);
 	}
@@ -80,381 +81,36 @@ struct Fix{
 	}
 };
 
-#define MEASURE_TIME(MSG, OPERATION, ITERS)     \
-	float MSG;                                  \
-	if(1){                                      \
-		Timing tim;                             \
-		for(int i=0;i<ITERS;i++){               \
-			OPERATION ;                         \
-		}                                       \
-		tim.update(ITERS);                      \
-		printf("%s [%s] took %4.4f us/pass\n", #MSG, #OPERATION, 1000000.0f*tim.perf()); \
-		MSG = 1000000.0f*tim.perf();            \
-	}
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
-
-BOOST_AUTO_TEST_CASE( convolution )
+BOOST_AUTO_TEST_CASE( test_conv3d )
 {
-	fill(d_dst, 0.0f);
-	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
-	sequence(d_filter); apply_scalar_functor(d_filter,SF_MULT,0.001f);
+	unsigned int nImgChan = 8;      // this makes sense for an intermediate layer, must be divisible by nGroups
+	unsigned int nImgPix  = 16*16;
+	unsigned int nImg     = 16;
+    unsigned int nGroups  = 2;
+   
+    // we must set nGroups>1, so each filter will only be applied to nImgChan/nGroups inputs
+	unsigned int nFiltChan = nImgChan/nGroups;
+	unsigned int nFiltPix  = 4*4;
+	unsigned int nFilt     = 4; // this is the minimum output filter number AFAICS
 
-	fill(h_dst, 0.0f);
-	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
-	sequence(h_filter); apply_scalar_functor(h_filter,SF_MULT,0.001f);
+	tensor<float,dev_memory_space,row_major> src(cuv::extents[nImgChan][nImgPix][nImg]);
+	tensor<float,dev_memory_space,row_major> dst(cuv::extents[nFilt][nImgPix][nImg]);
 
-	convolve(d_dst,d_img,d_filter);
-	convolve(h_dst,h_img,h_filter);
+	tensor<float,dev_memory_space,row_major> flt(cuv::extents[nFiltChan][nFiltPix][nFilt]);
 
-	tensor<float, host_memory_space, row_major> dst2(d_dst.shape()[0], d_dst.shape()[1]);
-	convert(dst2,d_dst);
+    //convolve3d(tensor<float,dev_memory_space>& dst, 
+    //        const tensor<float,dev_memory_space>& img, 
+    //        const tensor<float,dev_memory_space>& filter,
+    //        unsigned int nModulesX,
+    //        unsigned int paddingStart, 
+    //        unsigned int moduleStride,
+    //        unsigned int nGroups){
 
-	for(int i=0;i<d_dst.shape()[0];i++){
-		for(int j=0;j<d_dst.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)dst2(i,j), (float)h_dst(i,j), 0.001 );
-		}
-	}
-}
-
-
-BOOST_AUTO_TEST_CASE( local_maxima )
-{
-	fill(d_dst, 0.0f);
-	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
-
-	fill(h_dst, 0.0f);
-	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
-
-	max_pooling(h_pooled, h_img, p);
-	max_pooling(d_pooled, d_img, p);
-
-	tensor<float, host_memory_space, row_major> pooled2(d_pooled.shape()[0], d_pooled.shape()[1]);
-	convert(pooled2,d_pooled);
-
-	for(int i=0;i<d_pooled.shape()[0];i++){
-		for(int j=0;j<d_pooled.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)pooled2(i,j), (float)h_pooled(i,j), 0.001 );
-		}
-	}
-}
-
-BOOST_AUTO_TEST_CASE( supersampling )
-{
-	fill(d_dst, 0.0f);
-	sequence(d_pooled);    apply_scalar_functor(d_pooled,   SF_MULT,0.001f);
-
-	fill(h_pooled, 0.0f);
-	sequence(h_pooled);    apply_scalar_functor(h_pooled,   SF_MULT,0.001f);
-
-	supersample(h_img, h_pooled, p);
-	supersample(d_img, d_pooled, p);
-
-	tensor<float, host_memory_space,row_major> img2(d_img.shape()[0], d_img.shape()[1]);
-	convert(img2, d_img);
-
-	MAT_CMP(img2, h_img, 0.001);
-}
-
-BOOST_AUTO_TEST_CASE( reorder_matrix )
-{
-	sequence(d_dst); apply_scalar_functor(d_dst, SF_MULT,0.001f);
-	sequence(h_dst); apply_scalar_functor(h_dst, SF_MULT,0.001f);
-
-	reorder(d_dst, k*k);
-	reorder(h_dst, k*k);
-
-	tensor<float, host_memory_space, row_major> dst2(d_dst.shape()[0], d_dst.shape()[1]);
-	convert(dst2, d_dst);
-
-	MAT_CMP(dst2, h_dst, 0.1);
-}
-
-BOOST_AUTO_TEST_CASE( copy_into_matrix )
-{
-	const int padding = 5;
-	const int size = n + 2 * padding;
-
-	tensor<float, host_memory_space, row_major> h_pad(h_img.shape()[0], size * size);
-	tensor<float, dev_memory_space, row_major> d_pad(d_img.shape()[0], size * size);
-
-	sequence(d_img); apply_scalar_functor(d_img, SF_MULT,0.001f);
-	sequence(h_img); apply_scalar_functor(h_img, SF_MULT,0.001f);
-	sequence(d_pad);
-	sequence(h_pad);
-
-	copy_into(d_pad, d_img, padding);
-	copy_into(h_pad, h_img, padding);
-
-	MAT_CMP(h_pad, d_pad, 0.1);
-}
-
-BOOST_AUTO_TEST_CASE( local_maxima_index )
-{
-	initialize_mersenne_twister_seeds();
-
-	// part 1: calculate matrix indices
-	fill_rnd_uniform(d_img);
-	convert(h_img, d_img);
-
-	tensor<unsigned char,host_memory_space> h_indices(c,o*o);
-	tensor<unsigned char,dev_memory_space> d_indices(c,o*o);
-
-	max_pooling(h_pooled, h_img, p, 0, &h_indices);
-	max_pooling(d_pooled, d_img, p, 0, &d_indices);
-
-	tensor<unsigned char, host_memory_space, row_major> indices2(d_indices.shape()[0], d_indices.shape()[1]);
-	convert(indices2,d_indices);
-
-	for(int i=0;i<d_indices.shape()[0];i++){
-		for(int j=0;j<d_indices.shape()[1];j++){
-			BOOST_CHECK_EQUAL( indices2(i,j), h_indices(i,j) );
-		}
-	}
-
-	// part 2: propagate back to those indices
-	fill_rnd_uniform(d_pooled);
-	convert(h_pooled, d_pooled);
-
-	fill(h_img, 0.f);
-	fill(d_img, 0.f);
-
-	supersample(h_img, h_pooled, p, &h_indices);
-	supersample(d_img, d_pooled, p, &d_indices);
-
-	MAT_CMP(d_img, h_img, 0.1);
-}
-
-BOOST_AUTO_TEST_CASE( max_pool_res )
-{
-	initialize_mersenne_twister_seeds();
-
-	const int n = 64;
-	int p = 3;
-	int l = 2;
-	const int m = (n-p)/(p-l)+1; // resulting image size
-	const int c = 6;
-
-	tensor<float,host_memory_space,row_major> h_img(c,n*n);
-	tensor<float,host_memory_space,row_major> h_dst(c,m*m);
-	tensor<unsigned char,host_memory_space,row_major> h_indices(c,m*m);
-
-	tensor<float,dev_memory_space,row_major> d_img(c,n*n);
-	tensor<float,dev_memory_space,row_major> d_dst(c,m*m);
-	tensor<unsigned char,dev_memory_space,row_major> d_indices(c,m*m);
-
-	fill_rnd_uniform(h_img);
-	convert(d_img, h_img);
-
-	max_pooling(h_dst, h_img, p, l, &h_indices);
-	max_pooling(d_dst, d_img, p, l, &d_indices);
-
-	for(int k=0; k<c; k++) {
-		for(int i=0; i<m; i++) {// loop through output image
-			for(int j=0; j<m; j++) {
-				float cmax = -FLT_MAX;
-				for(int q=0; q<p; q++) { // loop through pool
-					for(int r=0; r<p; r++) {
-						int idx = (j*(p-l) + r) + (i*(p-l) + q)*n;
-						if(cmax < h_img(k,idx))
-							cmax = h_img(k,idx);
-					}
-				}
-				BOOST_CHECK_EQUAL( h_dst(k,i*m+j), cmax );
-			}
-		}
-	}
-
-	MAT_CMP(d_dst, h_dst, 0.1);
-	MAT_CMP(d_indices, h_indices, 0.1);
-
-	// backprop step
-	super_to_max(h_img, h_dst, p, l, &h_indices);
-	super_to_max(d_img, d_dst, p, l, &d_indices);
-
-	MAT_CMP(h_img, d_img, 0.1);
-}
-
-
-BOOST_AUTO_TEST_CASE( row_ncopy )
-{
-	sequence(d_img);
-	sequence(h_img);
-
-	d_img.reshape(extents[1][d_img.shape()[1]*d_img.shape()[0]]);
-	h_img.reshape(extents[1][h_img.shape()[1]*h_img.shape()[0]]);
-
-	int n=128;
-
-	tensor<float, host_memory_space, row_major> erg_h(n, h_img.shape()[1]);
-	tensor<float, dev_memory_space, row_major> erg_d(n, d_img.shape()[1]);
-	fill(erg_d, 0.0f);
-	fill(erg_h, 0.0f);
-	for(int idx = 0; idx < erg_h.shape()[1]; idx++ ){
-		for (int idy = 0; idy < n; idy++){
-			erg_h(idy,idx)=*(h_img.ptr() + idx);
-		}
-	}
-
-
-	cuv::row_ncopy(erg_d, d_img, n);
-
-	for(int i=0;i<erg_h.shape()[0];i++){
-		for(int j=0;j<erg_h.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
-			if (i>1){
-				BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_d(i-1,j), 0.001 );
-			}
-		}
-	}
+	convolve3d(dst,src,flt, 16, 0, 1, 2);
 
 }
 
-BOOST_AUTO_TEST_CASE( strip_padding )
-{
-
-	sequence(d_img);
-	//apply_scalar_functor(d_img,   SF_MULT,0.001f);
-
-	int padding=2;
-
-	int img_width 		= sqrt(d_img.shape()[1]);
-	int stripped_width  = img_width-2*padding;
-	tensor<float, host_memory_space, row_major> erg_h(d_img.shape()[0], stripped_width*stripped_width);
-	tensor<float, dev_memory_space, row_major> erg_d(d_img.shape()[0], stripped_width*stripped_width);
-	fill(erg_d, 0.0f);
-	fill(erg_h, 0.0f);
-
-	cuv::strip_padding(erg_d, d_img, padding);
-
-	int x,y, idx, idx_padded;
-	float val;
-	for (int img=0; img<d_img.shape()[0]; img++){
-		for(int px=0; px<d_img.shape()[1]; px++){
-			x = px % img_width;
-			y = px / img_width;
-			if ( x >=padding && x < padding+stripped_width &&
-				 y >=padding && y < padding+stripped_width){
-				idx 		=	y*img_width+x;
-				idx_padded 	=	(y-padding)*stripped_width+(x-padding);
-
-				val = d_img(img,idx);
-				erg_h(img,idx_padded)=val;
-			}
-		}
-	}
-	//std::cout << h_img ;
-
-	for(int i=0;i<erg_h.shape()[0];i++){
-		for(int j=0;j<erg_h.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
-		}
-	}
-}
-
-BOOST_AUTO_TEST_CASE( check_exitatory_inhibitory )
-{
-	tensor<float, host_memory_space, row_major> filter_h(f, c*g*g);
-	tensor<float, dev_memory_space, row_major> filter_d(f, c*g*g);
-
-	sequence(filter_h);
-	sequence(filter_d);
-	apply_scalar_functor(filter_d, SF_MULT, -1);
-	apply_scalar_functor(filter_h, SF_MULT, -1);
-	//fill(filter_d, 0);
-	safeThreadSync();
-
-	cuv::check_exitatory_inhibitory(filter_d,0,g*g,1,1);
-	safeThreadSync();
-	cuv::check_exitatory_inhibitory(filter_h,0,g*g,1,1);
-	safeThreadSync();
-
-//	std::cout << filter_d ;
-
-	for(int i=0;i<filter_h.shape()[0];i++){
-		for(int j=0;j<filter_h.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)filter_d(i,j), (float)filter_h(i,j), 0.001 );
-		}
-	}
-}
-
-BOOST_AUTO_TEST_CASE( reverse_filters )
-{
-	tensor<float, host_memory_space, row_major> filter_h(f*c, g*g);
-	tensor<float, dev_memory_space, row_major> filter_d(f*c, g*g);
-
-	tensor<float, host_memory_space, row_major> erg_h(f, c*g*g);
-	tensor<float, dev_memory_space, row_major> erg_d(f, c*g*g);
-
-	fill(filter_h, 0.0f);fill(filter_d, 0.0f);
-	fill(erg_h, 0.0f);fill(erg_d, 0.0f);
-
-	tensor<float,host_memory_space> one_filter_h(g*g);
-	tensor<float,dev_memory_space> one_filter_d(g*g);
-	sequence(one_filter_h); sequence(one_filter_d);
-
-	cuv::row_ncopy(filter_d, one_filter_d, c*f);
-	cuv::row_ncopy(filter_h, one_filter_h,c*f);
-
-	filter_d.reshape(extents[f][c*g*g]);
-	filter_h.reshape(extents[f][c*g*g]);
-
-	filter_rotate(erg_d,filter_d, g*g);
-	safeThreadSync();
-	filter_rotate(erg_h,filter_h, g*g);
-	safeThreadSync();
-//	std::cout << filter_d << std::endl << std::endl;
-//	std::cout << erg_d ;
-
-	for(int i=0;i<erg_h.shape()[0];i++){
-		for(int j=0;j<erg_h.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
-		}
-	}
-}
-
-//BOOST_AUTO_TEST_CASE( add_maps )
-//{
-//	// c, n x n = 2, 64 x 64 - represents two (delta) maps that contribute to one destination delta map
-//	// the destination delta map is calculated as the sum of the individual delta maps
-//	sequence(h_img);
-//	sequence(d_img);
-//
-//	// contains a map in each row where the summed pixels are stored
-//	tensor<float, host_memory_space, row_major> erg_h(c, n);
-//	tensor<float, dev_memory_space, row_major> erg_d(c, n);
-//
-//	fill(erg_h, 0.0f);
-//	fill(erg_d, 0.0f);
-//
-//
-//	float* e_ptr = erg_h.ptr();
-//	float* i_ptr = h_img.ptr();
-//	int imagesize = 64;
-//
-//	// host solution
-//	for (int row = 0; row<c; row++){
-//		for(int px = 0; px < n; px++){
-//			for(int img = 0; img < n; img++){
-//				*(e_ptr + row*erg_h.shape()[1] + px) += *(i_ptr + row*erg_h.shape()[1]    // mv to correct row in matrix
-//														 + img * imagesize  // iterate on image/delta maps
-//														 + px);				// iterate on pixels of destination map
-//			}
-//		}
-//	}
-//
-//	add_maps_h(erg_d, d_img, n);
-//
-////	std::cout << erg_d ;
-//
-//	for(int i=0;i<erg_h.shape()[0];i++){
-//		for(int j=0;j<erg_h.shape()[1];j++){
-//			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
-//		}
-//	}
-//}
-
-}
-
-
+BOOST_AUTO_TEST_SUITE_END()
