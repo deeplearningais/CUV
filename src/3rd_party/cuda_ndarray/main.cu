@@ -208,7 +208,7 @@ main(int argc, char **argv)
     timeval a, b;
 
     std::cout << "--------------------------------------- CONVOLVE ---------------"<<std::endl;
-for(int ver=-1;ver<14;ver++){
+for(int ver=-1;ver<0;ver++){
         gettimeofday(&a, 0);
         for(unsigned int i=0;i<10;i++){
             convolve(out,images,kern, mode,ver);
