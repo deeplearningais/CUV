@@ -55,7 +55,7 @@ namespace cuv{
  */
 template<class V, class M, class T>
     void
-    convolve3d(tensor<V,M,T>& dst, const tensor<V,M,T>& img, const tensor<V,M,T>& filter, unsigned int nModulesX, unsigned int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0);
+    convolve3d(tensor<V,M,T>& dst, const tensor<V,M,T>& img, const tensor<V,M,T>& filter, unsigned int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0);
 
 /**
  * determine the gradient of a convolution w.r.t. the inputs

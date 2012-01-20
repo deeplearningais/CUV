@@ -86,20 +86,22 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( test_conv3d )
 {
-	unsigned int nImgChan = 8;      // this makes sense for an intermediate layer, must be divisible by nGroups
-	unsigned int nImgPix  = 16*16;
+	unsigned int nImgChan = 8;      // must be divisible by nGroups
+	unsigned int nImgPix  = 176;
 	unsigned int nImg     = 16;
-    unsigned int nGroups  = 2;
+    unsigned int nGroups  = 1;      // must be divisible by 2 ??
    
     // we must set nGroups>1, so each filter will only be applied to nImgChan/nGroups inputs
 	unsigned int nFiltChan = nImgChan/nGroups;
-	unsigned int nFiltPix  = 4*4;
-	unsigned int nFilt     = 4; // this is the minimum output filter number AFAICS
+	unsigned int nFiltPix  = 7;
+	unsigned int nFilt     = 32; 
 
-	tensor<float,dev_memory_space,row_major> src(cuv::extents[nImgChan][nImgPix][nImg]);
-	tensor<float,dev_memory_space,row_major> dst(cuv::extents[nFilt][nImgPix][nImg]);
+    unsigned int nResPix   = nImgPix-nFiltPix+1;
 
-	tensor<float,dev_memory_space,row_major> flt(cuv::extents[nFiltChan][nFiltPix][nFilt]);
+	tensor<float,dev_memory_space,row_major> src(cuv::extents[nImgChan][nImgPix*nImgPix][nImg]);
+	tensor<float,dev_memory_space,row_major> dst(cuv::extents[nFilt][nResPix*nResPix][nImg]);
+
+	tensor<float,dev_memory_space,row_major> flt(cuv::extents[nFiltChan][nFiltPix*nFiltPix][nFilt]);
 
     //convolve3d(tensor<float,dev_memory_space>& dst, 
     //        const tensor<float,dev_memory_space>& img, 
@@ -109,7 +111,15 @@ BOOST_AUTO_TEST_CASE( test_conv3d )
     //        unsigned int moduleStride,
     //        unsigned int nGroups){
 
-	convolve3d(dst,src,flt, 16, 0, 1, 2);
+    {
+        tensor<float,dev_memory_space,row_major> src0(cuv::extents[nImg][nImgChan*nImgPix*nImgPix]);  // this is what we can get from preprocessing
+        tensor<float,dev_memory_space,row_major> src1(cuv::extents[nImgChan*nImgPix*nImgPix][nImg]);  // this is what we want in the end
+        MEASURE_TIME(trn_dev,  transpose(src1,src0), 10);
+    }
+
+    MEASURE_TIME(conv_dev,         convolve3d(dst,src,flt, 0, 1, nGroups), 10);
+    MEASURE_TIME(d_conv_dimg_dev,  d_conv3d_dimg(src,dst,flt, 0, 1, nGroups), 10);
+    MEASURE_TIME(d_conv_dfilt_dev, d_conv3d_dfilt(flt,dst,src, 0, 1, nGroups,4), 10);
 
 }
 

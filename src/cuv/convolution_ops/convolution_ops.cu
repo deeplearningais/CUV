@@ -59,7 +59,6 @@ template<>
     convolve3d(tensor<float,dev_memory_space>& dst, 
             const tensor<float,dev_memory_space>& img, 
             const tensor<float,dev_memory_space>& filter,
-            unsigned int nModulesX,
             unsigned int paddingStart, 
             unsigned int moduleStride,
             unsigned int nGroups){
@@ -75,15 +74,11 @@ template<>
         unsigned int nFiltPix  = filter.shape(1);
         unsigned int nFilt     = filter.shape(2);
 
-        unsigned int nModules  = nModulesX*nModulesX;
-
-        if(dst.ndim()==0){
-            dst.resize(extents[nFilt][nModules][nImg]);
-        }else{
-            cuvAssert(dst.shape(0)==nFilt);
-            cuvAssert(dst.shape(1)==nModules);
-            cuvAssert(dst.shape(2)==nImg);
-        }
+        cuvAssert(dst.shape(0)==nFilt);
+        unsigned int nModules = dst.shape(1);
+        unsigned int nModulesX = sqrt(nModules);
+        cuvAssert(nModules == nModulesX * nModulesX);
+        cuvAssert(dst.shape(2)==nImg);
 
         // make NVMatrices with this data
         NVMatrix nv_dst    NVView3D(dst);
@@ -138,28 +133,32 @@ template<>
                 imgSize, paddingStart, moduleStride, nImgChan, nGroups);
     }
 template<>
-	void d_conv3d_dfilt(tensor<float,dev_memory_space,row_major>& dst,
+	void d_conv3d_dfilt(tensor<float,dev_memory_space,row_major>& dst_,
 			  const tensor<float,dev_memory_space,row_major>&   delta,
 			  const tensor<float,dev_memory_space,row_major>&   input,
               unsigned int paddingStart,
             unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum){
 
-        cuvAssert(dst.ndim()==3);
-        unsigned int nModules  = dst.shape(0)*partialSum;
-        unsigned int nFiltChan = dst.shape(1);
-        unsigned int nFiltPix  = dst.shape(2);
-        unsigned int nFilt     = dst.shape(3);
+        cuvAssert(dst_.ndim()==3);
+        unsigned int nFiltChan = dst_.shape(0);
+        unsigned int nFiltPix  = dst_.shape(1);
+        unsigned int nFilt     = dst_.shape(2);
+
+
 
         unsigned int filtSize = sqrt(nFiltPix);
         cuvAssert ( nFiltPix == filtSize*filtSize );
 
-        unsigned int nModulesX = sqrt(nModules);
-        cuvAssert(nModules == nModulesX * nModulesX);
 
         cuvAssert(delta.ndim()==3);
         cuvAssert(delta.shape(0) == nFilt);
-        cuvAssert(delta.shape(1) == nModules);
+        unsigned int nModules  = delta.shape(1);
         unsigned int nImg      = delta.shape(2);
+
+        unsigned int nModulesX = sqrt(nModules);
+        cuvAssert(nModules == nModulesX * nModulesX);
+
+        cuv::tensor<float,dev_memory_space> dst(extents[nModules/partialSum][nFiltChan][nFiltPix][nFilt]);
 
         cuvAssert(input.ndim()==3);
         unsigned int nImgChan = input.shape(0);
@@ -168,6 +167,7 @@ template<>
 
         unsigned int imgSize = sqrt(nImgPix);
         cuvAssert(nImgPix == imgSize*imgSize);
+
 
         /*void convWeightActs(NVMatrix& images, NVMatrix& hidActs, NVMatrix& targets,*/
         /*                    int numModulesX, int filterSize, int paddingStart,*/
@@ -178,6 +178,11 @@ template<>
         convWeightActs(nv_input, nv_delta, nv_dst,
                 nModulesX, filtSize, paddingStart,
                 moduleStride, nImgChan, nGroups, partialSum);
+
+        dst.reshape(extents[nModules/partialSum][nFiltChan*nFiltPix*nFilt]);
+        dst_.reshape(extents[nFiltChan*nFiltPix*nFilt]);
+        cuv::reduce_to_row(dst_,dst);
+        dst_.reshape(extents[nFiltChan][nFiltPix][nFilt]);
     }
 
 
