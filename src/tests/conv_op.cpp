@@ -84,7 +84,7 @@ struct Fix{
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
-BOOST_AUTO_TEST_CASE( test_conv3d )
+BOOST_AUTO_TEST_CASE( test_conv2d )
 {
 	unsigned int nImgChan = 8;      // must be divisible by nGroups
 	unsigned int nImgPix  = 176;
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE( test_conv3d )
 
 	tensor<float,dev_memory_space,row_major> flt(cuv::extents[nFiltChan][nFiltPix*nFiltPix][nFilt]);
 
-    //convolve3d(tensor<float,dev_memory_space>& dst, 
+    //convolve2d(tensor<float,dev_memory_space>& dst, 
     //        const tensor<float,dev_memory_space>& img, 
     //        const tensor<float,dev_memory_space>& filter,
     //        unsigned int nModulesX,
@@ -117,9 +117,9 @@ BOOST_AUTO_TEST_CASE( test_conv3d )
         MEASURE_TIME(trn_dev,  transpose(src1,src0), 10);
     }
 
-    MEASURE_TIME(conv_dev,         convolve3d(dst,src,flt, 0, 1, nGroups), 10);
-    MEASURE_TIME(d_conv_dimg_dev,  d_conv3d_dimg(src,dst,flt, 0, 1, nGroups), 10);
-    MEASURE_TIME(d_conv_dfilt_dev, d_conv3d_dfilt(flt,dst,src, 0, 1, nGroups,4), 10);
+    MEASURE_TIME(conv_dev,         convolve2d(dst,src,flt, 0, 1, nGroups), 10);
+    MEASURE_TIME(d_conv_dimg_dev,  d_conv2d_dimg(src,dst,flt, 0, 1, nGroups), 10);
+    MEASURE_TIME(d_conv_dfilt_dev, d_conv2d_dfilt(flt,dst,src, 0, 1, nGroups,4), 10);
 
 }
 

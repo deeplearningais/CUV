@@ -56,7 +56,7 @@ namespace cuv{
 
 template<>
     void 
-    convolve3d(tensor<float,dev_memory_space>& dst, 
+    convolve2d(tensor<float,dev_memory_space>& dst, 
             const tensor<float,dev_memory_space>& img, 
             const tensor<float,dev_memory_space>& filter,
             unsigned int paddingStart, 
@@ -97,7 +97,7 @@ template<>
         }
     }
 template<>
-	void d_conv3d_dimg(tensor<float,dev_memory_space,row_major>& dst,
+	void d_conv2d_dimg(tensor<float,dev_memory_space,row_major>& dst,
 			  const tensor<float,dev_memory_space,row_major>&   delta,
 			  const tensor<float,dev_memory_space,row_major>&   filter,
               unsigned int paddingStart, unsigned int moduleStride, unsigned int nGroups){
@@ -133,7 +133,7 @@ template<>
                 imgSize, paddingStart, moduleStride, nImgChan, nGroups);
     }
 template<>
-	void d_conv3d_dfilt(tensor<float,dev_memory_space,row_major>& dst_,
+	void d_conv2d_dfilt(tensor<float,dev_memory_space,row_major>& dst_,
 			  const tensor<float,dev_memory_space,row_major>&   delta,
 			  const tensor<float,dev_memory_space,row_major>&   input,
               unsigned int paddingStart,

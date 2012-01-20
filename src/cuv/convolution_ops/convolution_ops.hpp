@@ -55,7 +55,7 @@ namespace cuv{
  */
 template<class V, class M, class T>
     void
-    convolve3d(tensor<V,M,T>& dst, const tensor<V,M,T>& img, const tensor<V,M,T>& filter, unsigned int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0);
+    convolve2d(tensor<V,M,T>& dst, const tensor<V,M,T>& img, const tensor<V,M,T>& filter, unsigned int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0);
 
 /**
  * determine the gradient of a convolution w.r.t. the inputs
@@ -66,7 +66,7 @@ template<class V, class M, class T>
  */
 template<class V, class M, class T>
     void
-    d_conv3d_dimg(tensor<V,M,T>& dst, const tensor<V,M,T>& delta, const tensor<V,M,T>& filter,
+    d_conv2d_dimg(tensor<V,M,T>& dst, const tensor<V,M,T>& delta, const tensor<V,M,T>& filter,
             unsigned int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0);
 
 /**
@@ -79,7 +79,7 @@ template<class V, class M, class T>
  */
 template<class V, class M, class T>
     void
-    d_conv3d_dfilt(tensor<V,M,T>& dst, const tensor<V,M,T>& delta, const tensor<V,M,T>& input,
+    d_conv2d_dfilt(tensor<V,M,T>& dst, const tensor<V,M,T>& delta, const tensor<V,M,T>& input,
             unsigned int paddingStart=0,
             unsigned int moduleStride=0, unsigned int nGroups=0, unsigned int partialSum=1);
 
