@@ -30,6 +30,8 @@
 #ifndef __REFERENCE_HPP__
 #define __REFERENCE_HPP__
 
+#include<boost/type_traits/is_convertible.hpp>
+#include<boost/utility/enable_if.hpp>
 #include<cuv/tools/cuv_general.hpp>
 #include<cuv/tools/meta_programming.hpp>
 #include<cuv/basics/accessors.hpp>
@@ -58,6 +60,13 @@ namespace cuv
 		/// assign a new value
 		void operator=(const value_type& v){
 			entry_set(ptr,(index_type)0,v,memory_space_type());
+		}
+
+        template<class _T>
+		typename 
+        boost::enable_if_c<boost::is_convertible<_T,value_type>::value >::type
+            operator=(const _T& v){
+			entry_set(ptr,(index_type)0,(value_type)v,memory_space_type());
 		}
 	
 		/// assignment from reference of same type

@@ -27,10 +27,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
 
-
-
-
-
 #include <iostream>
 #include <stdexcept>
 #include <cuda.h>
@@ -39,35 +35,36 @@
 #include <cuv/basics/linear_memory.hpp>
 #include <cuv/tools/meta_programming.hpp>
 
+#include "accessors.hpp"
 
 namespace cuv{
 
-template <class value_type, class index_type>
-struct allocator<value_type,index_type,dev_memory_space>{
-	void alloc2d( value_type** ptr, index_type& pitch, index_type height, index_type width ) const{
+template <class value_type, class size_type>
+struct allocator<value_type,size_type,dev_memory_space>{
+	void alloc2d( value_type** ptr, size_type& pitch, size_type height, size_type width ) const{
 		size_t p;
 		cuvSafeCall(cudaMallocPitch(ptr, &p, sizeof(value_type)*width, height));
 		pitch = p;
 	}
-	void alloc( value_type** ptr, index_type size) const{
+	void alloc( value_type** ptr, size_type size) const{
 		cuvSafeCall(cudaMalloc(ptr, sizeof(value_type)*size));
 	}
 	void dealloc( value_type** ptr) const {
 		cuvSafeCall(cudaFree((void*)*ptr));
 		*ptr = NULL;
 	}
-	void alloc(const value_type** ptr, index_type size) const{
+	void alloc(const value_type** ptr, size_type size) const{
 	       cuvAssert(false);
 	}
 	void dealloc(const value_type** ptr)const {
 	       cuvAssert(false);
 	}
-	void copy(value_type* dst, const value_type*src,index_type size, host_memory_space){
+	void copy(value_type* dst, const value_type*src,size_type size, host_memory_space){
 		cuvSafeCall(cudaMemcpy( dst, src, size*sizeof( value_type ), cudaMemcpyHostToDevice ));
 	}
 	template<class value_type2>
 	void
-	copy(value_type* dst, const value_type2*src,index_type size, dev_memory_space){
+	copy(value_type* dst, const value_type2*src,size_type size, dev_memory_space){
 		if(IsSame<value_type,value_type2>::Result::value){
 			cuvSafeCall(cudaMemcpy( dst, src, size*sizeof( value_type ), cudaMemcpyDeviceToDevice ));
 		}
@@ -78,10 +75,10 @@ struct allocator<value_type,index_type,dev_memory_space>{
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 	}
-	void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, host_memory_space){
+	void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, host_memory_space){
 		cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(value_type),h,cudaMemcpyHostToDevice));
 	}
-	void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, dev_memory_space){
+	void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, dev_memory_space){
 		cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(value_type),h,cudaMemcpyDeviceToDevice));
 	}
 };
@@ -121,14 +118,14 @@ allocator<V,I,host_memory_space>::copy2d(V* dst, const V*src,I dpitch, I spitch,
 	cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(V),h,cudaMemcpyHostToHost));
 }
 
-template <class value_type, class index_type>
-void entry_set(value_type* ptr, index_type idx, value_type val, dev_memory_space) {
+template <class value_type, class size_type>
+void entry_set(value_type* ptr, size_type idx, value_type val, dev_memory_space) {
 	thrust::device_ptr<value_type> dev_ptr(ptr);
 	dev_ptr[idx]=val;
 }
 
-template <class value_type, class index_type>
-value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space) {
+template <class value_type, class size_type>
+value_type entry_get(const value_type* ptr, size_type idx, dev_memory_space) {
 	const thrust::device_ptr<const value_type> dev_ptr(ptr);
 	return (value_type) *(dev_ptr+idx);
 }
