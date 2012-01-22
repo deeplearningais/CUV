@@ -52,7 +52,47 @@
 #define NVView3D(X)  \
         (X.ptr(), X.shape(0)*X.shape(1), X.shape(2), X.shape(2),false)
 
-namespace cuv{
+namespace cuv{ namespace alex_conv{
+
+template<class V,class M, class T>
+    void reorder_for_conv(tensor<V,M,T>& dst, const tensor<V,M,T>& src){
+        cuvAssert(src.ndim()==3);
+        cuvAssert(dst.ndim()==3);
+        std::vector<unsigned int> s = src.shape();
+        /*tensor<V,M,T> src_view(indices[index_range()][index_range()][index_range()], src);*/
+        tensor<V,M,T>& src_view  = const_cast<tensor<V,M,T>&>(src);
+        src_view.reshape(extents[s[0]][s[1]*s[2]]);
+        dst.reshape(extents[s[1]*s[2]][s[0]]);
+        std::cout << "Transposing: "<<src_view.ndim()<<": "<<src_view.shape(0)<<" "<<src_view.shape(1)<<std::endl;
+        std::cout << "         to: "<<dst.ndim()<<": "<<dst.shape(0)<<" "<<dst.shape(1)<<std::endl;
+        if(IsSame<M,host_memory_space>::Result::value)
+            std::cout << "       (host)"<<std::endl;
+        else
+            std::cout << "       (dev)"<<std::endl;
+            
+        cuv::transpose(dst,src_view);
+        std::cout << "src_pitch: "<< src.pitch()<<std::endl;
+        std::cout << "dst_pitch: "<< dst.pitch()<<std::endl;
+        for(unsigned int i=0;i<s[0];i++){
+            for(unsigned int j=0;j<s[1]*s[2];j++){
+                /*std::cout << dst(j,i)<< " "<<src_view(i,j)<<std::endl;*/
+                /*std::cout << "      "<< " "<<src(i,j/s[2],j%s[2])<<std::endl;*/
+                cuvAssert(dst(j,i) == src_view(i,j));
+            }
+        }
+        src_view.reshape(s);
+        dst.reshape(extents[s[1]][s[2]][s[0]]);
+    }
+template<class V,class M, class T>
+    void reorder_from_conv(tensor<V,M,T>& dst, const tensor<V,M,T>& src){
+        cuvAssert(src.ndim()==3);
+        cuvAssert(dst.ndim()==3);
+        tensor<V,M,T> src_view(indices[index_range()][index_range()][index_range()], src);
+        src_view.reshape(extents[src.shape(0)*src.shape(1)][src.shape(2)]);
+        dst.reshape(extents[dst.shape(0)][dst.shape(1)*dst.shape(2)]);
+        cuv::transpose(dst,src_view);
+        dst.reshape(extents[src.shape(2)][src.shape(0)][src.shape(1)]);
+    }
 
 template<>
     void 
@@ -280,5 +320,13 @@ template<>
         convLocalAvgUndo(nv_avgGrads, nv_target, subsX,startX,strideX,outputsX,imgX);
     }
 
-}
+// instantiate
+#define  TENS(V,M,T)       tensor<V,M,T>
+#define CTENS(V,M,T) const TENS(V,M,T)
+#define INST(V,M,T) \
+template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
+template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&);
+INST(float,host_memory_space,row_major);
+INST(float,dev_memory_space,row_major);
+}}
 

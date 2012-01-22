@@ -20,7 +20,7 @@ CUDA_ADD_LIBRARY(cuv_convolution_ops SHARED
 	convolution_ops.cu
   )
 
-TARGET_LINK_LIBRARIES(cuv_convolution_ops ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY} ${BLAS_LIBRARIES} cuv_convert cuv_matrix_ops tp_nvmatrix2 tp_cudaconv2)
+TARGET_LINK_LIBRARIES(cuv_convolution_ops ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY} ${BLAS_LIBRARIES} cuv_convert cuv_matrix_ops tp_cudaconv2)
 
 install(TARGETS cuv_convolution_ops
 	RUNTIME DESTINATION bin

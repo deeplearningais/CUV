@@ -44,6 +44,29 @@ namespace cuv{
 /** @defgroup convolution_ops Convolution and pooling operations
 * @{
 */
+/**
+ * wrappers of convolution operations by Alex Kriszevsky
+ */
+namespace alex_conv{
+
+/**
+ * Reorder memory for application of Alex' convolution routines.
+ *
+ * The routines by Alex require images to be in a slightly unintuitive memory order:
+ * (nChannels, nPixH*nPixW, nImages). This is a convenience function to
+ * change images of the form (nImages,nChannels,nPixH*nPixW) to the required
+ * format at the cost of one transpose operation.
+ *
+ */
+template<class V,class M, class T>
+    void reorder_for_conv(tensor<V,M,T>& dst, const tensor<V,M,T>& src);
+
+/**
+ * Reverse operation of @see reorder_for_conv
+ *
+ */
+template<class V,class M, class T>
+    void reorder_from_conv(tensor<V,M,T>& dst, const tensor<V,M,T>& src);
 
 /**
  * convolve a set of images with a set of filters
@@ -115,6 +138,7 @@ template<class V, class M, class T>
 void local_avg_pool_grad(tensor<V,M,T>& target, const tensor<V,M,T>& avgGrads, 
         int subsX, int startX, int strideX);
 
+}
 /** @} */ //end group convolution_ops
 }
 #endif /* __CONVOLUTION_OPS_HPP__ */
