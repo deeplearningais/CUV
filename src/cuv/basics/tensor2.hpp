@@ -1119,6 +1119,132 @@ namespace cuv
 					m_info.host_shape[i] = eg.ranges_[i].finish();
                 detail::allocate(*this,pitched_memory_tag());
 			}
+
+            /////////////////////////////////////////////////////////////
+            //   Construct as View
+            /////////////////////////////////////////////////////////////
+            template<int D, int E>
+                explicit tensor(const tensor&o, const index_gen<D,E>& idx)
+                : m_memory(o.mem())
+                , m_ptr(const_cast<pointer_type>(o.ptr()))
+                {
+                    std::vector<int> shapes;
+                    std::vector<int> strides;
+                    shapes.reserve(D);
+                    strides.reserve(D);
+                    cuvAssert(o.ndim()==D);
+                    for(std::size_t i=0;i<D;i++){
+                        int start  = idx.ranges_[i].get_start(0);
+                        int finish = idx.ranges_[i].get_finish(o.shape(i));
+                        int stride = idx.ranges_[i].stride();
+                        if (start <0) start  += o.shape(i);
+                        if (finish<0) finish += o.shape(i);
+#ifndef NDEBUG
+                        cuvAssert(finish>start);
+#endif
+                        m_ptr += start*o.stride(i);
+                        if(finish-start==1){
+                            // skip dimension
+                        }else{
+                            shapes.push_back((finish-start)/stride);
+                            strides.push_back(o.stride(i)*stride);
+                        }
+                    }
+                    // store in m_info
+                    m_info.resize(shapes.size());
+                    std::copy(shapes.begin(),shapes.end(),m_info.host_shape[0].ptr);
+                    std::copy(strides.begin(),strides.end(),m_info.host_stride[0].ptr);
+                }
+
+            /////////////////////////////////////////////////////////////
+            //   assignment operators (try not to reallocate if shapes match)
+            /////////////////////////////////////////////////////////////
+
+            /**
+             * assign from tensor of same type (always O(1) operation)
+             */
+            tensor& operator=(const tensor& o){
+                if(this==&o) return *this; // check for self-assignment
+                m_memory = o.mem();
+                m_ptr = const_cast<pointer_type>(o.ptr());
+                m_info = o.info();
+                return *this;
+            }
+
+            /**
+             * assign from tensor of different memory space type
+             *
+             * this copies memory (obviously) but tries to avoid reallocation
+             */
+            template<class OM>
+            tensor& operator=(const tensor<V,OM,L>& o){
+                if(shape()==o.shape()){
+                    if(dynamic_cast<linear_memory<V,M>*>(m_memory.get())){
+                        detail::copy_memory(*this, o, linear_memory_tag());
+                    }else if(dynamic_cast<pitched_memory<V,M>*>(m_memory.get())){
+                        detail::copy_memory(*this, o, pitched_memory_tag());
+                    }
+                }
+            }
+
+
+            /**
+             * copy memory using given allocator tag (linear/pitched)
+             */
+            template<class T>
+            tensor copy(T tag=linear_memory_tag())const{
+                    tensor t;
+                    const tensor& o = *this;
+                    t.m_info   = o.info();
+                    detail::copy_memory(t,o,tag);
+                    t.m_ptr    = t.mem()->ptr();
+                    return t;
+                }
+
+            /**
+             * copy memory using linear memory
+             */
+            tensor copy(){
+                return copy(linear_memory_tag());
+            }
+
+            template<int D, int E>
+                tensor
+                operator[](const index_gen<D,E>& idx)const
+                {
+                    tensor t;
+                    const tensor& o = *this;
+                    t.m_memory = o.mem();
+                    t.m_ptr    = const_cast<pointer_type>(o.ptr());
+
+                    std::vector<int> shapes;
+                    std::vector<int> strides;
+                    shapes.reserve(D);
+                    strides.reserve(D);
+                    cuvAssert(o.ndim()==D);
+                    for(std::size_t i=0;i<D;i++){
+                        int start  = idx.ranges_[i].get_start(0);
+                        int finish = idx.ranges_[i].get_finish(o.shape(i));
+                        int stride = idx.ranges_[i].stride();
+                        if (start <0) start  += o.shape(i);
+                        if (finish<0) finish += o.shape(i);
+#ifndef NDEBUG
+                        cuvAssert(finish>start);
+#endif
+                        t.m_ptr += start*o.stride(i);
+                        if(finish-start==1){
+                            // skip dimension
+                        }else{
+                            shapes.push_back((finish-start)/stride);
+                            strides.push_back(o.stride(i)*stride);
+                        }
+                    }
+                    // store in m_info
+                    t.m_info.resize(shapes.size());
+                    std::copy(shapes.begin(),shapes.end(),t.m_info.host_shape[0].ptr);
+                    std::copy(strides.begin(),strides.end(),t.m_info.host_stride[0].ptr);
+                    return t; // should not copy mem, only m_info
+                }
     };
 
     namespace detail{
