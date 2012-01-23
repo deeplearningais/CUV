@@ -317,7 +317,7 @@ namespace cuv
                         linear_memory<index_type,host_memory_space>& strides,
                         const linear_memory<size_type,host_memory_space>& shape, column_major){
                     size_type size = 1;
-                    for (int i = 0; i <  shape.size(); ++i)
+                    for (unsigned int i = 0; i <  shape.size(); ++i)
                     {
                         strides[i] = (shape[i] == 1) ? 0 : size;
                         size *= shape[i];
@@ -363,7 +363,7 @@ namespace cuv
         bool is_c_contiguous(column_major, const linear_memory<unsigned int,host_memory_space>& shape, const linear_memory<int,host_memory_space>& stride){
             bool c_contiguous = true;
             int size = 1;
-            for (int i = 0; i<shape.size() && c_contiguous; ++i)
+            for (unsigned int i = 0; i<shape.size() && c_contiguous; ++i)
             {
                 if (shape[i] == 1)
                     continue;
@@ -377,7 +377,7 @@ namespace cuv
         /// returns true iff memory can be copied using copy2d
         bool is_2dcopyable(row_major, const linear_memory<unsigned int,host_memory_space>& shape, const linear_memory<int,host_memory_space>& stride){
             bool c_contiguous = shape.size()>1;
-            const unsigned int pitched_dim = shape.size()-2;
+            const int pitched_dim = shape.size()-2; //TODO: 2 or 1?
             int size = 1;
             for (int i = shape.size()-1; (i >= 0) && c_contiguous; --i)
             {
@@ -397,9 +397,9 @@ namespace cuv
         /// returns true iff memory can be copied using copy2d
         bool is_2dcopyable(column_major, const linear_memory<unsigned int,host_memory_space>& shape, const linear_memory<int,host_memory_space>& stride){
             bool c_contiguous = shape.size()>1;
-            const unsigned int pitched_dim = 1;
+            const unsigned int pitched_dim = 1; // TODO: 1 or 0?
             int size = 1;
-            for (int i = 0; (i <  shape.size()) && c_contiguous; ++i)
+            for (unsigned int i = 0; (i <  shape.size()) && c_contiguous; ++i)
             {
                 if(shape[i] == 1){
                     continue;
@@ -505,7 +505,7 @@ namespace cuv
                  */
                 void alloc(){
                     assert(this->m_ptr == NULL);
-                    m_allocator.alloc2d(&this->m_ptr,m_pitch,m_rows,m_cols);
+                    m_allocator.alloc2d(&this->m_ptr,m_pitch,m_rows,m_cols+2); // TODO: remove +2  (here only for testing)
                     assert(m_pitch%sizeof(value_type)==0);
                     m_pitch/=sizeof(value_type);
                 }
@@ -571,7 +571,7 @@ namespace cuv
                  *
                  * @brief Copy pitched_memory from other memory type.
                  * 
-                 * @param o Source linear_memory
+                 * @param o Source pitched_memory
                  * 
                  * @return *this
                  *
@@ -594,7 +594,7 @@ namespace cuv
                     }
 
                 /**
-                 * @return a reference to memory at a position as if this were linear memory
+                 * @return a reference to memory at a position as if this were pitched memory
                  * @param idx position
                  */
                 reference_type
@@ -617,12 +617,7 @@ namespace cuv
                 const_reference_type
                     operator[](const index_type& idx)const
                     {
-                        assert(idx>=0);
-                        index_type row = idx/m_cols;
-                        index_type col = idx%m_cols;
-                        assert((size_type)row < m_rows);
-                        assert((size_type)col < m_cols);
-                        return const_reference_type(this->m_ptr+row*m_pitch+col);
+                        return const_cast<pitched_memory&>(*this)(idx);
                     }
 
                 reference_type
@@ -635,11 +630,7 @@ namespace cuv
                     }
                 const_reference_type
                     operator()(const index_type& i, const index_type& j)const{
-                        assert(i>=0);
-                        assert(j>=0);
-                        assert((size_type)i < m_rows);
-                        assert((size_type)j < m_cols);
-                        return const_reference_type(this->m_ptr+i*m_pitch+j);
+                        return const_cast<pitched_memory&>(*this)(i,j);
                     }
 
 
@@ -649,13 +640,13 @@ namespace cuv
                         const linear_memory<size_type,host_memory_space>& shape, row_major){
                     size_type size = 1;
                     assert(shape.size()>=2);
-                    const size_type pitched_dim = shape.size()-2;
+                    const int pitched_dim = shape.size()-1;
                     for (int i = shape.size()-1; i >= 0; --i)
                     {
                         if(shape[i] == 1){
                             strides[i] = 0;
                         }else if(i == pitched_dim){
-                            strides[i] = pitch();
+                            strides[i] = 1;
                             size *= pitch();
                         }else {
                             strides[i] = size;
@@ -669,13 +660,13 @@ namespace cuv
                         const linear_memory<size_type,host_memory_space>& shape, column_major){
                     size_type size = 1;
                     assert(shape.size()>=2);
-                    const size_type pitched_dim = 1;
-                    for (int i = 0; i < shape.size(); ++i)
+                    const size_type pitched_dim = 0;
+                    for (unsigned int i = 0; i < shape.size(); ++i)
                     {
                         if(shape[i] == 1){
                             strides[i] = 0;
                         }else if(i == pitched_dim){
-                            strides[i] = pitch();
+                            strides[i] = 1;
                             size *= pitch();
                         }else {
                             strides[i] = size;
@@ -831,12 +822,10 @@ namespace cuv
 			size_type
 			index_of(column_major, int D, index_type* arr)const{
 				index_type pos = 0;
-				index_type dim = 1;
 				for(int i=0; i<D; i++){
 					index_type temp = arr[i];
                     if(temp<0) temp = m_info.host_shape[i]+temp;
-					pos += temp * dim * m_info.host_stride[i];
-					dim *= m_info.host_stride[i];
+					pos += temp * m_info.host_stride[i];
 				}
 				return pos;
 			}
@@ -844,13 +833,10 @@ namespace cuv
 			index_type
 			index_of(row_major,int D, index_type* arr)const{
 				index_type pos = 0;
-				index_type dim = m_info.host_stride[D-1];
 				for(int i=0; i<D; i++){
-					index_type temp = arr[D-i-1];
-                    if(temp<0) temp = m_info.host_shape[D-i-1]+temp;
-					pos += temp * dim;
-                    if(0<=D-i-2)
-                        dim *= m_info.host_stride[D-i-2];
+					index_type temp = arr[i];
+                    if(temp<0) temp = m_info.host_shape[i]+temp;
+					pos += temp * m_info.host_stride[i];
 				}
 				return pos;
 			}
@@ -862,7 +848,7 @@ namespace cuv
             /** return the size of the i-th dimension
              *  @param i the index of the queried dimension
              */
-            index_type shape(const index_type& i)const{return m_info.host_shape[i];}
+            size_type shape(const index_type& i)const{return m_info.host_shape[i];}
 
             /** return the stride of the i-th dimension
              *  @param i the index of the queried dimension
@@ -900,23 +886,35 @@ namespace cuv
              * member access: "flat" access as if memory was linear
              */
             reference_type operator[](index_type idx){
+                size_type ndim = m_info.host_shape.size();
+                size_type* virtualstride = new size_type[ndim];
                 size_type pos = 0;
                 if(IsSame<L,row_major>::Result::value){
                     // row major
-                    int size = 1;
-                    for(int i=m_info.host_shape.size()-1; i>=0; --i){
-                        size_type s = idx % (m_info.host_shape[i] * m_info.host_stride[i]);
-                        pos += s;
-                        idx -= s * (m_info.host_shape[i] * m_info.host_stride[i]);
+                    {   size_type virt_size = 1;
+                        for(int i=ndim-1;i>=0;--i){
+                            virtualstride[i] = virt_size;
+                            virt_size *= m_info.host_shape[i];
+                        }
+                    }
+                    for(size_type i=0; i<ndim; ++i){
+                        pos += (idx/virtualstride[i])*m_info.host_stride[i];
+                        idx -= (idx/virtualstride[i])*virtualstride[i];
                     }
                 }else{
                     // column major
-                    for(size_type i=0; i<m_info.host_shape.size(); ++i){
-                        size_type s = idx / (m_info.host_shape[i] * m_info.host_stride[i]);
-                        pos += s;
-                        idx -= s * (m_info.host_shape[i] * m_info.host_stride[i]);
+                    {   size_type virt_size = 1;
+                        for(unsigned int i=0;i<ndim;++i){
+                            virtualstride[i] = virt_size;
+                            virt_size *= m_info.host_shape[i];
+                        }
+                    }
+                    for(int i=ndim-1; i>=0; --i){
+                        pos += (idx/virtualstride[i])*m_info.host_stride[i];
+                        idx -= (idx/virtualstride[i])*virtualstride[i];
                     }
                 }
+                delete[] virtualstride;
                 return reference_type(m_ptr + pos);
             }
 
@@ -937,8 +935,8 @@ namespace cuv
             reference_type operator()(index_type i0, index_type i1){
 #ifndef NDEBUG
                 cuvAssert(ndim()==2);
-                cuvAssert((i0>=0 && i0 < shape(0)) || (i0<0 && -i0<shape(0)+1) )
-                cuvAssert((i1>=0 && i1 < shape(1)) || (i1<0 && -i1<shape(1)+1) )
+                cuvAssert((i0>=0 && (size_type)i0 < shape(0)) || (i0<0 && (size_type)-i0<shape(0)+1) )
+                cuvAssert((i1>=0 && (size_type)i1 < shape(1)) || (i1<0 && (size_type)-i1<shape(1)+1) )
 #endif
                 index_type arr[2] = {i0,i1};
                 return reference_type(m_ptr + index_of(memory_layout_type(), 2,arr));
@@ -948,9 +946,9 @@ namespace cuv
             reference_type operator()(index_type i0, index_type i1, index_type i2){
 #ifndef NDEBUG
                 cuvAssert(ndim()==3);
-                cuvAssert((i0>=0 && i0 < shape(0)) || (i0<0 && -i0<shape(0)+1) )
-                cuvAssert((i1>=0 && i1 < shape(1)) || (i1<0 && -i1<shape(1)+1) )
-                cuvAssert((i2>=0 && i2 < shape(2)) || (i2<0 && -i2<shape(2)+1) )
+                cuvAssert((i0>=0 && (size_type)i0 < shape(0)) || (i0<0 && (size_type)-i0<shape(0)+1) )
+                cuvAssert((i1>=0 && (size_type)i1 < shape(1)) || (i1<0 && (size_type)-i1<shape(1)+1) )
+                cuvAssert((i2>=0 && (size_type)i2 < shape(2)) || (i2<0 && (size_type)-i2<shape(2)+1) )
 #endif
                 index_type arr[3] = {i0,i1,i2};
                 return reference_type(m_ptr + index_of(memory_layout_type(), 3,arr));
@@ -960,10 +958,10 @@ namespace cuv
             reference_type operator()(index_type i0, index_type i1, index_type i2, index_type i3){
 #ifndef NDEBUG
                 cuvAssert(ndim()==4);
-                cuvAssert((i0>=0 && i0 < shape(0)) || (i0<0 && -i0<shape(0)+1) )
-                cuvAssert((i1>=0 && i1 < shape(1)) || (i1<0 && -i1<shape(1)+1) )
-                cuvAssert((i2>=0 && i2 < shape(2)) || (i2<0 && -i2<shape(2)+1) )
-                cuvAssert((i3>=0 && i3 < shape(3)) || (i3<0 && -i3<shape(3)+1) )
+                cuvAssert((i0>=0 && (size_type)i0 < shape(0)) || (i0<0 && (size_type)-i0<shape(0)+1) )
+                cuvAssert((i1>=0 && (size_type)i1 < shape(1)) || (i1<0 && (size_type)-i1<shape(1)+1) )
+                cuvAssert((i2>=0 && (size_type)i2 < shape(2)) || (i2<0 && (size_type)-i2<shape(2)+1) )
+                cuvAssert((i3>=0 && (size_type)i3 < shape(3)) || (i3<0 && (size_type)-i3<shape(3)+1) )
 #endif
                 index_type arr[4] = {i0,i1,i2,i3};
                 return reference_type(m_ptr + index_of(memory_layout_type(), 4,arr));
@@ -973,11 +971,11 @@ namespace cuv
             reference_type operator()(index_type i0, index_type i1, index_type i2, index_type i3, index_type i4){
 #ifndef NDEBUG
                 cuvAssert(ndim()==5);
-                cuvAssert((i0>=0 && i0 < shape(0)) || (i0<0 && -i0<shape(0)+1) )
-                cuvAssert((i1>=0 && i1 < shape(1)) || (i1<0 && -i1<shape(1)+1) )
-                cuvAssert((i2>=0 && i2 < shape(2)) || (i2<0 && -i2<shape(2)+1) )
-                cuvAssert((i3>=0 && i3 < shape(3)) || (i3<0 && -i3<shape(3)+1) )
-                cuvAssert((i4>=0 && i4 < shape(4)) || (i4<0 && -i4<shape(4)+1) )
+                cuvAssert((i0>=0 && (size_type)i0 < shape(0)) || (i0<0 && (size_type)-i0<shape(0)+1) )
+                cuvAssert((i1>=0 && (size_type)i1 < shape(1)) || (i1<0 && (size_type)-i1<shape(1)+1) )
+                cuvAssert((i2>=0 && (size_type)i2 < shape(2)) || (i2<0 && (size_type)-i2<shape(2)+1) )
+                cuvAssert((i3>=0 && (size_type)i3 < shape(3)) || (i3<0 && (size_type)-i3<shape(3)+1) )
+                cuvAssert((i4>=0 && (size_type)i4 < shape(4)) || (i4<0 && (size_type)-i4<shape(4)+1) )
 #endif
                 index_type arr[5] = {i0,i1,i2,i3,i4};
                 return reference_type(m_ptr + index_of(memory_layout_type(), 5,arr));
@@ -1263,7 +1261,8 @@ namespace std{
                     if(i>0)
                         o<<" ";
                     o << "[ ";
-                    for(unsigned int j=0;j<t.shape(2);j++) o<< t(l,i,j)<<" ";
+                    //for(unsigned int j=0;j<t.shape(2);j++) o<< t(l,i,j)<<" ";
+                    for(unsigned int j=0;j<t.shape(2);j++) o<< t[l*t.shape(1)*t.shape(2) + i*t.shape(2) + j]<<" ";
                     o <<"]";
                     if(i != t.shape(1)-1)
                         o <<std::endl;
