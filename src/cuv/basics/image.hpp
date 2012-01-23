@@ -51,7 +51,7 @@ namespace cuv
 	interleaved_image{
 		public:
 			/// the type of the wrapped tensor: Row-major and strided!
-			typedef cuv::tensor<__value_type,__memory_space_type,row_major,memory2d_tag> tensor_type;
+			typedef cuv::tensor<__value_type,__memory_space_type,row_major> tensor_type;
 			/// the index type
 			typedef typename tensor_type::index_type index_type;
 			/// the type of returned references

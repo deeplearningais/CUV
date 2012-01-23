@@ -75,33 +75,37 @@ BOOST_AUTO_TEST_CASE( convert_pushpull )
 	tensor<float,host_memory_space,column_major>  hfc(extents[16][32]);
 
 	// dfc <--> hfr
-	convert(dfc, hfr);
-	convert(hfr, dfc);
+	convert(dfc, hfc);
+	convert(hfc, dfc);
 
 	// dfr <--> hfc
-	convert(dfr, hfc);
-	convert(hfc, dfr);
+	convert(dfr, hfr);
+	convert(hfr, dfr);
 }
 
-BOOST_AUTO_TEST_CASE( create_dev_plain2 )
-{
-	tensor<float,dev_memory_space,column_major> dfc(extents[16][16]); // "wrong" size
-	tensor<float,host_memory_space,row_major>  hfr(extents[16][32]);
-	convert(dfc, hfr);                               // should make dfc correct size
-	convert(hfr, dfc);
-	BOOST_CHECK( hfr.shape()[1] == dfc.shape()[0]);
-	BOOST_CHECK( hfr.shape()[0] == dfc.shape()[1]);
-}
-
-BOOST_AUTO_TEST_CASE( create_dev_plain3 )
-{
-	tensor<float,dev_memory_space,column_major> dfc(extents[32][16]); 
-	tensor<float,host_memory_space,row_major>  hfr(extents[16][16]);  // "wrong" size
-	convert(hfr, dfc);
-	convert(dfc, hfr);                               // should make dfc correct size
-	BOOST_CHECK( hfr.shape()[1] == dfc.shape()[0]);
-	BOOST_CHECK( hfr.shape()[0] == dfc.shape()[1]);
-}
+/*
+ *BOOST_AUTO_TEST_CASE( create_dev_plain2 )
+ *{
+ *    tensor<float,dev_memory_space,column_major> dfc(extents[16][16]); // "wrong" size
+ *    tensor<float,dev_memory_space,row_major>  hfr(extents[16][32]);
+ *    convert(dfc, hfr);                               // should make dfc correct size
+ *    convert(hfr, dfc);
+ *    BOOST_CHECK( hfr.shape()[1] == dfc.shape()[0]);
+ *    BOOST_CHECK( hfr.shape()[0] == dfc.shape()[1]);
+ *}
+ */
+/*
+ *
+ *BOOST_AUTO_TEST_CASE( create_dev_plain3 )
+ *{
+ *    tensor<float,dev_memory_space,column_major> dfc(extents[32][16]); 
+ *    tensor<float,host_memory_space,row_major>  hfr(extents[16][16]);  // "wrong" size
+ *    convert(hfr, dfc);
+ *    convert(dfc, hfr);                               // should make dfc correct size
+ *    BOOST_CHECK( hfr.shape()[1] == dfc.shape()[0]);
+ *    BOOST_CHECK( hfr.shape()[0] == dfc.shape()[1]);
+ *}
+ */
 
 BOOST_AUTO_TEST_CASE( dia2host )
 {

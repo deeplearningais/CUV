@@ -141,6 +141,12 @@ template void allocator<T, I, dev_memory_space>::copy<  signed char>(T* dst, con
 template void allocator<T, I, dev_memory_space>::copy<          int>(T* dst, const int          *src,I size, dev_memory_space); \
 template void allocator<T, I, dev_memory_space>::copy<unsigned  int>(T* dst, const unsigned int *src,I size, dev_memory_space);
 
+VECTOR_INST(float, int);
+VECTOR_INST(unsigned char, int);
+VECTOR_INST(signed char, int);
+VECTOR_INST(int, int);
+VECTOR_INST(unsigned int, int);
+
 VECTOR_INST(float, unsigned int);
 VECTOR_INST(unsigned char, unsigned int);
 VECTOR_INST(signed char, unsigned int);

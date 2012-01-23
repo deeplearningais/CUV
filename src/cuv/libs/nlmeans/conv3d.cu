@@ -27,7 +27,7 @@ namespace cuv{
 			}
 
 
-#define PITCH(PTR,P,Y,X) ((typeof(PTR))((char*)PTR + ((size_t)P)*((size_t)Y)) + ((size_t)X))
+#define PITCH(PTR,P,Y,X) ((typeof(PTR))(PTR + ((size_t)P)*((size_t)Y)) + ((size_t)X))
 #define MAX_KERNEL_RADIUS 8
 #define      MAX_KERNEL_W (2 * MAX_KERNEL_RADIUS + 1)
 			////////////////////////////////////////////////////////////////////////////////
@@ -70,13 +70,13 @@ namespace cuv{
 			__constant__ float c_Kernel_d[MAX_KERNEL_W];
 
 			void setConvolutionKernel_horizontal(const cuv::tensor<float,host_memory_space>&src){
-				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_h, src.ptr(), src.size() * sizeof(float)));
+				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_h, const_cast<float*>(src.ptr()), src.size() * sizeof(float)));
 			}
 			void setConvolutionKernel_vertical(const cuv::tensor<float,host_memory_space>&src){
-				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_v, src.ptr(), src.size() * sizeof(float)));
+				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_v, const_cast<float*>(src.ptr()), src.size() * sizeof(float)));
 			}
 			void setConvolutionKernel_depth(const cuv::tensor<float,host_memory_space>&src){
-				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_d, src.ptr(), src.size() * sizeof(float)));
+				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_d, const_cast<float*>(src.ptr()), src.size() * sizeof(float)));
 			}
 
 
@@ -149,7 +149,7 @@ namespace cuv{
 				int dd = src.shape()[0];
 				dim3 blocks(divup(dw , (ROWS_RESULT_STEPS * ROWS_BLOCKDIM_X)), divup(dh*dd , ROWS_BLOCKDIM_Y));
 				dim3 threads(ROWS_BLOCKDIM_X, ROWS_BLOCKDIM_Y);
-				convolutionRowGPU<<<blocks, threads>>>(  dst.ptr(),  src.ptr(), dw, dh*dd,dst.pitch(),src.pitch(),kernel_radius);
+				convolutionRowGPU<<<blocks, threads>>>(  dst.ptr(),  src.ptr(), dw, dh*dd,dst.stride(1),src.stride(1),kernel_radius);
 				cuvSafeCall(cudaThreadSynchronize());
 				safeThreadSync();
 			}
@@ -296,10 +296,10 @@ namespace cuv{
 					const cuv::tensor<float,dev_memory_space>& src,
 					int kernel_radius
 					){
-				int dw = src.shape()[2]*src.shape()[1];
-				int dh = src.shape()[0];
-				size_t spitch = src.pitch()*src.shape()[1];
-				size_t dpitch = dst.pitch()*dst.shape()[1];
+				int dw = src.shape(2)*src.shape(1);
+				int dh = src.shape(0);
+				size_t spitch = src.stride(1)*src.shape(1);
+				size_t dpitch = dst.stride(1)*dst.shape(1);
 
 				cuvAssert( COLUMNS_BLOCKDIM_X * COLUMNS_HALO_STEPS >= kernel_radius );
 

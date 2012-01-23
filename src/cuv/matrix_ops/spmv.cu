@@ -214,7 +214,7 @@ namespace cuv{
 			cuvAssert(dst.shape()[1] == B.shape()[1]);
 			for(int i=0;i<dst.shape()[1];i++){
 				tensor<float,host_memory_space> dst_v(indices[index_range(0,dst.shape()[0])], dst.ptr()+i*dst.shape()[0]);
-				tensor<float,host_memory_space> src_v(indices[index_range(0,B.shape()[0])],   B.ptr()+i*B.shape()[0]);
+				const tensor<float,host_memory_space> src_v(indices[index_range(0,B.shape()[0])],   const_cast<float*>(B.ptr()+i*B.shape()[0]));
 				spmv(dst_v,A,src_v,transA,factAB,factC);
 			}
 		}
@@ -241,7 +241,7 @@ namespace cuv{
 			const int num_at_same_time = min(MAX_NUM_IMGS_AT_ONCE, B.shape()[1]);
 			for(int i=0; i<dst.shape()[1]; i += num_at_same_time){
 				tensor<float,dev_memory_space> dst_v(indices[index_range(0,dst.shape()[0] * min(dst.shape()[1]-i,num_at_same_time))], dst.ptr()+i*dst.shape()[0]);
-				tensor<float,dev_memory_space> src_v(indices[index_range(0,B.shape()[0]* min(B.shape()[1]-i,  num_at_same_time))], B.ptr()+i*B.shape()[0]);
+				const tensor<float,dev_memory_space> src_v(indices[index_range(0,B.shape()[0]* min(B.shape()[1]-i,  num_at_same_time))], const_cast<float*>(B.ptr()+i*B.shape()[0]));
 				spmv(dst_v,A,src_v,transA,factAB,factC);
 			}
 		}

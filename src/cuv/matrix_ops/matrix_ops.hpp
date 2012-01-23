@@ -60,9 +60,9 @@ namespace cuv{
    * 	For row major matrices, this only works with start_cols=0 and num_cols=matrix.w().
    * 	For column major matrices, this only works with start_rows=0 and num_rows=matrix.h().
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout, class __index_type>
-	  tensor<__value_type,__memory_space_type,__memory_layout>* blockview(
-	  tensor<__value_type,__memory_space_type,__memory_layout> & matrix,
+  template<class V, class M, class __memory_layout, class __index_type>
+	  tensor<V,M,__memory_layout>* blockview(
+	  tensor<V,M,__memory_layout> & matrix,
 			  __index_type start_rows,
 			  __index_type num_rows ,
 			  __index_type start_cols,
@@ -92,31 +92,31 @@ namespace cuv{
    * In the above transA(A)*transB(B) is the matrix product and all other operations are pointwise.
    * This is a thin wrapper of CUBLAS.
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void prod(    tensor<__value_type,__memory_space_type,__memory_layout_type>& C,
-              const tensor<__value_type,__memory_space_type,__memory_layout_type>& A,
-              const tensor<__value_type,__memory_space_type,__memory_layout_type>& B,
+  template<class V, class M, class L>
+	  void prod(    tensor<V,M,L>& C,
+              const tensor<V,M,L>& A,
+              const tensor<V,M,L>& B,
               char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
 
 
   /// @see prod
 // convenience: use transposed view instead of "t" and "n"
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type, typename other_memory_layout<__memory_layout_type>::type >& B, const float& factAB=1.f, const float& factC=0.f){
+  template<class V, class M, class L>
+	  void prod(tensor<V,M,L>& C, const tensor<V,M,L>& A, const tensor<V,M, typename other_memory_layout<L>::type >& B, const float& factAB=1.f, const float& factC=0.f){
                prod(C, A, *transposed_view_p(B), 'n', 't', factAB, factC);
 }
   /// @see prod
 // convenience: use transposed view instead of "t" and "n"
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C,
-                const tensor<__value_type,__memory_space_type, typename other_memory_layout<__memory_layout_type>::type >& A,
-                const tensor<__value_type,__memory_space_type,__memory_layout_type>& B,
+  template<class V, class M, class L>
+	  void prod(tensor<V,M,L>& C,
+                const tensor<V,M, typename other_memory_layout<L>::type >& A,
+                const tensor<V,M,L>& B,
                 const float& factAB=1.f, const float& factC=0.f){
                    prod(C, *transposed_view_p(A), B, 't', 'n', factAB, factC);
 }
   /// @see prod
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void prod(tensor<__value_type,__memory_space_type,__memory_layout_type>& C, const dia_matrix<__value_type,__memory_space_type>& A, const tensor<__value_type,__memory_space_type,__memory_layout_type>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
+  template<class V, class M, class L>
+	  void prod(tensor<V,M,L>& C, const dia_matrix<V,M>& A, const tensor<V,M,L>& B, char transA='n', char transB='n', const float& factAB=1.f, const float& factC=0.f);
 
   /** 
    * @brief Transpose a matrix
@@ -125,8 +125,8 @@ namespace cuv{
    * @param src Source matrix 
    * 
    */
-template<class __value_type, class __memory_space_type, class __memory_layout_type, class __memory_container_type>
-void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __memory_container_type>& dst, const tensor<__value_type,__memory_space_type, __memory_layout_type, __memory_container_type>& src);
+template<class V, class M, class L>
+void transpose(tensor<V,M, L>& dst, const tensor<V,M, L>& src);
 
   /** 
    * @brief Transpose a matrix by creating a view with different storage
@@ -205,8 +205,8 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
    *	 dst= factOld * dst + factNew * rf(src)
    *	 By default, the reduce functor is RF_ADD so that rf(src) is the sum over all columns of src.
    */
-  template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
-	  void reduce_to_col(tensor<__value_type, __memory_space_type>& dst, const tensor<__value_type2, __memory_space_type, __memory_layout_type>& src, reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f);
+  template<class V, class __value_type2, class M, class L>
+	  void reduce_to_col(tensor<V, M>& dst, const tensor<__value_type2, M, L>& src, reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f);
 
   /** 
    * @brief Reduce a matrix to one row using specified reduce functor (or add them up by default)
@@ -221,8 +221,8 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
    *	 dst= factOld * dst + factNew * rf(src)
    *	 By default, the reduce functor is RF_ADD so that rf(src) is the sum over all rows of src.
    */
-  template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
-	  void reduce_to_row(tensor<__value_type, __memory_space_type>& dst, const tensor<__value_type2, __memory_space_type, __memory_layout_type>& src, reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f);
+  template<class V, class __value_type2, class M, class L>
+	  void reduce_to_row(tensor<V, M>& dst, const tensor<__value_type2, M, L>& src, reduce_functor rf=RF_ADD, const __value_type2& factNew=1.f, const __value_type2& factOld=0.f);
 
 
   /** 
@@ -232,8 +232,8 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
    * @param axis Along which axis (0 = reduce to row, 1 = reduce to col)
    *	 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-          tensor<__value_type, __memory_space_type> sum(const tensor<__value_type, __memory_space_type, __memory_layout_type>& src, const int& axis){
+  template<class V, class M, class L>
+          tensor<V, M> sum(const tensor<V, M, L>& src, const int& axis){
               cuvAssert(src.ndim()==2);
               int tensor_length = 0;
               if (axis==0){
@@ -242,7 +242,7 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
                   tensor_length = src.shape()[0];
               } else cuvAssert(false);
 
-              tensor<__value_type, __memory_space_type> dst(tensor_length);
+              tensor<V, M> dst(tensor_length);
               if (axis==0){
                   reduce_to_row(dst, src);
               } else if (axis==1) {
@@ -271,8 +271,8 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
    *	Here transA(A) is the transpose of A if transA = 't' and transA(A) is A if transA = 'n'.
    *	transA(A)*v is the matrix-vector product and all other operations are pointwise.
    */
-  template<class __value_type, class __memory_space_type>
-	  void spmv(tensor<__value_type, __memory_space_type>& dst, const dia_matrix<__value_type, __memory_space_type>& A, const tensor<__value_type, __memory_space_type>& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
+  template<class V, class M>
+	  void spmv(tensor<V, M>& dst, const dia_matrix<V, M>& A, const tensor<V, M>& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
   
   /** 
    * @brief Add a vector to each column of a matrix A.
@@ -281,8 +281,8 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_plus_col(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+  template<class V, class M, class L>
+	  void matrix_plus_col(tensor<V, M, L>& A, const tensor<V, M>& v);
 
   /** 
    * @brief Multiply each column of a matrix A pointwise with a vector v.
@@ -291,8 +291,8 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_times_col(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+  template<class V, class M, class L>
+	  void matrix_times_col(tensor<V, M, L>& A, const tensor<V, M>& v);
 
   /** 
    * @brief Devide each column of a matrix A pointwise by a vector v.
@@ -301,8 +301,8 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_divide_col(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+  template<class V, class M, class L>
+	  void matrix_divide_col(tensor<V, M, L>& A, const tensor<V, M>& v);
 
   /** 
    * @brief Add a vector to each row of a matrix A.
@@ -311,8 +311,8 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_plus_row(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+  template<class V, class M, class L>
+	  void matrix_plus_row(tensor<V, M, L>& A, const tensor<V, M>& v);
 
   /** 
    * @brief Multiply each row of a matrix A pointwise with a vector v.
@@ -321,8 +321,8 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_times_row(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+  template<class V, class M, class L>
+	  void matrix_times_row(tensor<V, M, L>& A, const tensor<V, M>& v);
 
   /** 
    * @brief Devide each row of a matrix A pointwise by a vector v.
@@ -331,8 +331,8 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type, __
    * @param v Vector, v.size()=A.h() 
    * 
    */
-  template<class __value_type, class __memory_space_type, class __memory_layout_type>
-	  void matrix_divide_row(tensor<__value_type, __memory_space_type, __memory_layout_type>& A, const tensor<__value_type, __memory_space_type>& v);
+  template<class V, class M, class L>
+	  void matrix_divide_row(tensor<V, M, L>& A, const tensor<V, M>& v);
   /** @} */ // end group blas2
 } // cuv
   

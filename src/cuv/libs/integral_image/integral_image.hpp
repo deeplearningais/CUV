@@ -50,16 +50,16 @@ namespace cuv{
 		 * @param src source
 		 * @param dst destination
 		 */
-		template<class V1, class V2, class T, class M, class A>
-		void integral_image(cuv::tensor<V1, T, M, A>& dst, const cuv::tensor<V2, T, M, A>& src);
+		template<class V1, class V2, class T, class M>
+		void integral_image(cuv::tensor<V1, T, M>& dst, const cuv::tensor<V2, T, M>& src);
 
 		/**
 		 * integrate rows of an image
 		 * @param src source
 		 * @param dst destination
 		 */
-		template<class V1, class V2, class T, class M, class A, class A2>
-		void scan(cuv::tensor<V1, T, M, A>& dst, const cuv::tensor<V2, T, M, A2>& src);
+		template<class V1, class V2, class T, class M>
+		void scan(cuv::tensor<V1, T, M>& dst, const cuv::tensor<V2, T, M>& src);
 		/**
 		 * @}
 		 * @}
