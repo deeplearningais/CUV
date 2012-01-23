@@ -323,12 +323,14 @@ namespace cuv
                         size *= shape[i];
                     }
                 }
+
                 /** reverse the array (for transposing etc)
                  * 
                  * currently only enabled for host memory space arrays
                  */
-                typename boost::enable_if_c<IsSame<host_memory_space,memory_space_type>::Result::value>::type
-                    reverse(){
+                void reverse(){
+                    if(IsSame<dev_memory_space,memory_space_type>::Result::value)
+                        throw std::runtime_error("reverse of dev linear memory not implemented");
                     value_type* __first = m_ptr, *__last = m_ptr + size();
                     while (true)
                         if (__first == __last || __first == --__last)
@@ -377,14 +379,14 @@ namespace cuv
         /// returns true iff memory can be copied using copy2d
         bool is_2dcopyable(row_major, const linear_memory<unsigned int,host_memory_space>& shape, const linear_memory<int,host_memory_space>& stride){
             bool c_contiguous = shape.size()>1;
-            const int pitched_dim = shape.size()-2; //TODO: 2 or 1?
+            const int pitched_dim = shape.size()-1; // last dim
             int size = 1;
             for (int i = shape.size()-1; (i >= 0) && c_contiguous; --i)
             {
                 if(shape[i] == 1){
                     continue;
                 }else if(i == pitched_dim){
-                    size *= stride[i];
+                    size *= stride[i-1];
                 }else if(stride[i] != size) {
                     c_contiguous = false;
                 }else{
@@ -794,6 +796,8 @@ namespace cuv
             typedef typename memory_type::value_type value_type; ///< type of stored values
             typedef typename memory_type::size_type size_type; ///< type shapes
             typedef typename memory_type::index_type index_type; ///< type strides
+            typedef typename memory_type::pointer_type pointer_type; ///< type of data pointers
+            typedef typename memory_type::const_pointer_type const_pointer_type; ///< type of const data pointers
             typedef          L memory_layout_type; ///< column/row major
 
             typedef tensor_info<M,L> info_type; ///< type of shape info struct
@@ -854,6 +858,24 @@ namespace cuv
              *  @param i the index of the queried dimension
              */
             index_type stride(const index_type& i)const{return m_info.host_stride[i];}
+
+            /** @return the pointer to the referenced memory */
+            pointer_type       ptr()       {return m_ptr;}
+
+            /** 
+             * @overload
+             * @return the const pointer to the referenced memory 
+             * */
+            const_pointer_type ptr() const {return m_ptr;}
+
+            /** * @return pointer to allocated memory */
+            boost::shared_ptr<memory_type> mem(){ return m_memory; }
+            /** 
+             * @overload
+             * @return the const pointer to the allocated memory 
+             * */
+            const boost::shared_ptr<memory_type> mem()const{ return m_memory; }
+
 
             /** @return the number of stored elements
              */
@@ -1006,7 +1028,7 @@ namespace cuv
              */
             template<class OM>
                 tensor(const tensor<V,OM,L>& o)
-                :m_info(o.m_info) // primarily to copy shape
+                :m_info(o.info()) // primarily to copy shape
                 {
                     detail::copy_memory(*this, o, linear_memory_tag());
                     m_ptr = m_memory->ptr();
@@ -1029,7 +1051,7 @@ namespace cuv
              */
             template<class OM>
                 tensor(const tensor<V,OM,L>& o, pitched_memory_tag)
-                :m_info(o.m_info) // primarily to copy shape
+                :m_info(o.info()) // primarily to copy shape
                 {
                     detail::copy_memory(*this, o, pitched_memory_tag());
                     m_ptr = m_memory->ptr();
@@ -1051,11 +1073,26 @@ namespace cuv
              */
             template<class OM>
                 tensor(const tensor<V,OM,L>& o, linear_memory_tag)
-                :m_info(o.m_info) // primarily to copy shape
+                :m_info(o.info()) // primarily to copy shape
                 {
                     detail::copy_memory(*this, o, linear_memory_tag());
                     m_ptr = m_memory->ptr();
                 }
+            /**
+             * construct tensor from other memory layout
+             *
+             * this does not copy memory, but reverses dimensions and strides
+             * (and therefore only takes O(1) time)
+             */
+            template<class OL>
+                tensor(const tensor<V,M,OL>& o)
+            : m_memory(o.mem()) // increase ref counter
+            , m_ptr(const_cast<pointer_type>( o.ptr() )) { // same pointer in memory
+                m_info.host_shape = o.info().host_shape; 
+                m_info.host_shape.reverse();
+                m_info.host_stride = o.info().host_stride; 
+                m_info.host_stride.reverse();
+            }    
             
             /////////////////////////////////////////////////////////////
             //        Constructing from SHAPE
@@ -1110,7 +1147,7 @@ namespace cuv
                     // other memory is probably a pitched memory or some view onto an array
                     size_type row,col,pitch;
                     detail::get_pitched_params(row,col,pitch,src.m_info.host_shape, src.m_info.host_stride,L1());
-                    a.copy2d(d->ptr(), src.m_ptr, col,pitch,row,col,M1());
+                    a.copy2d(d->ptr(), src.m_ptr, col*sizeof(V),pitch*sizeof(V),row,col,M1());
                 }else{
                     throw std::runtime_error("copying arbitrarily strided memory not implemented");
                 }
@@ -1142,7 +1179,7 @@ namespace cuv
                 if(src.is_2dcopyable()){
                     // other memory is probably a pitched memory or some view onto an array
                     detail::get_pitched_params(row,col,pitch,src.m_info.host_shape, src.m_info.host_stride,L1());
-                    a.copy2d(d->ptr(), src.m_ptr, d->pitch(),pitch,row,col,M1());
+                    a.copy2d(d->ptr(), src.m_ptr, d->pitch()*sizeof(V),pitch*sizeof(V),row,col,M1());
                 }else{
                     throw std::runtime_error("copying arbitrarily strided memory not implemented");
                 }
@@ -1224,6 +1261,16 @@ namespace std{
         return o;
     }
 
+    /**
+     * print a dev tensor to a stream (copying to host first)
+     *
+     * @param o the stream
+     * @param t the tensor
+     */
+    template<class V, class L>
+    ostream& operator<<(ostream& o, const cuv::tensor<V, cuv::dev_memory_space, L>& t){
+        return o << cuv::tensor<V,cuv::host_memory_space>(t);
+    }
     /**
      * print a host tensor to a stream
      *
