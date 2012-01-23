@@ -136,15 +136,7 @@ namespace cuv
 
                 /// default constructor (just sets ptr to NULL)
                 memory():m_ptr(NULL){}
-
-                /// set strides for this memory
-                virtual void set_strides(
-                        linear_memory<index_type,host_memory_space>& strides,
-                        const linear_memory<size_type,host_memory_space>& shape, row_major)=0;
-                virtual void set_strides(
-                        linear_memory<index_type,host_memory_space>& strides,
-                        const linear_memory<size_type,host_memory_space>& shape, column_major)=0;
-
+                virtual ~memory(){}
         };
 
     /**
@@ -302,7 +294,7 @@ namespace cuv
                 ~linear_memory(){ dealloc(); }
                 
                 /// set strides for this memory
-                virtual void set_strides(
+                void set_strides(
                         linear_memory<index_type,host_memory_space>& strides,
                         const linear_memory<size_type,host_memory_space>& shape, row_major){
                     size_type size = 1;
@@ -313,7 +305,7 @@ namespace cuv
                     }
                 }
                 /// set strides for this memory
-                virtual void set_strides(
+                void set_strides(
                         linear_memory<index_type,host_memory_space>& strides,
                         const linear_memory<size_type,host_memory_space>& shape, column_major){
                     size_type size = 1;
@@ -453,7 +445,7 @@ namespace cuv
 
 
     /**
-     * represents non-contiguous (pitched) memory
+     * represents 2D non-contiguous ("pitched") memory
      */
     template<class V, class M>
         class pitched_memory 
@@ -507,7 +499,7 @@ namespace cuv
                  */
                 void alloc(){
                     assert(this->m_ptr == NULL);
-                    m_allocator.alloc2d(&this->m_ptr,m_pitch,m_rows,m_cols+2); // TODO: remove +2  (here only for testing)
+                    m_allocator.alloc2d(&this->m_ptr,m_pitch,m_rows,m_cols); 
                     assert(m_pitch%sizeof(value_type)==0);
                     m_pitch/=sizeof(value_type);
                 }
@@ -622,6 +614,13 @@ namespace cuv
                         return const_cast<pitched_memory&>(*this)(idx);
                     }
 
+                /**
+                 * get a reference to a datum in memory
+                 *
+                 * @param i first (slow-changing) dimension index
+                 * @param j second (fast-changing) dimension index
+                 * @return reference to datum at index i,j
+                 */
                 reference_type
                     operator()(const index_type& i, const index_type& j){
                         assert(i>=0);
@@ -630,14 +629,24 @@ namespace cuv
                         assert((size_type)j < m_cols);
                         return reference_type(this->m_ptr+i*m_pitch+j);
                     }
+                /** @overload */
                 const_reference_type
                     operator()(const index_type& i, const index_type& j)const{
                         return const_cast<pitched_memory&>(*this)(i,j);
                     }
 
 
-                /// set strides for this memory
-                virtual void set_strides(
+                /**
+                 * set strides for this memory
+                 *
+                 * determines the strides for a given shape, with special consideration to pitched dimension
+                 *
+                 * @param strides output vector
+                 * @param shape   shape of the vector
+                 *
+                 * row major version
+                 */
+                void set_strides(
                         linear_memory<index_type,host_memory_space>& strides,
                         const linear_memory<size_type,host_memory_space>& shape, row_major){
                     size_type size = 1;
@@ -656,8 +665,12 @@ namespace cuv
                         }
                     }
                 }
-                /// set strides for this memory
-                virtual void set_strides(
+                /**
+                 * @overload
+                 *
+                 * column major version
+                 */
+                void set_strides(
                         linear_memory<index_type,host_memory_space>& strides,
                         const linear_memory<size_type,host_memory_space>& shape, column_major){
                     size_type size = 1;
@@ -682,7 +695,9 @@ namespace cuv
     {
 
         /**
-         * allocate memory
+         * allocate linear memory (c-contiguous version)
+         *
+         * @param t tensor to allocate
          */
         template<class V, class M, class L>
             void allocate(tensor<V,M,L>& t,linear_memory_tag){
@@ -701,7 +716,9 @@ namespace cuv
             }
 
         /**
-         * allocate memory (pitched)
+         * @overload
+         *
+         * pitched version
          */
         template<class V, class M, class L>
             void allocate(tensor<V,M,L>& t,pitched_memory_tag){
@@ -722,6 +739,9 @@ namespace cuv
             }
     }
 
+    /**
+     * contains infos about shape and stride on host and in the tensor data space.
+     */
     template<class M, class L>
     struct tensor_info{
         typedef unsigned int   size_type;        ///< type of shapes of the tensor
@@ -777,6 +797,8 @@ namespace cuv
         class tensor;
     namespace detail {
         template<class V, class M0, class M1, class L0, class L1>
+            bool copy_memory(tensor<V,M0,L0>&, const tensor<V,M1,L1>&, bool);
+        template<class V, class M0, class M1, class L0, class L1>
             void copy_memory(tensor<V,M0,L0>&, const tensor<V,M1,L1>&, linear_memory_tag);
         template<class V, class M0, class M1, class L0, class L1>
             void copy_memory(tensor<V,M0,L0>&, const tensor<V,M1,L1>&, pitched_memory_tag);
@@ -802,12 +824,18 @@ namespace cuv
 
             typedef tensor_info<M,L> info_type; ///< type of shape info struct
 
+            // **********************************************************************
+            // Friend declarations (taken out to keep the interface of tensor cleaner
+            // **********************************************************************
             template<class _V, class M0, class M1, class L0, class L1>
                 friend 
                 void detail::copy_memory(tensor<_V,M0,L0>&, const tensor<_V,M1,L1>&, linear_memory_tag);
             template<class _V, class M0, class M1, class L0, class L1>
                 friend 
                 void detail::copy_memory(tensor<_V,M0,L0>&, const tensor<_V,M1,L1>&, pitched_memory_tag);
+            template<class _V, class M0, class M1, class L0, class L1>
+                friend 
+                bool detail::copy_memory(tensor<_V,M0,L0>&, const tensor<_V,M1,L1>&, bool);
             template<class _V, class _M, class _L>
             friend void detail::allocate(tensor<_V,_M,_L>&, linear_memory_tag);
             template<class _V, class _M, class _L>
@@ -822,20 +850,20 @@ namespace cuv
             /// points to start of actually referenced memory (within m_memory)
             V* m_ptr;
 
-            /// determine linear index 
+            /** 
+             * determine linear index in memory of an index array
+             *
+             * this function takes strides etc. into account, so that indices
+             * are interpreted as relative to the (strided) subtensor we're
+             * referring to.
+             *
+             * @param D    size of index array
+             * @param arr  index array
+             * @return linear index in memory of index array
+             *
+             */
 			size_type
-			index_of(column_major, int D, index_type* arr)const{
-				index_type pos = 0;
-				for(int i=0; i<D; i++){
-					index_type temp = arr[i];
-                    if(temp<0) temp = m_info.host_shape[i]+temp;
-					pos += temp * m_info.host_stride[i];
-				}
-				return pos;
-			}
-
-			index_type
-			index_of(row_major,int D, index_type* arr)const{
+			index_of(int D, index_type* arr)const{
 				index_type pos = 0;
 				for(int i=0; i<D; i++){
 					index_type temp = arr[i];
@@ -869,12 +897,12 @@ namespace cuv
             const_pointer_type ptr() const {return m_ptr;}
 
             /** * @return pointer to allocated memory */
-            boost::shared_ptr<memory_type> mem(){ return m_memory; }
+            boost::shared_ptr<memory_type>& mem(){ return m_memory; }
             /** 
              * @overload
              * @return the const pointer to the allocated memory 
              * */
-            const boost::shared_ptr<memory_type> mem()const{ return m_memory; }
+            const boost::shared_ptr<memory_type>& mem()const{ return m_memory; }
 
 
             /** @return the number of stored elements
@@ -901,9 +929,6 @@ namespace cuv
                 return detail::is_2dcopyable(memory_layout_type(), m_info.host_shape, m_info.host_stride);
             }
 
-            const_reference_type operator[](index_type idx)const{
-                return const_cast<tensor&>(*this)[idx];
-            }
             /**
              * member access: "flat" access as if memory was linear
              */
@@ -940,7 +965,16 @@ namespace cuv
                 return reference_type(m_ptr + pos);
             }
 
-            const_reference_type operator()(index_type i0)const{ return const_cast<tensor&>(*this)(i0); }
+            /** @overload */
+            const_reference_type operator[](index_type idx)const{
+                return const_cast<tensor&>(*this)[idx];
+            }
+
+            /**
+             * get a reference to the datum at an index
+             * @param i0 index for a 1-dimensional tensor
+             * @return reference to datum at i0
+             */
             reference_type operator()(index_type i0){
 #ifndef NDEBUG
                 cuvAssert(ndim()==1);
@@ -952,8 +986,12 @@ namespace cuv
                         return reference_type(m_ptr + shape(0) - i0);
                 }
             }
+            /** @overload */
+            const_reference_type operator()(index_type i0)const{ return const_cast<tensor&>(*this)(i0); }
 
+            /** @overload */
             const_reference_type operator()(index_type i0, index_type i1)const{ return const_cast<tensor&>(*this)(i0,i1); }
+            /** @overload */
             reference_type operator()(index_type i0, index_type i1){
 #ifndef NDEBUG
                 cuvAssert(ndim()==2);
@@ -961,10 +999,12 @@ namespace cuv
                 cuvAssert((i1>=0 && (size_type)i1 < shape(1)) || (i1<0 && (size_type)-i1<shape(1)+1) )
 #endif
                 index_type arr[2] = {i0,i1};
-                return reference_type(m_ptr + index_of(memory_layout_type(), 2,arr));
+                return reference_type(m_ptr + index_of( 2,arr));
             }
 
+            /** @overload */
             const_reference_type operator()(index_type i0, index_type i1, index_type i2)const{ return const_cast<tensor&>(*this)(i0,i1,i2); }
+            /** @overload */
             reference_type operator()(index_type i0, index_type i1, index_type i2){
 #ifndef NDEBUG
                 cuvAssert(ndim()==3);
@@ -973,10 +1013,12 @@ namespace cuv
                 cuvAssert((i2>=0 && (size_type)i2 < shape(2)) || (i2<0 && (size_type)-i2<shape(2)+1) )
 #endif
                 index_type arr[3] = {i0,i1,i2};
-                return reference_type(m_ptr + index_of(memory_layout_type(), 3,arr));
+                return reference_type(m_ptr + index_of( 3,arr));
             }
 
+            /** @overload */
             const_reference_type operator()(index_type i0, index_type i1, index_type i2, index_type i3)const{ return const_cast<tensor&>(*this)(i0,i1,i2,i3); }
+            /** @overload */
             reference_type operator()(index_type i0, index_type i1, index_type i2, index_type i3){
 #ifndef NDEBUG
                 cuvAssert(ndim()==4);
@@ -986,10 +1028,12 @@ namespace cuv
                 cuvAssert((i3>=0 && (size_type)i3 < shape(3)) || (i3<0 && (size_type)-i3<shape(3)+1) )
 #endif
                 index_type arr[4] = {i0,i1,i2,i3};
-                return reference_type(m_ptr + index_of(memory_layout_type(), 4,arr));
+                return reference_type(m_ptr + index_of( 4,arr));
             }
 
+            /** @overload */
             const_reference_type operator()(index_type i0, index_type i1, index_type i2, index_type i3, index_type i4)const{ return const_cast<tensor&>(*this)(i0,i1,i2,i3,i4); }
+            /** @overload */
             reference_type operator()(index_type i0, index_type i1, index_type i2, index_type i3, index_type i4){
 #ifndef NDEBUG
                 cuvAssert(ndim()==5);
@@ -1000,7 +1044,7 @@ namespace cuv
                 cuvAssert((i4>=0 && (size_type)i4 < shape(4)) || (i4<0 && (size_type)-i4<shape(4)+1) )
 #endif
                 index_type arr[5] = {i0,i1,i2,i3,i4};
-                return reference_type(m_ptr + index_of(memory_layout_type(), 5,arr));
+                return reference_type(m_ptr + index_of( 5,arr));
             }
 
             /**
@@ -1008,9 +1052,9 @@ namespace cuv
              */
             tensor(){}
 
-            /////////////////////////////////////////////////////////////
+            // ****************************************************************
             //        Constructing from other tensor
-            /////////////////////////////////////////////////////////////
+            // ****************************************************************
 
             /**
              * construct tensor from tensor of exact same type
@@ -1094,9 +1138,9 @@ namespace cuv
                 m_info.host_stride.reverse();
             }    
             
-            /////////////////////////////////////////////////////////////
+            // ****************************************************************
             //        Constructing from SHAPE
-            /////////////////////////////////////////////////////////////
+            // ****************************************************************
 
             /**
              * construct tensor from a shape
@@ -1120,9 +1164,22 @@ namespace cuv
                 detail::allocate(*this,pitched_memory_tag());
 			}
 
-            /////////////////////////////////////////////////////////////
+            /**
+             * construct tensor from a shape and a pointer (does not copy memory)
+             */
+            template<std::size_t D>
+                explicit tensor(const extent_gen<D>& eg, V* ptr)
+                :m_ptr(ptr)
+                {
+                    m_info.resize(D);
+                    for(std::size_t i=0;i<D;i++){
+                        m_info.host_shape[i] = eg.ranges_[i].finish();
+                    }
+                }
+
+            // ****************************************************************
             //   Construct as View
-            /////////////////////////////////////////////////////////////
+            // ****************************************************************
             template<int D, int E>
                 explicit tensor(const tensor&o, const index_gen<D,E>& idx)
                 : m_memory(o.mem())
@@ -1156,9 +1213,9 @@ namespace cuv
                     std::copy(strides.begin(),strides.end(),m_info.host_stride[0].ptr);
                 }
 
-            /////////////////////////////////////////////////////////////
+            // ****************************************************************
             //   assignment operators (try not to reallocate if shapes match)
-            /////////////////////////////////////////////////////////////
+            // ****************************************************************
 
             /**
              * assign from tensor of same type (always O(1) operation)
@@ -1249,20 +1306,51 @@ namespace cuv
 
     namespace detail{
 
+        /// tries to copy memory, succeeds if shapes match AND both tensors are c_contiguous of 2dcopyable.
+        template<class V, class M0, class M1, class L0, class L1>
+            bool copy_memory(tensor<V,M0,L0>&dst, const tensor<V,M1,L1>&src, bool force_dst_contiguous){
+                typedef typename tensor<V,M0,L0>::size_type size_type;
+                allocator<V, size_type, M0> a;
+                if(dst.shape() == src.shape() && dst.mem().get()){
+                    if(dst.is_c_contiguous() && src.is_c_contiguous()){
+                        // can copy w/o bothering about m_memory
+                        a.copy(dst.ptr(), src.ptr(), src.size(), M1());
+                    }else if(dst.is_c_contiguous() && src.is_2dcopyable()){
+                        size_type row,col,pitch;
+                        detail::get_pitched_params(row,col,pitch,src.m_info.host_shape, src.m_info.host_stride,L1());
+                        a.copy2d(dst.ptr(), src.ptr(), col*sizeof(V),pitch*sizeof(V),row,col,M1());
+                    }else if(!force_dst_contiguous && dst.is_2dcopyable() && src.is_c_contiguous()){
+                        size_type row,col,pitch;
+                        detail::get_pitched_params(row,col,pitch,dst.m_info.host_shape, dst.m_info.host_stride,L0());
+                        a.copy2d(dst.ptr(), src.ptr(), pitch*sizeof(V),col*sizeof(V),row,col,M1());
+                    }else if(!force_dst_contiguous && dst.is_2dcopyable() && src.is_c_contiguous()){
+                        size_type srow,scol,spitch;
+                        size_type drow,dcol,dpitch;
+                        detail::get_pitched_params(drow,dcol,dpitch,dst.m_info.host_shape, dst.m_info.host_stride,L0());
+                        detail::get_pitched_params(srow,scol,spitch,src.m_info.host_shape, src.m_info.host_stride,L1());
+                        cuvAssert(scol==srow);
+                        cuvAssert(dcol==drow);
+                        a.copy2d(dst.ptr(), src.ptr(), dpitch*sizeof(V),spitch*sizeof(V),srow,scol,M1());
+                    }else{
+                        throw std::runtime_error("copying of generic strides not implemented yet");
+                    }
+                    if(!IsSame<L0,L1>::Result::value){
+                        dst.m_info.host_stride.reverse();
+                        dst.m_info.host_shape.reverse();
+                    }
+                    return true;
+                }
+                return false;
+            }
+
         /// copies between different memory spaces
         template<class V, class M0, class M1, class L0, class L1>
             void copy_memory(tensor<V,M0,L0>&dst, const tensor<V,M1,L1>&src, linear_memory_tag){
                 typedef typename tensor<V,M0,L0>::size_type size_type;
-                linear_memory<V,M0>* d  = NULL;
-                if(dst.m_memory.get()){
-                    d = dynamic_cast<linear_memory<V,M0>*>(dst.m_memory.get());
-                    if(d)
-                        d->set_size(src.size()); // may get us arround reallocation
-                }
-                if(!d){ // did not succeed in reusing memory
-                    d = new linear_memory<V,M0>(src.size());
-                    dst.m_memory.reset(d);
-                }
+                if(copy_memory(dst,src, true)) // destination must be contiguous
+                    return;
+                linear_memory<V,M0>* d = new linear_memory<V,M0>(src.size());
+                dst.m_memory.reset(d);
                 d->set_strides(dst.m_info.host_stride,dst.m_info.host_shape, L0());
                 allocator<V, size_type, M0> a;
                 if(src.is_c_contiguous()){ 
@@ -1288,18 +1376,12 @@ namespace cuv
             void copy_memory(tensor<V,M0,L0>&dst, const tensor<V,M1,L1>&src, pitched_memory_tag){
                 typedef typename tensor<V,M0,L0>::size_type size_type;
                 assert(src.ndim()>=2);
+                if(copy_memory(dst,src,false)) // destination need not be contiguous
+                    return;
                 size_type row,col,pitch;
                 detail::get_pitched_params(row,col,pitch,src.m_info.host_shape, src.m_info.host_stride,L1());
-                pitched_memory<V,M0>* d = NULL;
-                if(dst.m_memory.get()){
-                    d = dynamic_cast<pitched_memory<V,M0>*>(dst.m_memory.get());
-                    if(d)
-                        d->set_size(row,col); // may get us arround reallocation
-                }
-                if(!d){
-                    d = new pitched_memory<V,M0>(row,col);
-                    dst.m_memory.reset(d);
-                }
+                pitched_memory<V,M0>* d = new pitched_memory<V,M0>(row,col);
+                dst.m_memory.reset(d);
                 d->set_strides(dst.m_info.host_stride,dst.m_info.host_shape, L0());
                 allocator<V, size_type, M0> a;
                 if(src.is_2dcopyable()){

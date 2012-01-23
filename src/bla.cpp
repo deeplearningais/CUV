@@ -18,8 +18,8 @@ main(int argc, char **argv)
     std::cout << mp<<std::endl;
     std::cout << mq<<std::endl;
 
-    tensor<float,host_memory_space> s(extents[5][4]);
-    tensor<float,host_memory_space> t(extents[1][5][4], pitched_memory_tag());
+    tensor<float,host_memory_space> s(extents[6][4]);
+    tensor<float,host_memory_space> t(extents[1][6][4], pitched_memory_tag());
 
     //std::cout << s.is_2dcopyable()<<std::endl;
     std::cout << t.is_2dcopyable()<<std::endl;
@@ -37,7 +37,6 @@ main(int argc, char **argv)
     tensor<float,dev_memory_space> w(t, pitched_memory_tag());
 
     tensor<float,host_memory_space,column_major> x = s;
-    //tensor<float,host_memory_space,column_major> x(t, pitched_memory_tag());
 
     std::cout << "t Shape  : "<<t.info().host_shape<<std::endl;
     std::cout << "t Strides: "<<t.info().host_stride<<std::endl;
@@ -54,6 +53,25 @@ main(int argc, char **argv)
     std::cout << "---------"<<std::endl;
     std::cout << s <<std::endl;
     std::cout << x <<std::endl;
+
+    // a does not have a m_memory
+    tensor<float,host_memory_space> a(extents[1][6][4],t.ptr());
+    // copies 0-ptr
+    t = a;
+
+    std::cout << "---------"<<std::endl;
+    tensor<float,host_memory_space> y(t,indices[0][index_range().stride(2)][index_range()]);
+    tensor<float,host_memory_space> z = t[indices[0][index_range().stride(2)][index_range()]];
+    std::cout << t <<std::endl;
+    std::cout << y <<std::endl;
+    std::cout << z <<std::endl;
+    z(0,0) = -1;
+    std::cout << t <<std::endl;
+    std::cout << y <<std::endl;
+    std::cout << z <<std::endl;
+    z = z.copy();
+    z(0,0) = 1;
+    std::cout << y <<std::endl;
 
     return 0;
 }
