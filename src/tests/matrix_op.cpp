@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE( binary_operators )
 BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
 {
 	sequence(v);
-	w=v;
+	w=v.copy();
 	sequence(a);
 	//apply_scalar_functor(v,SF_ADD,1);
 	v+= float(1.0);
@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
 		BOOST_CHECK_EQUAL(v[i], i + 1);
 	}
 	//apply_binary_functor(v,w, BF_ADD);
-	a=v;
+	a=v.copy();
 	a=v+w;
 	v=a;
 	for(int i=0;i<N;i++){
@@ -160,7 +160,8 @@ BOOST_AUTO_TEST_CASE( vec_ops_copy )
 
 	// copy data from v to w
 	// copy(v,w);
-	v=w;
+	v=w.copy();
+    BOOST_CHECK_NE(v.ptr(), w.ptr());
 	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v[i],w[i]);
 	}
