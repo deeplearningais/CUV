@@ -1119,7 +1119,7 @@ namespace cuv
             /**
              * default constructor (does nothing)
              */
-            tensor(){}
+            tensor():m_ptr(NULL){}
 
             // ****************************************************************
             //        Constructing from other tensor
@@ -1142,6 +1142,7 @@ namespace cuv
             template<class OM>
                 explicit tensor(const tensor<value_type,OM,L>& o)
                 :m_info(o.info()) // primarily to copy shape
+                ,m_ptr(NULL)
                 {
                     copy_memory(*this, o, linear_memory_tag());
                     m_ptr = m_memory->ptr();
@@ -1153,6 +1154,7 @@ namespace cuv
              */
                 explicit tensor(const tensor& o, pitched_memory_tag)
                 :m_info(o.m_info) // primarily to copy shape
+                ,m_ptr(NULL)
                 {
                     copy_memory(*this, o, pitched_memory_tag());
                     m_ptr = m_memory->ptr();
@@ -1165,6 +1167,7 @@ namespace cuv
             template<class OM>
                 explicit tensor(const tensor<value_type,OM,L>& o, pitched_memory_tag)
                 :m_info(o.info()) // primarily to copy shape
+                ,m_ptr(NULL)
                 {
                     copy_memory(*this, o, pitched_memory_tag());
                     m_ptr = m_memory->ptr();
@@ -1176,6 +1179,7 @@ namespace cuv
              */
                 explicit tensor(const tensor& o, linear_memory_tag)
                 :m_info(o.m_info) // primarily to copy shape
+                ,m_ptr(NULL)
                 {
                     copy_memory(*this, o, linear_memory_tag());
                     m_ptr = m_memory->ptr();
@@ -1187,6 +1191,7 @@ namespace cuv
             template<class OM>
                 explicit tensor(const tensor<value_type,OM,L>& o, linear_memory_tag)
                 :m_info(o.info()) // primarily to copy shape
+                ,m_ptr(NULL)
                 {
                     copy_memory(*this, o, linear_memory_tag());
                     m_ptr = m_memory->ptr();
@@ -1214,7 +1219,9 @@ namespace cuv
             /**
              * construct one-dimensional tensor
              */
-			explicit tensor(const size_type i){
+			explicit tensor(const size_type i)
+                :m_ptr(NULL)
+            {
 				m_info.resize(1);
                 m_info.host_shape[0] = i;
                 allocate(*this,linear_memory_tag());
@@ -1222,7 +1229,9 @@ namespace cuv
             /**
              * construct two-dimensional tensor
              */
-			explicit tensor(const size_type i, const int j){
+			explicit tensor(const size_type i, const int j)
+                :m_ptr(NULL)
+            {
 				m_info.resize(2);
                 m_info.host_shape[0] = i;
                 m_info.host_shape[1] = j;
@@ -1232,7 +1241,9 @@ namespace cuv
              * construct tensor from a shape
              */
 			template<std::size_t D>
-			explicit tensor(const extent_gen<D>& eg){
+			explicit tensor(const extent_gen<D>& eg)
+                :m_ptr(NULL)
+            {
 				m_info.resize(D);
 				for(std::size_t i=0;i<D;i++)
 					m_info.host_shape[i] = eg.ranges_[i].finish();
@@ -1244,7 +1255,9 @@ namespace cuv
              *
              * @deprecated
              */
-			explicit tensor(const std::vector<size_type>& eg){
+			explicit tensor(const std::vector<size_type>& eg)
+                :m_ptr(NULL)
+            {
 				m_info.resize(eg.size());
 				for(std::size_t i=0;i<eg.size();i++)
 					m_info.host_shape[i] = eg[i];
@@ -1256,7 +1269,9 @@ namespace cuv
              *
              * @deprecated
              */
-			explicit tensor(const std::vector<size_type>& eg, pitched_memory_tag){
+			explicit tensor(const std::vector<size_type>& eg, pitched_memory_tag)
+                :m_ptr(NULL)
+            {
 				m_info.resize(eg.size());
 				for(std::size_t i=0;i<eg.size();i++)
 					m_info.host_shape[i] = eg[i];
@@ -1267,7 +1282,9 @@ namespace cuv
              * construct tensor from a shape (pitched)
              */
 			template<std::size_t D>
-			explicit tensor(const extent_gen<D>& eg, pitched_memory_tag){
+			explicit tensor(const extent_gen<D>& eg, pitched_memory_tag)
+                :m_ptr(NULL)
+            {
 				m_info.resize(D);
 				for(std::size_t i=0;i<D;i++)
 					m_info.host_shape[i] = eg.ranges_[i].finish();
@@ -1523,7 +1540,7 @@ namespace cuv
             /**
              * copy memory using linear memory
              */
-            tensor copy(){
+            tensor copy()const{
                 return copy(linear_memory_tag());
             }
 
