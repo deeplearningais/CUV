@@ -977,6 +977,8 @@ namespace cuv
 
             /// return the shape of the tensor (as a vector for backward compatibility)
             std::vector<size_type> shape()const{
+                if(ndim()==0)
+                    return std::vector<size_type>();
                 return std::vector<size_type>(m_info.host_shape[0].ptr, m_info.host_shape[0].ptr+m_info.host_shape.size());
             }
 
