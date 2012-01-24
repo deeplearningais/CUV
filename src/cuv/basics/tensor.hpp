@@ -1472,10 +1472,24 @@ namespace cuv
             // ****************************************************************
 
             /**
-             * assign from tensor of same type (always O(1) operation)
+             * assign from tensor of same type 
+             *
+             * If shapes are equal, it copies memory, otherwise this is a O(1)
+             * operation.  The reason for copying is that we want to allow this:
+             *
+             * @code
+             * tensor<float,host_memory_space> v(extents[5]);
+             * tensor<float,host_memory_space> w(extents[3]);
+             * v[indices[index_range(0,3)]] = w;
+             * @endcode
+             *
+             * which should change the first part of v.
              */
             tensor& operator=(const tensor& o){
                 if(this==&o) return *this; // check for self-assignment
+                if(copy_memory(*this,o,false))
+                    return *this;
+
                 m_memory = o.mem();
                 m_ptr = const_cast<pointer_type>(o.ptr());
                 m_info = o.info();
