@@ -98,7 +98,7 @@ template<class V,class I>
 void
 allocator<V,I,host_memory_space>::alloc2d(V** ptr, I& pitch, I height, I width)const{
 	pitch = width*sizeof(V);
-	*ptr  = new V[height*width];
+	cudaHostAlloc(ptr,height*width*sizeof(V),cudaHostAllocDefault);
 }
 template<class V,class I>
 void
