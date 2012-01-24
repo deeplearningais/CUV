@@ -876,18 +876,10 @@ namespace cuv
              * @param t tensor to allocate
              */
             void allocate(tensor& t,linear_memory_tag){
-                    linear_memory<V,M>* d  = NULL;
-                    if(t.m_memory.get()){
-                        d = dynamic_cast<linear_memory<V,M>*>(t.m_memory.get());
-                        if(d)
-                            d->set_size(t.size()); // may get us arround reallocation
-                    }
-                    if(!d){ // did not succeed in reusing memory
-                        d = new linear_memory<V,M>(t.size());
-                        t.m_memory.reset(d);
-                    }
-                    d->set_strides(t.m_info.host_stride,t.m_info.host_shape, L());
-                    t.m_ptr = d->ptr();
+                    linear_memory<V,M> d(t.size());
+                    d.set_strides(t.m_info.host_stride,t.m_info.host_shape, L());
+                    t.m_ptr = d.ptr();
+                    t.m_memory.reset(new memory<V,M>(d.release(), d.size()));
                 }
 
             /**
@@ -898,18 +890,10 @@ namespace cuv
             void allocate(tensor& t,pitched_memory_tag){
                 typename tensor<V,M,L>::size_type row,col,pitch;
                 detail::get_pitched_params(row,col,pitch,t.m_info.host_shape, t.m_info.host_stride,L());
-                pitched_memory<V,M>* d  = NULL;
-                if(t.m_memory.get()){
-                    d = dynamic_cast<pitched_memory<V,M>*>(t.m_memory.get());
-                    if(d)
-                        d->set_size(row,col); // may get us arround reallocation
-                }
-                if(!d){ // did not succeed in reusing memory
-                    d = new pitched_memory<V,M>(row,col);
-                    t.m_memory.reset(d);
-                }
-                d->set_strides(t.m_info.host_stride,t.m_info.host_shape, L());
-                t.m_ptr = d->ptr();
+                pitched_memory<V,M> d(row,col);
+                d.set_strides(t.m_info.host_stride,t.m_info.host_shape, L());
+                t.m_ptr = d.ptr();
+                t.m_memory.reset(new memory<V,M>(d.release(),d.size()));
             }
 
 
