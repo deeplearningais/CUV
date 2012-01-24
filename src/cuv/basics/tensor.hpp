@@ -1672,22 +1672,22 @@ namespace cuv
                 typedef typename tensor<V,M0,L0>::size_type size_type;
                 if(copy_memory(dst,src, true)) // destination must be contiguous
                     return;
-                linear_memory<V,M0>* d = new linear_memory<V,M0>(src.size());
-                dst.mem().reset(d);
-                d->set_strides(dst.info().host_stride,dst.info().host_shape, L0());
+                linear_memory<V,M0> d(src.size());
+                d.set_strides(dst.info().host_stride,dst.info().host_shape, L0());
                 allocator<V, size_type, M0> a;
                 if(src.is_c_contiguous()){ 
                     // easiest case: both linear, simply copy
-                    a.copy(d->ptr(), src.ptr(), src.size(), M1());
+                    a.copy(d.ptr(), src.ptr(), src.size(), M1());
                 }
                 else if(src.is_2dcopyable()){
                     // other memory is probably a pitched memory or some view onto an array
                     size_type row,col,pitch;
                     detail::get_pitched_params(row,col,pitch,src.info().host_shape, src.info().host_stride,L1());
-                    a.copy2d(d->ptr(), src.ptr(), col*sizeof(V),pitch*sizeof(V),row,col,M1());
+                    a.copy2d(d.ptr(), src.ptr(), col*sizeof(V),pitch*sizeof(V),row,col,M1());
                 }else{
                     throw std::runtime_error("copying arbitrarily strided memory not implemented");
                 }
+                dst.mem().reset(new memory<V,M0>(d.release(),d.size()));
                 if(!IsSame<L0,L1>::Result::value){
                     dst.info().host_stride.reverse();
                     dst.info().host_shape.reverse();
@@ -1703,17 +1703,18 @@ namespace cuv
                     return;
                 size_type row,col,pitch;
                 detail::get_pitched_params(row,col,pitch,src.info().host_shape, src.info().host_stride,L1());
-                pitched_memory<V,M0>* d = new pitched_memory<V,M0>(row,col);
-                dst.mem().reset(d);
+                pitched_memory<V,M0> d(row,col);
+                //dst.mem().reset(d);
                 d->set_strides(dst.info().host_stride,dst.info().host_shape, L0());
                 allocator<V, size_type, M0> a;
                 if(src.is_2dcopyable()){
                     // other memory is probably a pitched memory or some view onto an array
                     detail::get_pitched_params(row,col,pitch,src.info().host_shape, src.info().host_stride,L1());
-                    a.copy2d(d->ptr(), src.m_ptr, d->pitch()*sizeof(V),pitch*sizeof(V),row,col,M1());
+                    a.copy2d(d.ptr(), src.m_ptr, d.pitch()*sizeof(V),pitch*sizeof(V),row,col,M1());
                 }else{
                     throw std::runtime_error("copying arbitrarily strided memory not implemented");
                 }
+                dst.mem().reset(new memory<V,M0>(d.release(),d.size()));
 
                 if(!IsSame<L0,L1>::Result::value){
                     dst.info().host_stride.reverse();
