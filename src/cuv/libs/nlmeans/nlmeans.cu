@@ -40,7 +40,7 @@
 namespace cuv{
 namespace libs{
 namespace nlmeans{
-#define PITCH(PTR,PITCH,Y,X) ((typeof(PTR))((char*)(PTR) + (PITCH)*(Y)) + (X))
+#define PITCH(PTR,PITCH,Y,X) ((typeof(PTR))((PTR) + (PITCH)*(Y)) + (X))
 
 	texture<float,         2, cudaReadModeElementType> cuda_array_tex_float2d; 
 	texture<unsigned char, 2, cudaReadModeElementType> cuda_array_tex_uchar2d; 
@@ -152,12 +152,12 @@ namespace nlmeans{
 	}
 	
 	template<class T>
-	void filter_nlmean(cuv::tensor<T,dev_memory_space,row_major>& dst, const cuv::tensor<T,dev_memory_space,row_major,memory2d_tag>& constsrc, int search_radius, int filter_radius, float sigma, float dist_sigma, float step_size, bool threeDim, bool verbose){
+	void filter_nlmean(cuv::tensor<T,dev_memory_space,row_major>& dst, const cuv::tensor<T,dev_memory_space,row_major>& constsrc, int search_radius, int filter_radius, float sigma, float dist_sigma, float step_size, bool threeDim, bool verbose){
 		cuvAssert(!threeDim || constsrc.ndim()==3);
 
 		bool d3 = constsrc.ndim()==3;
 		unsigned int w = constsrc.shape()[d3?2:1], h=constsrc.shape()[d3?1:0], d=d3?constsrc.shape()[0]:1;
-		const tensor<float,dev_memory_space,row_major,memory2d_tag> src(indices[index_range(0,d)][index_range(0,h)][index_range(0,w)], constsrc);
+		const tensor<float,dev_memory_space,row_major> src(indices[index_range(0,d)][index_range(0,h)][index_range(0,w)], constsrc);
 
 		if(!equal_shape(dst,src)){
 			dst = cuv::tensor<T,dev_memory_space>(src.shape());
@@ -216,7 +216,7 @@ namespace nlmeans{
 			for(step_type i=-search_radius;i<=search_radius;i+=step_size){
 				for(step_type j=-search_radius;j<=search_radius;j+=step_size){
 					for(step_type k=-search_radius;k<=search_radius;k+=step_size){
-						get_sqdiff<<<blocks,threads>>>(diffs.ptr(),src.ptr(),k,j,i,w,h,d,src.pitch());
+						get_sqdiff<<<blocks,threads>>>(diffs.ptr(),src.ptr(),k,j,i,w,h,d,(unsigned int)src.stride(1));
 						if(filter_radius==0){
 							tmp1 = diffs;
 						}else{
@@ -229,7 +229,7 @@ namespace nlmeans{
 							tmp1 += -(i*i+j*j+k*k)/(dist_sigma*dist_sigma);
 						cuv::apply_scalar_functor(tmp1, SF_EXP);
 						weights += tmp1;
-						mult_offset<false><<<blocks,threads>>>(dst.ptr(),tmp1.ptr(),src.ptr(),k,j,i,w,h,d,src.pitch());
+						mult_offset<false><<<blocks,threads>>>(dst.ptr(),tmp1.ptr(),src.ptr(),k,j,i,w,h,d,(unsigned int)src.stride(1));
 						if(verbose)
 							pb.inc();
 					}
@@ -245,7 +245,7 @@ namespace nlmeans{
 			ProgressBar pb(fw*fw);
 			for(step_type k=-search_radius;k<=search_radius;k+=step_size){
 				for(step_type j=-search_radius;j<=search_radius;j+=step_size){
-					get_sqdiff2d<<<blocks,threads>>>(diffs.ptr(),src.ptr(),k,j,(step_type)0,w,h,d,src.pitch());
+					get_sqdiff2d<<<blocks,threads>>>(diffs.ptr(),src.ptr(),k,j,(step_type)0,w,h,d,(unsigned int)src.stride(0));
 					if(filter_radius!=0){
 						convolutionRows(tmp1,diffs,filter_radius);
 						convolutionColumns(diffs,tmp1,filter_radius);
@@ -255,7 +255,7 @@ namespace nlmeans{
 						diffs += -(j*j+k*k)/(dist_sigma*dist_sigma);
 					cuv::apply_scalar_functor(diffs, SF_EXP);
 					weights += diffs;
-					mult_offset<true><<<blocks,threads>>>(dst.ptr(),diffs.ptr(),src.ptr(),k,j,(step_type)0,w,h,d,src.pitch());
+					mult_offset<true><<<blocks,threads>>>(dst.ptr(),diffs.ptr(),src.ptr(),k,j,(step_type)0,w,h,d,(unsigned int)src.stride(0));
 					if(verbose)
 						pb.inc();
 				}
@@ -272,7 +272,7 @@ namespace nlmeans{
 	}
 
 	/*template void filter_nlmean(cuv::tensor<float,dev_memory_space>& dst, const cuv::tensor<float,dev_memory_space>& src);*/
-	template void filter_nlmean(cuv::tensor<float,dev_memory_space,row_major>& dst, const cuv::tensor<float,dev_memory_space,row_major,memory2d_tag>& src, int,int,float,float,float,bool,bool);
+	template void filter_nlmean(cuv::tensor<float,dev_memory_space,row_major>& dst, const cuv::tensor<float,dev_memory_space,row_major>& src, int,int,float,float,float,bool,bool);
 }
 }
 }

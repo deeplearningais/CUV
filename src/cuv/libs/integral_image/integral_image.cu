@@ -97,14 +97,14 @@ namespace integral_img{
 			      }
 		}
 
-	template<class V,class W, class L, class A1, class A2>
-		void scan(cuv::tensor<V, dev_memory_space, L, A1>& dst, const cuv::tensor<W, dev_memory_space, L, A2>& src) {
-			scan_kernel<256,V><<<src.shape()[0], 128>>>(dst.ptr(), src.ptr(), src.shape()[1], dst.pitch(), src.pitch());
+	template<class V,class W, class L>
+		void scan(cuv::tensor<V, dev_memory_space, L>& dst, const cuv::tensor<W, dev_memory_space, L>& src) {
+			scan_kernel<256,V><<<src.shape()[0], 128>>>(dst.ptr(), src.ptr(), src.shape(1), (unsigned int)dst.stride(0), (unsigned int)src.stride(0));
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 
-	template<class V,class W, class L, class A1, class A2>
-		void scan(cuv::tensor<V, host_memory_space, L, A1>& dst, const cuv::tensor<W, host_memory_space, L, A2>& src)
+	template<class V,class W, class L>
+		void scan(cuv::tensor<V, host_memory_space, L>& dst, const cuv::tensor<W, host_memory_space, L>& src)
 		{
 			const W* src_ptr = src.ptr();
 			V* dst_ptr = dst.ptr();
@@ -120,26 +120,24 @@ namespace integral_img{
 			}
 		}
 
-	template<class V,class W, class T, class M, class A>
-		void integral_image(cuv::tensor<V, T, M, A>& dst, const cuv::tensor<W, T, M, A>& src)
+	template<class V,class W, class T, class M>
+		void integral_image(cuv::tensor<V, T, M>& dst, const cuv::tensor<W, T, M>& src)
 		{
 			cuvAssert(src.ndim()==2);
 			cuvAssert(src.shape()[0]==dst.shape()[1]);
 			cuvAssert(src.shape()[1]==dst.shape()[0]);
-			tensor<V,T,M,memory2d_tag> temp (src.shape());
-			tensor<V,T,M,memory2d_tag> temp1(dst.shape());
+			tensor<V,T,M> temp (src.shape(),pitched_memory_tag());
+			tensor<V,T,M> temp1(dst.shape(),pitched_memory_tag());
 
 			scan(temp, src);
 			transpose(temp1, temp);
 			scan(dst, temp1);
 		}
-#define TENS(V,M,L,A) \
-        cuv::tensor<V,M,L,A>
+#define TENS(V,M,L) \
+        cuv::tensor<V,M,L>
 #define INSTANTIATE_INTIMG(V,W,M,L) \
-	template void integral_image(TENS(V, M, L, linear_memory_tag)&, const TENS(W, M, L, linear_memory_tag)&);\
-	template void scan(TENS(V          , M, L, linear_memory_tag)&, const TENS(W, M, L, linear_memory_tag)&);  \
-	template void integral_image(TENS(V, M, L, memory2d_tag)&, const TENS(W, M, L, memory2d_tag)&);\
-	template void scan(TENS(V          , M, L, memory2d_tag)&, const TENS(W, M, L, memory2d_tag)&);
+	template void integral_image(TENS(V, M, L)&, const TENS(W, M, L)&);\
+	template void scan(TENS(V          , M, L)&, const TENS(W, M, L)&);
 
 	INSTANTIATE_INTIMG(float, float        , host_memory_space, row_major);
 	INSTANTIATE_INTIMG(float, unsigned char, host_memory_space, row_major);

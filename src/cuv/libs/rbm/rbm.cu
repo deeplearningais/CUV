@@ -249,34 +249,34 @@ namespace rbm{
 	}
 }
 // bitflip a row of a column-major matrix
-template<class __value_type, class __memory_layout, class __memory_space_type>
-void bitflip(tensor<__value_type,__memory_layout,__memory_space_type>& matrix,
-		typename tensor<__value_type,__memory_layout,__memory_space_type>::index_type row){
+template<class V, class __memory_layout, class M>
+void bitflip(tensor<V,__memory_layout,M>& matrix,
+		typename tensor<V,__memory_layout,M>::size_type row){
                 cuvAssert(matrix.ndim()==2);
 		cuvAssert(row<matrix.shape()[0]);
 		cuvAssert(matrix.ptr());
 		detail::bitflip(matrix,row);
 }
 
-template <class __value_type, class __memory_space_type, class __memory_layout_type>
-void set_binary_sequence(tensor<__value_type,__memory_space_type,__memory_layout_type>& m, const int& start){
+template <class V, class M, class L>
+void set_binary_sequence(tensor<V,M,L>& m, const int& start){
 	detail::set_binary_sequence(m,start);
 }
 
-template <class __value_type, class __memory_space_type, class __memory_layout_type>
-void sigm_temperature(tensor<__value_type,__memory_space_type,__memory_layout_type>& m, const tensor<__value_type,__memory_space_type>& temp){
+template <class V, class M, class L>
+void sigm_temperature(tensor<V,M,L>& m, const tensor<V,M>& temp){
 	detail::sigm_temperature(m,temp);
 }
-template <class __value_type, class __memory_space_type, class __memory_layout_type>
-void set_local_connectivity_in_dense_matrix(tensor<__value_type,__memory_space_type,__memory_layout_type>& m, int patchsize, int vx, int vy, int hx, int hy, int maxdist_from_main_dia, bool round){
+template <class V, class M, class L>
+void set_local_connectivity_in_dense_matrix(tensor<V,M,L>& m, int patchsize, int vx, int vy, int hx, int hy, int maxdist_from_main_dia, bool round){
 	detail::set_local_connectivity_in_dense_matrix(m,patchsize, vx, vy, hx, hy, maxdist_from_main_dia, round);
 }
-template <class __value_type, class __memory_space_type, class __memory_layout_type>
-void copy_at_rowidx(tensor<__value_type,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_type,__memory_space_type,__memory_layout_type>&  src, const tensor<typename tensor<__value_type,__memory_space_type,__memory_layout_type>::index_type,__memory_space_type, __memory_layout_type>& rowidx, const unsigned int offset){
+template <class V, class M, class L>
+void copy_at_rowidx(tensor<V,M,L>& dst, const tensor<V,M,L>&  src, const tensor<typename tensor<V,M,L>::size_type,M, L>& rowidx, const unsigned int offset){
 	detail::copy_at_rowidx(dst,src,rowidx, offset);
 }
-template <class __value_type, class __memory_space_type, class __memory_layout_type>
-void copy_redblack(tensor<__value_type,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_type,__memory_space_type,__memory_layout_type>&  src, const unsigned int num_maps, const unsigned int color){
+template <class V, class M, class L>
+void copy_redblack(tensor<V,M,L>& dst, const tensor<V,M,L>&  src, const unsigned int num_maps, const unsigned int color){
 	detail::copy_redblack(dst,src, num_maps, color);
 }
 
@@ -293,8 +293,8 @@ template
 void copy_redblack(cuv::tensor<float,dev_memory_space,column_major>&, const cuv::tensor<float,dev_memory_space,column_major>&, const unsigned int num_maps, const unsigned int);
 template
 void copy_at_rowidx(cuv::tensor<float,dev_memory_space,column_major>&, const cuv::tensor<float,dev_memory_space,column_major>&, const cuv::tensor<unsigned int,dev_memory_space,column_major>&, const unsigned int);
-template void bitflip(tensor<float,host_memory_space,column_major>&, unsigned int);
-template void bitflip(tensor<float,dev_memory_space,column_major>&, unsigned int);
+template void bitflip(tensor<float,host_memory_space,column_major>&, const unsigned int);
+template void bitflip(tensor<float,dev_memory_space,column_major>&, const unsigned int);
 }
 }
 }

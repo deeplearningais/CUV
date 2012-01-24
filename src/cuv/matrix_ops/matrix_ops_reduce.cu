@@ -47,7 +47,7 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 
 	extern __shared__ unsigned char ptr[]; // need this intermediate variable for nvcc :-(
 	unconst_value_type* values = (unconst_value_type*) ptr;
-	unsigned int* indices = (unsigned int*)(values + BLOCK_DIM*BLOCK_DIM);
+	int* indices = (int*)(values + BLOCK_DIM*BLOCK_DIM);
 	const unsigned int tx = threadIdx.x;
 	const unsigned int bx = blockIdx.x;
 	const unsigned int ty = threadIdx.y;
@@ -62,9 +62,9 @@ void reduce_to_col_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	const unsigned int off = blockDim.y;
 
 	unconst_value_type sum = init_value;
-	unsigned int arg_index = 0; // for storing indeces of maxima/minima for arg functors
+	int arg_index = 0; // for storing indeces of maxima/minima for arg functors
 
-	for (unsigned int my = ty; my < nCols; my += off) {
+	for (int my = ty; my < nCols; my += off) {
 		T f = matrix[my * nRows + row_idx ];
 		rf.rv(sum,arg_index,f,my);
 		//sum=rf(sum,f);
@@ -110,7 +110,7 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 
 	extern __shared__ float sptr[]; // need this intermediate variable for nvcc :-(
 	unconst_value_type* values = (unconst_value_type*) sptr;
-	unsigned int* indices                  = (unsigned int*)(values + BLOCK_DIM*BLOCK_DIM);
+	int* indices                  = (int*)(values + BLOCK_DIM*BLOCK_DIM);
 	const unsigned int tx = threadIdx.x; // blockIdx.x is always 0
 	const unsigned int by = blockIdx.y + gridDim.y*blockIdx.z; //threadIdx.y is always 0, blockDim.y is always 1!
 	const unsigned int off = blockDim.x;
@@ -119,7 +119,7 @@ void reduce_to_row_kernel(const T* matrix, V* vector, const unsigned int nCols, 
 	if(functor_traits::returns_index)
 		indices[tx] = 0;
 
-	for (unsigned int my = tx; my < nRows; my += off) {
+	for (int my = tx; my < nRows; my += off) {
 		const T f = matrix[by * nRows + my];
 		rf.rv(values[tx],indices[tx],f,my);
 	}
@@ -157,9 +157,9 @@ namespace reduce_impl {
                 template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
 	       	void operator()(tensor<__value_type,dev_memory_space> &v,const tensor<__value_type2,dev_memory_space,__memory_layout_type> &m,const  S & factNew,const  S & factOld, RF rf)const{
                     cuvAssert(m.ptr() != NULL);
-                    cuvAssert(m.shape()[0] == v.size());
+                    cuvAssert(m.shape(0) == v.size());
                     static const int BLOCK_DIM = 16;
-                    const int blocks_needed = ceil((float)m.shape()[0]/(BLOCK_DIM));
+                    const int blocks_needed = ceil((float)m.shape(0)/(BLOCK_DIM));
                     int grid_x =0, grid_y=0;
 
                     // how to handle grid dimension constraint
@@ -180,7 +180,7 @@ namespace reduce_impl {
                     typedef reduce_functor_traits<typename RF::result_value_functor_type> traits_type;
                     if(traits_type::returns_index)
                             mem += sizeof(vecval_t)*BLOCK_DIM*BLOCK_DIM;
-                    reduce_to_col_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.shape()[1],m.shape()[0],__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
+                    reduce_to_col_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.shape(1),m.shape(0),__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
                     cuvSafeCall(cudaThreadSynchronize());
 	}};
 
@@ -189,12 +189,12 @@ namespace reduce_impl {
                 template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
 	       	void operator()(tensor<__value_type,dev_memory_space> &v,const tensor<__value_type2,dev_memory_space,__memory_layout_type> &m,const S & factNew,const  S & factOld, RF rf)const{
 		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.shape()[1] == v.size());
+		cuvAssert(m.shape(1) == v.size());
 		static const int BLOCK_DIM = 16;
-		dim3 grid(1, m.shape()[1]);
+		dim3 grid(1, m.shape(1));
 		if(grid.y>=65535){
-			grid.y = ceil(sqrt(m.shape()[1]));
-			grid.z = ceil((float)m.shape()[1]/grid.y);
+			grid.y = ceil(sqrt(m.shape(1)));
+			grid.z = ceil((float)m.shape(1)/grid.y);
 		}
 		dim3 threads(BLOCK_DIM*BLOCK_DIM,1);
 
@@ -205,7 +205,7 @@ namespace reduce_impl {
 		if(traits_type::returns_index)
 			mem += sizeof(vecval_t)*threads.x*threads.y;
 
-                reduce_to_row_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.shape()[1],m.shape()[0],__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
+                reduce_to_row_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.shape(1),m.shape(0),__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
@@ -221,8 +221,8 @@ namespace reduce_impl {
 
 		cuvAssert(m.ptr() != NULL);
 		// assert that vector has correct length
-		if (dim==0) cuvAssert(v.size()==m.shape()[1]);
-		if (dim==1) cuvAssert(v.size()==m.shape()[0]);
+		if (dim==0) cuvAssert(v.size()==m.shape(1));
+		if (dim==1) cuvAssert(v.size()==m.shape(0));
 
 		const __value_type2 * A_ptr                         = m.ptr();
 
@@ -248,13 +248,13 @@ namespace reduce_impl {
 		if (dim==0){
 			// apply reduce functor along columns
 			for(;values_ptr!=values_end; values_ptr++, indices_ptr++) {
-				for(unsigned int j=0; j<m.shape()[0]; j++, A_ptr++)
+				for(int j=0; j<m.shape(0); j++, A_ptr++)
 					rf.rv(*values_ptr,*indices_ptr,*A_ptr,j);
 			}
 		}
 		else if(dim==1){
 			// apply reduce functor along rows
-			for(I i=0;i<m.shape()[1];i++) {
+			for(I i=0;i<m.shape(1);i++) {
 				values_ptr  = values.ptr();
 				indices_ptr = indices_begin;
 				for(; values_ptr!=values_end;A_ptr++,values_ptr++,indices_ptr++) 
@@ -300,8 +300,8 @@ namespace reduce_impl {
 			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_plus<vec_val,vec_val,mat_val>(),bf_plus<vec_val,vec_val,vec_val>()));
 			break;
 			case RF_MEAN:
-            cuvAssert(factNew==1.f && "RF_MEAN can currently only be used when factNew==1, factOld==0");
-            cuvAssert(factOld==0.f && "RF_MEAN can currently only be used when factNew==1, factOld==0");
+            cuvAssert(factNew==1.f );/* "RF_MEAN can currently only be used when factNew==1, factOld==0" */
+            cuvAssert(factOld==0.f );/* "RF_MEAN can currently only be used when factNew==1, factOld==0" */
 			reduce_impl::reduce<dimension,mat_mem>()(v,m,factNew,factOld,make_reduce_functor(bf_plus<vec_val,vec_val,mat_val>(),bf_plus<vec_val,vec_val,vec_val>()));
             v /= (vec_val)m.shape(dimension);
 			break;
@@ -342,13 +342,13 @@ namespace reduce_impl {
 template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
 void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const tensor<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const __value_type2& factNew, const __value_type2& factOld) {
         // Assert that v is vector, m matrix
-        cuvAssert((v.ndim()==1) || ((v.ndim()==2) && (v.shape()[0]==1 || v.shape()[1] ==1)));
+        cuvAssert((v.ndim()==1) || ((v.ndim()==2) && (v.shape(0)==1 || v.shape(1) ==1)));
         cuvAssert(m.ndim()==2);
 	if (IsSame<__memory_layout_type,row_major>::Result::value){
 		//matrix is row major
                 //create column major view and call reduce_to_row for column major
 		// downstream from here everything is column major
-		const tensor<__value_type2,__memory_space_type,column_major> cm_view(indices[index_range(0,m.shape()[1])][index_range(0,m.shape()[0])],m.ptr());
+		const tensor<__value_type2,__memory_space_type,column_major> cm_view(indices[index_range(0,m.shape(1))][index_range(0,m.shape(0))],const_cast<__value_type2*>(m.ptr()));
 		reduce_impl::reduce_switch<0>(v,cm_view,rf,factNew,factOld); // 0 means zeroth dimension is summed out - meaning summing over the columns in a column major matrix.
 	}
 	else {
@@ -359,13 +359,13 @@ void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const tensor<__va
 template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
 void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const tensor<__value_type2,__memory_space_type,__memory_layout_type>& m,reduce_functor rf, const __value_type2& factNew, const __value_type2& factOld) {
         // Assert that v is vector, m matrix
-        cuvAssert((v.ndim()==1) || ((v.ndim()==2) && (v.shape()[0]==1 || v.shape()[1] ==1)));
+        cuvAssert((v.ndim()==1) || ((v.ndim()==2) && (v.shape(0)==1 || v.shape(1) ==1)));
         cuvAssert(m.ndim()==2);
 	if (IsSame<__memory_layout_type,row_major>::Result::value){
 		//matrix is row major
 		//create column major view and call reduce_to_row for column major
 		// downstream from here everything is column major
-		const tensor<__value_type2,__memory_space_type,column_major> cm_view(indices[index_range(0,m.shape()[1])][index_range(0,m.shape()[0])],m.ptr());
+		const tensor<__value_type2,__memory_space_type,column_major> cm_view(indices[index_range(0,m.shape(1))][index_range(0,m.shape(0))],const_cast<__value_type2*>(m.ptr()));
 		reduce_impl::reduce_switch<1>(v,cm_view,rf,factNew,factOld); // 1 means first (we start counting at zero) dimension is summed out - meaning summing over the rows in a column major matrix.
 	}
 	else {

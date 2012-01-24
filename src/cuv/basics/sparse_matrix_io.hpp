@@ -45,23 +45,9 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <cuv/basics/dia_matrix.hpp>
+#include <cuv/basics/io.hpp>
 
 namespace cuv{
-
-	/**
-	 * Serialize/deserialize a host-vector to/from an archive.
-	 *
-	 * @param ar the archive
-	 * @param v  the vector to serialize
-	 * @param version not used
-	 */
-	template<class Archive, class value_type>
-		void serialize(Archive& ar, cuv::tensor<value_type,host_memory_space>& v, const unsigned int version){
-			ar & v.m_shape;
-			if(!v.ptr())
-				v.allocate();
-			ar & boost::serialization::make_array(v.ptr(),v.size());
-		}
 
 	/**
 	 * Serialize/deserialize a host-dia-matrix to/from an archive.

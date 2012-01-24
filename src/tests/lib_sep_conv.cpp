@@ -65,7 +65,7 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 BOOST_AUTO_TEST_CASE( separable_convolution )
 {
 	tensor<float,host_memory_space,row_major> m;
-	typedef tensor<float,dev_memory_space,row_major, memory2d_tag> dev_t;
+	typedef tensor<float,dev_memory_space,row_major> dev_t;
 	//typedef tensor<float,dev_memory_space,row_major, linear_memory_tag> dev_t;
 	
 	//libs::cimg::load(m,"src/tests/data/lena_gray.png");
@@ -86,9 +86,9 @@ BOOST_AUTO_TEST_CASE( separable_convolution )
 	m=d_m;
 	libs::cimg::show(m,"before");
 
-	tensor<float,dev_memory_space,row_major,memory2d_tag> view0(indices[0][index_range(0,400)][index_range(0,400)],d_m);
-	tensor<float,dev_memory_space,row_major,memory2d_tag> view1(indices[1][index_range(0,400)][index_range(0,400)],d_m);
-	tensor<float,dev_memory_space,row_major,memory2d_tag> view2(indices[2][index_range(0,400)][index_range(0,400)],d_m);
+	tensor<float,dev_memory_space,row_major> view0(indices[0][index_range(0,400)][index_range(0,400)],d_m);
+	tensor<float,dev_memory_space,row_major> view1(indices[1][index_range(0,400)][index_range(0,400)],d_m);
+	tensor<float,dev_memory_space,row_major> view2(indices[2][index_range(0,400)][index_range(0,400)],d_m);
 
 	dev_t gauss, sobel0, sobel1;
 	sep_conv::convolve(gauss, d_m,8,sep_conv::SP_GAUSS, 2, 3.f);

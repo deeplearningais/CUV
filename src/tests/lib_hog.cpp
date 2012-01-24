@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE( cuv_hog )
 	libs::cimg::load(m,"src/tests/data/lena_gray.png");
 	unsigned int h = m.shape()[1];
 	unsigned int w = m.shape()[2];
-	dev_t md=m;
+	dev_t md(m);
 
 	dev_t bins(cuv::extents[bincnt][h][w]);
 

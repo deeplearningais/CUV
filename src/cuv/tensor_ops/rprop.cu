@@ -187,7 +187,7 @@ namespace cuv{
 	}
 	template<class V>
 	void learn_step_weight_decay_impl(tensor<V,host_memory_space>& W, const tensor<V,host_memory_space>& dW, const float& alpha, const float& beta, const float& sparsedecay){
-		V* dwptr = dW.ptr();
+		const V* dwptr = dW.ptr();
 		V* wptr  = W.ptr();
 		for (unsigned int i = 0; i < W.size(); i++){
 			wptr[i]  = alpha*dwptr[i] + beta*wptr[i];

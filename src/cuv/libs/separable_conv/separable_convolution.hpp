@@ -21,10 +21,10 @@ namespace cuv{
 			SP_BOX,
 			SP_ORIENTATION_AND_MAGNITUDE,
 		};
-		template<class DstV, class SrcV, class M, class A>
+		template<class DstV, class SrcV, class M>
 		void
-		convolve(  tensor<DstV,M,row_major, A>& dst,
-			   const tensor<SrcV,M,row_major, A>& src,
+		convolve(  tensor<DstV,M,row_major>& dst,
+			   const tensor<SrcV,M,row_major>& src,
 			   const unsigned int&   radius,
 			   const separable_filter& filt, int axis=2,
 			   const float& param=0.

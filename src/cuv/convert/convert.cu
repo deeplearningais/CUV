@@ -147,28 +147,28 @@ namespace cuv{
     (                 tensor<X,host_memory_space,Y>&,  const tensor<X,host_memory_space,Y>&);
 
     CONV_INST(float,column_major,column_major);
-    CONV_INST(float,column_major,row_major);
-    CONV_INST(float,row_major,   column_major);
+    /*CONV_INST(float,column_major,row_major);*/
+    /*CONV_INST(float,row_major,   column_major);*/
     CONV_INST(float,row_major,   row_major);
 
     CONV_INST(unsigned char,column_major,column_major);
-    CONV_INST(unsigned char,column_major,row_major);
-    CONV_INST(unsigned char,row_major,   column_major);
+    /*CONV_INST(unsigned char,column_major,row_major);*/
+    /*CONV_INST(unsigned char,row_major,   column_major);*/
     CONV_INST(unsigned char,row_major,   row_major);
 
     CONV_INST(signed char,column_major,column_major);
-    CONV_INST(signed char,column_major,row_major);
-    CONV_INST(signed char,row_major,   column_major);
+    /*CONV_INST(signed char,column_major,row_major);*/
+    /*CONV_INST(signed char,row_major,   column_major);*/
     CONV_INST(signed char,row_major,   row_major);
 
     CONV_INST(int,column_major,column_major);
-    CONV_INST(int,column_major,row_major);
-    CONV_INST(int,row_major,   column_major);
+    /*CONV_INST(int,column_major,row_major);*/
+    /*CONV_INST(int,row_major,   column_major);*/
     CONV_INST(int,row_major,   row_major);
 
     CONV_INST(unsigned int,column_major,column_major);
-    CONV_INST(unsigned int,column_major,row_major);
-    CONV_INST(unsigned int,row_major,   column_major);
+    /*CONV_INST(unsigned int,column_major,row_major);*/
+    /*CONV_INST(unsigned int,row_major,   column_major);*/
     CONV_INST(unsigned int,row_major,   row_major);
 
     CONV_SIMPLE_INST(int,column_major);
@@ -189,7 +189,7 @@ namespace cuv{
     void convert(tensor<X,host_memory_space,Y>& dst, const dia_matrix<X,host_memory_space,Z>& src)     \
     {                                                                                \
         typedef tensor<X,host_memory_space,Y> Dst;                                        \
-        convert_impl::convert<typename Dst::value_type, typename Dst::memory_layout_type, typename Dst::index_type>(dst,src);  \
+        convert_impl::convert<typename Dst::value_type, typename Dst::memory_layout_type, typename Dst::size_type>(dst,src);  \
     };   
 #define DIA_HOST_DEV_CONV(X,Z) \
     template <>                           \

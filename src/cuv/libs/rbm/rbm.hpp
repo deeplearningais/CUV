@@ -80,7 +80,7 @@ namespace rbm{
 	 * note that for at least _some_ consecutive read operations, rowidx is somewhat "transposed".
 	 */
 	template <class __value_type, class __memory_space_type, class __memory_layout_type>
-	void copy_at_rowidx(tensor<__value_type,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_type,__memory_space_type,__memory_layout_type>&  src, const tensor<typename tensor<__value_type,__memory_space_type,__memory_layout_type>::index_type,__memory_space_type,__memory_layout_type>& rowidx, const unsigned int offset);
+	void copy_at_rowidx(tensor<__value_type,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_type,__memory_space_type,__memory_layout_type>&  src, const tensor<typename tensor<__value_type,__memory_space_type,__memory_layout_type>::size_type,__memory_space_type,__memory_layout_type>& rowidx, const unsigned int offset);
 
 	template <class __value_type, class __memory_space_type, class __memory_layout_type>
 	void copy_redblack(tensor<__value_type,__memory_space_type,__memory_layout_type>& dst, const tensor<__value_type,__memory_space_type,__memory_layout_type>&  src, const unsigned int num_maps, const unsigned int color);
@@ -97,7 +97,7 @@ namespace rbm{
       template<class __value_type, class __memory_layout, class __memory_space_type>
               void bitflip(
               tensor<__value_type,__memory_layout,__memory_space_type> & matrix,
-                              typename tensor<__value_type,__memory_layout,__memory_space_type>::index_type row);
+                              typename tensor<__value_type,__memory_layout,__memory_space_type>::size_type row);
       /**
        * @}
        * @}

@@ -1,5 +1,6 @@
 #ifndef __ACCCESSORS_HPP__
 #define __ACCCESSORS_HPP__
+#include <cstring>
 #include <cuv/tools/cuv_general.hpp>
 
 namespace cuv
@@ -9,54 +10,54 @@ namespace cuv
 	 * @{
 	 */
 	/// Allocator allows allocation, deallocation and copying depending on memory_space_type
-	template <class value_type, class index_type, class memory_space_type>
+	template <class value_type, class size_type, class memory_space_type>
 		struct allocator{
-			void alloc( value_type** ptr, index_type memsize)const; /// allocate memory 
-			void alloc2d( value_type** ptr, index_type& pitch, index_type height, index_type width)const; /// allocate memory 
+			void alloc( value_type** ptr, size_type memsize)const; /// allocate memory 
+			void alloc2d( value_type** ptr, size_type& pitch, size_type height, size_type width)const; /// allocate memory 
 			void dealloc( value_type** ptr)const;                   /// free memory
 
 			/**
 			 * copy from host
 			 */
-			void copy(value_type* dst, const value_type*src,index_type size, host_memory_space); /// copy from host_memory_space
+			void copy(value_type* dst, const value_type*src,size_type size, host_memory_space); /// copy from host_memory_space
 
 			/**
 			 * @overload
 			 * copy from device to device when valuetype differs
 			 */
 			template<class value_type2>
-			void copy(value_type* dst, const value_type2*src,index_type size, dev_memory_space); 
+			void copy(value_type* dst, const value_type2*src,size_type size, dev_memory_space); 
 
-			void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, host_memory_space); /// copy from host_memory_space
-			void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, dev_memory_space);  /// copy from dev_memory_space
+			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, host_memory_space); /// copy from host_memory_space
+			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, dev_memory_space);  /// copy from dev_memory_space
 
-			void alloc( const value_type** ptr, index_type memsize)const;   /// const variant of the above
+			void alloc( const value_type** ptr, size_type memsize)const;   /// const variant of the above
 			void dealloc( const value_type** ptr)const;                     /// const variant of the above
-			void copy(const value_type* dst, const value_type*src,index_type size, host_memory_space)const{cuvAssert(false);}   /// this throws an assertion, it should never be called
-			void copy(const value_type* dst, const value_type*src,index_type size, dev_memory_space)const{cuvAssert(false);};   /// this throws an assertion, it should never be called
+			void copy(const value_type* dst, const value_type*src,size_type size, host_memory_space)const{cuvAssert(false);}   /// this throws an assertion, it should never be called
+			void copy(const value_type* dst, const value_type*src,size_type size, dev_memory_space)const{cuvAssert(false);};   /// this throws an assertion, it should never be called
 		};
 
 	/**
 	 * Set the value at *(ptr+idx) to val, when ptr is in host_memory_space.
 	 */
-	template <class value_type, class index_type>
-		void entry_set(value_type* ptr, index_type idx, value_type val, host_memory_space);
+	template <class value_type, class size_type>
+		void entry_set(value_type* ptr, size_type idx, value_type val, host_memory_space);
 	/**
 	 * Get the value at *(ptr+idx), when ptr is in host_memory_space.
 	 */
-	template <class value_type, class index_type>
-		value_type entry_get(const value_type* ptr, index_type idx, host_memory_space);
+	template <class value_type, class size_type>
+		value_type entry_get(const value_type* ptr, size_type idx, host_memory_space);
 
 	/**
 	 * Set the value at *(ptr+idx) to val, when ptr is in dev_memory_space.
 	 */
-	template <class value_type, class index_type>
-		void entry_set(value_type* ptr, index_type idx, value_type val, dev_memory_space);
+	template <class value_type, class size_type>
+		void entry_set(value_type* ptr, size_type idx, value_type val, dev_memory_space);
 	/**
 	 * Get the value at *(ptr+idx), when ptr is in dev_memory_space.
 	 */
-	template <class value_type, class index_type>
-		value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space);
+	template <class value_type, class size_type>
+		value_type entry_get(const value_type* ptr, size_type idx, dev_memory_space);
 
 
 	/** 
@@ -67,8 +68,8 @@ namespace cuv
 	 * @param val Value to set linear_memory entry to
 	 * 
 	 */
-	template <class value_type, class index_type>
-		void entry_set(value_type* ptr, index_type idx, value_type val, host_memory_space) {
+	template <class value_type, class size_type>
+		void entry_set(value_type* ptr, size_type idx, value_type val, host_memory_space) {
 			ptr[idx]=val;
 		}
 
@@ -81,8 +82,8 @@ namespace cuv
 	 * 
 	 * @return 
 	 */
-	template <class value_type, class index_type>
-		value_type entry_get(const value_type* ptr, index_type idx, host_memory_space) {
+	template <class value_type, class size_type>
+		value_type entry_get(const value_type* ptr, size_type idx, host_memory_space) {
 			return ptr[idx];
 		}
 
@@ -92,8 +93,8 @@ namespace cuv
 	 * The gcc compiler can deal directly with this, so we do not need to hide the implementation in a
 	 * .cu file.
 	 */
-	template<class value_type, class index_type>
-		struct allocator<value_type,index_type,host_memory_space>{
+	template<class value_type, class size_type>
+		struct allocator<value_type,size_type,host_memory_space>{
 			/** 
 			 * @brief Allocate memory for host matrices 
 			 * 
@@ -102,7 +103,7 @@ namespace cuv
 			 * 
 			 * This is the instance of the alloc function that is called by host vectors.
 			 */
-			void alloc( value_type** ptr, index_type size) const;
+			void alloc( value_type** ptr, size_type size) const;
 			/**
 			 * @brief Allocate 2D memory
 			 *
@@ -111,7 +112,7 @@ namespace cuv
 			 * @param height  number of lines in memory
 			 * @param width   number elements in one line
 			 */
-			void alloc2d( value_type** ptr, index_type& pitch, index_type height, index_type width)const; /// allocate memory 
+			void alloc2d( value_type** ptr, size_type& pitch, size_type height, size_type width)const; /// allocate memory 
 			/** 
 			 * @brief Deallocate memory for host matrices
 			 * 
@@ -128,7 +129,7 @@ namespace cuv
 			 * 
 			 * This is the instance of the alloc function that is called by const host vectors.
 			 */
-			void alloc(const value_type** ptr, index_type size) const{
+			void alloc(const value_type** ptr, size_type size) const{
 				cuvAssert(false);
 			}
 			/** 
@@ -142,31 +143,31 @@ namespace cuv
 				cuvAssert(false);
 			}
 			/// copy from host to host
-			void copy(value_type* dst, const value_type*src,index_type size, host_memory_space){
-				memcpy(dst,src,size*sizeof(value_type));
+			void copy(value_type* dst, const value_type*src,size_type size, host_memory_space){
+                std::memcpy(dst,src,size*sizeof(value_type));
 			}
 			/** @overload
 			 * copy from host to host (different memory types)
 			 */
 			template<class value_type2>
-			void copy(value_type* dst, const value_type2*src,index_type size, host_memory_space){
+			void copy(value_type* dst, const value_type2*src,size_type size, host_memory_space){
 				for(unsigned int i=0;i<size;i++)
 					dst[i] = (value_type)src[i];
 			}
 			/// copy from device to host
-			void copy(value_type* dst, const value_type*src,index_type size, dev_memory_space);
+			void copy(value_type* dst, const value_type*src,size_type size, dev_memory_space);
 
 			/// throw assertion (should never be called)
-			void copy(const value_type* dst, const value_type*src,index_type size, host_memory_space)const{
+			void copy(const value_type* dst, const value_type*src,size_type size, host_memory_space)const{
 				cuvAssert(false);
 			}
 			/// throw assertion (should never be called)
-			void copy(const value_type* dst, const value_type*src,index_type size, dev_memory_space)const{
+			void copy(const value_type* dst, const value_type*src,size_type size, dev_memory_space)const{
 				cuvAssert(false);
 			}
 
-			void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, host_memory_space); /// copy from host_memory_space
-			void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, dev_memory_space);  /// copy from dev_memory_space
+			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, host_memory_space); /// copy from host_memory_space
+			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, dev_memory_space);  /// copy from dev_memory_space
 		};
 
 	/** @} */ // end group basics

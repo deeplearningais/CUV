@@ -74,7 +74,7 @@ struct Fix{
 bool
 time_sort_by_idx_impl(unsigned int data_num=16, unsigned int data_len=4){
 	tensor<float,host_memory_space> data(extents[data_num][data_len]);
-	tensor<unsigned int, host_memory_space> indices(data_num);
+	tensor<int, host_memory_space> indices(data_num);
 
 	std::vector<unsigned int> hidx(data_num);
 	for (unsigned int i = 0; i < data_num; ++i)
@@ -99,7 +99,7 @@ time_sort_by_idx_impl(unsigned int data_num=16, unsigned int data_len=4){
 
 	tensor<float,dev_memory_space> data_d(data);
 	tensor<float,dev_memory_space> sorted_d(sorted);
-	tensor<unsigned int,dev_memory_space> indices_d(indices);
+	tensor<int,dev_memory_space> indices_d(indices);
 
 	MEASURE_TIME(host, sort_by_index(sorted,indices,data), 5);
 	MEASURE_TIME(dev,  sort_by_index(sorted_d,indices_d,data_d), 5);
@@ -110,9 +110,9 @@ template<class M>
 bool
 test_sort_by_idx_impl(unsigned int data_num=1000, unsigned int data_len=790){
 	tensor<float,M> data(extents[data_num][data_len]);
-	tensor<unsigned int, M> indices(data_num);
+	tensor<int, M> indices(data_num);
 
-	std::vector<unsigned int> hidx(data_num);
+	std::vector<int> hidx(data_num);
 	for (unsigned int i = 0; i < data_num; ++i)
 		hidx[i] = i;
 	std::random_shuffle(hidx.begin(), hidx.end());
