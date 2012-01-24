@@ -139,6 +139,40 @@ BOOST_AUTO_TEST_CASE( tensor_assignment )
 
 }
 
+BOOST_AUTO_TEST_CASE( tensor_zero_copy_assignment )
+{
+    tensor<float,host_memory_space> x(extents[4][5][6]);
+    for(int i=0;i<4*5*6;i++)
+        x[i] = i;
+    tensor<float,host_memory_space> y = x;
+    for(int i=0;i<4*5*6;i++)
+    {
+        BOOST_CHECK_EQUAL(x[i], y[i]);
+        y[i] = i+1; // change the copy results in change of original!
+        BOOST_CHECK_EQUAL(x[i], y[i]);
+    }
+}
+
+BOOST_AUTO_TEST_CASE( tensor_out_of_scope_view )
+{
+    // subtensor views should persist when original tensor falls out of scope
+    tensor<float,host_memory_space> y;
+    {
+        tensor<float,host_memory_space> x(extents[4][5][6]);
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 5; ++j)
+                for (int k = 0; k < 6; ++k)
+                    x(i,j,k) = i+j+k;
+        y = x[indices[index_range(1,3)][index_range()][index_range()]];
+    }
+    for (int i = 1; i < 3; ++i)
+        for (int j = 0; j < 5; ++j)
+            for (int k = 0; k < 6; ++k)
+                {
+                    BOOST_CHECK_EQUAL(y(i-1,j,k), i+j+k);
+                }
+}
+
 template<class V,class M1,class M2>
 void test_pushpull_2d()
 {
