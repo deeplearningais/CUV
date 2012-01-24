@@ -1486,6 +1486,7 @@ namespace cuv
             tensor& operator=(const tensor<value_type,OM,L>& o){
                 if(!copy_memory(*this,o,false))
                     copy_memory(*this,o,linear_memory_tag());
+                m_ptr = mem()->ptr();
                 return *this;
             }
 
@@ -1674,6 +1675,8 @@ namespace cuv
                 typedef typename tensor<V,M0,L0>::size_type size_type;
                 if(copy_memory(dst,src, true)) // destination must be contiguous
                     return;
+                dst.info().resize(src.ndim());
+                dst.info().host_shape = src.info().host_shape;
                 linear_memory<V,M0> d(src.size());
                 d.set_strides(dst.info().host_stride,dst.info().host_shape, L0());
                 allocator<V, size_type, M0> a;
@@ -1703,6 +1706,8 @@ namespace cuv
                 assert(src.ndim()>=2);
                 if(copy_memory(dst,src,false)) // destination need not be contiguous
                     return;
+                dst.info().resize(src.ndim());
+                dst.info().host_shape = src.info().host_shape;
                 size_type row,col,pitch;
                 detail::get_pitched_params(row,col,pitch,src.info().host_shape, src.info().host_stride,L1());
                 pitched_memory<V,M0> d(row,col);
