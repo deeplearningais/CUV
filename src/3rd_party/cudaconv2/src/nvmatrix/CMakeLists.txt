@@ -1,0 +1,14 @@
+CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/../../include/nvmatrix )
+CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/../../include/common )
+
+CUDA_ADD_LIBRARY(tp_nvmatrix2 SHARED
+	nvmatrix.cu
+	nvmatrix_kernels.cu
+  )
+
+TARGET_LINK_LIBRARIES(tp_nvmatrix2 ${CUDA_LIBRARIES} )
+
+install(TARGETS tp_nvmatrix2
+	RUNTIME DESTINATION bin
+	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib/static)
