@@ -451,7 +451,7 @@ void test_matrix_transpose(unsigned int n, unsigned int m){
 
 BOOST_AUTO_TEST_CASE( mat_op_transpose )
 {
-for(unsigned int iter=0;iter<50;iter++){
+for(unsigned int iter=0;iter<1;iter++){
     int nm[] = {2,8,15,24,176};
     for(unsigned int ni = 0; ni<5;ni++)
         for(unsigned int mi = 0; mi<5;mi++){
@@ -459,7 +459,7 @@ for(unsigned int iter=0;iter<50;iter++){
             //unsigned int m= nm[mi];
             unsigned int n = 1 + drand48()*50;
             unsigned int m = 1 + drand48()*50;
-            std::cout << "Transpose: "<<n << ", "<<m<<std::endl;
+            //std::cout << "Transpose: "<<n << ", "<<m<<std::endl;
             test_matrix_transpose<float,host_memory_space,column_major>(n,m);
             test_matrix_transpose<float,host_memory_space,column_major>(m,n);
             test_matrix_transpose<float,host_memory_space,row_major>(n,m);
