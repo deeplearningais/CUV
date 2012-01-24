@@ -175,13 +175,15 @@ void softmax_derivative(int n_var, int n_val){
     cuv::libs::opt::softmax_derivative(D,Y,R,1);
     tensor<float,M,L> Jtilde(extents[n_var*n_val][n_var*n_val]);
     for(int i=0;i<n_val*n_var;i++){
-            tensor<float,M,L> X_ = X;
+            tensor<float,M,L> X_ = X.copy();
             tensor<float,M,L> Y_minus(X.shape());
             tensor<float,M,L> Y_plus (X.shape());
             X_[i] += eps;
             cuv::libs::opt::softmax(Y_plus,X_,1);
             X_[i] -= 2*eps;
             cuv::libs::opt::softmax(Y_minus,X_,1);
+            Y_plus.reshape(extents[X.size()]);
+            Y_minus.reshape(extents[X.size()]);
             tensor<float,M,L> finite_diff(indices[index_range(i,i+1)][index_range()], Jtilde);
             finite_diff = (Y_plus-Y_minus)/(2*eps);
     }

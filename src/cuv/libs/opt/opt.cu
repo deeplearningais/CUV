@@ -42,7 +42,7 @@ namespace impl{
         else          cuv::reduce_to_col(red, src, RF_LOGADDEXP, -1.f);
 
         if(dst.ptr() != src.ptr()){
-            dst = src;
+            dst = src.copy();
         }
         if(vardim==1) cuv::matrix_plus_row(dst,red);
         else          cuv::matrix_plus_col(dst,red);
