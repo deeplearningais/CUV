@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstring>
-#include "cuv/basics/tensor2.hpp"
+#include "cuv/basics/tensor.hpp"
+#include "cuv/tensor_ops/tensor_ops.hpp"
 using namespace cuv;
 
     int
@@ -71,6 +72,7 @@ main(int argc, char **argv)
     std::cout << z <<std::endl;
     z = z.copy();
     z(0,0) = 1;
+    z = 1.f;
     std::cout << y <<std::endl;
 
     return 0;
