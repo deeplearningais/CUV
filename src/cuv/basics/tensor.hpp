@@ -139,8 +139,7 @@ namespace cuv
         void fill(tensor<V, M, L>& v, const V& p);
 
     /**
-     * abstract class providing interface for tensor to different memory
-     * allocators
+     * simply keeps a pointer and deallocates it when destroyed
      */
     template<class V, class M>
         class memory{
@@ -157,17 +156,46 @@ namespace cuv
 
             private:
                 friend class boost::serialization::access;
+                allocator<value_type, size_type, memory_space_type> m_allocator; ///< how stored memory was allocated
+                /// prohibit copying
+                memory(const memory&){}
+                /// prohibit copying
+                memory& operator=(const memory& o){return *this;}
             protected:
                 pointer_type m_ptr;  ///< points to allocated memory
+                size_type    m_size; ///< size (for serialization)
             public:
                 /// @return pointer to allocated memory
                 pointer_type ptr(){return m_ptr;}
                 /// @return pointer to allocated memory (const)
                 const_pointer_type ptr()const{return m_ptr;}
 
+                /// @return number of stored elements
+                size_type size()const{    return m_size; }
+                /// @return number of stored bytes
+                size_type memsize()const{ return size()*sizeof(V); }
+
+                /// reset information (use with care, for deserialization)
+                void reset(pointer_type p, size_type s){ m_ptr = p; m_size = s; }
+
+
                 /// default constructor (just sets ptr to NULL)
-                memory():m_ptr(NULL){}
-                virtual ~memory(){}
+                memory():m_ptr(NULL),m_size(0){}
+                
+                /// construct with pointer (takes /ownership/ of this pointer and deletes it when destroyed!)
+                memory(value_type* ptr, size_type size):m_ptr(ptr),m_size(size){}
+
+                /// destructor (deallocates the memory)
+                ~memory(){ dealloc(); }
+
+                /**
+                 * dellocate space
+                 */
+                void dealloc(){
+                    if (m_ptr)
+                        m_allocator.dealloc(&this->m_ptr);
+                    m_ptr=NULL;
+                }
         };
 
     /**
@@ -190,29 +218,25 @@ namespace cuv
                 friend class boost::serialization::access;
                 typedef linear_memory<V,M> my_type; ///< my own type
                 allocator<value_type, size_type, memory_space_type> m_allocator; ///< how stored memory was allocated
-                size_type m_size; ///< number of stored elements
+                using super::m_size;
                 using super::m_ptr;
             public:
 
-
-                /// @return number of stored elements
-                size_type size()const{    return m_size; }
-
-                /// @return number of stored bytes
-                size_type memsize()const{ return m_size*sizeof(V); }
-
                 /// default constructor: does nothing
-                linear_memory():m_size(0){}
+                linear_memory(){}
 
                 /** constructor: reserves space for i elements
                  *  @param i number of elements
                  */
-                linear_memory(size_type i):m_size(i){alloc();}
+                linear_memory(size_type i){m_size = i; alloc();}
+
+                /// releases ownership of pointer (for storage in memory class)
+                value_type* release(){ value_type* ptr = m_ptr; m_ptr = NULL; return ptr; }
 
                 /** sets the size (reallocates if necessary)
                  */
                 void set_size(size_type s){
-                    if(s!=size()){
+                    if(s!=this->size()){
                         dealloc();
                         m_size = s;
                         alloc();
@@ -234,7 +258,8 @@ namespace cuv
                 void dealloc(){
                     if (m_ptr)
                         m_allocator.dealloc(&this->m_ptr);
-                    m_ptr=NULL;
+                    this->m_ptr=NULL;
+                    this->m_size=NULL;
                 }
 
                 /** 
@@ -255,7 +280,7 @@ namespace cuv
                             m_size = o.size();
                             this->alloc();
                         }
-                        m_allocator.copy(this->m_ptr,o.ptr(),size(),memory_space_type());
+                        m_allocator.copy(this->m_ptr,o.ptr(),this->size(),memory_space_type());
 
                         return *this;
                     }
@@ -278,7 +303,7 @@ namespace cuv
                             m_size = o.size();
                             this->alloc();
                         }
-                        m_allocator.copy(m_ptr,o.ptr(),size(),OM());
+                        m_allocator.copy(m_ptr,o.ptr(),this->size(),OM());
                         return *this;
                     }
 
@@ -356,7 +381,7 @@ namespace cuv
                 void reverse(){
                     if(IsSame<dev_memory_space,memory_space_type>::Result::value)
                         throw std::runtime_error("reverse of dev linear memory not implemented");
-                    value_type* __first = m_ptr, *__last = m_ptr + size();
+                    value_type* __first = m_ptr, *__last = m_ptr + this->size();
                     while (true)
                         if (__first == __last || __first == --__last)
                             return;
@@ -498,12 +523,14 @@ namespace cuv
                 typedef typename super::reference_type reference_type; ///< type of reference you get using operator[]
                 typedef typename super::const_reference_type const_reference_type; ///< type of reference you get using operator[]
             private:
+                friend class boost::serialization::access;
                 typedef pitched_memory<V,M> my_type; ///< my own type
                 allocator<value_type, size_type, memory_space_type> m_allocator; ///< how stored memory was allocated
                 size_type m_rows;  ///< number of rows
                 size_type m_cols;  ///< number of columns
                 size_type m_pitch;  ///< pitch (multiples of sizeof(V))
                 using super::m_ptr;
+                using super::m_size;
             public:
 
                 /// @return the number of rows
@@ -539,6 +566,7 @@ namespace cuv
                     m_allocator.alloc2d(&this->m_ptr,m_pitch,m_rows,m_cols); 
                     assert(m_pitch%sizeof(value_type)==0);
                     m_pitch/=sizeof(value_type);
+                    m_size = m_rows*m_pitch; // in class memory
                 }
 
                 /** 
@@ -548,7 +576,11 @@ namespace cuv
                     if (this->m_ptr)
                         m_allocator.dealloc(&this->m_ptr);
                     this->m_ptr=NULL;
+                    this->m_size=NULL;
                 }
+
+                /// releases ownership of pointer (for storage in memory class)
+                value_type* release(){ value_type* ptr = m_ptr; m_ptr = NULL; return ptr; }
 
                 /** 
                  * set the size (reallocating, if necessary)

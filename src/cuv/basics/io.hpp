@@ -76,17 +76,51 @@ namespace boost
 		 */
 
         /**
-         * save memory to a file
+         * load a memory
          */
-        template<class Archive, class V>
-            void serialize(Archive& ar, cuv::memory<V,cuv::host_memory_space>& m, const unsigned int version ){
+        template<class Archive, class V, class M>
+            void load(Archive& ar, cuv::memory<V,M>& m, const unsigned int version ){
+                typename cuv::memory<V,M>::size_type size;
+                ar >> size;
+                if(size){
+                    V* tmp = new V[size];
+                    ar >> make_array(tmp,size);
+                    // copy to dev
+                    cuv::allocator<V,unsigned int,M> a;
+                    V* tmpo;
+                    a.alloc(&tmpo, sizeof(V)*size);
+                    a.copy(tmpo,tmp,size, cuv::host_memory_space());
+                    m.reset(tmpo, size);
+                    delete[] tmp;
+                }
             }
         /**
-         * @overload
+         * save a memory
          */
-        template<class Archive, class V>
-            void serialize(Archive& ar, cuv::memory<V,cuv::dev_memory_space>& m, const unsigned int version ){
+        template<class Archive, class V, class M>
+            void save(Archive& ar, const cuv::memory<V,M>& m, const unsigned int version ){
+                // copy to host
+                typename cuv::memory<V,M>::size_type size = m.size();
+                ar << size;
+                if(m.size()){
+                    V* tmp = new V[size];
+                    cuv::allocator<V,unsigned int,cuv::host_memory_space> a;
+                    a.copy(tmp,m.ptr(),size,M());
+                    ar << make_array(tmp, size);
+                    delete[] tmp;
+                }
             }
+		/**
+		 * load/save dev memory (dispatch to load/save)
+		 *
+		 * @param ar an archive to save to
+		 * @param m a memory to be stored
+		 * @param version (unused) protocol version
+		 */
+		template<class Archive, class V, class M>
+		void serialize(Archive& ar, cuv::memory<V,M>& m, const unsigned int version){
+			boost::serialization::split_free(ar, m, version);
+		}
 
         /**
          * @overload
@@ -98,21 +132,19 @@ namespace boost
                 cuv::pitched_memory<V,cuv::host_memory_space> m;
                 ar >>  m.m_rows
                     >> m.m_cols
-                    >> m.m_pitch
-                    >> m.make_array(m.m_ptr, m.m_rows*m.m_pitch);
+                    >> m.m_pitch;
                 m_ = m;
             }
         /**
          * @overload
          */
         template<class Archive, class V>
-            void save(Archive& ar, cuv::pitched_memory<V,cuv::dev_memory_space>& m_, const unsigned int version){
-                ar << boost::serialization::base_object<cuv::memory<V,cuv::dev_memory_space> >(m_);
+            void save(Archive& ar, const cuv::pitched_memory<V,cuv::dev_memory_space>& m_, const unsigned int version){
+                //ar << boost::serialization::base_object<cuv::memory<V,cuv::dev_memory_space> >(m_);
                 cuv::pitched_memory<V,cuv::host_memory_space> m(m_);
                 ar  << m.m_rows
                     << m.m_cols
-                    << m.m_pitch
-                    << m.make_array(m.m_ptr, m.m_rows*m.m_pitch);
+                    << m.m_pitch;
             }
 
 		/**
