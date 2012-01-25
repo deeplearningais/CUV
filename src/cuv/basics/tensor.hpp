@@ -1207,7 +1207,7 @@ namespace cuv
              * in (dense) /linear/ memory. Note: this /copies/ the memory!
              */
             template<class OM>
-                explicit tensor(const tensor<value_type,OM,L>& o)
+                tensor(const tensor<value_type,OM,L>& o)
                 :m_info(o.info()) // primarily to copy shape
                 ,m_ptr(NULL)
                 {
