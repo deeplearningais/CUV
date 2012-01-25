@@ -44,6 +44,9 @@
  * @defgroup MetaProgramming  Template meta programming tools
  * @defgroup libs    special purpose functions
  *
+ * @defgroup tags CUV tags
+ * @ingroup basics
+ *
  * @mainpage
  *
  * @section summary  Summary
@@ -133,24 +136,11 @@
  *
  * @subsection instproc  Installation Procedure
  *
- * Building a debug version:
+ * Building CUV:
  *
  * @code
- * $ cd cuv-version-source
- * $ mkdir -p build/debug
- * $ cd build/debug
- * $ cmake -DCMAKE_BUILD_TYPE=Debug ../../
- * $ ccmake .          # adjust paths to your system (cuda, thrust, pyublas, ...)!
- *                     # turn on/off optional libraries (CImg, ...)
- * $ make -j
- * $ ctest             # run tests to see if it went well
- * $ sudo make install
- * $ export PYTHONPATH=`pwd`/src      # only if you want python bindings
- * @endcode
- *
- * Building a release version:
- *
- * @code
+ * $ sudo apt-get install cmake cmake-curses-gui libblas-dev libboost-all-dev libtemplate-perl doxygen python-nose python-dev cimg-dev
+ * $ # download and install pyublas if you want python-bindings
  * $ cd cuv-version-source
  * $ mkdir -p build/release
  * $ cd build/release

@@ -28,7 +28,7 @@
 /** 
  * @file io.hpp
  * @brief serialization for tensors
- * @ingroup basics
+ * @ingroup io
  * @author Hannes Schulz
  * @date 2011-06-27
  */

@@ -27,6 +27,14 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
 
+/**
+ * @file tensor.hpp
+ * @brief an n-dimensional array on host or device
+ * @author Hannes Schulz
+ * @date 2012-01-25
+ * @ingroup basics
+ */
+
 #ifndef __TENSOR2_HPP__
 #     define __TENSOR2_HPP__
 
@@ -51,13 +59,26 @@ namespace cuv
  * @{
  */
 
-	/// Parent struct for row and column major tags
-	struct memory_layout_tag{};
+    /**
+     * @addtogroup tags
+     * @{
+     */
 	/// Tag for column major matrices
-	struct column_major : public memory_layout_tag{};
+	struct column_major {};
 	/// Tag for row major matrices
-	struct row_major    : public memory_layout_tag{};
+	struct row_major    {};
 
+    /// tag for linear memory
+    struct linear_memory_tag{};
+    /// tag for pitched memory
+    struct pitched_memory_tag{};
+    /** @} */ // tags
+/** @} */
+
+/**
+ * @addtogroup MetaProgramming
+ * @{
+ */
 	/// converts from column to row-major and vice versa
 	template<class T>
 	struct other_memory_layout{};
@@ -78,14 +99,9 @@ namespace cuv
 	/// specialisation: converts from host_memory_space to dev_memory_space
 	template<>
 	struct other_memory_space<host_memory_space>{ typedef dev_memory_space type; };
+/** @} */
 
 
-    /// Parent struct for linear/pitched/borrowed memory types
-    struct memory_type_tag{};
-    /// tag for linear memory
-    struct linear_memory_tag : public memory_type_tag{};
-    /// tag for pitched memory
-    struct pitched_memory_tag : public memory_type_tag{};
 
 	using boost::detail::multi_array::extent_gen;
 	using boost::detail::multi_array::index_gen;
@@ -123,7 +139,9 @@ namespace cuv
 		 *
 		 * Example:
 		 * @code
-		 * tensor<...> v(indices[index_range(1,3)][index_range()], other_tensor);
+		 * tensor_view<...> v(indices[index_range(1,3)][index_range()], other_tensor);
+         * // or, equivalently
+		 * other_tensor[indices[index_range(1,3)][index_range()]];
 		 * @endcode
 		 */
 		index_gen<0,0> indices;
@@ -138,6 +156,10 @@ namespace cuv
     template<class V, class M, class L, class S>
         void fill(tensor<V, M, L>& v, const V& p);
 
+    /**
+     * @addtogroup basics
+     * @{
+     */
     /**
      * simply keeps a pointer and deallocates it when destroyed
      */
@@ -393,6 +415,7 @@ namespace cuv
                 }
 
         };
+    /** @} */ // basics
 
     namespace detail{
 
@@ -505,6 +528,10 @@ namespace cuv
         }
     }
 
+    /**
+     * @addtogroup basics
+     * @{
+     */
 
     /**
      * represents 2D non-contiguous ("pitched") memory
@@ -928,6 +955,10 @@ namespace cuv
 				}
 				return pos;
 			}
+            /**
+             * @name Accessors
+             * @{
+             */
             /// return the number of dimensions
             index_type ndim()const{ return m_info.host_shape.size(); }
 
@@ -1004,6 +1035,13 @@ namespace cuv
             bool is_2dcopyable()const{
                 return detail::is_2dcopyable(memory_layout_type(), m_info.host_shape, m_info.host_stride);
             }
+
+            /** @} */ // accessors
+
+            /**
+             * @name accessing stored values
+             * @{
+             */
 
             /**
              * member access: "flat" access as if memory was linear
@@ -1122,7 +1160,11 @@ namespace cuv
                 index_type arr[5] = {i0,i1,i2,i3,i4};
                 return reference_type(m_ptr + index_of( 5,arr));
             }
+            /** @} */ // accessing stored values
 
+            /** @name constructors 
+             * @{
+             */
             /**
              * default constructor (does nothing)
              */
@@ -1370,11 +1412,17 @@ namespace cuv
                             size *= idx.ranges_[i].finish();
                         }
                 }
+            // @} // constructors
 
 
             // ****************************************************************
             //   assignment operators (try not to reallocate if shapes match)
             // ****************************************************************
+
+            /**
+             * @name assigning other values to a tensor object
+             * @{
+             */
 
             /**
              * assign from tensor of same type 
@@ -1434,6 +1482,8 @@ namespace cuv
                 return *this;
             }
 
+            /** @} */ // assignment
+
 
             /**
              * copy memory using given allocator tag (linear/pitched)
@@ -1454,6 +1504,7 @@ namespace cuv
             tensor copy()const{
                 return copy(linear_memory_tag());
             }
+
 
             /**
              * create a subtensor of the current tensor 
@@ -1793,12 +1844,21 @@ namespace cuv
             }
     //}
 
+        /** @} */ // basics
 
+
+        /**
+         * test whether two tensors have the same shape
+         * @ingroup tools
+         */
     template<class V, class V2, class M, class M2, class L>
         bool equal_shape(const tensor<V,M,L>& a, const tensor<V2,M2,L>& b){
             return a.shape()==b.shape();
         }
     
+    /**
+     * @addtogroup MetaProgramming
+     */
       /// create a tensor type with the same template parameters, but with switched value type
 	template<class Mat, class NewVT>
 		struct switch_value_type{
@@ -1818,6 +1878,13 @@ namespace cuv
     /** @} */
 
 }
+
+/**
+ * input and output operations
+ *
+ * @addtogroup io
+ * @{
+ */
 namespace std{
     /**
      * print a host linear memory to a stream
@@ -1947,4 +2014,5 @@ namespace std{
         throw std::runtime_error("printing of tensors with >3 dimensions not implemented");
     }
 }
+/** @} */ // io
 #endif /* __TENSOR2_HPP__ */

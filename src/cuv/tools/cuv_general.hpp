@@ -74,19 +74,14 @@
 #define DBG(X) #X <<":"<<(X)<<"  "
 
 namespace cuv{
-	/**
-	 * Parent struct for host and device memory tags
-	 * @ingroup basics
-	 */
-	struct memory_space{};
 	/** Tag for host memory
 	 * @ingroup basics
 	 */
-	struct host_memory_space : public memory_space {};
+	struct host_memory_space {};
 	/** Tag for device memory
 	 * @ingroup basics
 	 */
-	struct dev_memory_space  : public memory_space {};
+	struct dev_memory_space  {};
 
 	/** fail with an error message, a stack trace and a runtime_exception (the nicest failures you've seen ^^!)
 	 * @ingroup tools

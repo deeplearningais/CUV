@@ -44,7 +44,7 @@ namespace cuv
 	 * a wrapper around a tensor to provide an interleaved (e.g. RGBRGBRGB...) image
 	 *
 	 * the internal tensor is a _strided_ tensor.
-	 *
+     * @ingroup basics
 	 */
 	template<int NumChannels, class __value_type, class __memory_space_type>
 	class 
