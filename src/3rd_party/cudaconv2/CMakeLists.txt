@@ -2,6 +2,7 @@ CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/include/nvmatrix )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/include/common )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/include/cudaconv2 )
 CUDA_ADD_LIBRARY(tp_cudaconv2 SHARED
+	include/common/matrix.cpp
 	src/nvmatrix/nvmatrix.cu
 	src/nvmatrix/nvmatrix_kernels.cu
 	src/cudaconv2/conv_util.cu
