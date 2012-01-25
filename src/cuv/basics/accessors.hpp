@@ -6,15 +6,15 @@
 namespace cuv
 {
 	/**
-	 * @addtogroup basics
-	 * @{
-	 */
-	/// Allocator allows allocation, deallocation and copying depending on memory_space_type
+     * Allocator allows allocation, deallocation and copying depending on memory_space_type
+     *
+     * \ingroup tools
+     */
 	template <class value_type, class size_type, class memory_space_type>
 		struct allocator{
-			void alloc( value_type** ptr, size_type memsize)const; /// allocate memory 
-			void alloc2d( value_type** ptr, size_type& pitch, size_type height, size_type width)const; /// allocate memory 
-			void dealloc( value_type** ptr)const;                   /// free memory
+			void alloc( value_type** ptr, size_type memsize)const; ///< allocate memory 
+			void alloc2d( value_type** ptr, size_type& pitch, size_type height, size_type width)const; ///< allocate memory 
+			void dealloc( value_type** ptr)const;                   ///< free memory
 
 			/**
 			 * copy from host
@@ -28,14 +28,17 @@ namespace cuv
 			template<class value_type2>
 			void copy(value_type* dst, const value_type2*src,size_type size, dev_memory_space); 
 
-			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, host_memory_space); /// copy from host_memory_space
-			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, dev_memory_space);  /// copy from dev_memory_space
+			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, host_memory_space); ///< copy from host_memory_space
+			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, dev_memory_space);  ///< copy from dev_memory_space
 
-			void alloc( const value_type** ptr, size_type memsize)const;   /// const variant of the above
-			void dealloc( const value_type** ptr)const;                     /// const variant of the above
-			void copy(const value_type* dst, const value_type*src,size_type size, host_memory_space)const{cuvAssert(false);}   /// this throws an assertion, it should never be called
-			void copy(const value_type* dst, const value_type*src,size_type size, dev_memory_space)const{cuvAssert(false);};   /// this throws an assertion, it should never be called
+			void alloc( const value_type** ptr, size_type memsize)const;   ///< const variant of the above
+			void dealloc( const value_type** ptr)const;                     ///< const variant of the above
+			void copy(const value_type* dst, const value_type*src,size_type size, host_memory_space)const{cuvAssert(false);}   ///< this throws an assertion, it should never be called
+			void copy(const value_type* dst, const value_type*src,size_type size, dev_memory_space)const{cuvAssert(false);};   ///< this throws an assertion, it should never be called
 		};
+
+    namespace detail
+    {
 
 	/**
 	 * Set the value at *(ptr+idx) to val, when ptr is in host_memory_space.
@@ -87,11 +90,15 @@ namespace cuv
 			return ptr[idx];
 		}
 
+    }
+
 	/**
 	 * @brief specialization of template allocator for host_memory_space
 	 *
 	 * The gcc compiler can deal directly with this, so we do not need to hide the implementation in a
 	 * .cu file.
+     *
+     * \ingroup tools
 	 */
 	template<class value_type, class size_type>
 		struct allocator<value_type,size_type,host_memory_space>{
@@ -166,11 +173,9 @@ namespace cuv
 				cuvAssert(false);
 			}
 
-			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, host_memory_space); /// copy from host_memory_space
-			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, dev_memory_space);  /// copy from dev_memory_space
+			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, host_memory_space); ///< copy from host_memory_space
+			void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, dev_memory_space);  ///< copy from dev_memory_space
 		};
-
-	/** @} */ // end group basics
 }
 
 

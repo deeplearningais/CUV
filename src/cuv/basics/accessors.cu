@@ -32,7 +32,6 @@
 #include <cuda.h>
 #include <thrust/device_ptr.h>
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/linear_memory.hpp>
 #include <cuv/tools/meta_programming.hpp>
 
 #include "accessors.hpp"
@@ -118,23 +117,25 @@ allocator<V,I,host_memory_space>::copy2d(V* dst, const V*src,I dpitch, I spitch,
 	cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(V),h,cudaMemcpyHostToHost));
 }
 
-template <class value_type, class size_type>
-void entry_set(value_type* ptr, size_type idx, value_type val, dev_memory_space) {
-	thrust::device_ptr<value_type> dev_ptr(ptr);
-	dev_ptr[idx]=val;
-}
-
-template <class value_type, class size_type>
-value_type entry_get(const value_type* ptr, size_type idx, dev_memory_space) {
-	const thrust::device_ptr<const value_type> dev_ptr(ptr);
-	return (value_type) *(dev_ptr+idx);
+namespace detail {
+    template <class value_type, class size_type>
+    void entry_set(value_type* ptr, size_type idx, value_type val, dev_memory_space) {
+        thrust::device_ptr<value_type> dev_ptr(ptr);
+        dev_ptr[idx]=val;
+    }
+    
+    template <class value_type, class size_type>
+    value_type entry_get(const value_type* ptr, size_type idx, dev_memory_space) {
+        const thrust::device_ptr<const value_type> dev_ptr(ptr);
+        return (value_type) *(dev_ptr+idx);
+    }
 }
 
 #define VECTOR_INST(T,I) \
 template struct allocator<T, I, dev_memory_space>; \
 template struct allocator<T, I, host_memory_space>; \
-template void entry_set(T*, I, T, dev_memory_space); \
-template T entry_get(const T*, I, dev_memory_space); \
+template void detail::entry_set(T*, I, T, dev_memory_space); \
+template T detail::entry_get(const T*, I, dev_memory_space); \
 template void allocator<T, I, dev_memory_space>::copy<        float>(T* dst, const         float*src,I size, dev_memory_space); \
 template void allocator<T, I, dev_memory_space>::copy<unsigned char>(T* dst, const unsigned char*src,I size, dev_memory_space); \
 template void allocator<T, I, dev_memory_space>::copy<  signed char>(T* dst, const signed   char*src,I size, dev_memory_space); \
