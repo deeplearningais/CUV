@@ -1561,7 +1561,7 @@ namespace cuv
                         cuvAssert(finish>start);
 #endif
                         t.m_ptr += start*o.stride(i);
-                        if(finish-start==1){
+                        if(idx.ranges_[i].is_degenerate()){
                             // skip dimension
                         }else{
                             shapes.push_back((finish-start)/stride);
