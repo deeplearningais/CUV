@@ -281,6 +281,23 @@ BOOST_AUTO_TEST_CASE( set_vector_elements )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( tensor_resize )
+{
+    static const unsigned int N = 145;
+    static const unsigned int M = 97;
+    std::vector<unsigned int> s2(2); s2[0]= M; s2[1]=N;
+	tensor<float,host_memory_space> v(extents[N][M]);
+    float* p0 = v.ptr();
+    v.resize(s2);
+    float* p1 = v.ptr();
+    s2[0]+=1;
+    v.resize(s2);
+    float* p2 = v.ptr();
+
+    BOOST_CHECK_EQUAL(p0,p1);
+    BOOST_CHECK_NE(p0,p2);
+}
+
 BOOST_AUTO_TEST_CASE( assign_func )
 {
     static const unsigned int N = 145;
