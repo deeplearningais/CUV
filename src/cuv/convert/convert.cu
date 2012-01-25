@@ -205,13 +205,17 @@ namespace cuv{
     template void convert<tensor<X,dev_memory_space,L>,         tensor<Y,dev_memory_space,L> > \
     (                 tensor<X,dev_memory_space,L>&,  const tensor<Y,dev_memory_space,L>&);
 
-CONV_VALUE_TYPE(int,float,row_major);
 CONV_VALUE_TYPE(unsigned int,float,row_major);
-CONV_VALUE_TYPE(float,int,row_major);
-CONV_VALUE_TYPE(float,unsigned int,row_major);
 CONV_VALUE_TYPE(unsigned int,unsigned char,row_major);
+
+CONV_VALUE_TYPE(int,float,row_major);
 CONV_VALUE_TYPE(int,unsigned char,row_major);
 CONV_VALUE_TYPE(int,signed char,row_major);
+
+CONV_VALUE_TYPE(float,int,row_major);
+CONV_VALUE_TYPE(float,unsigned int,row_major);
+CONV_VALUE_TYPE(float,unsigned char,row_major);
+CONV_VALUE_TYPE(float,signed char,row_major);
 
 
 #define DIA_DENSE_CONV(X,Y,Z) \
