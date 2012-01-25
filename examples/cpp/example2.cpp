@@ -4,8 +4,7 @@ using namespace cuv;
 int main(void){
     tensor<float,dev_memory_space,column_major> C(2048,2048),A(2048,2048),B(2048,2048);
 
-    fill(C,0);         // initialize to some defined value, not strictly necessary here
-    sequence(A);
+    sequence(A);                        // fill A and B with sequence data
     sequence(B);
 
     apply_binary_functor(A,B,BF_MULT);  // elementwise multiplication
