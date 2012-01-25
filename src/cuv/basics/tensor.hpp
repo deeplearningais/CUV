@@ -1627,6 +1627,28 @@ namespace cuv
             }
 
             /**
+             * resize the tensor (deallocates memory if product changes, otherwise equivalent to reshape)
+             */
+            void resize(const std::vector<size_type>& shape){
+                if(ndim()!=0){
+                    size_type new_size = std::accumulate(shape.begin(),shape.end(),1,std::multiplies<size_type>());
+                    if(is_c_contiguous() && size()==new_size)
+                        reshape(shape);
+                    else
+                        *this = tensor(shape);
+                }
+                else
+                    *this = tensor(shape);
+            }
+            template<std::size_t D>
+                void resize(const extent_gen<D>& eg){
+                    std::vector<size_type> shape(D);
+                    for(std::size_t i=0;i<D;i++) 
+                        shape[i] = eg.ranges_[i].finish();
+                    resize(shape);
+                }
+
+            /**
              * force deallocation of memory if possible
              */
             void dealloc(){
