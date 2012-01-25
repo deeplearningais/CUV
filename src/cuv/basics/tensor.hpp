@@ -1636,6 +1636,15 @@ namespace cuv
                     return *this;
                 }
                 /**
+                 * assign from value (sets all elements equal to one scalar)
+                 */
+                template<class _V>
+                    typename boost::enable_if_c<boost::is_convertible<_V,V>::value, tensor_view&>::type
+                    operator=(const _V& scalar){
+                        super::operator=(scalar);
+                        return *this;
+                    }
+                /**
                  * @overload for other memory space type
                  */
                 template<class OM>
