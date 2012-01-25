@@ -1423,6 +1423,14 @@ namespace cuv
              * @name assigning other values to a tensor object
              * @{
              */
+            /**
+             * explicitly assign by copying memory
+             */
+            template<class _M, class _L>
+            tensor& assign(const tensor<V,_M,_L>& o){
+                static_cast<tensor_view<V,M,L>&>(*this).operator=(o);
+                return *this;
+            }
 
             /**
              * assign from tensor of same type 
