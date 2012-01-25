@@ -281,6 +281,20 @@ BOOST_AUTO_TEST_CASE( set_vector_elements )
 	}
 }
 
+BOOST_AUTO_TEST_CASE( assign_func )
+{
+    static const unsigned int N = 145;
+    static const unsigned int M = 97;
+	tensor<float,host_memory_space> v(extents[N][M]);
+	tensor<float,host_memory_space> w(extents[N][M]);
+    v[5] = 5;
+    w[5] = 0;
+    w.assign(v);
+    BOOST_CHECK_NE(w.ptr(),v.ptr());
+    BOOST_CHECK_EQUAL(v[5], 5);
+    BOOST_CHECK_EQUAL(w[5], 5);
+}
+
 /** 
  * @test 
  * @brief allocating and destroying a cuda_array

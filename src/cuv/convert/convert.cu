@@ -29,7 +29,6 @@
 
 
 
-#include <cuv/tensor_ops/tensor_ops.cuh>
 #include <cuv/basics/dia_matrix.hpp>
 #include <cuv/convert/convert.hpp>
 
@@ -111,20 +110,6 @@ namespace cuv{
                 dst.post_update_offsets();
             }
 
-        /**
-         * value type conversion
-         */
-        template<class V1,class V2,  class M, class L>
-            static void
-            convert(      tensor<V1, M,L>& dst, 
-                    const tensor<V2, M, L>& src){
-                typedef typename memspace_cuv2thrustptr<V1, M>::ptr_type ptr_type1;
-                typedef typename memspace_cuv2thrustptr<V2, M>::ptr_type ptr_type2;
-                ptr_type1 d_ptr(dst.ptr());
-                ptr_type2 s_ptr(const_cast<V2*>(src.ptr()));
-                thrust::copy(s_ptr, s_ptr+src.size(), d_ptr);
-	    }
-
         /*
          * Everything else
          */
@@ -197,20 +182,6 @@ namespace cuv{
     CONV_SIMPLE_INST(signed char,row_major);
     CONV_SIMPLE_INST(unsigned char,row_major);
     CONV_SIMPLE_INST(unsigned int,row_major);
-
-#define CONV_VALUE_TYPE(X,Y,L) \
-    template void convert<tensor<X,host_memory_space,L>,          tensor<Y,host_memory_space,L> > \
-    (                 tensor<X,host_memory_space,L>&,   const tensor<Y,host_memory_space,L>&); \
-    template void convert<tensor<X,dev_memory_space,L>,         tensor<Y,dev_memory_space,L> > \
-    (                 tensor<X,dev_memory_space,L>&,  const tensor<Y,dev_memory_space,L>&);
-
-CONV_VALUE_TYPE(int,float,row_major);
-CONV_VALUE_TYPE(unsigned int,float,row_major);
-CONV_VALUE_TYPE(float,int,row_major);
-CONV_VALUE_TYPE(float,unsigned int,row_major);
-CONV_VALUE_TYPE(unsigned int,unsigned char,row_major);
-CONV_VALUE_TYPE(int,unsigned char,row_major);
-CONV_VALUE_TYPE(int,signed char,row_major);
 
 
 #define DIA_DENSE_CONV(X,Y,Z) \
