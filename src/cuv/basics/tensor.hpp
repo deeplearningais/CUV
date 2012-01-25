@@ -1684,6 +1684,14 @@ namespace cuv
                     return *this;
                 }
                 /**
+                 * /always/ try to copy memory
+                 */
+                tensor_view& operator=(const tensor_view<V,M,L>& o){
+                    if(!copy_memory(*this, o, false))
+                        throw std::runtime_error("copying tensor to tensor_view did not succeed. Maybe a shape mismatch?");
+                    return *this;
+                }
+                /**
                  * assign from value (sets all elements equal to one scalar)
                  */
                 template<class _V>
@@ -1697,6 +1705,16 @@ namespace cuv
                  */
                 template<class OM>
                 tensor_view& operator=(const tensor<V,OM,L>& o){
+                    if(!copy_memory(*this, o, false))
+                        throw std::runtime_error("copying tensor to tensor_view did not succeed. Maybe a shape mismatch?");
+                    return *this;
+                }
+
+                /**
+                 * @overload for other memory space type
+                 */
+                template<class OM>
+                tensor_view& operator=(const tensor_view<V,OM,L>& o){
                     if(!copy_memory(*this, o, false))
                         throw std::runtime_error("copying tensor to tensor_view did not succeed. Maybe a shape mismatch?");
                     return *this;
