@@ -50,7 +50,7 @@
 #include <cuv/convolution_ops/convolution_ops.hpp>
 
 #define NVView3D(X)  \
-        (X.ptr(), X.shape(0)*X.shape(1), X.shape(2), X.shape(2),false)
+        (const_cast<float*>(X.ptr()), X.shape(0)*X.shape(1), X.shape(2), X.shape(2),false)
 
 namespace cuv{ namespace alex_conv{
 
@@ -63,23 +63,7 @@ template<class V,class M, class T>
         tensor<V,M,T>& src_view  = const_cast<tensor<V,M,T>&>(src);
         src_view.reshape(extents[s[0]][s[1]*s[2]]);
         dst.reshape(extents[s[1]*s[2]][s[0]]);
-        std::cout << "Transposing: "<<src_view.ndim()<<": "<<src_view.shape(0)<<" "<<src_view.shape(1)<<std::endl;
-        std::cout << "         to: "<<dst.ndim()<<": "<<dst.shape(0)<<" "<<dst.shape(1)<<std::endl;
-        if(IsSame<M,host_memory_space>::Result::value)
-            std::cout << "       (host)"<<std::endl;
-        else
-            std::cout << "       (dev)"<<std::endl;
-            
         cuv::transpose(dst,src_view);
-        std::cout << "src_pitch: "<< src.pitch()<<std::endl;
-        std::cout << "dst_pitch: "<< dst.pitch()<<std::endl;
-        for(unsigned int i=0;i<s[0];i++){
-            for(unsigned int j=0;j<s[1]*s[2];j++){
-                /*std::cout << dst(j,i)<< " "<<src_view(i,j)<<std::endl;*/
-                /*std::cout << "      "<< " "<<src(i,j/s[2],j%s[2])<<std::endl;*/
-                cuvAssert(dst(j,i) == src_view(i,j));
-            }
-        }
         src_view.reshape(s);
         dst.reshape(extents[s[1]][s[2]][s[0]]);
     }

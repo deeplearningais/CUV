@@ -87,9 +87,9 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 BOOST_AUTO_TEST_CASE( test_reorder_for_conv )
 {
     using namespace cuv::alex_conv;
-	unsigned int nImgChan = 23;      // must be divisible by nGroups
-	unsigned int nImgPix  = 54;
-	unsigned int nImg     = 42;
+	unsigned int nImgChan = 7;      // must be divisible by nGroups
+	unsigned int nImgPix  = 5;
+	unsigned int nImg     = 2;
 
     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nImg][nImgChan][nImgPix*nImgPix]);
 	tensor<float,dev_memory_space,row_major> src(cuv::extents[nImgChan][nImgPix*nImgPix][nImg]);
@@ -104,8 +104,8 @@ BOOST_AUTO_TEST_CASE( test_reorder_for_conv )
     sequence(inp_h);
     src = 0.f;
 
-    cuv::alex_conv::reorder_for_conv(src_h,inp_h);
-    cuv::alex_conv::reorder_for_conv(src,inp);
+    MEASURE_TIME(host_reorder,cuv::alex_conv::reorder_for_conv(src_h,inp_h), 2);
+    MEASURE_TIME(dev_reorder, cuv::alex_conv::reorder_for_conv(src,inp), 2);
     cuvAssert(inp.shape(0)==src.shape(2));
     cuvAssert(inp.shape(1)==src.shape(0));
     cuvAssert(inp.shape(2)==src.shape(1));
@@ -115,15 +115,26 @@ BOOST_AUTO_TEST_CASE( test_reorder_for_conv )
             for(unsigned int k=0;k<nImgPix*nImgPix;k++){
                 BOOST_CHECK_EQUAL(inp(i,j,k), src(j,k,i));
             }
-    cuv::alex_conv::reorder_from_conv(inp,src);
-    cuv::alex_conv::reorder_from_conv(inp_h,src_h);
-    MAT_CMP(inp,inp2,0.01f);
-    MAT_CMP(inp_h,inp2_h,0.01f);
+    MEASURE_TIME(host_reorder2,cuv::alex_conv::reorder_from_conv(inp2,src),2);
+    MEASURE_TIME(dev_reorder2,cuv::alex_conv::reorder_from_conv(inp2_h,src_h),2);
+    BOOST_CHECK_EQUAL(inp.ndim(),inp2.ndim());
+    BOOST_CHECK_EQUAL(inp.shape(0),inp2.shape(0));
+    BOOST_CHECK_EQUAL(inp.shape(1),inp2.shape(1));
+    BOOST_CHECK_EQUAL(inp.shape(2),inp2.shape(2));
+    BOOST_CHECK_EQUAL(inp_h.ndim(),inp2_h.ndim());
+    BOOST_CHECK_EQUAL(inp_h.shape(0),inp2_h.shape(0));
+    BOOST_CHECK_EQUAL(inp_h.shape(1),inp2_h.shape(1));
+    BOOST_CHECK_EQUAL(inp_h.shape(2),inp2_h.shape(2));
+    for(unsigned int i=0;i<nImg;i++)
+        for(unsigned int j=0;j<nImgChan;j++)
+            for(unsigned int k=0;k<nImgPix*nImgPix;k++){
+                BOOST_CHECK_EQUAL(inp(i,j,k), inp2(i,j,k));
+                BOOST_CHECK_EQUAL(inp_h(i,j,k), inp2_h(i,j,k));
+            }
 }
 
 BOOST_AUTO_TEST_CASE( test_conv2d )
 {
-    return;
     using namespace cuv::alex_conv;
 	unsigned int nImgChan = 8;      // must be divisible by nGroups
 	unsigned int nImgPix  = 176;
@@ -153,12 +164,6 @@ BOOST_AUTO_TEST_CASE( test_conv2d )
     //        unsigned int paddingStart, 
     //        unsigned int moduleStride,
     //        unsigned int nGroups){
-
-    {
-        tensor<float,dev_memory_space,row_major> src0(cuv::extents[nImg][nImgChan*nImgPix*nImgPix]);  // this is what we can get from preprocessing
-        tensor<float,dev_memory_space,row_major> src1(cuv::extents[nImgChan*nImgPix*nImgPix][nImg]);  // this is what we want in the end
-        MEASURE_TIME(trn_dev,  transpose(src1,src0), 10);
-    }
 
     MEASURE_TIME(conv_dev,         convolve2d(dst,src,flt, 0, 1, nGroups), 10);
     MEASURE_TIME(d_conv_dimg_dev,  d_conv2d_dimg(src,dst,flt, 0, 1, nGroups), 10);
