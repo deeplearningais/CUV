@@ -157,7 +157,7 @@ namespace nlmeans{
 
 		bool d3 = constsrc.ndim()==3;
 		unsigned int w = constsrc.shape()[d3?2:1], h=constsrc.shape()[d3?1:0], d=d3?constsrc.shape()[0]:1;
-		const tensor<float,dev_memory_space,row_major> src(indices[index_range(0,d)][index_range(0,h)][index_range(0,w)], constsrc);
+		const tensor_view<float,dev_memory_space,row_major> src(indices[index_range(0,d)][index_range(0,h)][index_range(0,w)], constsrc);
 
 		if(!equal_shape(dst,src)){
 			dst = cuv::tensor<T,dev_memory_space>(src.shape());
@@ -262,9 +262,9 @@ namespace nlmeans{
 			}
 			if(verbose)
 				pb.finish();
-			tensor<float,dev_memory_space> view_w(indices[0][index_range(0,h)][index_range(0,w)],weights);
+			tensor_view<float,dev_memory_space> view_w(indices[0][index_range(0,h)][index_range(0,w)],weights);
 			for(int l=0;l<d;l++){
-				tensor<float,dev_memory_space> view_dst(indices[l][index_range(0,h)][index_range(0,w)],dst);
+				tensor_view<float,dev_memory_space> view_dst(indices[l][index_range(0,h)][index_range(0,w)],dst);
 				view_dst/=view_w;
 			}
 		}

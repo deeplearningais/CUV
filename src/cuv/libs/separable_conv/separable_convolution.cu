@@ -218,8 +218,8 @@ namespace cuv{
 			if(src.ndim()==3){
 				const std::vector<typename src_type::size_type>& s = src.shape();
 				for(unsigned int i=0;i<s[0];i++){
-					src_type    sview(indices[i][index_range(0,s[1])][index_range(0,s[2])], src);
-					result_type dview(indices[i][index_range(0,s[1])][index_range(0,s[2])], dst);
+                    typename src_type::view_type    sview(indices[i][index_range(0,s[1])][index_range(0,s[2])], src);
+					typename result_type::view_type  dview(indices[i][index_range(0,s[1])][index_range(0,s[2])], dst);
 					convolve(dview,sview,filter_radius,filt,axis,param);
 				}
 				return;

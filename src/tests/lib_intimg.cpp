@@ -103,10 +103,10 @@ BOOST_AUTO_TEST_CASE( test_integral_image )
 
 	unsigned int w = mh.shape()[2];
 	unsigned int h = mh.shape()[1];
-	tensor<float,host_memory_space,row_major> view0h(indices[0][index_range(0,h)][index_range(0,w)],mh);
+	tensor_view<float,host_memory_space,row_major> view0h(indices[0][index_range(0,h)][index_range(0,w)],mh);
 	tensor<float,host_memory_space,row_major> intimg_h(extents[w][h]); // inverted
 
-	tensor<float,dev_memory_space,row_major> view0(indices[0][index_range(0,h)][index_range(0,w)],d_m);
+	tensor_view<float,dev_memory_space,row_major> view0(indices[0][index_range(0,h)][index_range(0,w)],d_m);
 	dev_t intimg_d(extents[w][h]); // inverted
 
 	integral_image(intimg_d ,view0 ); // warmup

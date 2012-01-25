@@ -816,6 +816,8 @@ namespace cuv
 
     template<class V, class M, class L>
         class tensor;
+    template<class V, class M, class L>
+        class tensor_view;
 
 
 
@@ -837,8 +839,9 @@ namespace cuv
             typedef          L memory_layout_type; ///< column/row major
 
             typedef tensor_info<M,L> info_type; ///< type of shape info struct
+            typedef tensor_view<V,M,L> view_type; ///< type of views on this tensor
 
-        private:
+        protected:
             /// information about shape, strides
             info_type  m_info;  
 
@@ -847,6 +850,10 @@ namespace cuv
             
             /// points to start of actually referenced memory (within m_memory)
             V* m_ptr;
+
+            /// tensor views are our friends
+            template <class _V, class _M, class _L>
+            friend class tensor_view;
 
             /** 
              * determine linear index in memory of an index array
@@ -1364,108 +1371,6 @@ namespace cuv
                         }
                 }
 
-            // ****************************************************************
-            //   Construct as View
-            // ****************************************************************
-            
-			/**
-			 * construct tensor as view of another (sub) tensor
-			 *
-			 * @warning if a dimension has size 1, the resulting tensor has fewer dimensions than the original one.
-			 *
-             * @warning most operations in CUV on tensors currently only work
-             *          if the subtensor is a connected area in memory.  Basically this
-             *          means that you can only slice in the first dimension which has
-             *          size>1.
-			 *
-			 * @param eg  the indices of the subtensor
-			 * @param o   the original tensor
-			 *
-			 * Example:
-			 * @code
-			 * tensor<float,host_memory_space> v(extents[5][10]);
-			 *
-			 * // these are equivalent:
-			 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range(0,10)]);
-			 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range()]);
-			 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range() < index(10)]);
-			 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index(0) < index_range() < index(10)]);
-			 *
-			 * // yields a 1D-tensor corresponding to the 2nd slice in the 1st dimension:
-			 * tensor<float,host_memory_space> w0(indices[1][index_range()]);
-			 * @endcode
-			 */
-            template<int D, int E>
-                explicit tensor(const tensor&o, const index_gen<D,E>& idx)
-                : m_memory(o.mem())
-                , m_ptr(const_cast<pointer_type>(o.ptr()))
-                {
-                    std::vector<int> shapes;
-                    std::vector<int> strides;
-                    shapes.reserve(D);
-                    strides.reserve(D);
-                    cuvAssert(o.ndim()==D);
-                    for(std::size_t i=0;i<D;i++){
-                        int start  = idx.ranges_[i].get_start(0);
-                        int finish = idx.ranges_[i].get_finish(o.shape(i));
-                        int stride = idx.ranges_[i].stride();
-                        if (start <0) start  += o.shape(i);
-                        if (finish<0) finish += o.shape(i);
-#ifndef NDEBUG
-                        cuvAssert(finish>start);
-#endif
-                        m_ptr += start*o.stride(i);
-                        if(finish-start==1){
-                            // skip dimension
-                        }else{
-                            shapes.push_back((finish-start)/stride);
-                            strides.push_back(o.stride(i)*stride);
-                        }
-                    }
-                    // store in m_info
-                    m_info.resize(shapes.size());
-                    std::copy(shapes.begin(),shapes.end(),m_info.host_shape[0].ptr);
-                    std::copy(strides.begin(),strides.end(),m_info.host_stride[0].ptr);
-                }
-            /**
-             * different order of arguments as above, all else being equal.
-             *
-             * @deprecated
-             * @param idx a set of index ranges into o
-             * @param o   other tensor
-             */
-            template<int D, int E>
-                explicit tensor( const index_gen<D,E>& idx, const tensor&o)
-                : m_memory(o.mem())
-                , m_ptr(const_cast<pointer_type>(o.ptr()))
-                {
-                    std::vector<int> shapes;
-                    std::vector<int> strides;
-                    shapes.reserve(D);
-                    strides.reserve(D);
-                    cuvAssert(o.ndim()==D);
-                    for(std::size_t i=0;i<D;i++){
-                        int start  = idx.ranges_[i].get_start(0);
-                        int finish = idx.ranges_[i].get_finish(o.shape(i));
-                        int stride = idx.ranges_[i].stride();
-                        if (start <0) start  += o.shape(i);
-                        if (finish<0) finish += o.shape(i);
-#ifndef NDEBUG
-                        cuvAssert(finish>start);
-#endif
-                        m_ptr += start*o.stride(i);
-                        if(finish-start==1){
-                            // skip dimension
-                        }else{
-                            shapes.push_back((finish-start)/stride);
-                            strides.push_back(o.stride(i)*stride);
-                        }
-                    }
-                    // store in m_info
-                    m_info.resize(shapes.size());
-                    std::copy(shapes.begin(),shapes.end(),m_info.host_shape[0].ptr);
-                    std::copy(strides.begin(),strides.end(),m_info.host_stride[0].ptr);
-                }
 
             // ****************************************************************
             //   assignment operators (try not to reallocate if shapes match)
@@ -1474,22 +1379,14 @@ namespace cuv
             /**
              * assign from tensor of same type 
              *
-             * If shapes are equal, it copies memory, otherwise this is a O(1)
-             * operation.  The reason for copying is that we want to allow this:
-             *
-             * @code
-             * tensor<float,host_memory_space> v(extents[5]);
-             * tensor<float,host_memory_space> w(extents[3]);
-             * v[indices[index_range(0,3)]] = w;
-             * @endcode
-             *
-             * which should change the first part of v.
+             * always an O(1) operation.
              */
             tensor& operator=(const tensor& o){
                 if(this==&o) return *this; // check for self-assignment
-                if(copy_memory(*this,o,false))
-                    return *this;
-
+                /*
+                 *if(copy_memory(*this,o,false))
+                 *    return *this;
+                 */
                 m_memory = o.mem();
                 m_ptr = const_cast<pointer_type>(o.ptr());
                 m_info = o.info();
@@ -1564,10 +1461,10 @@ namespace cuv
              * this works in O(1).
              */
             template<int D, int E>
-                tensor
+                tensor_view<V,M,L>
                 operator[](const index_gen<D,E>& idx)const
                 {
-                    tensor t;
+                    tensor_view<V,M,L> t;
                     const tensor& o = *this;
                     t.m_memory = o.mem();
                     t.m_ptr    = const_cast<pointer_type>(o.ptr());
@@ -1660,7 +1557,142 @@ namespace cuv
                 m_ptr = NULL;
                 m_info.host_shape.set_size(0);
             }
+
     };
+
+    /**
+     * primarily used as result of tensor::operator[]
+     */
+    template<class V, class M, class L=row_major>
+        class tensor_view
+        : public tensor<V,M,L>
+        {
+            private:
+                typedef tensor<V,M,L> super;
+                using super::m_memory;
+                using super::m_ptr;
+                using super::m_info;
+            public:
+                /** default constructor does nothing */
+                tensor_view(){}
+
+                /**
+                 * /always/ try to copy memory
+                 */
+                tensor_view& operator=(const tensor<V,M,L>& o){
+                    if(!copy_memory(*this, o, false))
+                        throw std::runtime_error("copying tensor to tensor_view did not succeed. Maybe a shape mismatch?");
+                    return *this;
+                }
+                /**
+                 * @overload for other memory space type
+                 */
+                template<class OM>
+                tensor_view& operator=(const tensor<V,OM,L>& o){
+                    if(!copy_memory(*this, o, false))
+                        throw std::runtime_error("copying tensor to tensor_view did not succeed. Maybe a shape mismatch?");
+                    return *this;
+                }
+
+                /**
+                 * construct tensor_view
+                 *
+                 * @warning if a dimension has size 1, the resulting tensor has fewer dimensions than the original one.
+                 *
+                 * @warning most operations in CUV on tensors currently only work
+                 *          if the subtensor is a connected area in memory.  Basically this
+                 *          means that you can only slice in the first dimension which has
+                 *          size>1.
+                 *
+                 * @param eg  the indices of the subtensor
+                 * @param o   the original tensor
+                 *
+                 * Example:
+                 * @code
+                 * tensor<float,host_memory_space> v(extents[5][10]);
+                 *
+                 * // these are equivalent:
+                 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range(0,10)]);
+                 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range()]);
+                 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range() < index(10)]);
+                 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index(0) < index_range() < index(10)]);
+                 *
+                 * // yields a 1D-tensor corresponding to the 2nd slice in the 1st dimension:
+                 * tensor<float,host_memory_space> w0(indices[1][index_range()]);
+                 * @endcode
+                 */
+                template<int D, int E>
+                    explicit tensor_view(const tensor<V,M,L>&o, const index_gen<D,E>& idx)
+                    {
+                        m_memory = o.mem();
+                        m_ptr    = const_cast<V*>(o.ptr());
+                        std::vector<int> shapes;
+                        std::vector<int> strides;
+                        shapes.reserve(D);
+                        strides.reserve(D);
+                        cuvAssert(o.ndim()==D);
+                        for(std::size_t i=0;i<D;i++){
+                            int start  = idx.ranges_[i].get_start(0);
+                            int finish = idx.ranges_[i].get_finish(o.shape(i));
+                            int stride = idx.ranges_[i].stride();
+                            if (start <0) start  += o.shape(i);
+                            if (finish<0) finish += o.shape(i);
+#ifndef NDEBUG
+                            cuvAssert(finish>start);
+#endif
+                            m_ptr += start*o.stride(i);
+                            if(finish-start==1){
+                                // skip dimension
+                            }else{
+                                shapes.push_back((finish-start)/stride);
+                                strides.push_back(o.stride(i)*stride);
+                            }
+                        }
+                        // store in m_info
+                        m_info.resize(shapes.size());
+                        std::copy(shapes.begin(),shapes.end(),m_info.host_shape[0].ptr);
+                        std::copy(strides.begin(),strides.end(),m_info.host_stride[0].ptr);
+                    }
+                /**
+                 * different order of arguments as above, all else being equal.
+                 *
+                 * @deprecated
+                 * @param idx a set of index ranges into o
+                 * @param o   other tensor
+                 */
+                template<int D, int E>
+                    explicit tensor_view( const index_gen<D,E>& idx, const tensor<V,M,L>&o)
+                    {
+                        m_memory = o.mem();
+                        m_ptr    = const_cast<V*>(o.ptr());
+                        std::vector<int> shapes;
+                        std::vector<int> strides;
+                        shapes.reserve(D);
+                        strides.reserve(D);
+                        cuvAssert(o.ndim()==D);
+                        for(std::size_t i=0;i<D;i++){
+                            int start  = idx.ranges_[i].get_start(0);
+                            int finish = idx.ranges_[i].get_finish(o.shape(i));
+                            int stride = idx.ranges_[i].stride();
+                            if (start <0) start  += o.shape(i);
+                            if (finish<0) finish += o.shape(i);
+#ifndef NDEBUG
+                            cuvAssert(finish>start);
+#endif
+                            m_ptr += start*o.stride(i);
+                            if(finish-start==1){
+                                // skip dimension
+                            }else{
+                                shapes.push_back((finish-start)/stride);
+                                strides.push_back(o.stride(i)*stride);
+                            }
+                        }
+                        // store in m_info
+                        m_info.resize(shapes.size());
+                        std::copy(shapes.begin(),shapes.end(),m_info.host_shape[0].ptr);
+                        std::copy(strides.begin(),strides.end(),m_info.host_stride[0].ptr);
+                    }
+        };
 
     //namespace detail{
         /// tries to copy memory, succeeds if shapes match AND both tensors are c_contiguous of 2dcopyable.

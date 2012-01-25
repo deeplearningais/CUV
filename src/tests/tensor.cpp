@@ -230,7 +230,7 @@ void test_lowdim_views(){
 	// 2D View on 3D tensor
 	// ***************************************
 	for(int k=0;k<d;++k){
-		tensor<V,M,row_major> view(indices[k][index_range(0,h)][index_range(0,w)], t2d);
+		tensor_view<V,M,row_major> view(indices[k][index_range(0,h)][index_range(0,w)], t2d);
 		BOOST_CHECK_EQUAL(  view.ndim() , 2);
 		BOOST_CHECK_EQUAL(  view.shape(0) , h);
 		BOOST_CHECK_EQUAL(  view.shape(1) , w);
@@ -239,7 +239,7 @@ void test_lowdim_views(){
 				BOOST_CHECK_EQUAL( (V) view(i,j) , (V) t2d(k,i,j) );
 
 		// alternative spec
-		tensor<V,M,row_major> view_(indices[k][index_range()][index_range()<cuv::index(w)], t2d);
+		tensor_view<V,M,row_major> view_(indices[k][index_range()][index_range()<cuv::index(w)], t2d);
 		BOOST_CHECK_EQUAL(  view_.ndim() , 2);
 		BOOST_CHECK_EQUAL(  view_.shape(0) , h);
 		BOOST_CHECK_EQUAL(  view_.shape(1) , w);
@@ -253,7 +253,7 @@ void test_lowdim_views(){
 	// ***************************************
 	for(int k=0;k<d;++k){
 		for (int i = 0; i < h; ++i) {
-		       tensor<V,M,row_major> view(indices[k][i][index_range(0,w)], t2d);
+		       tensor_view<V,M,row_major> view(indices[k][i][index_range(0,w)], t2d);
 		       for(int j=0;j<w; j++)
 			      BOOST_REQUIRE_EQUAL( (V) view(j) , (V) t2d(k,i,j) );
 		}

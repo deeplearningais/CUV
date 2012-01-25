@@ -71,7 +71,7 @@ template<class V,class M, class T>
     void reorder_from_conv(tensor<V,M,T>& dst, const tensor<V,M,T>& src){
         cuvAssert(src.ndim()==3);
         cuvAssert(dst.ndim()==3);
-        tensor<V,M,T> src_view(indices[index_range()][index_range()][index_range()], src);
+        tensor_view<V,M,T> src_view(indices[index_range()][index_range()][index_range()], src);
         src_view.reshape(extents[src.shape(0)*src.shape(1)][src.shape(2)]);
         dst.reshape(extents[dst.shape(0)][dst.shape(1)*dst.shape(2)]);
         cuv::transpose(dst,src_view);

@@ -184,7 +184,7 @@ void softmax_derivative(int n_var, int n_val){
             cuv::libs::opt::softmax(Y_minus,X_,1);
             Y_plus.reshape(extents[X.size()]);
             Y_minus.reshape(extents[X.size()]);
-            tensor<float,M,L> finite_diff(indices[index_range(i,i+1)][index_range()], Jtilde);
+            tensor_view<float,M,L> finite_diff(indices[index_range(i,i+1)][index_range()], Jtilde);
             finite_diff = (Y_plus-Y_minus)/(2*eps);
     }
     tensor<float,M,L> D2(D.shape());
