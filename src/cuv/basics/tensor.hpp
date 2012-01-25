@@ -1020,6 +1020,24 @@ namespace cuv
                 return std::vector<size_type>(m_info.host_shape[0].ptr, m_info.host_shape[0].ptr+m_info.host_shape.size());
             }
 
+            /**
+             * return the effective shape of the tensor (as a vector for backward compatibility)
+             *
+             * the effective shape removes all degenerate dimensions (i.e. shape(i)==1).
+             */
+            std::vector<size_type> effective_shape()const{
+                std::vector<size_type> shape;
+                shape.reserve(ndim());
+                if(ndim()==0)
+                    return shape;
+                std::remove_copy_if(
+                        m_info.host_shape[0].ptr, 
+                        m_info.host_shape[0].ptr+m_info.host_shape.size(),
+                        std::back_inserter(shape),
+                        std::bind2nd(std::equal_to<size_type>(),1));
+                return shape;
+            }
+
             /// @return the tensor info struct (const)
             const info_type& info()const{return m_info;}
 
@@ -1768,7 +1786,7 @@ namespace cuv
             bool copy_memory(tensor<V,M0,L0>&dst, const tensor<V,M1,L1>&src, bool force_dst_contiguous){
                 typedef typename tensor<V,M0,L0>::size_type size_type;
                 allocator<V, size_type, M0> a;
-                if(dst.shape() == src.shape() && dst.ptr()){
+                if(dst.effective_shape() == src.effective_shape() && dst.ptr()){
                     if(dst.is_c_contiguous() && src.is_c_contiguous()){
                         // can copy w/o bothering about m_memory
                         a.copy(dst.ptr(), src.ptr(), src.size(), M1());
@@ -1870,7 +1888,7 @@ namespace cuv
          */
     template<class V, class V2, class M, class M2, class L>
         bool equal_shape(const tensor<V,M,L>& a, const tensor<V2,M2,L>& b){
-            return a.shape()==b.shape();
+            return a.effective_shape()==b.effective_shape();
         }
     
     /**
