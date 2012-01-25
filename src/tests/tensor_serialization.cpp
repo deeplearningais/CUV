@@ -36,7 +36,6 @@
 #include <cuv/tools/cuv_general.hpp>
 #include <cuv/basics/tensor.hpp>
 #include <cuv/basics/io.hpp>
-#include <cuv/basics/memory2d.hpp>
 using namespace cuv;
 
 struct MyConfig {
