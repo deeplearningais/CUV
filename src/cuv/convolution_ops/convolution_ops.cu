@@ -78,14 +78,111 @@ template<class V,class M, class T>
         dst.reshape(extents[src.shape(2)][src.shape(0)][src.shape(1)]);
     }
 
-template<>
+/*
+ * hidActs:     (numFilters, numModules, numImages)
+ * filters:     (numFilterColors, filterPixels, numFilters)               if conv
+ *              (numModules, numFilterColors, filterPixels, numFilters)   otherwise
+ * targets:     (numImageColors, imgPixels, numImages)
+ */
+void cpuImgActs(const float* hidActs, const float* filters, float* targets,
+               int numModulesX,  int numImages,  int numFilters,
+               int filterSize,  int imgSize,  int moduleStart,
+               int moduleStride, int numImgColors, int numGroups, bool conv) {
+    int filterPixles = filterSize * filterSize;
+    int imgPixels = imgSize * imgSize;
+    int numModules = numModulesX * numModulesX;
+    int numFiltersPerGroup = numFilters / numGroups;
+    int numFilterColors = numImgColors / numGroups;
+    for (int py = 0; py < imgSize; py++) {
+        for (int px = 0; px < imgSize; px++) {
+            for (int my = 0; my < numModulesX; my++) {
+                int moduleTop = moduleStart + my * moduleStride;
+                int moduleBottom = moduleTop + filterSize;
+                for (int mx = 0; mx < numModulesX; mx++) {
+                    int m = my * numModulesX + mx;
+                    int moduleLeft = moduleStart + mx * moduleStride;
+                    int moduleRight = moduleLeft + filterSize;
+                    int pixInModuleX = px - moduleLeft;
+                    int pixInModuleY = py - moduleTop;
+                    int pixInModule = pixInModuleY * filterSize + pixInModuleX;
+                    if (py >= moduleTop && py < moduleBottom && px >= moduleLeft && px < moduleRight) {
+                        for (int f = 0; f < numFilters; f++) {
+                            int g = f / numFiltersPerGroup; // filter's group idx
+                            for (int i = 0; i < numImages; i++) {
+                                for (int c = 0; c < numFilterColors; c++) {
+                                    float w = filters[(conv ? 0 : m * numFilterColors * filterPixles * numFilters) 
+                                                      + c * numFilters * filterPixles + pixInModule * numFilters + f];
+                                    float h = hidActs[m * numImages + f * numModules * numImages + i];
+                                    targets[(c + g * numFilterColors) * imgPixels * numImages + i] += w * h;
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+            targets += numImages;
+        }
+    }
+}
+
+/*
+ * images:      (numImgColors, imgPixels, numImages) with stride given
+ * filters:     (numFilterColors, filterPixels, numFilters)             if conv
+ *              (numModules, numFilterColors, filterPixels, numFilters) otherwise
+ *
+ * targets:     (numFilters, numModules, numImages)
+ */
+void cpuFilterActs(const float* images, const float* filters, float* targets,
+                       int numImages, int numFilters,
+                       int imgSize, int filterSize, int paddingStart,
+                       int moduleStride, int numModulesX,
+                       int numImgColors, int numGroups, bool conv, float scaleTargets, float scaleOutput) {
+    int filterPixels = filterSize * filterSize;
+    int numFilterColors = numImgColors / numGroups;
+    int numModules = numModulesX * numModulesX;
+    int imgPixels = imgSize * imgSize;
+    int groupColorStride = numGroups == 1 ? 0 : (numImgColors - numFilterColors) / (numGroups - 1);
+    int filtersPerGroup = numFilters / numGroups;
+    for (int my = 0; my < numModulesX; my++) {
+        int mStartY = paddingStart + my * moduleStride;
+        for (int mx = 0; mx < numModulesX; mx++) {
+            int mStartX = paddingStart + mx * moduleStride;
+            int m = (my * numModulesX + mx);
+            for (int f = 0; f < numFilters; f++) {
+                int g = f / filtersPerGroup; // filter group
+                for (int i = 0; i < numImages; i++) {
+                    float prod = 0;
+                    for (int c = 0; c < numFilterColors; c++) {
+                        for (int y = 0; y < filterSize; y++) {
+                            for (int x = 0; x < filterSize; x++) {
+                                float imgVal = mStartY + y >= 0 && mStartY + y < imgSize && mStartX + x >= 0 && mStartX + x < imgSize
+                                            ? images[(c + g * groupColorStride) * imgPixels * numImages + i + ((mStartY+y) * imgSize + mStartX+x) * numImages]
+                                            : 0;
+                                float fVal = filters[c * filterPixels * numFilters + f + (y * filterSize + x) * numFilters
+                                                     + (conv ? 0 : m * numFilters * filterPixels * numFilterColors)];
+                                prod += fVal * imgVal;
+                            }
+                        }
+                    }
+
+                    targets[f * numModules * numImages + m * numImages + i] = scaleTargets*targets[f * numModules * numImages + m * numImages + i] + scaleOutput* prod;
+                }
+            }
+        }
+    }
+}
+
+template<class V, class M, class T>
     void 
-    convolve2d(tensor<float,dev_memory_space>& dst, 
-            const tensor<float,dev_memory_space>& img, 
-            const tensor<float,dev_memory_space>& filter,
+    convolve2d(tensor<V,M, T>& dst, 
+            const tensor<V,M, T>& img, 
+            const tensor<V,M, T>& filter,
             unsigned int paddingStart, 
             unsigned int moduleStride,
-            unsigned int nGroups){
+            unsigned int nGroups,
+            float factNew,
+            float factOld){
         // check compatibility before converting to NVMatrix format
         /*cuvAssert(dst.ndim()==3);*/
         cuvAssert(img.ndim()==3);
@@ -115,22 +212,37 @@ template<>
             // since the non-sparse conv only allows 
             int* colorIndices = new int[nGroups*nFiltChan]; 
             for(unsigned int i=0;i<nGroups*nFiltChan;i++) colorIndices[i]=i;
-            convFilterActsSparse(nv_img, nv_filter, nv_dst, colorIndices, nModulesX, paddingStart, moduleStride, nImgChan, nFiltChan, nGroups);
+            convFilterActsSparse(nv_img, nv_filter, nv_dst, colorIndices, nModulesX, paddingStart, moduleStride, nImgChan, nFiltChan, nGroups,factOld,factNew);
         }{
-            convFilterActs(nv_img, nv_filter, nv_dst, nModulesX, paddingStart, moduleStride, nImgChan, nGroups);
+            if(IsSame<M,dev_memory_space>::Result::value){
+                convFilterActs(nv_img, nv_filter, nv_dst, nModulesX, paddingStart, moduleStride, nImgChan, nGroups, factOld,factNew);
+            }else{
+                unsigned int imgX = sqrt(nImgPix);
+                cuvAssert(imgX*imgX == nImgPix);
+                unsigned int filtX  = sqrt(nFiltPix);
+                cuvAssert(filtX*filtX == nFiltPix);
+
+                cpuFilterActs(img.ptr(), filter.ptr(), dst.ptr(), 
+                        nImg, nFilt, 
+                        imgX, filtX, paddingStart,
+                        moduleStride, nModulesX, 
+                        nImgChan, nGroups, true, factOld,factNew);
+            }
         }
     }
-template<>
-	void d_conv2d_dimg(tensor<float,dev_memory_space,row_major>& dst,
-			  const tensor<float,dev_memory_space,row_major>&   delta,
-			  const tensor<float,dev_memory_space,row_major>&   filter,
-              unsigned int paddingStart, unsigned int moduleStride, unsigned int nGroups){
+template<class V, class M, class L>
+	void d_conv2d_dimg(tensor<V,M,L>& dst,
+			  const tensor<V,M,L>&   delta,
+			  const tensor<V,M,L>&   filter,
+              unsigned int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld){
 
 
         cuvAssert(delta.ndim()==3);
         unsigned int nFilt    = delta.shape(0);
         unsigned int nModules = delta.shape(1); 
         unsigned int nImg     = delta.shape(2);
+        unsigned int nModulesX = sqrt(nModules);
+        cuvAssert(nModules==nModulesX*nModulesX);
 
         cuvAssert(filter.ndim()==3);
         unsigned int nFiltChan = filter.shape(0);
@@ -146,22 +258,39 @@ template<>
         unsigned int imgSize = sqrt(nImgPix);
         cuvAssert(nImgPix == imgSize*imgSize);
 
-        /*void convImgActs(NVMatrix& hidActs, NVMatrix& filters, NVMatrix& targets,*/
-        /*    int imgSize, int paddingStart, int moduleStride, int numImgColors, int numGroups);*/
 
-        NVMatrix nv_dst    NVView3D(dst);
-        NVMatrix nv_delta  NVView3D(delta);
-        NVMatrix nv_filter NVView3D(filter);
+        if(IsSame<M,dev_memory_space>::Result::value){
+            NVMatrix nv_dst    NVView3D(dst);
+            NVMatrix nv_delta  NVView3D(delta);
+            NVMatrix nv_filter NVView3D(filter);
 
-        convImgActs(nv_delta, nv_filter, nv_dst,
-                imgSize, paddingStart, moduleStride, nImgChan, nGroups);
+            /*void convImgActs(NVMatrix& hidActs, NVMatrix& filters, NVMatrix& targets,*/
+            /*    int imgSize, int paddingStart, int moduleStride, int numImgColors, int numGroups);*/
+            convImgActs(nv_delta, nv_filter, nv_dst,
+                    imgSize, paddingStart, moduleStride, nImgChan, nGroups,factOld,factNew);
+        }else{
+            /*void cpuImgActs(float* hidActs, float* filters, float* targets,*/
+                           /*int numModulesX,  int numImages,  int numFilters,*/
+                           /*int filterSize,  int imgSize,  int moduleStart,*/
+                           /*int moduleStride, int numImgColors, int numGroups, bool conv) {*/
+            if(factOld == 0.f)
+                dst = 0.f;
+            cpuImgActs(delta.ptr(), filter.ptr(), dst.ptr(),
+                    nModulesX, nImg, nFilt, 
+                    sqrt(nFiltPix), imgSize, paddingStart,
+                    moduleStride, nImgChan, nGroups,true);
+        }
     }
-template<>
-	void d_conv2d_dfilt(tensor<float,dev_memory_space,row_major>& dst_,
-			  const tensor<float,dev_memory_space,row_major>&   delta,
-			  const tensor<float,dev_memory_space,row_major>&   input,
+template<class V, class M, class L>
+	void d_conv2d_dfilt(tensor<V,M,L>& dst_,
+			  const tensor<V,M,L>&   delta,
+			  const tensor<V,M,L>&   input,
               unsigned int paddingStart,
-            unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum){
+            unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld){
+        if(IsSame<M,host_memory_space>::Result::value){
+            std::cout << "warning: host version of d_conv2d_dfilt not implemented"<<std::endl;
+            return;
+        }
 
         cuvAssert(dst_.ndim()==3);
         unsigned int nFiltChan = dst_.shape(0);
@@ -182,7 +311,7 @@ template<>
         unsigned int nModulesX = sqrt(nModules);
         cuvAssert(nModules == nModulesX * nModulesX);
 
-        cuv::tensor<float,dev_memory_space> dst(extents[nModules/partialSum][nFiltChan][nFiltPix][nFilt]);
+        cuv::tensor<float,M> dst(extents[nModules/partialSum][nFiltChan*nFiltPix][nFilt]); // make 3D for NVView3D
 
         cuvAssert(input.ndim()==3);
         unsigned int nImgChan = input.shape(0);
@@ -201,7 +330,7 @@ template<>
         NVMatrix nv_input NVView3D(input);
         convWeightActs(nv_input, nv_delta, nv_dst,
                 nModulesX, filtSize, paddingStart,
-                moduleStride, nImgChan, nGroups, partialSum);
+                moduleStride, nImgChan, nGroups, partialSum,factOld,factNew);
 
         dst.reshape(extents[nModules/partialSum][nFiltChan*nFiltPix*nFilt]);
         dst_.reshape(extents[nFiltChan*nFiltPix*nFilt]);
@@ -210,6 +339,11 @@ template<>
     }
 
 
+template<>
+    void local_pool(tensor<float,host_memory_space>& target,
+            const tensor<float,host_memory_space>& images,
+            int subsX, int startX, int strideX, int outputsX, pool_type pooler){
+    }
 template<>
     void local_pool(tensor<float,dev_memory_space>& target,
             const tensor<float,dev_memory_space>& images,
@@ -245,14 +379,24 @@ template<>
                 break;
             case PT_AVG:
                 convLocalPool(nv_images, nv_target, nFilt,
-                        subsX, startX, strideX, outputsX, AvgPooler(poolSize));
+                        subsX, startX, strideX, outputsX, AvgPooler(poolSize*poolSize));
                 break;
         }
     }
 template<>
+    void local_max_pool_grad(tensor<float,host_memory_space>& target, const tensor<float,host_memory_space>& images, const tensor<float,host_memory_space>& maxGrads,
+            const tensor<float,host_memory_space>& maxActs, int subsX, int startX, int strideX, float factNew,float factOld){
+    }
+template<>
     void local_max_pool_grad(tensor<float,dev_memory_space>& target, const tensor<float,dev_memory_space>& images, const tensor<float,dev_memory_space>& maxGrads,
-            const tensor<float,dev_memory_space>& maxActs, int subsX, int startX, int strideX){
+            const tensor<float,dev_memory_space>& maxActs, int subsX, int startX, int strideX, float factNew,float factOld){
 
+/*
+ * imgs:        (numFilters, imgPixels, numImages)
+ * maxGrads:    (numFilters, numOutputs, numImages)
+ * rMaxActs:    (numFilters, numOutputs, numImages)
+ * target:      (numFilters, imgPixels, numImages)
+ */
 
         cuvAssert(target.ndim()==3);
         unsigned int nImgChan  = target.shape(0);
@@ -261,8 +405,18 @@ template<>
 
         cuvAssert(images.ndim()==3);
         cuvAssert(nImgChan == images.shape(0));
-        unsigned int nOutPix = images.shape(1);
+        cuvAssert(nImgPix  == images.shape(1));
         cuvAssert(nImg     == images.shape(2));
+
+        cuvAssert(maxGrads.ndim()==3);
+        cuvAssert(nImgChan == maxGrads.shape(0));
+        unsigned int nOutPix = maxGrads.shape(1);
+        cuvAssert(nImg     == maxGrads.shape(2));
+
+        cuvAssert(maxActs.ndim()==3);
+        cuvAssert(nImgChan == maxActs.shape(0));
+        cuvAssert(nOutPix  == maxGrads.shape(1));
+        cuvAssert(nImg     == maxActs.shape(2));
 
         unsigned int outputsX = sqrt(nOutPix);
         cuvAssert(outputsX*outputsX==nOutPix);
@@ -274,9 +428,14 @@ template<>
         
 /*void convLocalMaxUndo(NVMatrix& images, NVMatrix& maxGrads, NVMatrix& maxActs, NVMatrix& target,*/
 /*                      int subsX, int startX, int strideX, int outputsX);*/
-        convLocalMaxUndo(nv_images,nv_maxGrads, nv_maxActs, nv_target, subsX,startX,strideX,outputsX);
+        convLocalMaxUndo(nv_images,nv_maxGrads, nv_maxActs, nv_target, 
+                subsX,startX,strideX,outputsX,factOld,factNew);
     }
 
+template<>
+    void local_avg_pool_grad(tensor<float,host_memory_space>& target, const tensor<float,host_memory_space>& avgGrads,
+            int subsX, int startX, int strideX){
+    }
 template<>
     void local_avg_pool_grad(tensor<float,dev_memory_space>& target, const tensor<float,dev_memory_space>& avgGrads,
             int subsX, int startX, int strideX){
@@ -309,7 +468,10 @@ template<>
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
 template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
-template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&);
+template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
+template void convolve2d(TENS(V,M,T)& dst,CTENS(V,M,T)& img,CTENS(V,M,T)& filter, unsigned int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew, float factOld); \
+template void d_conv2d_dfilt(TENS(V,M,T)& dst_, CTENS(V,M,T)& delta, CTENS(V,M,T)&   input, unsigned int paddingStart, unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld);\
+template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, unsigned int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld);
 INST(float,host_memory_space,row_major);
 INST(float,dev_memory_space,row_major);
 }}
