@@ -133,6 +133,68 @@ BOOST_AUTO_TEST_CASE( test_reorder_for_conv )
             }
 }
 
+BOOST_AUTO_TEST_CASE( test_conv2d_hostdev )
+{
+    using namespace cuv::alex_conv;
+	unsigned int nImgChan = 1;      // must be divisible by nGroups
+	unsigned int nImgPix  = 16;
+	unsigned int nImg     = 1;
+    unsigned int nGroups  = 1;      // must be divisible by 2 ??
+   
+	unsigned int nFiltChan = nImgChan/nGroups;
+	unsigned int nFiltPix  = 3;
+	unsigned int nFilt     = 16; 
+
+    unsigned int nResPix   = nImgPix+1-nFiltPix;
+
+
+    tensor<float,dev_memory_space,row_major> inp(cuv::extents[nImg][nImgChan][nImgPix*nImgPix]);
+	tensor<float,dev_memory_space,row_major> src(cuv::extents[nImgChan][nImgPix*nImgPix][nImg]);
+	tensor<float,dev_memory_space,row_major> dst(cuv::extents[nFilt][nResPix*nResPix][nImg]);
+	tensor<float,dev_memory_space,row_major> flt(cuv::extents[nFiltChan][nFiltPix*nFiltPix][nFilt]);
+    cuv::alex_conv::reorder_for_conv(src,inp);
+
+    for(unsigned int i=0;i<inp.size();i++) inp[i] = -0.1 + drand48();
+    for(unsigned int i=0;i<flt.size();i++) flt[i] = -0.1 + drand48();
+    dst = 0.f;
+
+	tensor<float,host_memory_space,row_major> hsrc(cuv::extents[nImgChan][nImgPix*nImgPix][nImg]);
+	tensor<float,host_memory_space,row_major> hdst(cuv::extents[nFilt][nResPix*nResPix][nImg]);
+	tensor<float,host_memory_space,row_major> hflt(cuv::extents[nFiltChan][nFiltPix*nFiltPix][nFilt]);
+    hsrc=src;
+    hdst=dst;
+    hflt=flt;
+
+    MEASURE_TIME(conv_dev,         convolve2d(dst,src,flt, 0, 1, nGroups), 10);
+    MEASURE_TIME(conv_hst,         convolve2d(hdst,hsrc,hflt, 0, 1, nGroups), 10);
+
+    for(unsigned int i=0;i<hdst.shape(0);i++)
+        for (unsigned int j = 0; j < hdst.shape(1); ++j)
+            for (unsigned int k = 0; k < hdst.shape(2); ++k)
+            {
+                BOOST_CHECK_CLOSE((float)dst(i,j,k),(float)hdst(i,j,k),0.1f);
+            }
+
+    // check derivative w.r.t. images
+    for(unsigned int i=0;i<hdst.size();i++) hdst[i] = -0.1 + drand48();
+    hdst = 0.f; hdst[0]=1.f;
+    dst = hdst; flt=2.f;
+    MEASURE_TIME(d_conv_dimg_dev,           d_conv2d_dimg(src,dst,flt, 0, 1, nGroups), 10);
+    MEASURE_TIME(d_conv_dimg_hst,  hsrc=0.f;d_conv2d_dimg(hsrc,hdst,hflt, 0, 1, nGroups), 10);
+
+    for(unsigned int i=0;i<src.shape(1);i++)
+        std::cout <<src[i]<<" ";
+    std::cout << "norm2 of gradient: "<<cuv::norm2(src)<<std::endl;
+
+    for(unsigned int i=0;i<hsrc.shape(0);i++)
+        for (unsigned int j = 0; j < hsrc.shape(1); ++j)
+            for (unsigned int k = 0; k < hsrc.shape(2); ++k)
+            {
+                BOOST_CHECK_CLOSE((float)src(i,j,k),(float)hsrc(i,j,k),0.01f);
+            }
+}
+
+
 BOOST_AUTO_TEST_CASE( test_conv2d )
 {
     using namespace cuv::alex_conv;
@@ -141,7 +203,6 @@ BOOST_AUTO_TEST_CASE( test_conv2d )
 	unsigned int nImg     = 16;
     unsigned int nGroups  = 1;      // must be divisible by 2 ??
    
-    // we must set nGroups>1, so each filter will only be applied to nImgChan/nGroups inputs
 	unsigned int nFiltChan = nImgChan/nGroups;
 	unsigned int nFiltPix  = 7;
 	unsigned int nFilt     = 32; 
