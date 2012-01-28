@@ -68,7 +68,7 @@ namespace cuv{ namespace libs{
 		 * @param dst         destination tensor of size \f$ n\times m \f$
 		 * @param softmax_act the value of \f$ S(\vec x) \f$ of size \f$ n\times m\f$
          * @param residual    the residual of size \f$ S(\vec x) \f$, also size \f$ n\times m\f$
-         * @param row_var if true, variables are assumed to be in the columns
+         * @param vardim      the dimension in which the variables are stored
 		 */
 		template<class V, class M, class L>
 		void softmax_derivative(cuv::tensor<V, M,L>& dst, const cuv::tensor<V, M,L>& softmax_act, const cuv::tensor<V,M,L>& residual, unsigned int vardim=1);
