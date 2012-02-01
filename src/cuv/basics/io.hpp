@@ -33,6 +33,8 @@
  * @date 2011-06-27
  */
 
+#ifndef __CUV_BASICS_IO_HPP__
+#define __CUV_BASICS_IO_HPP__
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/shared_ptr.hpp>
@@ -209,3 +211,4 @@ namespace boost
 		/** @} */
 	}
 }
+#endif /* __CUV_BASICS_IO_HPP__ */
