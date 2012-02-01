@@ -65,10 +65,10 @@ namespace cuv{
 		cuvSafeCall(cudaSetDevice(dev));
 		cudaDeviceProp prop;
 		cudaGetDeviceProperties(&prop, 0);
-		bool canHostmap = prop.canMapHostMemory;
-		if(canHostmap){
-			cuvSafeCall(cudaSetDeviceFlags(cudaDeviceMapHost));
-		}
+		/*bool canHostmap = prop.canMapHostMemory;*/
+		/*if(canHostmap){*/
+		/*    cuvSafeCall(cudaSetDeviceFlags(cudaDeviceMapHost));*/
+		/*}*/
 	}
 	void exitCUDA(){
 		cudaThreadExit();
