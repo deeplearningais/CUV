@@ -178,7 +178,10 @@ BOOST_AUTO_TEST_CASE( test_conv2d_hostdev )
     // check derivative w.r.t. images
     for(unsigned int i=0;i<hdst.size();i++) hdst[i] = -0.1 + drand48();
     hdst = 0.f; hdst[0]=1.f;
-    dst = hdst; flt=2.f;
+    dst = hdst; 
+    flt=2.f; hflt = flt;
+    src = 0.f;
+    hsrc = 0.f;
     MEASURE_TIME(d_conv_dimg_dev,           d_conv2d_dimg(src,dst,flt, 0, 1, nGroups), 10);
     MEASURE_TIME(d_conv_dimg_hst,  hsrc=0.f;d_conv2d_dimg(hsrc,hdst,hflt, 0, 1, nGroups), 10);
 
