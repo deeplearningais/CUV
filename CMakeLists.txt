@@ -37,6 +37,19 @@ IF(DOXYGEN_FOUND)
     ADD_CUSTOM_TARGET(doc DEPENDS ${CMAKE_BINARY_DIR}/docs/html/index.html ${CMAKE_BINARY_DIR}/docs/Doxyfile)
 ENDIF(DOXYGEN_FOUND)
 
+SET(AIS_BOOST_LOCATION "/usr/local/src/boost1.46-1.46.1" CACHE STRING "location of local boost installation")
+OPTION(USE_LOCAL_BOOST "Assume boost is placed in ${AIS_BOOST_LOCATION}" ON)
+IF(EXISTS "${AIS_BOOST_LOCATION}")
+    IF(USE_LOCAL_BOOST)
+        MESSAGE("Using local boost installation in ${AIS_BOOST_LOCATION}")
+        SET (BOOST_ROOT "${AIS_BOOST_LOCATION}")
+        SET (Boost_NO_SYSTEM_PATHS true)
+    ELSEIF(USE_LOCAL_BOOST)
+        MESSAGE("Using system-wide boost installation")
+    ENDIF(USE_LOCAL_BOOST)
+ENDIF(EXISTS "${AIS_BOOST_LOCATION}")
+
+
 ENABLE_TESTING()
 add_subdirectory(src)
 
