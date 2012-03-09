@@ -211,6 +211,7 @@ CONV_VALUE_TYPE(unsigned int,unsigned char,row_major);
 CONV_VALUE_TYPE(int,float,row_major);
 CONV_VALUE_TYPE(int,unsigned char,row_major);
 CONV_VALUE_TYPE(int,signed char,row_major);
+CONV_VALUE_TYPE(int,unsigned int,row_major);
 
 CONV_VALUE_TYPE(float,int,row_major);
 CONV_VALUE_TYPE(float,unsigned int,row_major);
