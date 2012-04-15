@@ -453,6 +453,21 @@ struct bf_logce_of_logistic:binary_functor<R,T,U>{ inline __device__  __host__  
     return  x*lae(0.f,-y)+(1.f-x)*lae(0.f,y);
 } };
 
+// BF_BERNOULLI_KL  computes Kullback-Leibler divergence of two bernoulli variables \f$x\log(x/y)+(1-x)\log\frac{1-x}{1-y}\f$
+template<class R, class T, class U>
+struct bf_bernoulli_kl:binary_functor<R,T,U>{ inline __device__  __host__       R operator()(const T& x_, const T& y_)           const{ 
+    float y = max(0.0001f,(float)y_);
+    float x = max(0.0001f,(float)x_);
+    return  x*log(x/y)+(1.f-x)*log((1-x)/(1-y));
+} };
+// BF_DBERNOULLI_KL computes derivative of Kullback-Leibler divergence of two bernoulli variables w.r.t. y: \f$\frac{x-y}{y(y-1)}\f$
+template<class R, class T, class U>
+struct bf_dbernoulli_kl:binary_functor<R,T,U>{ inline __device__  __host__       R operator()(const T& x_, const T& y_)           const{ 
+    float y = max(0.0001f,(float)y_);
+    float x = max(0.0001f,(float)x_);
+    return  (x-y)/(y*y-y);
+} };
+
 
 /// calculates arg-max of two values and their indices
 template<class V, class I>

@@ -171,6 +171,8 @@ namespace cuv{
 	 *  @li SF_GT computes x > a
 	 *  @li SF_LEQ computes x <= a
 	 *  @li SF_GEQ computes x >= a
+     * 	@li SF_BERNOULLI_KL  computes Kullback-Leibler divergence of two bernoulli variables \f$x\log(a/x)+(1-a)\log\frac{1-a}{1-x}\f$
+     * 	@li SF_DBERNOULLI_KL computes derivative of Kullback-Leibler divergence of two bernoulli variables w.r.t. x: \f$\frac{a-x}{x(x-1)}\f$
 	 *
 	 * With zero OR two scalar parameters a and b:
 	 *
@@ -220,6 +222,8 @@ namespace cuv{
 		SF_GT,
 		SF_LEQ,
 		SF_GEQ,
+        SF_BERNOULLI_KL,
+        SF_DBERNOULLI_KL,
 
 		// with two params
 		SF_TANH,
@@ -420,6 +424,8 @@ namespace cuv{
 	 * 	@li BF_MAX computes x = max(x,y)
 	 * 	@li BF_LOGADDEXP computes x = log(exp(x)+exp(y))
      * 	@li BF_LOGCE_OF_LOGISTIC computes the negative log of cross-entropy \f$-x\log(y)-(1-x)\log(1-z)\f$ of logistic \f$z=1/(1+\exp(-y))\f$
+     * 	@li BF_BERNOULLI_KL  computes Kullback-Leibler divergence of two bernoulli variables \f$x\log(x/y)+(1-x)\log\frac{1-x}{1-y}\f$
+     * 	@li BF_DBERNOULLI_KL computes derivative of Kullback-Leibler divergence of two bernoulli variables w.r.t. y: \f$\frac{x-y}{y(y-1)}\f$
 	 *
 	 *  With one scalar parameter a:
 	 *  @li BF_AXPY computes x = a * x + y
@@ -446,6 +452,8 @@ namespace cuv{
 	  BF_NORM,
       BF_LOGADDEXP,
       BF_LOGCE_OF_LOGISTIC,
+      BF_BERNOULLI_KL,
+      BF_DBERNOULLI_KL,
 
 	  // w/ param
 	  BF_AXPY,

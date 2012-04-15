@@ -323,6 +323,8 @@ namespace detail{
 				case SF_GT:        launch_unary_kernel(dst,src,make_bind2nd(thrust::greater<V2>(),p),mask); break;
 				case SF_LEQ:       launch_unary_kernel(dst,src,make_bind2nd(thrust::less_equal<V2>(),p),mask); break;
 				case SF_GEQ:       launch_unary_kernel(dst,src,make_bind2nd(thrust::greater_equal<V2>(),p),mask); break;
+				case SF_BERNOULLI_KL:     launch_unary_kernel(dst,src,make_bind1st(bf_bernoulli_kl<V1,V2,S1>(),p),mask); break;
+				case SF_DBERNOULLI_KL:    launch_unary_kernel(dst,src,make_bind1st(bf_dbernoulli_kl<V1,V2,S1>(),p),mask); break;
 				default:
 						   cout << "No suitable one-parameter scalar functor was found." << endl;
 						   cuvAssert(false);
@@ -387,6 +389,8 @@ namespace detail{
 				case BF_NORM:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_norm<V1,V2,V3>()); break;
 				case BF_LOGADDEXP:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logaddexp<V1>()); break;
 				case BF_LOGCE_OF_LOGISTIC:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logce_of_logistic<V1,V2,V3>()); break;
+				case BF_BERNOULLI_KL:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_bernoulli_kl<V1,V2,V3>()); break;
+				case BF_DBERNOULLI_KL:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_dbernoulli_kl<V1,V2,V3>()); break;
 				default: cuvAssert(false);
 			}
 #else
