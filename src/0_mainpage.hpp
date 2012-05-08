@@ -33,7 +33,7 @@
 
 /**
  *
- * @defgroup basics  CUV datastructures
+ * @defgroup data_structures  CUV datastructures
  * @defgroup blas1   BLAS1 -- Vector/Vector operations
  * @defgroup blas2   BLAS2 -- Matrix/Vector operations
  * @defgroup blas3   BLAS3 -- Matrix/Matrix operations
@@ -45,7 +45,7 @@
  * @defgroup libs    special purpose functions
  *
  * @defgroup tags CUV tags
- * @ingroup basics
+ * @ingroup data_structures
  *
  * @mainpage
  *

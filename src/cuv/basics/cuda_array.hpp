@@ -30,7 +30,7 @@
 /** 
  * @file cuda_array.hpp
  * @brief wrapper around cuda_array
- * @ingroup basics
+ * @ingroup data_structures
  * @author Hannes Schulz
  * @date 2010-10-22
  *

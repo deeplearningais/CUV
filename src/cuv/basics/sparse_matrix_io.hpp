@@ -34,7 +34,7 @@
 /** 
  * @file sparse_matrix_io.hpp
  * @brief serialization of vectors and sparse matrices on host
- * @ingroup basics
+ * @ingroup data_structures
  * @author Hannes Schulz
  * @date 2010-03-21
  */

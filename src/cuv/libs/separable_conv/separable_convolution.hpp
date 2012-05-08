@@ -15,12 +15,27 @@ namespace cuv{
 		 * @addtogroup sep_conv
 		 * @{
 		 */
+
+        /**
+         * identifiers for different types of separable filters
+         */
 		enum separable_filter{
-			SP_GAUSS,
-			SP_CENTERED_DERIVATIVE,
-			SP_BOX,
-			SP_ORIENTATION_AND_MAGNITUDE,
+			SP_GAUSS,  ///< gaussian filter
+			SP_CENTERED_DERIVATIVE, ///< centered derivative (-1,0,1)
+			SP_BOX, ///< box filter
+			SP_ORIENTATION_AND_MAGNITUDE, ///< orientation+magnitude (for HOG, primarily)
 		};
+
+        /**
+         * separable convolution
+         *
+         * @param dst result matrix
+         * @param src source (image)
+         * @param radius filter radius (filter size is 2r+1 for radius r)
+         * @param filt type of separable filter
+         * @param axis the image dimension to apply this filter on
+         * @param param optional filter parameter
+         */
 		template<class DstV, class SrcV, class M>
 		void
 		convolve(  tensor<DstV,M,row_major>& dst,
@@ -30,6 +45,18 @@ namespace cuv{
 			   const float& param=0.
 		       	);
 
+        /**
+         * separable convolution
+         *
+         * @overload for interleaved images
+         *
+         * @param dst result image
+         * @param src source image
+         * @param radius filter radius (filter size is 2r+1 for radius r)
+         * @param filt type of separable filter
+         * @param axis the image dimension to apply this filter on
+         * @param param optional filter parameter
+         */
 		template<int Channels, class DstV, class SrcV, class M>
 		void
 		convolve(        interleaved_image<Channels,DstV,M>& dst,

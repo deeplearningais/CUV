@@ -34,7 +34,7 @@
 /** 
  * @file dia_matrix.hpp
  * @brief base class for sparse matrices in DIA format
- * @ingroup basics
+ * @ingroup data_structures
  * @author Hannes Schulz
  * @date 2010-03-21
  */
@@ -52,7 +52,7 @@
 namespace cuv{
 	/** 
 	 * @brief Class for diagonal matrices
-     * @ingroup basics
+     * @ingroup data_structures
 	 */
 	template<class __value_type, class __memory_space_type, class __index_type=unsigned int> 
 	class dia_matrix 

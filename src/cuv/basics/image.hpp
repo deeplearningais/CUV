@@ -30,7 +30,7 @@
 /** 
  * @file image.hpp
  * @brief general base class for images 
- * @ingroup basics
+ * @ingroup data_structures
  * @author Hannes Schulz
  * @date 2011-05-19
  */
@@ -44,7 +44,7 @@ namespace cuv
 	 * a wrapper around a tensor to provide an interleaved (e.g. RGBRGBRGB...) image
 	 *
 	 * the internal tensor is a _strided_ tensor.
-     * @ingroup basics
+     * @ingroup data_structures
 	 */
 	template<int NumChannels, class __value_type, class __memory_space_type>
 	class 

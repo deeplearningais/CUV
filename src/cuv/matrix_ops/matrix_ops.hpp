@@ -131,12 +131,12 @@ void transpose(tensor<V,M, L>& dst, const tensor<V,M, L>& src);
   /** 
    * @brief Transpose a matrix by creating a view with different storage
    * 
-   * @param dst Destination matrix 
    * @param src Source matrix 
    *
    * Creates a row major view of a column major matrix or a column major view of a row major matrix.
    * Does not actually modify the content of the memory.
-   * 
+   *
+   * @deprecated an assignment does not copy anymore, so use that instead.
    */
   template<class V, class T, class M>
   cuv::tensor<V,T,typename other_memory_layout<M>::type > * transposed_view_p(cuv::tensor<V,T,M>&  src);

@@ -5,28 +5,65 @@
 namespace cuv{
 	namespace libs
 	{
+        /// non-local means
 		namespace nlmeans
 		{
+            /**
+             * @addtogroup libs
+             * @{
+             * @addtogroup nonlocal_means
+             * @{
+             */
 			
+            /// fix a kernel for horizontal convolution in constant memory
+            /// @param src the kernel to be loaded in constant memory
 			void setConvolutionKernel_horizontal(const cuv::tensor<float,host_memory_space>&src);
+
+            /// fix a kernel for vertical convolution in constant memory
+            /// @param src the kernel to be loaded in constant memory
 			void setConvolutionKernel_vertical(const cuv::tensor<float,host_memory_space>&src);
+
+            /// fix a kernel for depth convolution in constant memory
+            /// @param src the kernel to be loaded in constant memory
 			void setConvolutionKernel_depth(const cuv::tensor<float,host_memory_space>&src);
 
+            /** convolve along 1st axis of a 3D array
+             * @param d_Dst where to write results
+             * @param d_Src source matrix
+             * @param kernel_radius radius of the kernel (kernel size = 2*r+1)
+             */
 			void convolutionRows(
 					cuv::tensor<float,dev_memory_space> &d_Dst,
 					const cuv::tensor<float,dev_memory_space> &d_Src,
 					int kernel_radius
 					);
+            /**
+             * convolve along 2nd axis of a 3D array
+             * @param d_Dst where to write results
+             * @param d_Src source matrix
+             * @param kernel_radius radius of the kernel (kernel size = 2*r+1)
+             */
 			void convolutionColumns(
 					cuv::tensor<float,dev_memory_space> & d_Dst,
 					const cuv::tensor<float,dev_memory_space> & d_Src,
 					int kernel_radius
 					);
+            /**
+             * convolve along 3rd axis of a 3D array
+             * @param d_Dst where to write results
+             * @param d_Src source matrix
+             * @param kernel_radius radius of the kernel (kernel size = 2*r+1)
+             */
 			void convolutionDepth(
 					cuv::tensor<float,dev_memory_space>& d_Dst,
 					const cuv::tensor<float,dev_memory_space>& d_Src,
 					int kernel_radius
 					);
+            /**
+             * determine hessian magnitude of 3D array
+             *
+             * @warning this is not well tested!
+             */
 			void hessian
 				(
 				 cuv::tensor<float,dev_memory_space>& d_output,
@@ -38,6 +75,11 @@ namespace cuv{
 				 const cuv::tensor<float,dev_memory_space>& d_gzz,
 				 float sigma
 				);
+            /**
+             * determine hessian orientation of 3D array
+             *
+             * @warning this is not well tested!
+             */
 			void hessian_orientation
 				(
 				 cuv::tensor<float,dev_memory_space> &d_Output,
@@ -51,6 +93,10 @@ namespace cuv{
 				 const cuv::tensor<float,dev_memory_space> &d_gzz,
 				 float sigma
 				);
+            /**
+             * @}
+             * @}
+             */
 		}
 	}
 }

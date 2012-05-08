@@ -32,7 +32,7 @@
  * @brief an n-dimensional array on host or device
  * @author Hannes Schulz
  * @date 2012-01-25
- * @ingroup basics
+ * @ingroup data_structures
  */
 
 #ifndef __TENSOR2_HPP__
@@ -55,7 +55,7 @@ namespace boost { namespace serialization {
 namespace cuv
 {
 /**
- * @addtogroup basics Basic datastructures
+ * @addtogroup data_structures Basic datastructures
  * @{
  */
 
@@ -84,10 +84,14 @@ namespace cuv
 	struct other_memory_layout{};
 	/// specialisation: converts from column to row-major 
 	template<>
-	struct other_memory_layout<column_major>{ typedef row_major type; };
+	struct other_memory_layout<column_major>{ 
+        typedef row_major type;  ///< new memory layout type after switch
+    };
 	/// specialisation: converts from row to column-major 
 	template<>
-	struct other_memory_layout<row_major>{ typedef column_major type; };
+	struct other_memory_layout<row_major>{ 
+        typedef column_major type;   ///< new memory layout type after switch
+    };
 
 
 	/// converts from dev to host memory space and vice versa
@@ -95,10 +99,14 @@ namespace cuv
 	struct other_memory_space{};
 	/// specialisation: converts from dev_memory_space to host_memory_space
 	template<>
-	struct other_memory_space<dev_memory_space>{ typedef host_memory_space type; };
+	struct other_memory_space<dev_memory_space>{ 
+        typedef host_memory_space type;  ///< new memory space type after switch
+    };
 	/// specialisation: converts from host_memory_space to dev_memory_space
 	template<>
-	struct other_memory_space<host_memory_space>{ typedef dev_memory_space type; };
+	struct other_memory_space<host_memory_space>{ 
+        typedef dev_memory_space type;  ///< new memory space type after switch
+    };
 /** @} */
 
 
@@ -152,12 +160,12 @@ namespace cuv
     template<class V, class M, class L> class tensor;
     template<class V, class M> class linear_memory;
 
-    // forward declaration of fill to implement operator= for value_type	
+    /// used in implementation of tensor.operator= for value_type argument
     template<class V, class M, class L, class S>
         void fill(tensor<V, M, L>& v, const V& p);
 
     /**
-     * @addtogroup basics
+     * @addtogroup data_structures
      * @{
      */
     /**
@@ -415,7 +423,7 @@ namespace cuv
                 }
 
         };
-    /** @} */ // basics
+    /** @} */ // data_structures
 
     namespace detail{
 
@@ -529,7 +537,7 @@ namespace cuv
     }
 
     /**
-     * @addtogroup basics
+     * @addtogroup data_structures
      * @{
      */
 
@@ -939,8 +947,8 @@ namespace cuv
              * are interpreted as relative to the (strided) subtensor we're
              * referring to.
              *
-             * @param D    size of index array
-             * @param arr  index array
+             * @tparam D    size of index array
+             * @param eg  position in array
              * @return linear index in memory of index array
              *
              */
@@ -1594,7 +1602,7 @@ namespace cuv
              *
              * works only for c_contiguous memory!
              *
-             * @param eg new shape
+             * @param shape new shape
              */
             void reshape(const std::vector<size_type>& shape){
                 size_type new_size = std::accumulate(shape.begin(),shape.end(),1,std::multiplies<size_type>());
@@ -1628,6 +1636,8 @@ namespace cuv
 
             /**
              * resize the tensor (deallocates memory if product changes, otherwise equivalent to reshape)
+             *
+             * @param shape new shape
              */
             void resize(const std::vector<size_type>& shape){
                 if(ndim()!=0){
@@ -1640,6 +1650,13 @@ namespace cuv
                 else
                     *this = tensor(shape);
             }
+            /**
+             * resize the tensor (deallocates memory if product changes, otherwise equivalent to reshape)
+             *
+             * @overload
+             *
+             * @param eg new shape 
+             */
             template<std::size_t D>
                 void resize(const extent_gen<D>& eg){
                     std::vector<size_type> shape(D);
@@ -1693,6 +1710,8 @@ namespace cuv
                 }
                 /**
                  * assign from value (sets all elements equal to one scalar)
+                 *
+                 * @param scalar value which should be assigned to all elements
                  */
                 template<class _V>
                     typename boost::enable_if_c<boost::is_convertible<_V,V>::value, tensor_view&>::type
@@ -1701,7 +1720,9 @@ namespace cuv
                         return *this;
                     }
                 /**
-                 * @overload for other memory space type
+                 * assignment operator for other memory space type
+                 *
+                 * @param o a tensor of another memory space type
                  */
                 template<class OM>
                 tensor_view& operator=(const tensor<V,OM,L>& o){
@@ -1711,7 +1732,9 @@ namespace cuv
                 }
 
                 /**
-                 * @overload for other memory space type
+                 * assignment operator for views in other memory space types
+                 *
+                 * @param o a tensor_view of another memory space type
                  */
                 template<class OM>
                 tensor_view& operator=(const tensor_view<V,OM,L>& o){
@@ -1730,7 +1753,7 @@ namespace cuv
                  *          means that you can only slice in the first dimension which has
                  *          size>1.
                  *
-                 * @param eg  the indices of the subtensor
+                 * @param idx  the indices of the subtensor
                  * @param o   the original tensor
                  *
                  * Example:
@@ -1919,12 +1942,14 @@ namespace cuv
             }
     //}
 
-        /** @} */ // basics
+        /** @} */ // data_structures
 
 
         /**
          * test whether two tensors have the same shape
          * @ingroup tools
+         * @param a first tensor
+         * @param a second tensor
          */
     template<class V, class V2, class M, class M2, class L>
         bool equal_shape(const tensor<V,M,L>& a, const tensor<V2,M2,L>& b){
@@ -1937,17 +1962,17 @@ namespace cuv
       /// create a tensor type with the same template parameters, but with switched value type
 	template<class Mat, class NewVT>
 		struct switch_value_type{
-			typedef tensor<NewVT, typename Mat::memory_space_type, typename Mat::memory_layout_type> type;
+			typedef tensor<NewVT, typename Mat::memory_space_type, typename Mat::memory_layout_type> type; ///< new tensor type after switch
 		};
       /// create a tensor type with the same template parameters, but with switched memory_layout_type
 	template<class Mat, class NewML>
 		struct switch_memory_layout_type{
-			typedef tensor<typename Mat::value_type, typename Mat::memory_space_type, NewML> type;
+			typedef tensor<typename Mat::value_type, typename Mat::memory_space_type, NewML> type; ///< new tensor type after switch
 		};
       /// create a tensor type with the same template parameters, but with switched memory_space_type
 	template<class Mat, class NewMS>
 		struct switch_memory_space_type{
-			typedef tensor<typename Mat::value_type, NewMS, typename Mat::memory_layout_type> type;
+			typedef tensor<typename Mat::value_type, NewMS, typename Mat::memory_layout_type> type; ///< new tensor type after switch
 		};
 
     /** @} */

@@ -40,7 +40,7 @@ namespace cuv
 {
 	/**
 	 * This objects acts like a reference to the object stored at the wrapped pointer.
-     * \ingroup basics
+     * \ingroup data_structures
 	 */
 	template<class T, class M, class I>
 	struct reference
