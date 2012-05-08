@@ -71,6 +71,12 @@ namespace cuv{
 	 */
 	void initialize_mersenne_twister_seeds(unsigned int seed = 0); 
 
+	/** 
+	 * @brief destruction counterpart to @see initialize_mersenne_twister_seeds
+	 * 
+	 */
+	void deinit_rng(unsigned int seed = 0); 
+
  /** @} */ // end of group random
 
 } // cuv

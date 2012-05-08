@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE( test_nlmeans )
 #endif
 
 	//cuvAssert(s==mh.memsize());
-	typedef tensor<float,dev_memory_space,row_major, memory2d_tag> dev_t;
+	typedef tensor<float,dev_memory_space,row_major> dev_t;
 	typedef tensor<float,dev_memory_space,row_major> dev1d_t;
 	dev_t    md;
 	md  = mh;

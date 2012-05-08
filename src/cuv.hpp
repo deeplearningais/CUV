@@ -36,6 +36,7 @@
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/random/random.hpp>
+#include <cuv/convert/convert.hpp>
 
 
 #endif /* __CUV_HPP__ */

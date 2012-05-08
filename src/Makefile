@@ -1,5 +1,5 @@
 .PHONY:tags filelist cs ctags_hilite
-all: filelist tags cs ctags_hilite
+all: filelist tags cs 
 filelist:
 	find . -name '*.cpp' -or -name '*.cu' -or -name '*.h' -or -name '*.hpp'  | grep -v ConvNetwork | grep -v Mlp |grep -v build > cscope.files
 tags: Makefile

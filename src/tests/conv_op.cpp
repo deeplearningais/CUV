@@ -46,6 +46,18 @@
 #include <cuv/random/random.hpp>
 #include <cuv/convert/convert.hpp>
 
+#define MEASURE_TIME(MSG, OPERATION, ITERS)     \
+	float MSG;                                  \
+	if(1){                                      \
+		Timing tim;                             \
+		for(int i=0;i<ITERS;i++){               \
+			OPERATION ;                         \
+		}                                       \
+		tim.update(ITERS);                      \
+		printf("%s [%s] took %4.4f us/pass\n", #MSG, #OPERATION, 1000000.0f*tim.perf()); \
+		MSG = 1000000.0f*tim.perf();            \
+	}
+
 using namespace cuv;
 
 struct MyConfig {
@@ -61,18 +73,7 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	static const int c = 2;  // # patterns (images)
-	static const int n = 32;  // image size
-	static const int f = 16;   // # filters
-	static const int p = 8;	   // pooling size
-	static const int g = 8;    // filter size
-	static const int k = n-g+1;// target image size
-	static const int o = n/p;  // pooling output size
-	tensor<float, dev_memory_space, row_major>  d_img,d_filter,d_dst,d_pooled;
-	tensor<float, host_memory_space, row_major> h_img,h_filter,h_dst,h_pooled;
 	Fix()
-	:   d_img(c,n*n), d_filter(f,g*g), d_dst(f,c*k*k), d_pooled(c,o*o)
-	,   h_img(c,n*n), h_filter(f,g*g), h_dst(f,c*k*k), h_pooled(c,o*o)
 	{
 		//MEASURE_TIME("warmup", apply_scalar_functor(v, SF_EXP), 100);
 	}
@@ -80,381 +81,158 @@ struct Fix{
 	}
 };
 
-#define MEASURE_TIME(MSG, OPERATION, ITERS)     \
-	float MSG;                                  \
-	if(1){                                      \
-		Timing tim;                             \
-		for(int i=0;i<ITERS;i++){               \
-			OPERATION ;                         \
-		}                                       \
-		tim.update(ITERS);                      \
-		printf("%s [%s] took %4.4f us/pass\n", #MSG, #OPERATION, 1000000.0f*tim.perf()); \
-		MSG = 1000000.0f*tim.perf();            \
-	}
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
-
-BOOST_AUTO_TEST_CASE( convolution )
+BOOST_AUTO_TEST_CASE( test_reorder_for_conv )
 {
-	fill(d_dst, 0.0f);
-	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
-	sequence(d_filter); apply_scalar_functor(d_filter,SF_MULT,0.001f);
+    using namespace cuv::alex_conv;
+	unsigned int nImgChan = 7;      // must be divisible by nGroups
+	unsigned int nImgPix  = 5;
+	unsigned int nImg     = 2;
 
-	fill(h_dst, 0.0f);
-	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
-	sequence(h_filter); apply_scalar_functor(h_filter,SF_MULT,0.001f);
+    tensor<float,dev_memory_space,row_major> inp(cuv::extents[nImg][nImgChan][nImgPix*nImgPix]);
+	tensor<float,dev_memory_space,row_major> src(cuv::extents[nImgChan][nImgPix*nImgPix][nImg]);
 
-	convolve(d_dst,d_img,d_filter);
-	convolve(h_dst,h_img,h_filter);
+    tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nImg][nImgChan][nImgPix*nImgPix]);
+	tensor<float,host_memory_space,row_major> src_h(cuv::extents[nImgChan][nImgPix*nImgPix][nImg]);
 
-	tensor<float, host_memory_space, row_major> dst2(d_dst.shape()[0], d_dst.shape()[1]);
-	convert(dst2,d_dst);
+    tensor<float,dev_memory_space,row_major> inp2(cuv::extents[nImg][nImgChan][nImgPix*nImgPix]);
+    tensor<float,host_memory_space,row_major> inp2_h(cuv::extents[nImg][nImgChan][nImgPix*nImgPix]);
 
-	for(int i=0;i<d_dst.shape()[0];i++){
-		for(int j=0;j<d_dst.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)dst2(i,j), (float)h_dst(i,j), 0.001 );
-		}
-	}
+    sequence(inp);
+    sequence(inp_h);
+    src = 0.f;
+
+    MEASURE_TIME(host_reorder,cuv::alex_conv::reorder_for_conv(src_h,inp_h), 2);
+    MEASURE_TIME(dev_reorder, cuv::alex_conv::reorder_for_conv(src,inp), 2);
+    cuvAssert(inp.shape(0)==src.shape(2));
+    cuvAssert(inp.shape(1)==src.shape(0));
+    cuvAssert(inp.shape(2)==src.shape(1));
+    unsigned int cnt=0;
+    for(unsigned int i=0;i<nImg;i++)
+        for(unsigned int j=0;j<nImgChan;j++)
+            for(unsigned int k=0;k<nImgPix*nImgPix;k++){
+                BOOST_CHECK_EQUAL(inp(i,j,k), src(j,k,i));
+            }
+    MEASURE_TIME(host_reorder2,cuv::alex_conv::reorder_from_conv(inp2,src),2);
+    MEASURE_TIME(dev_reorder2,cuv::alex_conv::reorder_from_conv(inp2_h,src_h),2);
+    BOOST_CHECK_EQUAL(inp.ndim(),inp2.ndim());
+    BOOST_CHECK_EQUAL(inp.shape(0),inp2.shape(0));
+    BOOST_CHECK_EQUAL(inp.shape(1),inp2.shape(1));
+    BOOST_CHECK_EQUAL(inp.shape(2),inp2.shape(2));
+    BOOST_CHECK_EQUAL(inp_h.ndim(),inp2_h.ndim());
+    BOOST_CHECK_EQUAL(inp_h.shape(0),inp2_h.shape(0));
+    BOOST_CHECK_EQUAL(inp_h.shape(1),inp2_h.shape(1));
+    BOOST_CHECK_EQUAL(inp_h.shape(2),inp2_h.shape(2));
+    for(unsigned int i=0;i<nImg;i++)
+        for(unsigned int j=0;j<nImgChan;j++)
+            for(unsigned int k=0;k<nImgPix*nImgPix;k++){
+                BOOST_CHECK_EQUAL(inp(i,j,k), inp2(i,j,k));
+                BOOST_CHECK_EQUAL(inp_h(i,j,k), inp2_h(i,j,k));
+            }
 }
 
-
-BOOST_AUTO_TEST_CASE( local_maxima )
+BOOST_AUTO_TEST_CASE( test_conv2d_hostdev )
 {
-	fill(d_dst, 0.0f);
-	sequence(d_img);    apply_scalar_functor(d_img,   SF_MULT,0.001f);
+    using namespace cuv::alex_conv;
+	unsigned int nImgChan = 1;      // must be divisible by nGroups
+	unsigned int nImgPix  = 16;
+	unsigned int nImg     = 1;
+    unsigned int nGroups  = 1;      // must be divisible by 2 ??
+   
+	unsigned int nFiltChan = nImgChan/nGroups;
+	unsigned int nFiltPix  = 3;
+	unsigned int nFilt     = 16; 
 
-	fill(h_dst, 0.0f);
-	sequence(h_img);    apply_scalar_functor(h_img,   SF_MULT,0.001f);
+    unsigned int nResPix   = nImgPix+1-nFiltPix;
 
-	max_pooling(h_pooled, h_img, p);
-	max_pooling(d_pooled, d_img, p);
 
-	tensor<float, host_memory_space, row_major> pooled2(d_pooled.shape()[0], d_pooled.shape()[1]);
-	convert(pooled2,d_pooled);
+    tensor<float,dev_memory_space,row_major> inp(cuv::extents[nImg][nImgChan][nImgPix*nImgPix]);
+	tensor<float,dev_memory_space,row_major> src(cuv::extents[nImgChan][nImgPix*nImgPix][nImg]);
+	tensor<float,dev_memory_space,row_major> dst(cuv::extents[nFilt][nResPix*nResPix][nImg]);
+	tensor<float,dev_memory_space,row_major> flt(cuv::extents[nFiltChan][nFiltPix*nFiltPix][nFilt]);
+    cuv::alex_conv::reorder_for_conv(src,inp);
 
-	for(int i=0;i<d_pooled.shape()[0];i++){
-		for(int j=0;j<d_pooled.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)pooled2(i,j), (float)h_pooled(i,j), 0.001 );
-		}
-	}
+    for(unsigned int i=0;i<inp.size();i++) inp[i] = -0.1 + drand48();
+    for(unsigned int i=0;i<flt.size();i++) flt[i] = -0.1 + drand48();
+    dst = 0.f;
+
+	tensor<float,host_memory_space,row_major> hsrc(cuv::extents[nImgChan][nImgPix*nImgPix][nImg]);
+	tensor<float,host_memory_space,row_major> hdst(cuv::extents[nFilt][nResPix*nResPix][nImg]);
+	tensor<float,host_memory_space,row_major> hflt(cuv::extents[nFiltChan][nFiltPix*nFiltPix][nFilt]);
+    hsrc=src;
+    hdst=dst;
+    hflt=flt;
+
+    MEASURE_TIME(conv_dev,         convolve2d(dst,src,flt, 0, 1, nGroups), 10);
+    MEASURE_TIME(conv_hst,         convolve2d(hdst,hsrc,hflt, 0, 1, nGroups), 10);
+
+    for(unsigned int i=0;i<hdst.shape(0);i++)
+        for (unsigned int j = 0; j < hdst.shape(1); ++j)
+            for (unsigned int k = 0; k < hdst.shape(2); ++k)
+            {
+                BOOST_CHECK_CLOSE((float)dst(i,j,k),(float)hdst(i,j,k),0.1f);
+            }
+
+    // check derivative w.r.t. images
+    for(unsigned int i=0;i<hdst.size();i++) hdst[i] = -0.1 + drand48();
+    hdst = 0.f; hdst[0]=1.f;
+    dst = hdst; 
+    flt=2.f; hflt = flt;
+    src = 0.f;
+    hsrc = 0.f;
+    MEASURE_TIME(d_conv_dimg_dev,           d_conv2d_dimg(src,dst,flt, 0, 1, nGroups), 10);
+    MEASURE_TIME(d_conv_dimg_hst,  hsrc=0.f;d_conv2d_dimg(hsrc,hdst,hflt, 0, 1, nGroups), 10);
+
+    for(unsigned int i=0;i<src.shape(1);i++)
+        std::cout <<src[i]<<" ";
+    std::cout << "norm2 of gradient: "<<cuv::norm2(src)<<std::endl;
+
+    for(unsigned int i=0;i<hsrc.shape(0);i++)
+        for (unsigned int j = 0; j < hsrc.shape(1); ++j)
+            for (unsigned int k = 0; k < hsrc.shape(2); ++k)
+            {
+                BOOST_CHECK_CLOSE((float)src(i,j,k),(float)hsrc(i,j,k),0.01f);
+            }
 }
 
-BOOST_AUTO_TEST_CASE( supersampling )
+
+BOOST_AUTO_TEST_CASE( test_conv2d )
 {
-	fill(d_dst, 0.0f);
-	sequence(d_pooled);    apply_scalar_functor(d_pooled,   SF_MULT,0.001f);
+    using namespace cuv::alex_conv;
+	unsigned int nImgChan = 8;      // must be divisible by nGroups
+	unsigned int nImgPix  = 176;
+	unsigned int nImg     = 16;
+    unsigned int nGroups  = 1;      // must be divisible by 2 ??
+   
+	unsigned int nFiltChan = nImgChan/nGroups;
+	unsigned int nFiltPix  = 7;
+	unsigned int nFilt     = 32; 
 
-	fill(h_pooled, 0.0f);
-	sequence(h_pooled);    apply_scalar_functor(h_pooled,   SF_MULT,0.001f);
+    unsigned int nResPix   = nImgPix-nFiltPix+1;
 
-	supersample(h_img, h_pooled, p);
-	supersample(d_img, d_pooled, p);
+    tensor<float,dev_memory_space,row_major> inp(cuv::extents[nImg][nImgChan][nImgPix*nImgPix]);
 
-	tensor<float, host_memory_space,row_major> img2(d_img.shape()[0], d_img.shape()[1]);
-	convert(img2, d_img);
+	tensor<float,dev_memory_space,row_major> src(cuv::extents[nImgChan][nImgPix*nImgPix][nImg]);
+	tensor<float,dev_memory_space,row_major> dst(cuv::extents[nFilt][nResPix*nResPix][nImg]);
 
-	MAT_CMP(img2, h_img, 0.001);
-}
+	tensor<float,dev_memory_space,row_major> flt(cuv::extents[nFiltChan][nFiltPix*nFiltPix][nFilt]);
 
-BOOST_AUTO_TEST_CASE( reorder_matrix )
-{
-	sequence(d_dst); apply_scalar_functor(d_dst, SF_MULT,0.001f);
-	sequence(h_dst); apply_scalar_functor(h_dst, SF_MULT,0.001f);
+    cuv::alex_conv::reorder_for_conv(src,inp);
 
-	reorder(d_dst, k*k);
-	reorder(h_dst, k*k);
+    //convolve2d(tensor<float,dev_memory_space>& dst, 
+    //        const tensor<float,dev_memory_space>& img, 
+    //        const tensor<float,dev_memory_space>& filter,
+    //        unsigned int nModulesX,
+    //        unsigned int paddingStart, 
+    //        unsigned int moduleStride,
+    //        unsigned int nGroups){
 
-	tensor<float, host_memory_space, row_major> dst2(d_dst.shape()[0], d_dst.shape()[1]);
-	convert(dst2, d_dst);
-
-	MAT_CMP(dst2, h_dst, 0.1);
-}
-
-BOOST_AUTO_TEST_CASE( copy_into_matrix )
-{
-	const int padding = 5;
-	const int size = n + 2 * padding;
-
-	tensor<float, host_memory_space, row_major> h_pad(h_img.shape()[0], size * size);
-	tensor<float, dev_memory_space, row_major> d_pad(d_img.shape()[0], size * size);
-
-	sequence(d_img); apply_scalar_functor(d_img, SF_MULT,0.001f);
-	sequence(h_img); apply_scalar_functor(h_img, SF_MULT,0.001f);
-	sequence(d_pad);
-	sequence(h_pad);
-
-	copy_into(d_pad, d_img, padding);
-	copy_into(h_pad, h_img, padding);
-
-	MAT_CMP(h_pad, d_pad, 0.1);
-}
-
-BOOST_AUTO_TEST_CASE( local_maxima_index )
-{
-	initialize_mersenne_twister_seeds();
-
-	// part 1: calculate matrix indices
-	fill_rnd_uniform(d_img);
-	convert(h_img, d_img);
-
-	tensor<unsigned char,host_memory_space> h_indices(c,o*o);
-	tensor<unsigned char,dev_memory_space> d_indices(c,o*o);
-
-	max_pooling(h_pooled, h_img, p, 0, &h_indices);
-	max_pooling(d_pooled, d_img, p, 0, &d_indices);
-
-	tensor<unsigned char, host_memory_space, row_major> indices2(d_indices.shape()[0], d_indices.shape()[1]);
-	convert(indices2,d_indices);
-
-	for(int i=0;i<d_indices.shape()[0];i++){
-		for(int j=0;j<d_indices.shape()[1];j++){
-			BOOST_CHECK_EQUAL( indices2(i,j), h_indices(i,j) );
-		}
-	}
-
-	// part 2: propagate back to those indices
-	fill_rnd_uniform(d_pooled);
-	convert(h_pooled, d_pooled);
-
-	fill(h_img, 0.f);
-	fill(d_img, 0.f);
-
-	supersample(h_img, h_pooled, p, &h_indices);
-	supersample(d_img, d_pooled, p, &d_indices);
-
-	MAT_CMP(d_img, h_img, 0.1);
-}
-
-BOOST_AUTO_TEST_CASE( max_pool_res )
-{
-	initialize_mersenne_twister_seeds();
-
-	const int n = 64;
-	int p = 3;
-	int l = 2;
-	const int m = (n-p)/(p-l)+1; // resulting image size
-	const int c = 6;
-
-	tensor<float,host_memory_space,row_major> h_img(c,n*n);
-	tensor<float,host_memory_space,row_major> h_dst(c,m*m);
-	tensor<unsigned char,host_memory_space,row_major> h_indices(c,m*m);
-
-	tensor<float,dev_memory_space,row_major> d_img(c,n*n);
-	tensor<float,dev_memory_space,row_major> d_dst(c,m*m);
-	tensor<unsigned char,dev_memory_space,row_major> d_indices(c,m*m);
-
-	fill_rnd_uniform(h_img);
-	convert(d_img, h_img);
-
-	max_pooling(h_dst, h_img, p, l, &h_indices);
-	max_pooling(d_dst, d_img, p, l, &d_indices);
-
-	for(int k=0; k<c; k++) {
-		for(int i=0; i<m; i++) {// loop through output image
-			for(int j=0; j<m; j++) {
-				float cmax = -FLT_MAX;
-				for(int q=0; q<p; q++) { // loop through pool
-					for(int r=0; r<p; r++) {
-						int idx = (j*(p-l) + r) + (i*(p-l) + q)*n;
-						if(cmax < h_img(k,idx))
-							cmax = h_img(k,idx);
-					}
-				}
-				BOOST_CHECK_EQUAL( h_dst(k,i*m+j), cmax );
-			}
-		}
-	}
-
-	MAT_CMP(d_dst, h_dst, 0.1);
-	MAT_CMP(d_indices, h_indices, 0.1);
-
-	// backprop step
-	super_to_max(h_img, h_dst, p, l, &h_indices);
-	super_to_max(d_img, d_dst, p, l, &d_indices);
-
-	MAT_CMP(h_img, d_img, 0.1);
-}
-
-
-BOOST_AUTO_TEST_CASE( row_ncopy )
-{
-	sequence(d_img);
-	sequence(h_img);
-
-	d_img.reshape(extents[1][d_img.shape()[1]*d_img.shape()[0]]);
-	h_img.reshape(extents[1][h_img.shape()[1]*h_img.shape()[0]]);
-
-	int n=128;
-
-	tensor<float, host_memory_space, row_major> erg_h(n, h_img.shape()[1]);
-	tensor<float, dev_memory_space, row_major> erg_d(n, d_img.shape()[1]);
-	fill(erg_d, 0.0f);
-	fill(erg_h, 0.0f);
-	for(int idx = 0; idx < erg_h.shape()[1]; idx++ ){
-		for (int idy = 0; idy < n; idy++){
-			erg_h(idy,idx)=*(h_img.ptr() + idx);
-		}
-	}
-
-
-	cuv::row_ncopy(erg_d, d_img, n);
-
-	for(int i=0;i<erg_h.shape()[0];i++){
-		for(int j=0;j<erg_h.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
-			if (i>1){
-				BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_d(i-1,j), 0.001 );
-			}
-		}
-	}
+    MEASURE_TIME(conv_dev,         convolve2d(dst,src,flt, 0, 1, nGroups), 10);
+    MEASURE_TIME(d_conv_dimg_dev,  d_conv2d_dimg(src,dst,flt, 0, 1, nGroups), 10);
+    MEASURE_TIME(d_conv_dfilt_dev, d_conv2d_dfilt(flt,dst,src, 0, 1, nGroups,4), 10);
 
 }
 
-BOOST_AUTO_TEST_CASE( strip_padding )
-{
-
-	sequence(d_img);
-	//apply_scalar_functor(d_img,   SF_MULT,0.001f);
-
-	int padding=2;
-
-	int img_width 		= sqrt(d_img.shape()[1]);
-	int stripped_width  = img_width-2*padding;
-	tensor<float, host_memory_space, row_major> erg_h(d_img.shape()[0], stripped_width*stripped_width);
-	tensor<float, dev_memory_space, row_major> erg_d(d_img.shape()[0], stripped_width*stripped_width);
-	fill(erg_d, 0.0f);
-	fill(erg_h, 0.0f);
-
-	cuv::strip_padding(erg_d, d_img, padding);
-
-	int x,y, idx, idx_padded;
-	float val;
-	for (int img=0; img<d_img.shape()[0]; img++){
-		for(int px=0; px<d_img.shape()[1]; px++){
-			x = px % img_width;
-			y = px / img_width;
-			if ( x >=padding && x < padding+stripped_width &&
-				 y >=padding && y < padding+stripped_width){
-				idx 		=	y*img_width+x;
-				idx_padded 	=	(y-padding)*stripped_width+(x-padding);
-
-				val = d_img(img,idx);
-				erg_h(img,idx_padded)=val;
-			}
-		}
-	}
-	//std::cout << h_img ;
-
-	for(int i=0;i<erg_h.shape()[0];i++){
-		for(int j=0;j<erg_h.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
-		}
-	}
-}
-
-BOOST_AUTO_TEST_CASE( check_exitatory_inhibitory )
-{
-	tensor<float, host_memory_space, row_major> filter_h(f, c*g*g);
-	tensor<float, dev_memory_space, row_major> filter_d(f, c*g*g);
-
-	sequence(filter_h);
-	sequence(filter_d);
-	apply_scalar_functor(filter_d, SF_MULT, -1);
-	apply_scalar_functor(filter_h, SF_MULT, -1);
-	//fill(filter_d, 0);
-	safeThreadSync();
-
-	cuv::check_exitatory_inhibitory(filter_d,0,g*g,1,1);
-	safeThreadSync();
-	cuv::check_exitatory_inhibitory(filter_h,0,g*g,1,1);
-	safeThreadSync();
-
-//	std::cout << filter_d ;
-
-	for(int i=0;i<filter_h.shape()[0];i++){
-		for(int j=0;j<filter_h.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)filter_d(i,j), (float)filter_h(i,j), 0.001 );
-		}
-	}
-}
-
-BOOST_AUTO_TEST_CASE( reverse_filters )
-{
-	tensor<float, host_memory_space, row_major> filter_h(f*c, g*g);
-	tensor<float, dev_memory_space, row_major> filter_d(f*c, g*g);
-
-	tensor<float, host_memory_space, row_major> erg_h(f, c*g*g);
-	tensor<float, dev_memory_space, row_major> erg_d(f, c*g*g);
-
-	fill(filter_h, 0.0f);fill(filter_d, 0.0f);
-	fill(erg_h, 0.0f);fill(erg_d, 0.0f);
-
-	tensor<float,host_memory_space> one_filter_h(g*g);
-	tensor<float,dev_memory_space> one_filter_d(g*g);
-	sequence(one_filter_h); sequence(one_filter_d);
-
-	cuv::row_ncopy(filter_d, one_filter_d, c*f);
-	cuv::row_ncopy(filter_h, one_filter_h,c*f);
-
-	filter_d.reshape(extents[f][c*g*g]);
-	filter_h.reshape(extents[f][c*g*g]);
-
-	filter_rotate(erg_d,filter_d, g*g);
-	safeThreadSync();
-	filter_rotate(erg_h,filter_h, g*g);
-	safeThreadSync();
-//	std::cout << filter_d << std::endl << std::endl;
-//	std::cout << erg_d ;
-
-	for(int i=0;i<erg_h.shape()[0];i++){
-		for(int j=0;j<erg_h.shape()[1];j++){
-			BOOST_CHECK_CLOSE( (float)erg_d(i,j), (float)erg_h(i,j), 0.001 );
-		}
-	}
-}
-
-//BOOST_AUTO_TEST_CASE( add_maps )
-//{
-//	// c, n x n = 2, 64 x 64 - represents two (delta) maps that contribute to one destination delta map
-//	// the destination delta map is calculated as the sum of the individual delta maps
-//	sequence(h_img);
-//	sequence(d_img);
-//
-//	// contains a map in each row where the summed pixels are stored
-//	tensor<float, host_memory_space, row_major> erg_h(c, n);
-//	tensor<float, dev_memory_space, row_major> erg_d(c, n);
-//
-//	fill(erg_h, 0.0f);
-//	fill(erg_d, 0.0f);
-//
-//
-//	float* e_ptr = erg_h.ptr();
-//	float* i_ptr = h_img.ptr();
-//	int imagesize = 64;
-//
-//	// host solution
-//	for (int row = 0; row<c; row++){
-//		for(int px = 0; px < n; px++){
-//			for(int img = 0; img < n; img++){
-//				*(e_ptr + row*erg_h.shape()[1] + px) += *(i_ptr + row*erg_h.shape()[1]    // mv to correct row in matrix
-//														 + img * imagesize  // iterate on image/delta maps
-//														 + px);				// iterate on pixels of destination map
-//			}
-//		}
-//	}
-//
-//	add_maps_h(erg_d, d_img, n);
-//
-////	std::cout << erg_d ;
-//
-//	for(int i=0;i<erg_h.shape()[0];i++){
-//		for(int j=0;j<erg_h.shape()[1];j++){
-//			BOOST_CHECK_CLOSE( erg_d(i,j), erg_h(i,j), 0.001 );
-//		}
-//	}
-//}
-
-}
-
-
+BOOST_AUTO_TEST_SUITE_END()

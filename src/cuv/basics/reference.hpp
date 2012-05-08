@@ -30,6 +30,8 @@
 #ifndef __REFERENCE_HPP__
 #define __REFERENCE_HPP__
 
+#include<boost/type_traits/is_convertible.hpp>
+#include<boost/utility/enable_if.hpp>
 #include<cuv/tools/cuv_general.hpp>
 #include<cuv/tools/meta_programming.hpp>
 #include<cuv/basics/accessors.hpp>
@@ -38,26 +40,35 @@ namespace cuv
 {
 	/**
 	 * This objects acts like a reference to the object stored at the wrapped pointer.
+     * \ingroup basics
 	 */
 	template<class T, class M, class I>
 	struct reference
 	{
-		typedef T*                        pointer_type; /// the wrapped pointer type
-		typedef typename unconst<T>::type value_type;   /// the type of the pointer
-		typedef M                memory_space_type;     /// the memory space of the pointer
-		typedef reference<T,M,I>            my_type;    /// the type of this reference
-		typedef I                        index_type;    /// hmm this should be size_t eventually
+		typedef T*                        pointer_type; ///< the wrapped pointer type
+		typedef typename unconst<T>::type value_type;   ///< the type of the pointer
+		typedef M                memory_space_type;     ///< the memory space of the pointer
+		typedef reference<T,M,I>            my_type;    ///< the type of this reference
+		typedef I                        index_type;    ///< hmm this should be size_t eventually
 
-		const pointer_type ptr;                         /// the wrapped pointer
+		const pointer_type ptr;                         ///< the wrapped pointer
 
 		/// convert to the stored value
 		operator value_type ()const{
-			return entry_get(ptr,(index_type)0,memory_space_type());
+			return detail::entry_get(ptr,(index_type)0,memory_space_type());
 		}
 
 		/// assign a new value
 		void operator=(const value_type& v){
-			entry_set(ptr,(index_type)0,v,memory_space_type());
+            detail::entry_set(ptr,(index_type)0,v,memory_space_type());
+		}
+
+        /// assign a value of a different (but convertible) value type
+        template<class _T>
+		typename 
+        boost::enable_if_c<boost::is_convertible<_T,value_type>::value >::type
+            operator=(const _T& v){
+                detail::entry_set(ptr,(index_type)0,(value_type)v,memory_space_type());
 		}
 	
 		/// assignment from reference of same type

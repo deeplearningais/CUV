@@ -34,238 +34,111 @@
 #include <string>
 #include <cmath>
 #include <iostream>
-#include <boost/random/linear_congruential.hpp>
-#include <boost/random/normal_distribution.hpp>
-#include <boost/random/variate_generator.hpp>
-#include <boost/random.hpp>
+
+#include "random.hpp"
 
 #include <cuda.h>
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
-#include <thrust/device_ptr.h>
-#include <thrust/generate.h>
+#include <curand.h>
+#include <curand_kernel.h>
 
- 
-#include <thrust/transform_reduce.h>
-
-// Mersenne Twister code reproduced & modified from: 
-//										http://svn.jcornwall.me.uk/applications/MersenneTwisterGPU/
-//										http://www.jcornwall.me.uk/2009/04/mersenne-twisters-in-cuda/
-#include <cassert>
-#include <cstdio>
-#include <vector>
-
-#include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/tensor.hpp>
-#include "cuv/random/random.hpp"
-
-#define MT_MM     9
-#define MT_NN     19
-#define MT_WMASK  0xFFFFFFFFU
-#define MT_UMASK  0xFFFFFFFEU
-#define MT_LMASK  0x1U
-#define MT_RNG_COUNT 32768
-#define MT_SHIFT0 12
-#define MT_SHIFTB 7
-#define MT_SHIFTC 15
-#define MT_SHIFT1 18
-#define QUOTEME_(x) #x
-#define QUOTEME(x) QUOTEME_(x)
- 
-// Record format for MersenneTwister.dat, created by spawnTwisters.c
-struct mt_struct_stripped {
-	unsigned int matrix_a;
-	unsigned int mask_b;
-	unsigned int mask_c;
-	unsigned int seed;
-};
- 
-// Per-thread state object for a single twister.
-struct MersenneTwisterState {
-	unsigned int mt[MT_NN];
-	int iState;
-	unsigned int mti1;
-};
- 
-// Preloaded, offline-generated seed data structure.
-__device__ static mt_struct_stripped MT[MT_RNG_COUNT];
-__device__ static MersenneTwisterState gStates[MT_RNG_COUNT];
- 
-__device__ unsigned int MersenneTwisterGenerate(MersenneTwisterState &state, unsigned int threadID) {
-	int iState1 = state.iState + 1;
-	int iStateM = state.iState + MT_MM;
- 
-	if(iState1 >= MT_NN) iState1 -= MT_NN;
-	if(iStateM >= MT_NN) iStateM -= MT_NN;
- 
-	unsigned int mti = state.mti1;
-	state.mti1 = state.mt[iState1];
-	unsigned int mtiM = state.mt[iStateM];
- 
-	unsigned int x = (mti & MT_UMASK) | (state.mti1 & MT_LMASK);
-	x = mtiM ^ (x >> 1) ^ ((x & 1) ? MT[threadID].matrix_a : 0);
-	state.mt[state.iState] = x;
-	state.iState = iState1;
- 
-	// Tempering transformation.
-	x ^= (x >> MT_SHIFT0);
-	x ^= (x << MT_SHIFTB) & MT[threadID].mask_b;
-	x ^= (x << MT_SHIFTC) & MT[threadID].mask_c;
-	x ^= (x >> MT_SHIFT1);
- 
-	return x;
-}
- 
-#define TWISTER_WARM_UP 0
- 
-__device__ void MersenneTwisterInitialize(MersenneTwisterState &state, unsigned int threadID) {
-	state.mt[0] = MT[threadID].seed;
-	for(int i = 1; i < MT_NN; ++ i) {
-		state.mt[i] = (1812433253U * (state.mt[i - 1] ^ (state.mt[i - 1] >> 30)) + i) & MT_WMASK;
-	}
- 
-	state.iState = 0;
-	state.mti1 = state.mt[0];
- 
-	// warm up the twister
-        #if TWISTER_WARM_UP
-	for(int i = 0; i < 10000; ++ i) {
-		MersenneTwisterGenerate(state, threadID);
-	}
-        #endif
- 
-}
- 
- 
-//Box Muller transform
-#define PI 3.14159265358979f
-__device__ 
-void BoxMuller(float &u1, float &u2){
-    float   r = sqrtf(-2.0f * logf(u1)); 
-    float phi = 2 * PI * u2;
- 
-    u1 = (r * __cosf(phi));
-	u2 = (r * __sinf(phi));
-}
- 
-template<class value_type>
-struct binarize{
-	__device__
-	void operator()(value_type* dst, const int& n) const {
-		unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-		if( idx >= n ) return;
-		/*__shared__ MersenneTwisterState mtState;*/
-		MersenneTwisterState mtState = gStates[idx];
-		for(int i=idx; i<n; i += blockDim.x * gridDim.x)
-			 dst[i] = ((value_type(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f) < dst[i]);
-		gStates[idx] = mtState;
-	}
-};
-
-template<class value_type>
-struct rnd_uniform{
-	const value_type m_vmin;
-	const value_type m_vmax;
-
-	rnd_uniform(const value_type& vmin, const value_type& vmax) : 
-		m_vmin(vmin),
-		m_vmax(vmax) { }
- 
-	__device__
-	void operator()(value_type* dst, const int& n) const {
-		unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-		if( idx >= n ) return;
-		/*__shared__ MersenneTwisterState mtState;*/
-		MersenneTwisterState mtState = gStates[idx];
-		for(int i=idx; i<n; i += blockDim.x * gridDim.x)
-			 dst[i] = value_type(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
-		gStates[idx] = mtState;
-	}
-};
-
-__global__
-void rnd_init_dev() {
-	unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
-	/*__shared__ MersenneTwisterState mtState;*/
-	MersenneTwisterState mtState = gStates[idx];
-	MersenneTwisterInitialize(mtState, idx);
-	gStates[idx] = mtState;
-}
-
-template<class value_type>
-struct rnd_normal {
-	const float m_std;
-	rnd_normal(const float& std):m_std(std) { }
- 
-	__device__
-		void 
-	operator()(value_type* dst, const int& n) const {
-		unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-		if( idx >= n ) return;
-		/*__shared__ MersenneTwisterState mtState;*/
-		MersenneTwisterState mtState = gStates[idx];
-		float x,y;
-		for(unsigned int i=idx; i<n-1; i += blockDim.x * gridDim.x){
-			 float2 tmp=dst[i]; // move up so it can be done in background while we fetch random numbers
-			 do{
-				 x = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
-				 y = float(MersenneTwisterGenerate(mtState, idx)) / 4294967295.0f;
-				 BoxMuller(x, y); //transform uniform into two independent standard normals
-			 }while(!isfinite(x) || !isfinite(y));
-
-			 dst[i] = make_float2(x*m_std+tmp.x,y*m_std+tmp.y);
-		}
-		__syncthreads();
-		gStates[idx] = mtState;
-	}
-};
+#define NUM_RND_BLOCKS                      96
+#define NUM_RND_THREADS_PER_BLOCK           128
+#define NUM_RND_STREAMS                     (NUM_RND_BLOCKS * NUM_RND_THREADS_PER_BLOCK)
 
 namespace cuv{
+    __global__ void setup_kernel(curandState* state, unsigned long long  seed){
+    const uint tidx = NUM_RND_THREADS_PER_BLOCK * blockIdx.x + threadIdx.x;
+    /* Each thread gets same seed, a different sequence number,
+     no offset */
+    curand_init(seed, tidx, 0, &state[tidx]);
+    };
 	// Initialize seeds for the Mersenne Twister
-	static bool g_mersenne_twister_initialized = false;
+	static bool* g_mersenne_twister_initialized;
+    static curandState** g_rnd_dev_state = NULL;
 	void initialize_mersenne_twister_seeds(unsigned int seed) {
-		mt_struct_stripped *mtStripped = new mt_struct_stripped[MT_RNG_COUNT];
-		FILE *datFile = fopen((std::string(QUOTEME(RANDOM_PATH))+"/MersenneTwister.dat").c_str(), "rb");
-		if(!datFile){
-			cuvAssert(datFile);
-		}
-		bool ret = fread(mtStripped, sizeof(mt_struct_stripped) * MT_RNG_COUNT, 1, datFile);
-		assert(ret);
-		fclose(datFile);
-
-		// Seed the structure with low-quality random numbers. Twisters will need "warming up"
-		// before the RNG quality improves.
-		srand(seed?seed:time(0));
-		for(int i = 0; i < MT_RNG_COUNT; ++ i) {
-			mtStripped[i].seed = rand();
-		}
-
-		// Upload the initial configurations to the GPU.
-		cuvSafeCall(cudaMemcpyToSymbol(MT, mtStripped, sizeof(mt_struct_stripped) * MT_RNG_COUNT, 0, cudaMemcpyHostToDevice));
-		dim3 threads(256,1);
-		dim3 grid(MT_RNG_COUNT/256,1,1);
-		rnd_init_dev<<<grid,threads>>>();
-
-		cuvSafeCall(cudaThreadSynchronize());
-		delete[] mtStripped;
-
-		g_mersenne_twister_initialized = true;
+        if(g_rnd_dev_state==NULL){
+            int cnt;
+            cuvSafeCall(cudaGetDeviceCount(&cnt));
+            g_rnd_dev_state = new curandState* [cnt];
+            g_mersenne_twister_initialized = new bool[cnt];
+            for(int i=0;i<cnt;i++){
+                g_rnd_dev_state[i] = NULL;
+                g_mersenne_twister_initialized[i]=false;
+            }
+        }
+        int dev;
+        cuvSafeCall(cudaGetDevice(&dev));
+        if(g_rnd_dev_state[dev]==NULL){
+            cuvSafeCall(cudaMalloc((void **)&g_rnd_dev_state[dev], NUM_RND_STREAMS * sizeof(curandState)));
+        }
+        setup_kernel<<<NUM_RND_BLOCKS, NUM_RND_THREADS_PER_BLOCK>>>(g_rnd_dev_state[dev], 1 + seed*2); // so there's no chance it'll be correlated with the other one
+        cuvSafeCall(cudaThreadSynchronize());
+		g_mersenne_twister_initialized[dev] = true;
 	}
+	void deinit_rng(unsigned int seed) {
+        int dev;
+        cuvSafeCall(cudaGetDevice(&dev));
+        cuvSafeCall(cudaFree(g_rnd_dev_state[dev]));
+        g_rnd_dev_state[dev] = NULL;
+		g_mersenne_twister_initialized[dev] = false;
+	}
+    
+    struct uf_binarize{
+        public:
+            __device__ inline float operator()(float f, curandState* state){
+                return f>curand_uniform(state);
+            }
+    };
+    struct uf_uniform{
+        public:
+            __device__ inline float operator()(float f, curandState* state){
+                return curand_uniform(state);
+            }
+    };
+    struct uf_gaussian{
+        private: 
+            float m_mean, m_std;
+        public:
+            uf_gaussian(float mean, float std):m_mean(mean),m_std(std){}
+            __device__ inline float operator()(float f, curandState* state){
+                return m_mean+m_std*curand_normal(state);
+            }
+    };
+    struct uf_add_gaussian{
+        private: 
+            float m_std;
+        public:
+            uf_add_gaussian(float std):m_std(std){}
+            __device__ inline float operator()(float f, curandState* state){
+                return f + m_std*curand_normal(state);
+            }
+    };
 
-	__global__ void kBinarize  (float* dst,int n, binarize<float> rng)    { rng(dst,n); }
-	__global__ void kRndUniform(float* dst, int n, rnd_uniform<float> rng){ rng(dst,n); }
-	__global__ void kRndNormal (float2* dst,int n, rnd_normal<float2> rng){ rng(dst,n); }
+    template<class Op>
+    __global__ void unary_rng_kernel(float* dst, const float* src, curandState* state, unsigned int size, Op op){
+        const unsigned int tidx = NUM_RND_THREADS_PER_BLOCK * blockIdx.x + threadIdx.x;
+        curandState localState = state[tidx];
+        for(unsigned int i=tidx;i<size;i+=NUM_RND_STREAMS){
+            dst[i] = op(src[i], &localState);
+        }
+        state[tidx] = localState;
+    };
+
+    template<class Op>
+        void
+    call_unary_rng_kernel(tensor<float,dev_memory_space>& dst, tensor<float,dev_memory_space>& src, const Op& op){
+        int dev;
+        cuvSafeCall(cudaGetDevice(&dev));
+		cuvAssert(g_mersenne_twister_initialized[dev]);
+
+        unary_rng_kernel<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(dst.ptr(), src.ptr(),g_rnd_dev_state[dev], dst.size(), op);
+		cuvSafeCall(cudaThreadSynchronize());
+    }
 
 	template<>
 	void rnd_binarize(tensor<float,dev_memory_space>& v){
 		cuvAssert(v.ptr());
-		cuvAssert(g_mersenne_twister_initialized);
-
-		binarize<float> rng;
-		dim3 threads(256,1);
-		dim3 grid(MT_RNG_COUNT/256,1,1);
-		kBinarize<<<grid,threads>>>(v.ptr(),v.size(),rng);
-		cuvSafeCall(cudaThreadSynchronize());
+		call_unary_rng_kernel(v,v,uf_binarize());
 	}
 	template<>
 	void rnd_binarize(tensor<float,host_memory_space>& v){
@@ -292,14 +165,7 @@ namespace cuv{
 	template<>
 	void fill_rnd_uniform(tensor<float,dev_memory_space>& v){
 		cuvAssert(v.ptr());
-		cuvAssert(g_mersenne_twister_initialized);
-
-		rnd_uniform<float> rng(0.f,1.f);
-		dim3 threads(256,1);
-		dim3 grid(MT_RNG_COUNT/256,1,1);
-		kRndUniform<<<grid,threads>>>(v.ptr(),v.size(),rng);
-
-		cuvSafeCall(cudaThreadSynchronize());
+		call_unary_rng_kernel(v,v,uf_uniform());
 	}
         template<>
 	void fill_rnd_uniform(tensor<float,host_memory_space,column_major>& v){
@@ -309,28 +175,41 @@ namespace cuv{
 	void fill_rnd_uniform(tensor<float,dev_memory_space,column_major>& v){
             fill_rnd_uniform(*reinterpret_cast<tensor<float,dev_memory_space>* >(&v));
         }
+        double norminv(double q) {
+            if(q == .5)
+                return 0;
+
+            q = 1.0 - q;
+
+            double p = (q > 0.0 && q < 0.5) ? q : (1.0 - q);
+            double t = sqrt(log(1.0 / pow(p, 2.0)));
+
+            double c0 = 2.515517;
+            double c1 = 0.802853;
+            double c2 = 0.010328;
+
+            double d1 = 1.432788;
+            double d2 = 0.189269;
+            double d3 = 0.001308;
+
+            double x = t - (c0 + c1 * t + c2 * pow(t, 2.0)) /
+                (1.0 + d1 * t + d2 * pow(t, 2.0) + d3 * pow(t, 3.0));
+
+            if(q > .5)
+                x *= -1.0;
+
+            return x;
+        }
 	template<>
 	void add_rnd_normal(tensor<float,host_memory_space>& v, const float& std){
 	   cuvAssert(v.ptr());
 	   tensor<float,host_memory_space>::value_type* ptr = v.ptr();
-	   typedef boost::mt19937 rng_type;
-	   rng_type rng;
-	   boost::normal_distribution<float> nd;
-	   boost::variate_generator<rng_type, boost::normal_distribution<float> > die(rng, nd);
 	   for(int i=0;i<v.size();i++)
-		   *ptr++ += std*die();
+		   *ptr++ += std*norminv(drand48());
 	}
 	template<>
 	void add_rnd_normal(tensor<float,dev_memory_space>& v, const float& std){
-		cuvAssert(g_mersenne_twister_initialized);
-		cuvAssert(v.ptr());
-		cuvAssert((v.size()%2) == 0);
-		rnd_normal<float2> rng(std);
-		dim3 threads(256,1);
-		dim3 grid(MT_RNG_COUNT/256,1,1);
-		using namespace std;
-		kRndNormal<<<grid,threads>>>((float2*)v.ptr(),v.size()/2,rng);
-		cuvSafeCall(cudaThreadSynchronize());
+        call_unary_rng_kernel(v,v,uf_add_gaussian(std)); 
 	}
         template<>
 	void add_rnd_normal(tensor<float,dev_memory_space,column_major>& v, const float& std){

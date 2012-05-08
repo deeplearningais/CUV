@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE( show_host_matrix )
 	libs::cimg::load(m,"src/tests/data/colored_square.jpg");
 
 	for(int i=0;i<3;i++){
-		tensor_t view(indices[i][index_range(0,m.shape()[1])][index_range(0,m.shape()[2])], m);
+        tensor_t::view_type view(indices[i][index_range(0,m.shape()[1])][index_range(0,m.shape()[2])], m);
 		libs::cimg::show(view,"channel");
 	}
 	libs::cimg::show(m,"all channels");

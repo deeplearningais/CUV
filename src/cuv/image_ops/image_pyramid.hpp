@@ -38,7 +38,6 @@
 #ifndef __IMAGE_PYRAMID_HPP__
 #define __IMAGE_PYRAMID_HPP__
 
-#include <boost/ptr_container/ptr_vector.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
 #include <cuv/basics/cuda_array.hpp>
 
@@ -102,14 +101,14 @@ namespace cuv{
 				&& src.shape()[1] == m_base_width
 			){
 				//std::cout << "Copycase"<<std::endl;
-					m_matrices[0]=src;
+					*m_matrices[0]=src;
 			}
 			else if(   interleaved_channels == 4
 					&& m_dim                == 3
 			){
 				//std::cout << "Colorcase"<<std::endl;
 					argca_type cpy(src,4);
-					matrix_type& dst = m_matrices[0];
+					matrix_type& dst = *m_matrices[0];
 					gaussian_pyramid_downsample(dst, cpy, interleaved_channels);
 			}
 			else if(src.shape()[0] > m_base_height*m_dim  // the image dimensions are too large: downsample to 1st level of pyramid
@@ -143,7 +142,7 @@ namespace cuv{
 
 		}
 	private:
-		boost::ptr_vector<matrix_type> m_matrices;
+		std::vector<matrix_type*> m_matrices;
 		unsigned int m_dim;
 		unsigned int m_base_width;
 		unsigned int m_base_height;
@@ -154,7 +153,7 @@ namespace cuv{
 	image_pyramid<__matrix_type>::get(int depth, int channel){
 		cuvAssert(depth   < m_matrices.size());
 		cuvAssert(channel < m_dim);
-		matrix_type& mat = m_matrices[depth];
+		matrix_type& mat = *m_matrices[depth];
 		//std::cout << "asking for channel "<<channel<<" in matrix of size "<<mat.shape()[0]<<"x"<<mat.shape()[1]<<std::endl;
 		unsigned int w = mat.shape()[1];
 		unsigned int h = mat.shape()[0];
@@ -165,7 +164,7 @@ namespace cuv{
 	typename image_pyramid<__matrix_type>::matrix_type*
 	image_pyramid<__matrix_type>::get_all_channels(int depth){
 		cuvAssert(depth   < m_matrices.size());
-		matrix_type& mat = m_matrices[depth];
+		matrix_type& mat = *m_matrices[depth];
 		return &mat;
 	}
 
@@ -175,6 +174,8 @@ namespace cuv{
 	,m_base_width(img_w)
 	,m_dim(dim)
 	{
+        for(unsigned int i=0;i<m_matrices.size();i++)
+            delete m_matrices[i];
 		m_matrices.clear();
 		for(unsigned int i=0; i<depth;i++){
 			//std::cout << "Creating Pyramid Level: "<< img_h<<"*"<<m_dim<<"x"<<img_w<<std::endl;

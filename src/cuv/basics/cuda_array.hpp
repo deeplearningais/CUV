@@ -130,7 +130,6 @@ namespace cuv
 		   * src.h() should be the same as this->h()
 		   */
 		  void assign(const tensor<__value_type,dev_memory_space,row_major>& src);  
-		  void assign(const tensor<__value_type,dev_memory_space,row_major,memory2d_tag>& src);  
 		  /**
 		   * @brief assign memory
 		   *

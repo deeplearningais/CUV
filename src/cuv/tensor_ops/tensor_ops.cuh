@@ -292,7 +292,7 @@ namespace detail{
 		typedef typename memspace_cuv2thrustptr<V1, M>::ptr_type ptr_type1;
 		typedef typename memspace_cuv2thrustptr<V2, M>::ptr_type ptr_type2;
 		ptr_type1 d_ptr(dst.ptr());
-		ptr_type2 s_ptr(src.ptr());
+		ptr_type2 s_ptr(const_cast<V2*>(src.ptr()));
 		if(numparams==2){
 			switch(sf){
 				case SF_TANH:      launch_unary_kernel(dst,src,make_bind2nd3rd(tf_tanh <V1>(),p,p2),mask); break;
@@ -371,8 +371,8 @@ namespace detail{
 		typedef typename memspace_cuv2thrustptr<V2,M>::ptr_type ptr_type2;
 		typedef typename memspace_cuv2thrustptr<V3,M>::ptr_type ptr_type3;
 		ptr_type1 d_ptr(dst.ptr());
-		ptr_type2 s1_ptr(src1.ptr());
-		ptr_type2 s2_ptr(src2.ptr());
+		ptr_type2 s1_ptr(const_cast<V2*>(src1.ptr()));
+		ptr_type2 s2_ptr(const_cast<V3*>(src2.ptr()));
 		if(numparams==0){
 #if USE_THRUST_LAUNCHER 
 			switch(bf){

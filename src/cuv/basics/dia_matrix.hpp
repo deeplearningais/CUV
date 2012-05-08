@@ -52,6 +52,7 @@
 namespace cuv{
 	/** 
 	 * @brief Class for diagonal matrices
+     * @ingroup basics
 	 */
 	template<class __value_type, class __memory_space_type, class __index_type=unsigned int> 
 	class dia_matrix 
@@ -276,13 +277,14 @@ namespace cuv{
 }
 
 namespace std{
-	template<class V, class T, class I>
 	/** 
 	 * @brief Return stream containing matrix entries for debugging
 	 * 
 	 * @param o Output stream
 	 * @param w2 Matrix to output
+     * @ingroup io
 	 */
+	template<class V, class T, class I>
 	ostream& 
 	operator<<(ostream& o, const cuv::dia_matrix<V,T,I>& w2){
 		cout << "Dia-Matrix: "<<endl;

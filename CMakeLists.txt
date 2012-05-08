@@ -27,15 +27,28 @@ INCLUDE(CPack)
 
 FIND_PACKAGE(Doxygen)
 IF(DOXYGEN_FOUND)
-	CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/doc/Doxyfile.in ${CMAKE_BINARY_DIR}/doc/Doxyfile)
+	CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/doc/Doxyfile.in ${CMAKE_BINARY_DIR}/docs/Doxyfile)
 	ADD_CUSTOM_COMMAND(
-		DEPENDS ${CMAKE_BINARY_DIR}/doc/Doxyfile
-		OUTPUT  ${CMAKE_BINARY_DIR}/doc/html/index.html
-		COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_BINARY_DIR}/doc/Doxyfile
+		DEPENDS ${CMAKE_BINARY_DIR}/docs/Doxyfile
+		OUTPUT  ${CMAKE_BINARY_DIR}/docs/html/index.html
+		COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_BINARY_DIR}/docs/Doxyfile
 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 		)
-	ADD_CUSTOM_TARGET(doc DEPENDS ${CMAKE_BINARY_DIR}/doc/html/index.html)
+    ADD_CUSTOM_TARGET(doc DEPENDS ${CMAKE_BINARY_DIR}/docs/html/index.html ${CMAKE_BINARY_DIR}/docs/Doxyfile)
 ENDIF(DOXYGEN_FOUND)
+
+SET(AIS_BOOST_LOCATION "/usr/local/src/boost1.46-1.46.1" CACHE STRING "location of local boost installation")
+OPTION(USE_LOCAL_BOOST "Assume boost is placed in ${AIS_BOOST_LOCATION}" ON)
+IF(EXISTS "${AIS_BOOST_LOCATION}")
+    IF(USE_LOCAL_BOOST)
+        MESSAGE("Using local boost installation in ${AIS_BOOST_LOCATION}")
+        SET (BOOST_ROOT "${AIS_BOOST_LOCATION}")
+        SET (Boost_NO_SYSTEM_PATHS true)
+    ELSEIF(USE_LOCAL_BOOST)
+        MESSAGE("Using system-wide boost installation")
+    ENDIF(USE_LOCAL_BOOST)
+ENDIF(EXISTS "${AIS_BOOST_LOCATION}")
+
 
 ENABLE_TESTING()
 add_subdirectory(src)

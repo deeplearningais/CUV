@@ -40,6 +40,11 @@
 namespace cuv{
 
 
+    /**
+     * @addtogroup blas1
+     * @{
+     */
+
 	/** 
 	 * @brief Does a gradient descent step using the "RPROP" algorithm.
 	 * 
@@ -86,6 +91,7 @@ namespace cuv{
             typedef tensor<__value_type, __memory_space_type> rm_tensor;
             learn_step_weight_decay(*reinterpret_cast<rm_tensor*>(&W),*reinterpret_cast<const rm_tensor*>(&dW),learnrate,decay,sparsedecay);
         }
+        /** @} */ // blas1
 
 }
 

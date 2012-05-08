@@ -23,21 +23,18 @@ namespace cuv{
         /** 
          * @brief Get available memory on device
          * 
-         * @param dev_idx Device id. Tries to set cuda context to this device.
-         * 
          * @return Bytes of free memory.
          *
-         * This function is highly discouraged and deprecated. It tries to fill the memory.
-         * It should be replace by a call to the cuda API.
+         * @ingroup tools
          */
 	int getFreeDeviceMemory();
 
         /** 
          * @brief Get device memory
          * 
-         * @param dev_idx Device id.
-         * 
          * @return Memory of GPU in bytes.
+         *
+         * @ingroup tools
          */
 	int getMaxDeviceMemory();
 
@@ -45,12 +42,14 @@ namespace cuv{
          * @brief Returns number of CUDA devices
          * 
          * @return Number of CUDA devices
+         * @ingroup tools
          */
 	int countDevices();
         /** 
          * @brief Get device id of current CUDA context
          * 
          * @return device id of current device
+         * @ingroup tools
          */
         int getCurrentDevice();
 }

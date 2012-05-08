@@ -60,61 +60,205 @@ struct MyConfig {
 BOOST_GLOBAL_FIXTURE( MyConfig );
 
 struct Fix{
-	static const int N;
-	tensor<float,dev_memory_space> v;
-	tensor<float,host_memory_space> w;
 	Fix()
-	:   v(N)
-	,   w(N)
 	{
 	}
 	~Fix(){
 	}
 };
-const int Fix::N = 256;
 
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
+BOOST_AUTO_TEST_CASE( create_lm )
+{
+    unsigned int N = 54;
+    {
+        linear_memory<float,host_memory_space> v(N);
+        BOOST_CHECK_EQUAL(v.size(), N);
+        BOOST_CHECK_NE(v.ptr(), (float*)NULL);
+        v.dealloc();
+        BOOST_CHECK_EQUAL(v.ptr(), (float*)NULL);
+    }
+    {
+        linear_memory<float,dev_memory_space> v(N);
+        BOOST_CHECK_EQUAL(v.size(), N);
+        BOOST_CHECK_NE(v.ptr(), (float*)NULL);
+        v.dealloc();
+        BOOST_CHECK_EQUAL(v.ptr(), (float*)NULL);
+    }
+
+}
+
+BOOST_AUTO_TEST_CASE( readwrite_lm )
+{
+    unsigned int N = 54;
+    {
+        linear_memory<float,host_memory_space> v(N);
+        v[1] = 0;
+        BOOST_CHECK_EQUAL(v[1], 0);
+        v[1] = 1;
+        BOOST_CHECK_EQUAL(v[1], 1);
+    }
+    {
+        linear_memory<float,dev_memory_space> v(N);
+        v[1] = 0;
+        BOOST_CHECK_EQUAL(v[1], 0);
+        v[1] = 1;
+        BOOST_CHECK_EQUAL(v[1], 1);
+    }
+
+}
+
+BOOST_AUTO_TEST_CASE( create_pm )
+{
+    unsigned int N = 54, M=97;
+    {
+        pitched_memory<float,host_memory_space> v(N,M);
+        BOOST_CHECK_EQUAL(v.size(), N*M);
+        BOOST_CHECK_EQUAL(v.rows(), N);
+        BOOST_CHECK_EQUAL(v.cols(), M);
+        BOOST_CHECK_GE(v.pitch(), M);
+        BOOST_CHECK_NE(v.ptr(), (float*)NULL);
+        v.dealloc();
+        BOOST_CHECK_EQUAL(v.ptr(), (float*)NULL);
+    }
+    {
+        pitched_memory<float,dev_memory_space> v(N,M);
+        BOOST_CHECK_GE(v.size(), N*M);
+        BOOST_CHECK_EQUAL(v.rows(), N);
+        BOOST_CHECK_EQUAL(v.cols(), M);
+        BOOST_CHECK_GE(v.pitch(), M);
+        BOOST_CHECK_NE(v.ptr(), (float*)NULL);
+        v.dealloc();
+        BOOST_CHECK_EQUAL(v.ptr(), (float*)NULL);
+    }
+
+}
+
+BOOST_AUTO_TEST_CASE( readwrite_pm )
+{
+    unsigned int N = 54, M=97;
+    {
+        pitched_memory<float,host_memory_space> v(N,M);
+        v[1] = 0;
+        BOOST_CHECK_EQUAL(v[1], 0);
+        v[1] = 1;
+        BOOST_CHECK_EQUAL(v[1], 1);
+    }
+    {
+        pitched_memory<float,dev_memory_space> v(N,M);
+        v[1] = 0;
+        BOOST_CHECK_EQUAL(v[1], 0);
+        v[1] = 1;
+        BOOST_CHECK_EQUAL(v[1], 1);
+    }
+
+    {
+        pitched_memory<float,host_memory_space> v(N,M);
+        v(3,4) = 0;
+        BOOST_CHECK_EQUAL(v(3,4), 0);
+        v(3,4) = 1;
+        BOOST_CHECK_EQUAL(v(3,4), 1);
+    }
+    {
+        pitched_memory<float,dev_memory_space> v(N,M);
+        v(3,4) = 0;
+        BOOST_CHECK_EQUAL(v(3,4), 0);
+        v(3,4) = 1;
+        BOOST_CHECK_EQUAL(v(3,4), 1);
+    }
+
+}
 
 /** 
  * @test
- * @brief create dense device matrix.
+ * @brief create dense matrix.
  */
-BOOST_AUTO_TEST_CASE( create_dev_plain )
+BOOST_AUTO_TEST_CASE( create_linear )
 {
-	tensor<float,dev_memory_space,column_major> m(16,16);
+    unsigned int N=16,M=32;
+	{
+        tensor<float,dev_memory_space,row_major> m(extents[N][M]);
+        BOOST_CHECK_EQUAL(m.size(),N*M);
+        BOOST_CHECK_EQUAL(m.shape(0),N);
+        BOOST_CHECK_EQUAL(m.shape(1),M);
+        BOOST_CHECK_EQUAL(m.stride(0),M);
+        BOOST_CHECK_EQUAL(m.stride(1),1);
+	}
+
+	{
+        tensor<float,host_memory_space,row_major> m(extents[N][M]);
+        BOOST_CHECK_EQUAL(m.size(),N*M);
+        BOOST_CHECK_EQUAL(m.shape(0),N);
+        BOOST_CHECK_EQUAL(m.shape(1),M);
+        BOOST_CHECK_EQUAL(m.stride(0),M);
+        BOOST_CHECK_EQUAL(m.stride(1),1);
+	}
+
+	{
+        tensor<float,dev_memory_space,column_major> m(extents[N][M]);
+        BOOST_CHECK_EQUAL(m.size(),N*M);
+        BOOST_CHECK_EQUAL(m.shape(0),N);
+        BOOST_CHECK_EQUAL(m.shape(1),M);
+        BOOST_CHECK_EQUAL(m.stride(0),1);
+        BOOST_CHECK_EQUAL(m.stride(1),N);
+	}
+
+	{
+        tensor<float,host_memory_space,column_major> m(extents[N][M]);
+        BOOST_CHECK_EQUAL(m.size(),N*M);
+        BOOST_CHECK_EQUAL(m.shape(0),N);
+        BOOST_CHECK_EQUAL(m.shape(1),M);
+        BOOST_CHECK_EQUAL(m.stride(0),1);
+        BOOST_CHECK_EQUAL(m.stride(1),N);
+	}
 }
 
 /** 
- * @test 
- * @brief view on a device vector (at same position in memory).
+ * @test
+ * @brief create pitched matrix.
  */
-BOOST_AUTO_TEST_CASE( create_dev_view )
+BOOST_AUTO_TEST_CASE( create_pitched )
 {
-	tensor<float,dev_memory_space,column_major> m(16,16);
-	//tensor<float,column_major,dev_memory_space> m2(16,16,new linear_memory<float,dev_memory_space>(m.n(), m.ptr(), true));
+    unsigned int N=16,M=32;
+	{
+        tensor<float,dev_memory_space,row_major> m(extents[N][M],pitched_memory_tag());
+        BOOST_CHECK_EQUAL(m.size(),N*M);
+        BOOST_CHECK_EQUAL(m.shape(0),N);
+        BOOST_CHECK_EQUAL(m.shape(1),M);
+        BOOST_CHECK_GE(m.stride(0),M);
+        BOOST_CHECK_EQUAL(m.stride(1),1);
+	}
+
+	{
+        tensor<float,host_memory_space,row_major> m(extents[N][M],pitched_memory_tag());
+        BOOST_CHECK_EQUAL(m.size(),N*M);
+        BOOST_CHECK_EQUAL(m.shape(0),N);
+        BOOST_CHECK_EQUAL(m.shape(1),M);
+        BOOST_CHECK_GE(m.stride(0),M);
+        BOOST_CHECK_EQUAL(m.stride(1),1);
+	}
+
+	{
+        tensor<float,dev_memory_space,column_major> m(extents[N][M],pitched_memory_tag());
+        BOOST_CHECK_EQUAL(m.size(),N*M);
+        BOOST_CHECK_EQUAL(m.shape(0),N);
+        BOOST_CHECK_EQUAL(m.shape(1),M);
+        BOOST_CHECK_EQUAL(m.stride(0),1);
+        BOOST_CHECK_GE(m.stride(1),N);
+	}
+
+	{
+        tensor<float,host_memory_space,column_major> m(extents[N][M],pitched_memory_tag());
+        BOOST_CHECK_EQUAL(m.size(),N*M);
+        BOOST_CHECK_EQUAL(m.shape(0),N);
+        BOOST_CHECK_EQUAL(m.shape(1),M);
+        BOOST_CHECK_EQUAL(m.stride(0),1);
+        BOOST_CHECK_GE(m.stride(1),N);
+	}
 }
 
-/** 
- * @test 
- * @brief create a matrix using same width/height as another.
- */
-BOOST_AUTO_TEST_CASE( create_dev_from_mat )
-{
-	tensor<float,dev_memory_space,column_major> m(16,16);
-	//tensor<float,column_major,dev_memory_space> m2(&m);
-}
-
-/** 
- * @test 
- * @brief creation of dense host matrix and a view.
- */
-BOOST_AUTO_TEST_CASE( create_host )
-{
-	tensor<float,host_memory_space,column_major> m(16,16);
-	//tensor<float,column_major,host_memory_space> m2(16,16,new vector<float,host_memory_space>(m.n(),m.ptr(),true));
-}
 
 /** 
  * @test 
@@ -122,15 +266,50 @@ BOOST_AUTO_TEST_CASE( create_host )
  */
 BOOST_AUTO_TEST_CASE( set_vector_elements )
 {
+    static const unsigned int N = 145;
+    static const unsigned int M = 97;
+	tensor<float,host_memory_space> v(extents[N][M]);                     // linear memory
+	tensor<float,dev_memory_space> w(extents[N][M],pitched_memory_tag()); // pitched memory
 	for(int i=0; i < N; i++) {
-		v[i]=(float) i/N;
-		w[i]=(float) i/N;
+		v[i]= (float)i/N;
+		w[i]= (float)i/N;
 	}
 	//convert(w,v);
 	for(int i=0; i < N; i++) {
 		BOOST_CHECK_EQUAL(v[i], (float) i/N );
 		BOOST_CHECK_EQUAL(w[i], (float) i/N );
 	}
+}
+
+BOOST_AUTO_TEST_CASE( tensor_resize )
+{
+    static const unsigned int N = 145;
+    static const unsigned int M = 97;
+    std::vector<unsigned int> s2(2); s2[0]= M; s2[1]=N;
+	tensor<float,host_memory_space> v(extents[N][M]);
+    float* p0 = v.ptr();
+    v.resize(s2);
+    float* p1 = v.ptr();
+    s2[0]+=1;
+    v.resize(s2);
+    float* p2 = v.ptr();
+
+    BOOST_CHECK_EQUAL(p0,p1);
+    BOOST_CHECK_NE(p0,p2);
+}
+
+BOOST_AUTO_TEST_CASE( assign_func )
+{
+    static const unsigned int N = 145;
+    static const unsigned int M = 97;
+	tensor<float,host_memory_space> v(extents[N][M]);
+	tensor<float,host_memory_space> w(extents[N][M]);
+    v[5] = 5;
+    w[5] = 0;
+    w.assign(v);
+    BOOST_CHECK_NE(w.ptr(),v.ptr());
+    BOOST_CHECK_EQUAL(v[5], 5);
+    BOOST_CHECK_EQUAL(w[5], 5);
 }
 
 /** 

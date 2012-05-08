@@ -82,7 +82,7 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 BOOST_AUTO_TEST_CASE( test_integral_image )
 {
 	tensor<float,host_memory_space,row_major> mh;
-	typedef tensor<float,dev_memory_space,row_major, memory2d_tag> dev_t;
+	typedef tensor<float,dev_memory_space,row_major> dev_t;
 	//typedef tensor<float,dev_memory_space,row_major, linear_memory_tag> dev_t;
 	tensor<float,host_memory_space,row_major> md(extents[3][512][128]);
 	
@@ -99,15 +99,14 @@ BOOST_AUTO_TEST_CASE( test_integral_image )
 	 *mh = md;
 	 */
 
-	dev_t d_m;
-       	d_m = mh;
+	dev_t d_m(mh);
 
 	unsigned int w = mh.shape()[2];
 	unsigned int h = mh.shape()[1];
-	tensor<float,host_memory_space,row_major,memory2d_tag> view0h(indices[0][index_range(0,h)][index_range(0,w)],mh);
-	tensor<float,host_memory_space,row_major,memory2d_tag> intimg_h(extents[w][h]); // inverted
+	tensor_view<float,host_memory_space,row_major> view0h(indices[0][index_range(0,h)][index_range(0,w)],mh);
+	tensor<float,host_memory_space,row_major> intimg_h(extents[w][h]); // inverted
 
-	tensor<float,dev_memory_space,row_major,memory2d_tag> view0(indices[0][index_range(0,h)][index_range(0,w)],d_m);
+	tensor_view<float,dev_memory_space,row_major> view0(indices[0][index_range(0,h)][index_range(0,w)],d_m);
 	dev_t intimg_d(extents[w][h]); // inverted
 
 	integral_image(intimg_d ,view0 ); // warmup

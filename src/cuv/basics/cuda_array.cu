@@ -117,6 +117,33 @@ void cuda_array<V,S,I>::assign(const tensor<V, host_memory_space, row_major>& sr
 	}
 	checkCudaError("cudaMemcpyToArray");
 }
+/*
+ *template<class V,class S, class I>
+ *void cuda_array<V,S,I>::assign(const tensor<V,dev_memory_space,row_major>& src){
+ *    cuvAssert(src.ptr()!=NULL);
+ *    if(src.ndim()==2){
+ *        cuvAssert(m_depth == 1);
+ *        cuvAssert(src.shape()[1]/m_dim == m_width);
+ *        cuvAssert(src.shape()[0]       == m_height);
+ *        cudaMemcpyToArray(ptr(), 0, 0, src.ptr(), src.memsize(), cudaMemcpyDeviceToDevice);
+ *    }else{
+ *        cuvAssert(src.shape()[2]/m_dim == m_width);
+ *        cuvAssert(src.shape()[1]       == m_height);
+ *        cuvAssert(src.shape()[0]       == m_depth);
+ *
+ *        cudaExtent extent = make_cudaExtent(m_width,m_height,m_depth);
+ *
+ *        cudaMemcpy3DParms copyParams = {0};
+ *        copyParams.srcPtr   = make_cudaPitchedPtr((void*)src.ptr(), m_height*sizeof(V), m_height, m_depth);  
+ *        copyParams.dstArray = ptr();
+ *        copyParams.extent   = extent;
+ *        copyParams.kind	 = cudaMemcpyDeviceToDevice;
+ *        cuvSafeCall(cudaMemcpy3D(&copyParams));
+ *    }
+ *    checkCudaError("cudaMemcpyToArray");
+ *}
+ */
+
 template<class V,class S, class I>
 void cuda_array<V,S,I>::assign(const tensor<V,dev_memory_space,row_major>& src){
 	cuvAssert(src.ptr()!=NULL);
@@ -133,32 +160,7 @@ void cuda_array<V,S,I>::assign(const tensor<V,dev_memory_space,row_major>& src){
 		cudaExtent extent = make_cudaExtent(m_width,m_height,m_depth);
 
 		cudaMemcpy3DParms copyParams = {0};
-		copyParams.srcPtr   = make_cudaPitchedPtr((void*)src.ptr(), m_height*sizeof(V), m_height, m_depth);  
-		copyParams.dstArray = ptr();
-		copyParams.extent   = extent;
-		copyParams.kind	 = cudaMemcpyDeviceToDevice;
-		cuvSafeCall(cudaMemcpy3D(&copyParams));
-	}
-	checkCudaError("cudaMemcpyToArray");
-}
-
-template<class V,class S, class I>
-void cuda_array<V,S,I>::assign(const tensor<V,dev_memory_space,row_major,memory2d_tag>& src){
-	cuvAssert(src.ptr()!=NULL);
-	if(src.ndim()==2){
-		cuvAssert(m_depth == 1);
-		cuvAssert(src.shape()[1]/m_dim == m_width);
-		cuvAssert(src.shape()[0]       == m_height);
-		cudaMemcpyToArray(ptr(), 0, 0, src.ptr(), src.memsize(), cudaMemcpyDeviceToDevice);
-	}else{
-		cuvAssert(src.shape()[2]/m_dim == m_width);
-		cuvAssert(src.shape()[1]       == m_height);
-		cuvAssert(src.shape()[0]       == m_depth);
-
-		cudaExtent extent = make_cudaExtent(m_width,m_height,m_depth);
-
-		cudaMemcpy3DParms copyParams = {0};
-		copyParams.srcPtr   = make_cudaPitchedPtr((void*)src.ptr(), src.pitch(), m_width, m_height);  
+		copyParams.srcPtr   = make_cudaPitchedPtr((void*)src.ptr(), src.stride(1)*sizeof(V), m_width, m_height);  
 		copyParams.dstArray = ptr();
 		copyParams.extent   = extent;
 		copyParams.kind	 = cudaMemcpyDeviceToDevice;
@@ -181,7 +183,6 @@ cuda_array<V,S,I>::operator()(const I& i, const I& j)const{
 	template void cuda_array<V,M,I>::dealloc();   \
 	template void cuda_array<V,M,I>::assign(const tensor<V,host_memory_space,row_major>&);   \
 	template void cuda_array<V,M,I>::assign(const tensor<V,dev_memory_space,row_major>&);    \
-	template void cuda_array<V,M,I>::assign(const tensor<V,dev_memory_space,row_major,memory2d_tag>&);    \
 	template V cuda_array<V,M,I>::operator()(const I&, const I&)const;   
 
 INST(float,dev_memory_space,unsigned int);

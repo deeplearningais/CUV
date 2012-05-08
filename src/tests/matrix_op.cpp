@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE( binary_operators )
 BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
 {
 	sequence(v);
-	w=v;
+	w=v.copy();
 	sequence(a);
 	//apply_scalar_functor(v,SF_ADD,1);
 	v+= float(1.0);
@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE( vec_ops_binary1 )
 		BOOST_CHECK_EQUAL(v[i], i + 1);
 	}
 	//apply_binary_functor(v,w, BF_ADD);
-	a=v;
+	a=v.copy();
 	a=v+w;
 	v=a;
 	for(int i=0;i<N;i++){
@@ -160,7 +160,8 @@ BOOST_AUTO_TEST_CASE( vec_ops_copy )
 
 	// copy data from v to w
 	// copy(v,w);
-	v=w;
+	v=w.copy();
+    BOOST_CHECK_NE(v.ptr(), w.ptr());
 	for(int i=0;i<N;i++){
 		BOOST_CHECK_EQUAL(v[i],w[i]);
 	}
@@ -433,37 +434,45 @@ BOOST_AUTO_TEST_CASE( mat_op_view )
 		}
 }
 
+template<class T, class M, class R>
+void test_matrix_transpose(unsigned int n, unsigned int m){
+    tensor<T,M,R> src(extents[n][m]), dst(extents[m][n]);
+    dst = (T)0;
+    //sequence(src);
+    fill_rnd_uniform(src);
+    transpose(dst,src);
+    for(unsigned int i = 0;i<n;i++)
+        for (unsigned int j = 0; j < m; ++j)
+        {
+            BOOST_CHECK_EQUAL(src(i,j),dst(j,i));
+        }
+}
+
 
 BOOST_AUTO_TEST_CASE( mat_op_transpose )
 {
-	const int n = 8;
-	const int m = 3;
+for(unsigned int iter=0;iter<1;iter++){
+    int nm[] = {2,8,15,24,176};
+    for(unsigned int ni = 0; ni<5;ni++)
+        for(unsigned int mi = 0; mi<5;mi++){
+            //unsigned int n= nm[ni];
+            //unsigned int m= nm[mi];
+            unsigned int n = 1 + drand48()*50;
+            unsigned int m = 1 + drand48()*50;
+            //std::cout << "Transpose: "<<n << ", "<<m<<std::endl;
+            test_matrix_transpose<float,host_memory_space,column_major>(n,m);
+            test_matrix_transpose<float,host_memory_space,column_major>(m,n);
+            test_matrix_transpose<float,host_memory_space,row_major>(n,m);
+            test_matrix_transpose<float,host_memory_space,row_major>(m,n);
 
-	tensor<float,host_memory_space,column_major> hA(extents[n][m]), hB(extents[m][n]);
-	tensor<float,dev_memory_space,column_major>  dA(extents[n][m]), dB(extents[m][n]);
-	tensor<float,host_memory_space,row_major> hC(extents[n][m]), hD(extents[m][n]);
-	tensor<float,dev_memory_space,row_major>  dC(extents[n][m]), dD(extents[m][n]);
-
-	sequence(hB); sequence(dB);
-	sequence(hD); sequence(dD);
-
-	transpose(hA, hB);
-	transpose(dA, dB);
-	transpose(hC, hD);
-	transpose(dC, dD);
-
-	tensor<float,host_memory_space,column_major> h2A(dA.shape()); h2A = dA;
-	tensor<float,host_memory_space,row_major> h2C(dC.shape()); h2C = dC; 
-
-	for(int i=0;i<n;i++)
-		for(int j=0;j<m;j++){
-			BOOST_CHECK_EQUAL(hA(i,j), hB(j,i));
-			BOOST_CHECK_EQUAL(hC(i,j), hD(j,i));
-		}
-
-	MAT_CMP(hA, h2A, 0.1);
-	MAT_CMP(hC, h2C, 0.1);
+            test_matrix_transpose<float,dev_memory_space,column_major>(n,m);
+            test_matrix_transpose<float,dev_memory_space,column_major>(m,n);
+            test_matrix_transpose<float,dev_memory_space,row_major>(n,m);
+            test_matrix_transpose<float,dev_memory_space,row_major>(m,n);
+        }
 }
+}
+
 
 BOOST_AUTO_TEST_CASE( logaddexp_reduce ){
 	const int n = 25;

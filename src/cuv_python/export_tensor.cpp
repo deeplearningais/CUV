@@ -90,8 +90,8 @@ namespace python_wrapping {
 
     template <class T>
     T* reshaped_view(T& tens, const boost::python::list &new_shape){
-        std::vector<typename T::index_type> shape = extract_python_list<typename T::index_type>(new_shape);
-        typename T::index_type new_size = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<typename T::index_type>());
+        std::vector<typename T::size_type> shape = extract_python_list<typename T::size_type>(new_shape);
+        typename T::size_type new_size = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<typename T::size_type>());
         cuvAssert(new_size == tens.size());
         return new T(shape, tens.ptr());
 
@@ -99,7 +99,7 @@ namespace python_wrapping {
 
     template <class T>
     void reshape(T& tens, const boost::python::list &shape){
-        tens.reshape(extract_python_list<typename T::index_type>(shape));
+        tens.reshape(extract_python_list<typename T::size_type>(shape));
     }
     template <class T>
      boost::python::list shape(T& tens){
@@ -120,10 +120,10 @@ namespace python_wrapping {
 	    /// construct using shape 
 	    typedef tensor<V,M,L> T;
 	    static T* construct_tensor_shape(boost::python::list python_shape){
-		    return new T(extract_python_list<typename T::index_type>(python_shape));
+		    return new T(extract_python_list<typename T::size_type>(python_shape));
 	    }
 	    static T* construct_tensor_shape(boost::python::tuple python_shape){
-		    return new T(extract_python_list<typename T::index_type>(python_shape));
+		    return new T(extract_python_list<typename T::size_type>(python_shape));
 	    }
 	    /// construct a vector using a single dimension
 	    static T* construct_tensor_int(unsigned int len){

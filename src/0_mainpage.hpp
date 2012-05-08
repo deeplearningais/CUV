@@ -44,6 +44,9 @@
  * @defgroup MetaProgramming  Template meta programming tools
  * @defgroup libs    special purpose functions
  *
+ * @defgroup tags CUV tags
+ * @ingroup basics
+ *
  * @mainpage
  *
  * @section summary  Summary
@@ -133,24 +136,11 @@
  *
  * @subsection instproc  Installation Procedure
  *
- * Building a debug version:
+ * Building CUV:
  *
  * @code
- * $ cd cuv-version-source
- * $ mkdir -p build/debug
- * $ cd build/debug
- * $ cmake -DCMAKE_BUILD_TYPE=Debug ../../
- * $ ccmake .          # adjust paths to your system (cuda, thrust, pyublas, ...)!
- *                     # turn on/off optional libraries (CImg, ...)
- * $ make -j
- * $ ctest             # run tests to see if it went well
- * $ sudo make install
- * $ export PYTHONPATH=`pwd`/src      # only if you want python bindings
- * @endcode
- *
- * Building a release version:
- *
- * @code
+ * $ sudo apt-get install cmake cmake-curses-gui libblas-dev libboost-all-dev libtemplate-perl doxygen python-nose python-dev cimg-dev
+ * $ # download and install pyublas if you want python-bindings
  * $ cd cuv-version-source
  * $ mkdir -p build/release
  * $ cd build/release
@@ -186,25 +176,29 @@
  *
  * C++ Code:
  * @code
- * #include <cuv.hpp>
- *     using namespace cuv;
- * 
- *     int main(void){
- *         tensor<float,host_memory_space> h(256);  // reserves space in host memory
- *         tensor<float,dev_memory_space>  d(256);  // reserves space in device memory
- * 
- *         fill(h,0);                          // terse form
- *         apply_0ary_functor(h,NF_FILL,0.f);    // more verbose
- * 
- *         d=h;                                // push to device
- *         sequence(d);                        // fill device vector with a sequence
- * 
- *         h=d;                                // pull to host
- *         for(int i=0;i<h.size();i++)
- *         {
- *             assert(d[i] == h[i]);
- *         }
- *     }
+ *  #include <cuv.hpp>
+ *  using namespace cuv;
+ *
+ *  int main(void){
+ *      tensor<float,host_memory_space> h(extents[8][5]);  // reserves space in host memory
+ *      tensor<float,dev_memory_space>  d(extents[8][5]);  // reserves space in device memory
+ *
+ *      h = 0;                              // set all values to 0
+ *
+ *      d=h;                                // push to device
+ *      sequence(d);                        // fill device vector with a sequence
+ *
+ *      h=d;                                // pull to host
+ *      for(int i=0;i<h.size();i++) {
+ *          assert(d[i] == h[i]);
+ *      }
+ *
+ *      for(int i=0;i<h.shape(0);i++)
+ *          for(int j=0;j<h.shape(1);j++) {
+ *              assert(d(i,j) == h(i,j));
+ *          }
+ *  }
+ *
  * @endcode
  *
  * Python Code:
@@ -238,8 +232,7 @@
  * int main(void){
  *     tensor<float,dev_memory_space,column_major> C(2048,2048),A(2048,2048),B(2048,2048);
  * 
- *     fill(C,0);         // initialize to some defined value, not strictly necessary here
- *     sequence(A);
+ *     sequence(A);                        // fill A, B with consecutive integers
  *     sequence(B);
  * 
  *     apply_binary_functor(A,B,BF_MULT);  // elementwise multiplication
@@ -255,7 +248,6 @@
  * C = cp.dev_tensor_float_cm([2048,2048])   # column major tensor
  * A = cp.dev_tensor_float_cm([2048,2048])   
  * B = cp.dev_tensor_float_cm([2048,2048])
- * cp.fill(C,0)                       # fill with some defined values, not really necessary here
  * cp.sequence(A)
  * cp.sequence(B)
  * cp.apply_binary_functor(B,A,cp.binary_functor.MULT) # elementwise multiplication

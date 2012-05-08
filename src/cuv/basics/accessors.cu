@@ -27,47 +27,43 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //*LE*
 
-
-
-
-
 #include <iostream>
 #include <stdexcept>
 #include <cuda.h>
 #include <thrust/device_ptr.h>
 #include <cuv/tools/cuv_general.hpp>
-#include <cuv/basics/linear_memory.hpp>
 #include <cuv/tools/meta_programming.hpp>
 
+#include "accessors.hpp"
 
 namespace cuv{
 
-template <class value_type, class index_type>
-struct allocator<value_type,index_type,dev_memory_space>{
-	void alloc2d( value_type** ptr, index_type& pitch, index_type height, index_type width ) const{
+template <class value_type, class size_type>
+struct allocator<value_type,size_type,dev_memory_space>{
+	void alloc2d( value_type** ptr, size_type& pitch, size_type height, size_type width ) const{
 		size_t p;
 		cuvSafeCall(cudaMallocPitch(ptr, &p, sizeof(value_type)*width, height));
 		pitch = p;
 	}
-	void alloc( value_type** ptr, index_type size) const{
+	void alloc( value_type** ptr, size_type size) const{
 		cuvSafeCall(cudaMalloc(ptr, sizeof(value_type)*size));
 	}
 	void dealloc( value_type** ptr) const {
 		cuvSafeCall(cudaFree((void*)*ptr));
 		*ptr = NULL;
 	}
-	void alloc(const value_type** ptr, index_type size) const{
+	void alloc(const value_type** ptr, size_type size) const{
 	       cuvAssert(false);
 	}
 	void dealloc(const value_type** ptr)const {
 	       cuvAssert(false);
 	}
-	void copy(value_type* dst, const value_type*src,index_type size, host_memory_space){
+	void copy(value_type* dst, const value_type*src,size_type size, host_memory_space){
 		cuvSafeCall(cudaMemcpy( dst, src, size*sizeof( value_type ), cudaMemcpyHostToDevice ));
 	}
 	template<class value_type2>
 	void
-	copy(value_type* dst, const value_type2*src,index_type size, dev_memory_space){
+	copy(value_type* dst, const value_type2*src,size_type size, dev_memory_space){
 		if(IsSame<value_type,value_type2>::Result::value){
 			cuvSafeCall(cudaMemcpy( dst, src, size*sizeof( value_type ), cudaMemcpyDeviceToDevice ));
 		}
@@ -78,10 +74,10 @@ struct allocator<value_type,index_type,dev_memory_space>{
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 	}
-	void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, host_memory_space){
+	void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, host_memory_space){
 		cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(value_type),h,cudaMemcpyHostToDevice));
 	}
-	void copy2d(value_type* dst, const value_type*src,index_type dpitch, index_type spitch, index_type h, index_type w, dev_memory_space){
+	void copy2d(value_type* dst, const value_type*src,size_type dpitch, size_type spitch, size_type h, size_type w, dev_memory_space){
 		cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(value_type),h,cudaMemcpyDeviceToDevice));
 	}
 };
@@ -89,19 +85,22 @@ struct allocator<value_type,index_type,dev_memory_space>{
 template<class V,class I>
 void
 allocator<V,I,host_memory_space>::alloc(V** ptr, I size)const{
-	cuvSafeCall(cudaHostAlloc(ptr,size*sizeof(V),cudaHostAllocDefault));
+	/*cuvSafeCall(cudaHostAlloc(ptr,size*sizeof(V),cudaHostAllocDefault));*/
+    *ptr = new V[size];
 }
 template<class V,class I>
 void
 allocator<V,I,host_memory_space>::dealloc(V** ptr)const{
-	cuvSafeCall(cudaFreeHost(*ptr));
+	/*cuvSafeCall(cudaFreeHost(*ptr));*/
+    delete[] *ptr;
 	*ptr = 0;
 }
 template<class V,class I>
 void
 allocator<V,I,host_memory_space>::alloc2d(V** ptr, I& pitch, I height, I width)const{
 	pitch = width*sizeof(V);
-	*ptr  = new V[height*width];
+	/*cudaHostAlloc(ptr,height*width*sizeof(V),cudaHostAllocDefault);*/
+    *ptr = new V[height*width];
 }
 template<class V,class I>
 void
@@ -121,28 +120,36 @@ allocator<V,I,host_memory_space>::copy2d(V* dst, const V*src,I dpitch, I spitch,
 	cuvSafeCall(cudaMemcpy2D(dst,dpitch,src,spitch,w*sizeof(V),h,cudaMemcpyHostToHost));
 }
 
-template <class value_type, class index_type>
-void entry_set(value_type* ptr, index_type idx, value_type val, dev_memory_space) {
-	thrust::device_ptr<value_type> dev_ptr(ptr);
-	dev_ptr[idx]=val;
-}
-
-template <class value_type, class index_type>
-value_type entry_get(const value_type* ptr, index_type idx, dev_memory_space) {
-	const thrust::device_ptr<const value_type> dev_ptr(ptr);
-	return (value_type) *(dev_ptr+idx);
+namespace detail {
+    template <class value_type, class size_type>
+    void entry_set(value_type* ptr, size_type idx, value_type val, dev_memory_space) {
+        thrust::device_ptr<value_type> dev_ptr(ptr);
+        dev_ptr[idx]=val;
+    }
+    
+    template <class value_type, class size_type>
+    value_type entry_get(const value_type* ptr, size_type idx, dev_memory_space) {
+        const thrust::device_ptr<const value_type> dev_ptr(ptr);
+        return (value_type) *(dev_ptr+idx);
+    }
 }
 
 #define VECTOR_INST(T,I) \
 template struct allocator<T, I, dev_memory_space>; \
 template struct allocator<T, I, host_memory_space>; \
-template void entry_set(T*, I, T, dev_memory_space); \
-template T entry_get(const T*, I, dev_memory_space); \
+template void detail::entry_set(T*, I, T, dev_memory_space); \
+template T detail::entry_get(const T*, I, dev_memory_space); \
 template void allocator<T, I, dev_memory_space>::copy<        float>(T* dst, const         float*src,I size, dev_memory_space); \
 template void allocator<T, I, dev_memory_space>::copy<unsigned char>(T* dst, const unsigned char*src,I size, dev_memory_space); \
 template void allocator<T, I, dev_memory_space>::copy<  signed char>(T* dst, const signed   char*src,I size, dev_memory_space); \
 template void allocator<T, I, dev_memory_space>::copy<          int>(T* dst, const int          *src,I size, dev_memory_space); \
 template void allocator<T, I, dev_memory_space>::copy<unsigned  int>(T* dst, const unsigned int *src,I size, dev_memory_space);
+
+VECTOR_INST(float, int);
+VECTOR_INST(unsigned char, int);
+VECTOR_INST(signed char, int);
+VECTOR_INST(int, int);
+VECTOR_INST(unsigned int, int);
 
 VECTOR_INST(float, unsigned int);
 VECTOR_INST(unsigned char, unsigned int);

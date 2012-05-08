@@ -137,9 +137,9 @@ namespace cuv{
 			return (a % b != 0) ? (a / b + 1) : (a / b);  	  	 
 		} 
 #define V(X) #X << " : "<< (X)<<"  "
-		template<int radius, int channels, class DstV, class SrcV, class A>
-		void convolve_call_kernel(tensor<DstV,dev_memory_space,row_major,A>& dst,
-				     const tensor<SrcV,dev_memory_space,row_major,A>& src, int dir
+		template<int radius, int channels, class DstV, class SrcV>
+		void convolve_call_kernel(tensor<DstV,dev_memory_space,row_major>& dst,
+				     const tensor<SrcV,dev_memory_space,row_major>& src, int dir
 				     ){
 
 			int dw = src.shape()[1]/channels;
@@ -153,13 +153,13 @@ namespace cuv{
 			if(dir==0){
 				dim3 blocks(iDivUp(dw , (ROWS_RESULT_STEPS * ROWS_BLOCKDIM_X)), iDivUp(dh , ROWS_BLOCKDIM_Y));
 				dim3 threads(ROWS_BLOCKDIM_X, ROWS_BLOCKDIM_Y);
-				 convolutionRowGPU<radius><<<blocks, threads>>>( (dst_vec_t) dst.ptr(), (src_vec_t) src.ptr(), dw, dh,dst.pitch(),src.pitch());
+				 convolutionRowGPU<radius><<<blocks, threads>>>( (dst_vec_t) dst.ptr(), (src_vec_t) src.ptr(), dw, dh,dst.stride(0),src.stride(0));
 				/*convolutionRowGPU<radius><<<blocks, threads>>>( (dst_vec_t) dst.ptr(), (src_vec_t) src.ptr(), dw, dh,dst.pitch(),src.pitch(),*/
 						/*make_bf_vd_vd<channels,1>(bf_multiplies<DstV,SrcV,float>()));*/
 			}else if(dir==1){
 				dim3 blocks(iDivUp(dw , COLUMNS_BLOCKDIM_X), iDivUp(dh , (COLUMNS_RESULT_STEPS * COLUMNS_BLOCKDIM_Y)));
 				dim3 threads(COLUMNS_BLOCKDIM_X, COLUMNS_BLOCKDIM_Y);
-				convolutionColumnGPU<radius><<<blocks, threads>>>( (dst_vec_t) dst.ptr(), (src_vec_t) src.ptr(), dw, dh, dst.pitch(), src.pitch());
+				convolutionColumnGPU<radius><<<blocks, threads>>>( (dst_vec_t) dst.ptr(), (src_vec_t) src.ptr(), dw, dh, dst.stride(0), src.stride(0));
 				/*convolutionColumnGPU<radius><<<blocks, threads>>>( (dst_vec_t) dst.ptr(), (src_vec_t) src.ptr(), dh, dw, dst.pitch(), src.pitch(),*/
 						/*make_bf_vd_vd<channels,1>(bf_multiplies<DstV,SrcV,float>()));*/
 			}
@@ -167,7 +167,7 @@ namespace cuv{
 		}
 
 
-		template<int Channels,class DstV, class SrcV, class M, class A>
+		template<int Channels,class DstV, class SrcV, class M>
 		void radius_dispatch(const unsigned int& radius,
 					   interleaved_image<Channels,DstV,M>& dst,
 				     const interleaved_image<Channels,SrcV,M>& src,int dir){
@@ -183,9 +183,9 @@ namespace cuv{
 				default: cuvAssert(false);
 			}
 		}
-		template<class DstV, class SrcV, class M, class A>
-		void radius_dispatch(const unsigned int& radius,tensor<DstV,M,row_major,A>& dst,
-				     const tensor<SrcV,M,row_major,A>& src,int dir){
+		template<class DstV, class SrcV, class M>
+		void radius_dispatch(const unsigned int& radius,tensor<DstV,M,row_major>& dst,
+				     const tensor<SrcV,M,row_major>& src,int dir){
 			switch(radius){
 				case 1: convolve_call_kernel<1,1>(dst,src,dir); break;
 				case 2: convolve_call_kernel<2,1>(dst,src,dir); break;
@@ -198,16 +198,16 @@ namespace cuv{
 				default: cuvAssert(false);
 			}
 		}
-		template<class DstV, class SrcV, class M, class A>
+		template<class DstV, class SrcV, class M>
 		void
-		convolve(       tensor<DstV,M,row_major, A>& dst,
-			  const tensor<SrcV,M,row_major, A>& src,
+		convolve(       tensor<DstV,M,row_major>& dst,
+			  const tensor<SrcV,M,row_major>& src,
 			  const unsigned int&   filter_radius,
 			  const separable_filter& filt, int axis, 
 			  const float& param ){
 
-			typedef tensor<DstV,M,row_major,A> result_type;
-			typedef tensor<SrcV,M,row_major,A>    src_type;
+			typedef tensor<DstV,M,row_major> result_type;
+			typedef tensor<SrcV,M,row_major>    src_type;
 			cuvAssert(filter_radius <= MAX_KERNEL_RADIUS);
                         cuvAssert(src.ndim()==2 || src.ndim()==3);
 
@@ -216,10 +216,10 @@ namespace cuv{
 			}
 
 			if(src.ndim()==3){
-				const std::vector<typename src_type::index_type>& s = src.shape();
+				const std::vector<typename src_type::size_type>& s = src.shape();
 				for(unsigned int i=0;i<s[0];i++){
-					src_type    sview(indices[i][index_range(0,s[1])][index_range(0,s[2])], src);
-					result_type dview(indices[i][index_range(0,s[1])][index_range(0,s[2])], dst);
+                    typename src_type::view_type    sview(indices[i][index_range(0,s[1])][index_range(0,s[2])], src);
+					typename result_type::view_type  dview(indices[i][index_range(0,s[1])][index_range(0,s[2])], dst);
 					convolve(dview,sview,filter_radius,filt,axis,param);
 				}
 				return;
@@ -291,10 +291,10 @@ namespace cuv{
 		}
 		
 		// instantiations
-#define INST(DSTV, SRCV,M,A) \
+#define INST(DSTV, SRCV,M) \
 		template void \
-		convolve<DSTV,SRCV,M>( tensor<DSTV,M,row_major, A>&, \
-				const tensor<SRCV,M,row_major, A>&, \
+		convolve<DSTV,SRCV,M>( tensor<DSTV,M,row_major>&, \
+				const tensor<SRCV,M,row_major>&, \
 				const unsigned int&,                     \
 				const separable_filter&, int axis, \
 				const float&);
@@ -305,8 +305,7 @@ namespace cuv{
 				const unsigned int&,                     \
 				const separable_filter&, int axis, \
 				const float&);
-		INST(float,float,dev_memory_space,linear_memory_tag);
-		INST(float,float,dev_memory_space,memory2d_tag);
+		INST(float,float,dev_memory_space);
 
 		INST_IL(4,float,float,dev_memory_space);
 	} // namespace separable convolution

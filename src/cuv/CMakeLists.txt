@@ -25,6 +25,7 @@ TARGET_LINK_LIBRARIES(cuv
 	cuv_kernels
 	cuv_intimg
 	cuv_separable_conv
+    tp_cudaconv2
 	)
 IF(CUV_CIMG_BINDINGS)
 	TARGET_LINK_LIBRARIES(cuv cuv_cimg pthread X11 png)

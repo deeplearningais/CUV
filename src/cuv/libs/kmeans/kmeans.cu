@@ -86,8 +86,8 @@ void compute_clusters_impl(tensor<V,dev_memory_space,M>& centers,
 		const tensor<V,dev_memory_space,M>& m,
 		const cuv::tensor<I,dev_memory_space>& indices){
 
-		I height = cuv::IsSame<M,column_major>::Result::value ? m.shape()[0] : m.shape()[1];
-		I  width = cuv::IsSame<M,column_major>::Result::value ? m.shape()[1] : m.shape()[0];
+		I height = cuv::IsSame<M,column_major>::Result::value ? m.shape(0) : m.shape(1);
+		I  width = cuv::IsSame<M,column_major>::Result::value ? m.shape(1) : m.shape(0);
 
 		static const int BLOCK_DIM = 16;
 		const int blocks_needed = ceil((float)height/(BLOCK_DIM));
@@ -119,11 +119,11 @@ void compute_clusters_impl(tensor<V,host_memory_space,M>& clusters,
 		const tensor<V,host_memory_space,M>& data,
 		const tensor<I,host_memory_space>& indices){
 
-	const I data_length = cuv::IsSame<M,column_major>::Result::value ? data.shape()[0] : data.shape()[1];
-	const I  data_num   = cuv::IsSame<M,column_major>::Result::value ? data.shape()[1] : data.shape()[0];
+	const I data_length = cuv::IsSame<M,column_major>::Result::value ? data.shape(0) : data.shape(1);
+	const I  data_num   = cuv::IsSame<M,column_major>::Result::value ? data.shape(1) : data.shape(0);
 
-	const I clusters_length = cuv::IsSame<M,column_major>::Result::value ? clusters.shape()[0] : clusters.shape()[1];
-	const I clusters_num    = cuv::IsSame<M,column_major>::Result::value ? clusters.shape()[1] : clusters.shape()[0];
+	const I clusters_length = cuv::IsSame<M,column_major>::Result::value ? clusters.shape(0) : clusters.shape(1);
+	const I clusters_num    = cuv::IsSame<M,column_major>::Result::value ? clusters.shape(1) : clusters.shape(0);
 
 	unsigned int* points_in_cluster=new unsigned int[clusters_num];
 	for (int i=0; i <clusters_num; i++)
@@ -159,15 +159,15 @@ namespace impl{
 
 	template<class V, class L>
 	thrust::device_ptr<V>
-	thrust_ptr(const cuv::tensor<V,dev_memory_space,L>& m){ return thrust::device_ptr<V>(m.ptr()); }
+	thrust_ptr(const cuv::tensor<V,dev_memory_space,L>& m){ return thrust::device_ptr<V>(const_cast<V*>(m.ptr())); }
 
 	template<class V, class L>
 	V*
-	thrust_ptr(const cuv::tensor<V,host_memory_space,L>& m){ return m.ptr(); }
+	thrust_ptr(const cuv::tensor<V,host_memory_space,L>& m){ return const_cast<V*>(m.ptr()); }
 
-	template<class value_type, class index_type>
+	template<class value_type, class index_type, class size_type>
 	__global__
-	void reorder_kernel(value_type* dst, value_type* src, index_type* index,index_type dataDim, index_type rows){
+	void reorder_kernel(value_type* dst, const value_type* src, index_type* index,size_type dataDim, size_type rows){
 		for(unsigned int row = blockIdx.x; row<rows; row+=gridDim.x){
 			const unsigned int off = threadIdx.x;
 			const unsigned int index_row = index[row];
@@ -180,15 +180,15 @@ namespace impl{
 			tensor<I,host_memory_space>& indices,
 			const tensor<V,host_memory_space,M>& data){
 
-		const I data_length = cuv::IsSame<M,column_major>::Result::value ? data.shape()[0] : data.shape()[1];
-		const I  data_num   = cuv::IsSame<M,column_major>::Result::value ? data.shape()[1] : data.shape()[0];
+		const I data_length = cuv::IsSame<M,column_major>::Result::value ? data.shape(0) : data.shape(1);
+		const I  data_num   = cuv::IsSame<M,column_major>::Result::value ? data.shape(1) : data.shape(0);
 
 		cuv::tensor<I,host_memory_space> seq(indices.shape());
 		thrust::sequence(thrust_ptr(seq),thrust_ptr(seq)+data_num);
 		thrust::sort_by_key(thrust_ptr(indices),thrust_ptr(indices)+data_num,thrust_ptr(seq));
 		V* sorted_ptr = sorted.ptr();
-		for(I i=0;i<data.shape()[0]; i++){
-			V* src_ptr = data.ptr()   + data_length * seq[i];
+		for(I i=0;i<data.shape(0); i++){
+			const V* src_ptr = data.ptr()   + data_length * seq[i];
 			V* dst_ptr = sorted.ptr() + data_length * i;
 			for(I j=0;j<data_length; j++)
 				dst_ptr[j] = src_ptr[j];
@@ -198,13 +198,13 @@ namespace impl{
 	void sort_by_index(tensor<V,dev_memory_space,M>& sorted,
 			tensor<I,dev_memory_space>& indices,
 			const tensor<V,dev_memory_space,M>& data){
-		tensor<unsigned int,dev_memory_space> seq(indices.shape());
+		tensor<I,dev_memory_space> seq(indices.shape());
 
-		const I data_length = cuv::IsSame<M,column_major>::Result::value ? data.shape()[0] : data.shape()[1];
-		const I  data_num   = cuv::IsSame<M,column_major>::Result::value ? data.shape()[1] : data.shape()[0];
+		const I data_length = cuv::IsSame<M,column_major>::Result::value ? data.shape(0) : data.shape(1);
+		const I  data_num   = cuv::IsSame<M,column_major>::Result::value ? data.shape(1) : data.shape(0);
 
-		thrust::sequence(thrust_ptr(seq),thrust_ptr(seq)+data.shape()[0]);
-		thrust::sort_by_key(thrust_ptr(indices),thrust_ptr(indices)+data.shape()[0],thrust_ptr(seq));
+		thrust::sequence(thrust_ptr(seq),thrust_ptr(seq)+data.shape(0));
+		thrust::sort_by_key(thrust_ptr(indices),thrust_ptr(indices)+data.shape(0),thrust_ptr(seq));
 
 		unsigned int num_threads = min(256,data_length);
 		num_threads = 32 * ((num_threads+32-1)/32); // make sure it can be divided by 32
@@ -224,11 +224,11 @@ void compute_clusters(cuv::tensor<__data_value_type, __memory_space_type, __memo
         cuvAssert(data.ndim()==2);
         cuvAssert(indices.ndim()==1);
 	if(IsSame<__memory_layout_type,column_major>::Result::value){
-		cuvAssert(data.shape()[1]==indices.size());
-		cuvAssert(cuv::maximum(indices)<clusters.shape()[1]); // indices start with 0.
+		cuvAssert(data.shape(1)==indices.size());
+		cuvAssert(cuv::maximum(indices)<clusters.shape(1)); // indices start with 0.
 	}else{
-		cuvAssert(data.shape()[0]==indices.size());
-		cuvAssert(cuv::maximum(indices)<clusters.shape()[0]); // indices start with 0.
+		cuvAssert(data.shape(0)==indices.size());
+		cuvAssert(cuv::maximum(indices)<clusters.shape(0)); // indices start with 0.
 	}
 	compute_clusters_impl(clusters,data,indices);
 	}
@@ -242,14 +242,14 @@ void sort_by_index(cuv::tensor<__data_value_type, __memory_space_type, __memory_
         cuvAssert(indices.ndim()==1);
 
 	if(IsSame<__memory_layout_type,column_major>::Result::value){
-		cuvAssert(data.shape()[1]==indices.size());
+		cuvAssert(data.shape(1)==indices.size());
 #ifndef NDEBUG
-		cuvAssert(cuv::maximum(indices)<sorted.shape()[1]); // indices start with 0.
+		cuvAssert(cuv::maximum(indices)<sorted.shape(1)); // indices start with 0.
 #endif
 	}else{
-		cuvAssert(data.shape()[0]==indices.size());
+		cuvAssert(data.shape(0)==indices.size());
 #ifndef NDEBUG
-		cuvAssert(cuv::maximum(indices)<sorted.shape()[0]); // indices start with 0.
+		cuvAssert(cuv::maximum(indices)<sorted.shape(0)); // indices start with 0.
 #endif
 	}
 	impl::sort_by_index(sorted,indices,data);

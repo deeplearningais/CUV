@@ -27,7 +27,7 @@ CUDA_ADD_LIBRARY(cuv_matrix_ops SHARED
 ADD_DEPENDENCIES(cuv_matrix_ops generateheader)
 
 CUDA_ADD_CUBLAS_TO_TARGET(cuv_matrix_ops)
-TARGET_LINK_LIBRARIES(cuv_matrix_ops ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY} ${BLAS_LIBRARIES} cuda_conv cuv_tensor_ops )
+TARGET_LINK_LIBRARIES(cuv_matrix_ops ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY} ${BLAS_LIBRARIES} cuv_tensor_ops )
 install(TARGETS cuv_matrix_ops
 	RUNTIME DESTINATION bin
 	LIBRARY DESTINATION lib

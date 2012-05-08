@@ -115,8 +115,8 @@ namespace libs{
                 cuvAssert(B.shape()[0] == result.shape()[1]);
                 
                 typedef tensor<__value_type, __memory_space_type> tensortype;
-                tensortype A_sqr_norm(A.shape()[0]);
-                tensortype B_sqr_norm(B.shape()[0]);
+                tensortype A_sqr_norm(A.shape(0));
+                tensortype B_sqr_norm(B.shape(0));
                 reduce_to_col(A_sqr_norm,A,RF_ADD_SQUARED);
                 reduce_to_col(B_sqr_norm,B,RF_ADD_SQUARED);
                 prod(result,A,B,'n','t',-2.,0.);
