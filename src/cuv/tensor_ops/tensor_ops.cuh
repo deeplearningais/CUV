@@ -316,6 +316,8 @@ namespace detail{
 				case SF_LOGADDEXP: launch_unary_kernel(dst,src,make_bind1st(bf_logaddexp<V1>(),p),mask); break;
 				case SF_MIN:       launch_unary_kernel(dst,src,make_bind2nd(bf_min<V1,V2,S1>(),p),mask); break;
 				case SF_MAX:       launch_unary_kernel(dst,src,make_bind2nd(bf_max<V1,V2,S1>(),p),mask); break;
+				case SF_ROBUST_ABS:launch_unary_kernel(dst,src,make_bind2nd(bf_robust_abs<V1,V2,S1>(),p),mask); break;
+				case SF_DROBUST_ABS:launch_unary_kernel(dst,src,make_bind2nd(bf_drobust_abs<V1,V2,S1>(),p),mask); break;
 				case SF_RECT:      launch_unary_kernel(dst,src,make_bind2nd(bf_rect<V1,V2,S1>(),p),mask); break;
 				case SF_DRECT:     launch_unary_kernel(dst,src,make_bind2nd(bf_drect<V1,V2,S1>(),p),mask); break;
 				case SF_EQ:        launch_unary_kernel(dst,src,make_bind2nd(thrust::equal_to<V2>(),p),mask); break;

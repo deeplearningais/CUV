@@ -324,6 +324,12 @@ struct bf_min: binary_functor<R,T,U> { inline __device__ __host__  R operator()(
 /// calculates the maximum of x and y
 template<class R, class T, class U>
 struct bf_max: binary_functor<R,T,U> { inline __device__ __host__  R operator()(const T& t, const U& u)      const{ return t>u ? t : u; } };
+/// calculates the robust absolute value of x
+template<class R, class T, class U>
+struct bf_robust_abs: binary_functor<R,T,U> { inline __device__ __host__  R operator()(const T& t, const U& u)      const{ return sqrt((float)t*(float)t+u); } };
+/// calculates the derivative of robust absolute value of x w.r.t. x 
+template<class R, class T, class U>
+struct bf_drobust_abs: binary_functor<R,T,U> { inline __device__ __host__  R operator()(const T& t, const U& u)      const{ return t / sqrt((float)t*(float)t+u); } };
 
 /// calculates a*x+y for fixed a
 template<class R, class T, class U>

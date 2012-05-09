@@ -166,6 +166,8 @@ namespace cuv{
 	 *  @li SF_LOGADDEXP computes \f$\log(\exp(a) + \exp(x))\f$
 	 *  @li SF_MIN computes min(x,a)
 	 *  @li SF_MAX computes max(x,a)
+	 *  @li SF_ROBUST_ABS computes \f$\sqrt{x^2+a}\f$
+	 *  @li SF_DROBUST_ABS computes derivative of @see SF_ROBUST_ABS \f$x/\sqrt{a+x^2}\f$
 	 *  @li SF_EQ computes x == a
 	 *  @li SF_LT computes x < a
 	 *  @li SF_GT computes x > a
@@ -217,6 +219,8 @@ namespace cuv{
         SF_LOGADDEXP,
 		SF_MIN,
 		SF_MAX,
+        SF_ROBUST_ABS,
+        SF_DROBUST_ABS,
 		SF_EQ,
 		SF_LT,
 		SF_GT,
