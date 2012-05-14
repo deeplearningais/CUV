@@ -143,6 +143,7 @@ namespace cuv{
 	 *  @li SF_SIGN computes sign(x)
 	 *  @li SF_SIGM computes 1/(1+exp(-x))
 	 *  @li SF_DSIGM computes x * (1-x)
+	 *  @li SF_SIN computes sin(x)
 	 *  @li SF_COS computes cos(x)
 	 *  @li SF_SQUARE computes x*x
 	 *  @li SF_SUBLIN computes 1-x
@@ -185,6 +186,7 @@ namespace cuv{
 	enum ScalarFunctor{
 		// w/o params
 		SF_EXP,
+		SF_SIN,
 		SF_COS,
 		//SF_EXACT_EXP,
 		SF_LOG,

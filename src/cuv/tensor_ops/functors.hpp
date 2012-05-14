@@ -60,6 +60,9 @@ struct uf_exp:unary_functor<R,T>{  inline __host__ __device__         R operator
 /// calculates exp(x) (deprecated)
 template<class R, class T>
 struct uf_exact_exp:unary_functor<R,T>{  inline __device__ __host__   R operator()(const T& t)const{ return expf(t);    } };
+/// calculates sin(x)
+template<class R, class T>
+struct uf_sin:unary_functor<R,T>{  inline __host__ __device__         R operator()(const T& t)const{ return sinf(t);    } };
 /// calculates cos(x)
 template<class R, class T>
 struct uf_cos:unary_functor<R,T>{  inline __host__ __device__         R operator()(const T& t)const{ return cosf(t);    } };

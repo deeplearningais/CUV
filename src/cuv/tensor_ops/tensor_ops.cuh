@@ -335,6 +335,7 @@ namespace detail{
 		else if(numparams==0){
 			switch(sf){
 				case SF_EXP:        launch_unary_kernel(dst,src, uf_exp<V1,V2>(),mask); break;
+				case SF_SIN:        launch_unary_kernel(dst,src, uf_sin<V1,V2>(),mask); break;
 				case SF_COS:        launch_unary_kernel(dst,src, uf_cos<V1,V2>(),mask); break;
 				case SF_LOG:        launch_unary_kernel(dst,src, uf_log<V1,V2>(),mask); break;
 				case SF_SIGN:       launch_unary_kernel(dst,src, uf_sign<V1,V2>(),mask); break;
