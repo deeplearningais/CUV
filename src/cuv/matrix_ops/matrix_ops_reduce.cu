@@ -348,8 +348,8 @@ namespace reduce_impl {
 template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
 void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const tensor<__value_type2,__memory_space_type,__memory_layout_type>& m, reduce_functor rf, const __value_type2& factNew, const __value_type2& factOld) {
         // Assert that v is vector, m matrix
-        cuvAssert((v.ndim()==1) || ((v.ndim()==2) && (v.shape(0)==1 || v.shape(1) ==1)));
-        cuvAssert(m.ndim()==2);
+        /*cuvAssert((v.ndim()==1) || ((v.ndim()==2) && (v.shape(0)==1 || v.shape(1) ==1)));*/
+        /*cuvAssert(m.ndim()==2);*/
 	if (IsSame<__memory_layout_type,row_major>::Result::value){
 		//matrix is row major
                 //create column major view and call reduce_to_row for column major
@@ -365,8 +365,8 @@ void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const tensor<__va
 template<class __value_type, class __value_type2, class __memory_space_type, class __memory_layout_type>
 void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const tensor<__value_type2,__memory_space_type,__memory_layout_type>& m,reduce_functor rf, const __value_type2& factNew, const __value_type2& factOld) {
         // Assert that v is vector, m matrix
-        cuvAssert((v.ndim()==1) || ((v.ndim()==2) && (v.shape(0)==1 || v.shape(1) ==1)));
-        cuvAssert(m.ndim()==2);
+        /*cuvAssert((v.ndim()==1) || ((v.ndim()==2) && (v.shape(0)==1 || v.shape(1) ==1)));*/
+        /*cuvAssert(m.ndim()==2);*/
 	if (IsSame<__memory_layout_type,row_major>::Result::value){
 		//matrix is row major
 		//create column major view and call reduce_to_row for column major
