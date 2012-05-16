@@ -172,6 +172,41 @@ BOOST_AUTO_TEST_CASE( tensor_out_of_scope_view )
                 }
 }
 
+BOOST_AUTO_TEST_CASE( tensor_memcpy2d )
+{
+    tensor<float,host_memory_space> y;
+    tensor<float,host_memory_space> x(extents[4][5][6]);
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 5; ++j)
+            for (int k = 0; k < 6; ++k)
+                x(i,j,k) = i+j+k;
+
+    // accessing strided memory
+    y = x[indices[index_range()][index_range()][index_range(0,1)]];
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 5; ++j)
+            for (int k = 0; k < 1; ++k)
+                {
+                    BOOST_CHECK_EQUAL(y(i,j,k), i+j+k);
+                }
+    // copying strided memory
+    y = y.copy(); // y in R^(4,5,1)
+    for(int k=0;k<y.size();k++) // avoid fill() dependency in this file (speed up compiling...)
+        y[k] = 0.f;
+    tensor_view<float,host_memory_space> m(x,indices[index_range()][index_range()][index_range(0,1)]);
+    m = y;
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 5; ++j)
+            for (int k = 0; k < 1; ++k)
+                {
+                    if(k!=0) {
+                        BOOST_CHECK_EQUAL(x(i,j,k), i+j+k);
+                    }else{
+                        BOOST_CHECK_EQUAL(x(i,j,k), 0.f);
+                    }
+                }
+}
+
 template<class V,class M1,class M2>
 void test_pushpull_2d()
 {
