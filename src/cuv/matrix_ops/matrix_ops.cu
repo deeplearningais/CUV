@@ -143,8 +143,8 @@ tensor<__value_type , __memory_space_type,column_major>*blockview(
 				) {
                         cuvAssert(matrix.ndim()==2);
 			cuvAssert(start_rows==0);
-			cuvAssert(num_rows==matrix.shape()[0])
-			return new tensor<__value_type,__memory_space_type,column_major>(indices[index_range(0,num_rows)][index_range(0,num_cols)], matrix.ptr()+matrix.shape()[0]*start_cols);
+			cuvAssert(num_rows==matrix.shape(0))
+			return new tensor<__value_type,__memory_space_type,column_major>(indices[index_range(0,num_rows)][index_range(0,num_cols)], matrix.ptr()+matrix.shape(0)*start_cols);
 		}
 
 template<class __value_type, class __memory_space_type, class __index_type>
@@ -158,8 +158,8 @@ tensor<__value_type,__memory_space_type,row_major>* blockview(
 ) {
         cuvAssert(matrix.ndim()==2);
 	cuvAssert(start_cols==0);
-	cuvAssert(num_cols==matrix.shape()[1])
-	return new tensor<__value_type,__memory_space_type,row_major>(indices[index_range(0,num_rows)][index_range(0,num_cols)],matrix.ptr()+matrix.shape()[1]*start_rows);
+	cuvAssert(num_cols==matrix.shape(1))
+	return new tensor<__value_type,__memory_space_type,row_major>(indices[index_range(0,num_rows)][index_range(0,num_cols)],matrix.ptr()+matrix.shape(1)*start_rows);
 }
 template<class __value_type, class __memory_space_type, class __memory_layout, class __index_type>
 tensor<__value_type,__memory_space_type,__memory_layout>* blockview(
@@ -185,19 +185,19 @@ void prod(tensor<float,dev_memory_space,column_major>& dst,
         cuvAssert(dst.ndim()==2);
         cuvAssert(A.ndim()==2);
         cuvAssert(B.ndim()==2);
-	int m = (transA=='t' ? A.shape()[1] : A.shape()[0]);
-	int k1 = (transA=='t' ? A.shape()[0] : A.shape()[1]);
-	int k2 = (transB=='t' ? B.shape()[1] : B.shape()[0]);
-	int n = (transB=='t' ? B.shape()[0] : B.shape()[1]);
+	int m = (transA=='t' ? A.shape(1) : A.shape(0));
+	int k1 = (transA=='t' ? A.shape(0) : A.shape(1));
+	int k2 = (transB=='t' ? B.shape(1) : B.shape(0));
+	int n = (transB=='t' ? B.shape(0) : B.shape(1));
 
-	cuvAssert(dst.shape()[0] == m);
-	cuvAssert(dst.shape()[1] == n);
+	cuvAssert(dst.shape(0) == m);
+	cuvAssert(dst.shape(1) == n);
 	cuvAssert(k1 == k2);
 	cuvAssert(A.ptr());
 	cuvAssert(B.ptr());
 	cuvAssert(dst.ptr());
 
-	cublasSgemm(transA, transB, m, n, k1, factAB, A.ptr(), A.shape()[0],B.ptr(), B.shape()[0], factC, dst.ptr(), dst.shape()[0]);
+	cublasSgemm(transA, transB, m, n, k1, factAB, A.ptr(), A.shape(0),B.ptr(), B.shape(0), factC, dst.ptr(), dst.shape(0));
 	cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
 	cuvSafeCall(cudaThreadSynchronize());
 }
@@ -214,13 +214,13 @@ void prod(tensor<float,host_memory_space,column_major>& dst,
         cuvAssert(A.ndim()==2);
         cuvAssert(B.ndim()==2);
 
-	int m = (transA=='t' ? A.shape()[1] : A.shape()[0]);
-	int k1 = (transA=='t' ? A.shape()[0] : A.shape()[1]);
-	int k2 = (transB=='t' ? B.shape()[1] : B.shape()[0]);
-	int n = (transB=='t' ? B.shape()[0] : B.shape()[1]);
+	int m = (transA=='t' ? A.shape(1) : A.shape(0));
+	int k1 = (transA=='t' ? A.shape(0) : A.shape(1));
+	int k2 = (transB=='t' ? B.shape(1) : B.shape(0));
+	int n = (transB=='t' ? B.shape(0) : B.shape(1));
 
-	cuvAssert(dst.shape()[0] == m);
-	cuvAssert(dst.shape()[1] == n);
+	cuvAssert(dst.shape(0) == m);
+	cuvAssert(dst.shape(1) == n);
 	cuvAssert(k1 == k2);
 	cuvAssert(A.ptr() != NULL);
 	cuvAssert(B.ptr() != NULL);
@@ -231,12 +231,12 @@ void prod(tensor<float,host_memory_space,column_major>& dst,
 			CblasColMajor,
 			CVT_TRANSPOSE(transA),
 			CVT_TRANSPOSE(transB), m, n, k1,
-			factAB, A.ptr(), A.shape()[0],B.ptr(), B.shape()[0], factC, dst.ptr(), dst.shape()[0]);
+			factAB, A.ptr(), A.shape(0),B.ptr(), B.shape(0), factC, dst.ptr(), dst.shape(0));
 #else /* naive */
-	for(int i=0; i<A.shape()[0];i++)
-	for(int j=0; j<B.shape()[1]; j++) {
+	for(int i=0; i<A.shape(0);i++)
+	for(int j=0; j<B.shape(1); j++) {
 		float f=0;
-		for(int k=0;k<A.shape()[1];k++) {
+		for(int k=0;k<A.shape(1);k++) {
 			f += A(i,k)*B(k,j);
 		}
 		dst.set(i,j,f);
@@ -256,18 +256,18 @@ void prod(tensor<float,dev_memory_space,row_major>& dst,
         cuvAssert(A.ndim()==2);
         cuvAssert(B.ndim()==2);
 	// we use column major prod and just exchange width and height
-	int m = (transB=='t' ? B.shape()[0] : B.shape()[1]);
-	int k1 = (transB=='t' ? B.shape()[1] : B.shape()[0]);
-	int k2 = (transA=='t' ? A.shape()[0] : A.shape()[1]);
-	int n = (transA=='t' ? A.shape()[1] : A.shape()[0]);
+	int m = (transB=='t' ? B.shape(0) : B.shape(1));
+	int k1 = (transB=='t' ? B.shape(1) : B.shape(0));
+	int k2 = (transA=='t' ? A.shape(0) : A.shape(1));
+	int n = (transA=='t' ? A.shape(1) : A.shape(0));
 
-	cuvAssert(dst.shape()[0] == n);
-	cuvAssert(dst.shape()[1] == m);
+	cuvAssert(dst.shape(0) == n);
+	cuvAssert(dst.shape(1) == m);
 	cuvAssert(k1 == k2);
 	cuvAssert(A.ptr());
 	cuvAssert(B.ptr());
 	cuvAssert(dst.ptr());
-	cublasSgemm(transB, transA, m, n, k1, factAB, B.ptr(), B.shape()[1],A.ptr(), A.shape()[1], factC, dst.ptr(), dst.shape()[1]);
+	cublasSgemm(transB, transA, m, n, k1, factAB, B.ptr(), B.shape(1),A.ptr(), A.shape(1), factC, dst.ptr(), dst.shape(1));
 
 	cuvAssert( cublasGetError() == CUBLAS_STATUS_SUCCESS );
 	cuvSafeCall(cudaThreadSynchronize());
@@ -284,13 +284,13 @@ void prod(tensor<float,host_memory_space,row_major>& dst,
         cuvAssert(dst.ndim()==2);
         cuvAssert(A.ndim()==2);
         cuvAssert(B.ndim()==2);
-	int m = (transA=='t' ? A.shape()[1] : A.shape()[0]);
-	int k1 = (transA=='t' ? A.shape()[0] : A.shape()[1]);
-	int k2 = (transB=='t' ? B.shape()[1] : B.shape()[0]);
-	int n = (transB=='t' ? B.shape()[0] : B.shape()[1]);
+	int m = (transA=='t' ? A.shape(1) : A.shape(0));
+	int k1 = (transA=='t' ? A.shape(0) : A.shape(1));
+	int k2 = (transB=='t' ? B.shape(1) : B.shape(0));
+	int n = (transB=='t' ? B.shape(0) : B.shape(1));
 
-	cuvAssert(dst.shape()[0] == m);
-	cuvAssert(dst.shape()[1] == n);
+	cuvAssert(dst.shape(0) == m);
+	cuvAssert(dst.shape(1) == n);
 	cuvAssert(k1 == k2);
 	cuvAssert(A.ptr() != NULL);
 	cuvAssert(B.ptr() != NULL);
@@ -300,7 +300,7 @@ void prod(tensor<float,host_memory_space,row_major>& dst,
 			CblasRowMajor,
 			CVT_TRANSPOSE(transA),
 			CVT_TRANSPOSE(transB), m, n, k1,
-			factAB, A.ptr(), A.shape()[1],B.ptr(), B.shape()[1], factC, dst.ptr(), dst.shape()[1]);
+			factAB, A.ptr(), A.shape(1),B.ptr(), B.shape(1), factC, dst.ptr(), dst.shape(1));
 }
 
 template<class V, class I, class V2, class OP>
@@ -342,45 +342,49 @@ void matrix_plus_vector_kernel_row_major (V *A, V2* v, I h, I w, OP op) {
 namespace matrix_plus_vector_impl {
 	template<class V, class V2, class OP>
 	void matrix_plus_col(tensor<V,dev_memory_space,row_major>& A, const tensor<V2,dev_memory_space>& v, const OP& op) {
-		cuvAssert(A.shape()[0] == v.size());
-		const unsigned int num_threads = min(512,A.shape()[1]);
-		const unsigned int num_blocks  = min(1024,A.shape()[0]);
-		matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.shape()[0], A.shape()[1], op);
+		cuvAssert(A.shape(0) == v.size());
+        unsigned int other_dim = A.size()/A.shape(0);
+		const unsigned int num_threads = min(512,other_dim);
+		const unsigned int num_blocks  = min(1024,A.shape(0));
+		matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.shape(0), other_dim, op);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class V2, class OP>
 	void matrix_plus_col(tensor<V,dev_memory_space,column_major>& A, const tensor<V2,dev_memory_space>& v, const OP& op) {
-		cuvAssert(A.shape()[0] == v.size());
+		cuvAssert(A.shape(0) == v.size());
+        unsigned int other_dim = A.size()/A.shape(0);
 		const unsigned int num_threads = 512;
 		const unsigned int num_blocks  = min(512,(int)ceil((float)A.size() / num_threads));
-		matrix_plus_vector_kernel_column_major2<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.shape()[0], A.shape()[1], op);
+		matrix_plus_vector_kernel_column_major2<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.shape(0), other_dim, op);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class V2, class OP>
 	void matrix_plus_col(tensor<V,host_memory_space,column_major>& A, const tensor<V2,host_memory_space>& v, const OP& op) {
-		cuvAssert(A.shape()[0] == v.size());
+		cuvAssert(A.shape(0) == v.size());
+        unsigned int other_dim = A.size()/A.shape(0);
 		const V2* v_ptr = v.ptr();
 		V * A_ptr = A.ptr();
-		for(int j=0;j<A.shape()[1];j++) {
+		for(int j=0;j<other_dim;j++) {
 			v_ptr = v.ptr();
-			for(int i=0;i<A.shape()[0];i++,A_ptr++,v_ptr++)
+			for(int i=0;i<A.shape(0);i++,A_ptr++,v_ptr++)
 			*A_ptr = op(*A_ptr,*v_ptr);
 		}
 	}
 	template<class V, class V2, class OP>
 	void matrix_plus_col(tensor<V,host_memory_space,row_major>& A, const tensor<V2,host_memory_space>& v, const OP& op) {
-		cuvAssert(A.shape()[0] == v.size());
+		cuvAssert(A.shape(0) == v.size());
+        unsigned int other_dim = A.size()/A.shape(0);
 		const V2* v_ptr = v.ptr();
 		V * A_ptr = A.ptr();
-		for(int i=0;i<A.shape()[0];i++, v_ptr++) {
-			for(int j=0;j<A.shape()[1];j++)
+		for(int i=0;i<A.shape(0);i++, v_ptr++) {
+			for(int j=0;j<other_dim;j++)
 			*A_ptr++ = op(*A_ptr,*v_ptr);
 		}
 	}
 	// ====================  row ======================
 	template<class V, class V2, class T, class M, class OP>
 	void matrix_plus_row(tensor<V,T,M>& A, const tensor<V2,T>& v, const OP& op) {
-		cuvAssert(A.shape()[1] == v.size());
+		cuvAssert(A.shape(A.ndim()-1) == v.size());
 		matrix_plus_col(*(transposed_view(A)),v,op);
 	}
 }
@@ -418,11 +422,11 @@ namespace transpose_impl{
 			 const tensor<V, dev_memory_space, column_major>& src) {
                 cuvAssert(dst.ndim()==2);
                 cuvAssert(src.ndim()==2);
-		cuvAssert(dst.shape()[1] == src.shape()[0]);
-		cuvAssert(dst.shape()[0] == src.shape()[1]);
+		cuvAssert(dst.shape(1) == src.shape(0));
+		cuvAssert(dst.shape(0) == src.shape(1));
                 typedef typename tensor<V, dev_memory_space, column_major>::index_type I;
-		const I width = src.shape()[0];
-		const I height = src.shape()[1];
+		const I width = src.shape(0);
+		const I height = src.shape(1);
 		static const int BLOCK_SIZE = 16;
 		const int numBlocksX = ceil((float)width / BLOCK_SIZE);
 		const int numBlocksY = ceil((float)height / BLOCK_SIZE);
@@ -437,11 +441,11 @@ namespace transpose_impl{
 			 const tensor<V,dev_memory_space,row_major>& src) {
                 cuvAssert(dst.ndim()==2);
                 cuvAssert(src.ndim()==2);
-		cuvAssert(dst.shape()[1] == src.shape()[0]);
-		cuvAssert(dst.shape()[0] == src.shape()[1]);
+		cuvAssert(dst.shape(1) == src.shape(0));
+		cuvAssert(dst.shape(0) == src.shape(1));
                 typedef typename tensor<V, dev_memory_space, row_major>::index_type I;
-		const I width = src.shape()[1];
-		const I height = src.shape()[0];
+		const I width = src.shape(1);
+		const I height = src.shape(0);
 		static const int BLOCK_SIZE = 16;
 		const int numBlocksX = ceil((float)width / BLOCK_SIZE);
 		const int numBlocksY = ceil((float)height / BLOCK_SIZE);
@@ -456,13 +460,13 @@ namespace transpose_impl{
 			 const tensor<V,host_memory_space,column_major>& src) {
                 cuvAssert(dst.ndim()==2);
                 cuvAssert(src.ndim()==2);
-		cuvAssert(dst.shape()[1] == src.shape()[0]);
-		cuvAssert(dst.shape()[0] == src.shape()[1]);
+		cuvAssert(dst.shape(1) == src.shape(0));
+		cuvAssert(dst.shape(0) == src.shape(1));
 		V* dst_ptr = dst.ptr();
 		const V* src_ptr = src.ptr();
-		for(int i=0; i<dst.shape()[1]; i++) {
-			for(int j=0; j<dst.shape()[0]; j++) {
-				*dst_ptr++ = src_ptr[j*src.shape()[0]];
+		for(int i=0; i<dst.shape(1); i++) {
+			for(int j=0; j<dst.shape(0); j++) {
+				*dst_ptr++ = src_ptr[j*src.shape(0)];
 			}
 			src_ptr++;
 		}
@@ -473,13 +477,13 @@ namespace transpose_impl{
 			 const tensor<V,host_memory_space,row_major>& src) {
                 cuvAssert(dst.ndim()==2);
                 cuvAssert(src.ndim()==2);
-		cuvAssert(dst.shape()[1] == src.shape()[0]);
-		cuvAssert(dst.shape()[0] == src.shape()[1]);
+		cuvAssert(dst.shape(1) == src.shape(0));
+		cuvAssert(dst.shape(0) == src.shape(1));
 		V* dst_ptr = dst.ptr();
 		const V* src_ptr = src.ptr();
-		for(int i=0; i<dst.shape()[0]; i++) {
-			for(int j=0; j<dst.shape()[1]; j++) {
-				*dst_ptr++ = src_ptr[j*src.shape()[1]];
+		for(int i=0; i<dst.shape(0); i++) {
+			for(int j=0; j<dst.shape(1); j++) {
+				*dst_ptr++ = src_ptr[j*src.shape(1)];
 			}
 			src_ptr++;
 		}
@@ -494,13 +498,13 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& d
 template<class V, class T, class M>
 cuv::tensor<V,T,typename other_memory_layout<M>::type> * transposed_view_p(cuv::tensor<V,T,M>&  src){
         cuvAssert(src.ndim()==2);
-	return new tensor<V,T,typename other_memory_layout<M>::type>(indices[index_range(0,src.shape()[1])][index_range(0,src.shape()[0])],src.ptr());
+	return new tensor<V,T,typename other_memory_layout<M>::type>(indices[index_range(0,src.shape(1))][index_range(0,src.shape(0))],src.ptr());
 }
 
 template<class V, class T, class M>
 const cuv::tensor<V,T,typename other_memory_layout<M>::type> * transposed_view_p(const cuv::tensor<V,T,M>&  src){
         cuvAssert(src.ndim()==2);
-	return new tensor<V,T,typename other_memory_layout<M>::type>(indices[index_range(0,src.shape()[1])][index_range(0,src.shape()[0])],const_cast<V*>(src.ptr()));
+	return new tensor<V,T,typename other_memory_layout<M>::type>(indices[index_range(0,src.shape(1))][index_range(0,src.shape(0))],const_cast<V*>(src.ptr()));
 }
 
 #define INSTANTIATE_MV(V1,V2,M) \
