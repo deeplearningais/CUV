@@ -157,9 +157,11 @@ namespace reduce_impl {
                 template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
 	       	void operator()(tensor<__value_type,dev_memory_space> &v,const tensor<__value_type2,dev_memory_space,__memory_layout_type> &m,const  S & factNew,const  S & factOld, RF rf)const{
                     cuvAssert(m.ptr() != NULL);
-                    cuvAssert(m.shape(0) == v.size());
+                    const int main_dim  = m.shape(0);
+                    const int other_dim = m.size() / main_dim;
+                    cuvAssert(main_dim == v.size());
                     static const int BLOCK_DIM = 16;
-                    const int blocks_needed = ceil((float)m.shape(0)/(BLOCK_DIM));
+                    const int blocks_needed = ceil((float)main_dim/(BLOCK_DIM));
                     int grid_x =0, grid_y=0;
 
                     // how to handle grid dimension constraint
@@ -180,7 +182,7 @@ namespace reduce_impl {
                     typedef reduce_functor_traits<typename RF::result_value_functor_type> traits_type;
                     if(traits_type::returns_index)
                             mem += sizeof(vecval_t)*BLOCK_DIM*BLOCK_DIM;
-                    reduce_to_col_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.shape(1),m.shape(0),__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
+                    reduce_to_col_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),other_dim,main_dim,__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
                     cuvSafeCall(cudaThreadSynchronize());
 	}};
 
@@ -189,12 +191,15 @@ namespace reduce_impl {
                 template<class __value_type, class __value_type2, class __memory_layout_type, class RF, class S>
 	       	void operator()(tensor<__value_type,dev_memory_space> &v,const tensor<__value_type2,dev_memory_space,__memory_layout_type> &m,const S & factNew,const  S & factOld, RF rf)const{
 		cuvAssert(m.ptr() != NULL);
-		cuvAssert(m.shape(1) == v.size());
+        const int reduce_to_dim = m.ndim() - 1;
+        const int main_dim  = m.shape(reduce_to_dim);
+        const int other_dim = m.size()/main_dim;
+		cuvAssert(main_dim == v.size());
 		static const int BLOCK_DIM = 16;
-		dim3 grid(1, m.shape(1));
+		dim3 grid(1, main_dim);
 		if(grid.y>=65535){
-			grid.y = ceil(sqrt(m.shape(1)));
-			grid.z = ceil((float)m.shape(1)/grid.y);
+			grid.y = ceil(sqrt(main_dim));
+			grid.z = ceil((float)main_dim/grid.y);
 		}
 		dim3 threads(BLOCK_DIM*BLOCK_DIM,1);
 
@@ -205,7 +210,7 @@ namespace reduce_impl {
 		if(traits_type::returns_index)
 			mem += sizeof(vecval_t)*threads.x*threads.y;
 
-                reduce_to_row_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),m.shape(1),m.shape(0),__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
+                reduce_to_row_kernel<BLOCK_DIM><<<grid,threads,mem>>>(m.ptr(),v.ptr(),main_dim,other_dim,__value_type2(factNew),__value_type2(factOld),rf,__value_type2(traits_type::init_value()));
 		cuvSafeCall(cudaThreadSynchronize());
 	}};
 
@@ -220,9 +225,10 @@ namespace reduce_impl {
 		typedef cuv::reduce_functor_traits<typename RF::result_value_functor_type> functor_traits;
 
 		cuvAssert(m.ptr() != NULL);
+        const int main_dim = (dim==1) ? m.shape(0) : m.shape(m.ndim()-1);
+        const int other_dim = m.size()/main_dim;
 		// assert that vector has correct length
-		if (dim==0) cuvAssert(v.size()==m.shape(1));
-		if (dim==1) cuvAssert(v.size()==m.shape(0));
+		cuvAssert(v.size()==main_dim);
 
 		const __value_type2 * A_ptr                         = m.ptr();
 
@@ -248,13 +254,13 @@ namespace reduce_impl {
 		if (dim==0){
 			// apply reduce functor along columns
 			for(;values_ptr!=values_end; values_ptr++, indices_ptr++) {
-				for(int j=0; j<m.shape(0); j++, A_ptr++)
+				for(int j=0; j<other_dim; j++, A_ptr++)
 					rf.rv(*values_ptr,*indices_ptr,*A_ptr,j);
 			}
 		}
 		else if(dim==1){
 			// apply reduce functor along rows
-			for(I i=0;i<m.shape(1);i++) {
+			for(I i=0;i<other_dim;i++) {
 				values_ptr  = values.ptr();
 				indices_ptr = indices_begin;
 				for(; values_ptr!=values_end;A_ptr++,values_ptr++,indices_ptr++) 
