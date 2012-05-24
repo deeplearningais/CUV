@@ -13,16 +13,16 @@ SET (CUDA_TEST_DEVICE "0" CACHE STRING "Which CUDA device should the tests be ru
 add_definitions(-DCUDA_TEST_DEVICE=${CUDA_TEST_DEVICE})
 
 ADD_EXECUTABLE( test_tensor tensor.cpp )
-TARGET_LINK_LIBRARIES( test_tensor cuv_basics cuv_tools cuv_matrix_ops cuv_convert)
+TARGET_LINK_LIBRARIES( test_tensor cuv_basics cuv_tools cuv_matrix_ops cuv_convert cuv_tensor_ops)
 
 ADD_EXECUTABLE( test_tensor_serialization tensor_serialization.cpp )
-TARGET_LINK_LIBRARIES( test_tensor_serialization cuv_basics cuv_tools cuv_matrix_ops cuv_convert ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES( test_tensor_serialization cuv_basics cuv_tools cuv_matrix_ops cuv_convert cuv_tensor_ops ${Boost_LIBRARIES})
 
 ADD_EXECUTABLE( test_basic basic.cpp )
-TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools cuv_matrix_ops cuv_convert)
+TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools cuv_convert)
 
 ADD_EXECUTABLE( test_convert convert.cpp )
-TARGET_LINK_LIBRARIES( test_convert cuv_basics cuv_tools cuv_convert)
+TARGET_LINK_LIBRARIES( test_convert cuv_tensor_ops cuv_basics cuv_tools cuv_convert)
 
 ADD_EXECUTABLE( test_tensor_op tensor_op.cpp )
 TARGET_LINK_LIBRARIES( test_tensor_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops)
@@ -56,7 +56,7 @@ ADD_EXECUTABLE( test_mat_op_speed matrix_op_speed.cpp )
 TARGET_LINK_LIBRARIES( test_mat_op_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
 
 ADD_EXECUTABLE( test_conv_op conv_op.cpp )
-TARGET_LINK_LIBRARIES( test_conv_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_convolution_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+TARGET_LINK_LIBRARIES( test_conv_op cuv_convolution_ops cuv_matrix_ops cuv_random cuv_tools cuv_convert cuv_tensor_ops cuv_basics ${CUDA_CUBLAS_LIBRARIES})
 
 ADD_EXECUTABLE( test_conv_op_speed conv_op_speed.cpp )
 TARGET_LINK_LIBRARIES( test_conv_op_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_convolution_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} ${BLAS_LIBRARIES} )
