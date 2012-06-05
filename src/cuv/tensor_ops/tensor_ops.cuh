@@ -169,13 +169,14 @@ void launch_unary_kernel(
 	 cuvAssert(dst.size() == src.size());
 	 V1* dst_ptr = dst.ptr();
 	 const V2* src_ptr = src.ptr();
+     size_t size = dst.size();
 	 if(!mask)
-		 for(size_t i=0;i<dst.size();i++)
+		 for(size_t i=0;i<size;i++)
 			 *dst_ptr++ = uf( *src_ptr++ );
 	 else{
 		 cuvAssert(mask->ptr());
 		 const unsigned char* mask_ptr = mask->ptr();
-		 for(size_t i=0;i<dst.size();i++,src_ptr++)
+		 for(size_t i=0;i<size;i++,src_ptr++)
 			 *dst_ptr++ = *mask_ptr++ ? uf( *src_ptr ) : *src_ptr;
 	 }
 }
