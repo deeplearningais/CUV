@@ -364,9 +364,10 @@ namespace matrix_plus_vector_impl {
         unsigned int other_dim = A.size()/A.shape(0);
 		const V2* v_ptr = v.ptr();
 		V * A_ptr = A.ptr();
+        unsigned int Ashape0 = A.shape(0);
 		for(int j=0;j<other_dim;j++) {
 			v_ptr = v.ptr();
-			for(int i=0;i<A.shape(0);i++,A_ptr++,v_ptr++)
+			for(int i=0;i<Ashape0;i++,A_ptr++,v_ptr++)
 			*A_ptr = op(*A_ptr,*v_ptr);
 		}
 	}
@@ -376,7 +377,8 @@ namespace matrix_plus_vector_impl {
         unsigned int other_dim = A.size()/A.shape(0);
 		const V2* v_ptr = v.ptr();
 		V * A_ptr = A.ptr();
-		for(int i=0;i<A.shape(0);i++, v_ptr++) {
+        unsigned int Ashape0 = A.shape(0);
+		for(int i=0;i<Ashape0;i++, v_ptr++) {
 			for(int j=0;j<other_dim;j++)
 			*A_ptr++ = op(*A_ptr,*v_ptr);
 		}

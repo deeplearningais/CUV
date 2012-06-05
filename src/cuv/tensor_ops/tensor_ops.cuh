@@ -225,7 +225,8 @@ void launch_binary_kernel(
 	 cuvAssert(dst.size() == src.size());
 	 V1* dst_ptr = dst.ptr();
 	 const V2* src_ptr = src.ptr();
-	 for(size_t i=0;i<dst.size();i++)
+     const size_t size = dst.size();
+	 for(size_t i=0;i<size;i++)
 	   *dst_ptr++ = uf(*dst_ptr,*src_ptr++);
 }
 
