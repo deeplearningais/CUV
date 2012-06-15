@@ -1500,7 +1500,10 @@ namespace cuv
             tensor& operator=(const tensor<value_type,OM,L>& o){
                 if(!copy_memory(*this,o,false))
                     copy_memory(*this,o,linear_memory_tag());
-                m_ptr = mem()->ptr();
+                if(mem())
+                    // if mem() does not exist, we're just wrapping a pointer
+                    // of a std::vector or so -> simply keep it
+                    m_ptr = mem()->ptr();
                 return *this;
             }
 

@@ -298,6 +298,30 @@ BOOST_AUTO_TEST_CASE( lowdim_views ) {
 	test_lowdim_views<float,host_memory_space>();
 	test_lowdim_views<float,dev_memory_space>();
 }
+
+BOOST_AUTO_TEST_CASE( tensor_wrapping ){
+    {
+        std::vector<float>    v_orig(10, 0.f);
+        tensor<float,host_memory_space> v(extents[10], &v_orig[0]);
+        tensor<float,host_memory_space> w(extents[10]);
+        for(unsigned int i=0;i<10;i++)
+            w[i] = 1.f;
+    
+        // overwrite the wrapped memory (needs copying)
+        v = w;
+    }
+    {
+        std::vector<float>    v_orig(10, 0.f);
+        tensor<float,host_memory_space> v(extents[10], &v_orig[0]);
+        tensor<float,dev_memory_space> w(extents[10]);
+        for(unsigned int i=0;i<10;i++)
+            w[i] = 1.f;
+    
+        // overwrite the wrapped memory (needs copying)
+        v = w;
+    }
+}
+
 BOOST_AUTO_TEST_CASE( pushpull_nd )
 {
 	// same memory space, linear container
