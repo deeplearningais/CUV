@@ -74,7 +74,7 @@ class Timing
 	 *
 	 * \return performance measured by the Timing instance
 	 */
-        inline double  perf() const;
+        inline double  perf() ;
 	/**
 	 * \brief Returns the current value of the counter.
 	 *
@@ -119,7 +119,7 @@ inline void Timing::update(int inc)
     m_count += inc;
 }
 
-inline double Timing::perf() const
+inline double Timing::perf()
 {
     if(m_count==0)
         update(1);
