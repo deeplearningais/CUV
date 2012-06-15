@@ -121,6 +121,8 @@ inline void Timing::update(int inc)
 
 inline double Timing::perf() const
 {
+    if(m_count==0)
+        update(1);
     return diff() / m_count ;
 }
 
