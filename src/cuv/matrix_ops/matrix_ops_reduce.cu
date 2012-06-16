@@ -354,8 +354,7 @@ void reduce_to_col(tensor<__value_type,__memory_space_type>&v, const tensor<__va
 		//matrix is row major
                 //create column major view and call reduce_to_row for column major
 		// downstream from here everything is column major
-		const tensor<__value_type2,__memory_space_type,column_major> cm_view(indices[index_range(0,m.shape(1))][index_range(0,m.shape(0))],const_cast<__value_type2*>(m.ptr()));
-		reduce_impl::reduce_switch<0>(v,cm_view,rf,factNew,factOld); // 0 means zeroth dimension is summed out - meaning summing over the columns in a column major matrix.
+		reduce_impl::reduce_switch<0>(v,*transposed_view(m),rf,factNew,factOld); // 0 means zeroth dimension is summed out - meaning summing over the columns in a column major matrix.
 	}
 	else {
 		reduce_impl::reduce_switch<1>(v,m,rf,factNew,factOld); // 1 means first dimension (we start counting at zero) is summed out - meaning summing over the rows in a column major matrix.
@@ -371,8 +370,7 @@ void reduce_to_row(tensor<__value_type,__memory_space_type>&v, const tensor<__va
 		//matrix is row major
 		//create column major view and call reduce_to_row for column major
 		// downstream from here everything is column major
-		const tensor<__value_type2,__memory_space_type,column_major> cm_view(indices[index_range(0,m.shape(1))][index_range(0,m.shape(0))],const_cast<__value_type2*>(m.ptr()));
-		reduce_impl::reduce_switch<1>(v,cm_view,rf,factNew,factOld); // 1 means first (we start counting at zero) dimension is summed out - meaning summing over the rows in a column major matrix.
+		reduce_impl::reduce_switch<1>(v,*transposed_view(m),rf,factNew,factOld); // 1 means first (we start counting at zero) dimension is summed out - meaning summing over the rows in a column major matrix.
 	}
 	else {
 		reduce_impl::reduce_switch<0>(v,m,rf,factNew,factOld); // 0 means zeroth dimension is summed out - meaning summing over the columns in a column major matrix.

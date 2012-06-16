@@ -314,6 +314,114 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row )
 	}
 
 }
+BOOST_AUTO_TEST_CASE( mat_op_mat_reduce_to_row_3d )
+{
+    tensor<float,host_memory_space> R(extents[5][4][3]);
+
+    tensor<float,dev_memory_space>  Md(extents[5][4][3]);
+    tensor<float,host_memory_space> Mh(extents[5][4][3]);
+    tensor<float,dev_memory_space>  vd(extents[3]);
+    tensor<float,host_memory_space> vh(extents[3]);
+
+    sequence(R);
+    sequence(Md);
+    sequence(Mh);
+    sequence(vd);
+    sequence(vh);
+
+	reduce_to_row(vd,Md);
+	reduce_to_row(vh,Mh);
+    for(int k=0;k<3;k++){
+        float sum = 0.f;
+        BOOST_CHECK_CLOSE((float)vd(k), (float)vh(k), 0.01);
+        for(int i=0;i<5;i++){
+            for(int j=0;j<4;j++){
+                sum += Mh(i,j,k);
+            }
+        }
+        BOOST_CHECK_CLOSE((float)vh(k), sum, 0.01);
+	}
+}
+BOOST_AUTO_TEST_CASE( mat_op_mat_reduce_to_col_3d )
+{
+    tensor<float,host_memory_space> R(extents[5][4][3]);
+
+    tensor<float,dev_memory_space>  Md(extents[5][4][3]);
+    tensor<float,host_memory_space> Mh(extents[5][4][3]);
+    tensor<float,dev_memory_space>  vd(extents[5]);
+    tensor<float,host_memory_space> vh(extents[5]);
+
+    sequence(R);
+    sequence(Md);
+    sequence(Mh);
+    sequence(vd);
+    sequence(vh);
+
+	reduce_to_col(vd,Md);
+	reduce_to_col(vh,Mh);
+	for(int i=0;i<5;i++){
+        BOOST_CHECK_CLOSE((float)vd(i), (float)vh(i), 0.01);
+        float sum = 0.f;
+        for(int j=0;j<4;j++){
+            for(int k=0;k<3;k++){
+                sum += Mh(i,j,k);
+            }
+        }
+        BOOST_CHECK_CLOSE((float)vh(i), sum, 0.01);
+	}
+}
+BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row_3d )
+{
+    tensor<float,host_memory_space> R(extents[5][4][3]);
+
+    tensor<float,dev_memory_space>  Md(extents[5][4][3]);
+    tensor<float,host_memory_space> Mh(extents[5][4][3]);
+    tensor<float,dev_memory_space>  vd(extents[3]);
+    tensor<float,host_memory_space> vh(extents[3]);
+
+    sequence(R);
+    sequence(Md);
+    sequence(Mh);
+    sequence(vd);
+    sequence(vh);
+
+	matrix_plus_row(Md,vd);
+	matrix_plus_row(Mh,vh);
+	for(int i=0;i<5;i++){
+        for(int j=0;j<4;j++){
+            for(int k=0;k<3;k++){
+                BOOST_CHECK_CLOSE((float)Md(i,j,k), (float)Mh(i,j,k), 0.01);
+                BOOST_CHECK_CLOSE((float)Mh(i,j,k), (float)R(i,j,k) + (float)vh(k), 0.01);
+            }
+        }
+	}
+}
+BOOST_AUTO_TEST_CASE( mat_op_mat_plus_col_3d )
+{
+    tensor<float,host_memory_space> R(extents[5][4][3]);
+
+    tensor<float,dev_memory_space>  Md(extents[5][4][3]);
+    tensor<float,host_memory_space> Mh(extents[5][4][3]);
+    tensor<float,dev_memory_space>  vd(extents[5]);
+    tensor<float,host_memory_space> vh(extents[5]);
+
+    sequence(R);
+    sequence(Md);
+    sequence(Mh);
+    sequence(vd);
+    sequence(vh);
+
+	matrix_plus_col(Md,vd);
+	matrix_plus_col(Mh,vh);
+	for(int i=0;i<5;i++){
+        for(int j=0;j<4;j++){
+            for(int k=0;k<3;k++){
+                BOOST_CHECK_CLOSE((float)Md(i,j,k), (float)Mh(i,j,k), 0.01);
+                BOOST_CHECK_CLOSE((float)Mh(i,j,k), (float)R(i,j,k) + (float)vh(i), 0.01);
+            }
+        }
+	}
+}
 BOOST_AUTO_TEST_CASE( mat_op_mat_plus_col )
 {
 	sequence(v); sequence(w);
