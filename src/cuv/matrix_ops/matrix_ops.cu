@@ -499,14 +499,16 @@ void transpose(tensor<__value_type,__memory_space_type, __memory_layout_type>& d
 
 template<class V, class T, class M>
 cuv::tensor<V,T,typename other_memory_layout<M>::type> * transposed_view_p(cuv::tensor<V,T,M>&  src){
-        cuvAssert(src.ndim()==2);
-	return new tensor<V,T,typename other_memory_layout<M>::type>(indices[index_range(0,src.shape(1))][index_range(0,src.shape(0))],src.ptr());
+        std::vector<unsigned int> shape = src.shape();
+        std::reverse(shape.begin(), shape.end());
+	return new tensor<V,T,typename other_memory_layout<M>::type>(shape,src.ptr());
 }
 
 template<class V, class T, class M>
 const cuv::tensor<V,T,typename other_memory_layout<M>::type> * transposed_view_p(const cuv::tensor<V,T,M>&  src){
-        cuvAssert(src.ndim()==2);
-	return new tensor<V,T,typename other_memory_layout<M>::type>(indices[index_range(0,src.shape(1))][index_range(0,src.shape(0))],const_cast<V*>(src.ptr()));
+        std::vector<unsigned int> shape = src.shape();
+        std::reverse(shape.begin(), shape.end());
+	return new tensor<V,T,typename other_memory_layout<M>::type>(shape,const_cast<V*>(src.ptr()));
 }
 
 #define INSTANTIATE_MV(V1,V2,M) \
@@ -550,9 +552,9 @@ INSTANTIATE_TRANSPOSE(unsigned char,column_major);
 INSTANTIATE_TRANSPOSE(unsigned char,row_major);
 
 INSTANTIATE_TRANSPOSED_VIEW(float);
-/*INSTANTIATE_TRANSPOSED_VIEW(int);*/
-/*INSTANTIATE_TRANSPOSED_VIEW(unsigned int);*/
-/*INSTANTIATE_TRANSPOSED_VIEW(char);*/
+INSTANTIATE_TRANSPOSED_VIEW(int);
+INSTANTIATE_TRANSPOSED_VIEW(unsigned int);
+INSTANTIATE_TRANSPOSED_VIEW(char);
 INSTANTIATE_TRANSPOSED_VIEW(unsigned char);
 
 INSTANTIATE_MV(float, float, column_major);
