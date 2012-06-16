@@ -178,6 +178,9 @@ void transpose(tensor<V,M, L>& dst, const tensor<V,M, L>& src);
    * 	- RF_ADD_SQUARED adds squared entries of columns/rows
    * 	- RF_MAX uses maximum in colum (when reducing to row) or row (when reducing to column)
    * 	- RF_MIN uses minimum in colum (when reducing to row) or row (when reducing to column)
+   * 	- RF_MULT multiplies by summing in log-space \f$r_j = exp(\sum_i \log m_{ji})\f$
+   * 	- RF_LOGADDEXP calculates \f$r_j = \log(\sum_i\exp(m_ji)\f$ in a numerically stable way
+   * 	- RF_ADDEXP calculates \f$r_j = \sum_i\exp(m_ji)\f$ in a numerically stable way
    */
   enum reduce_functor{
 	  RF_ADD,
