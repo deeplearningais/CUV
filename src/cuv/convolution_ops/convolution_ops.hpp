@@ -78,7 +78,7 @@ template<class V,class M, class T>
  */
 template<class V, class M, class T>
     void
-    convolve2d(tensor<V,M,T>& dst, const tensor<V,M,T>& img, const tensor<V,M,T>& filter, unsigned int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0, float factNew=1.f,float factOld=0.f);
+    convolve2d(tensor<V,M,T>& dst, const tensor<V,M,T>& img, const tensor<V,M,T>& filter, int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0, float factNew=1.f,float factOld=0.f);
 
 /**
  * determine the gradient of a convolution w.r.t. the inputs
@@ -90,7 +90,7 @@ template<class V, class M, class T>
 template<class V, class M, class T>
     void
     d_conv2d_dimg(tensor<V,M,T>& dst, const tensor<V,M,T>& delta, const tensor<V,M,T>& filter,
-            unsigned int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0, float factNew=1.f, float factOld=0.f);
+            int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0, float factNew=1.f, float factOld=0.f);
 
 /**
  * determine the gradient of a convolution w.r.t. the filters
@@ -103,7 +103,7 @@ template<class V, class M, class T>
 template<class V, class M, class T>
     void
     d_conv2d_dfilt(tensor<V,M,T>& dst, const tensor<V,M,T>& delta, const tensor<V,M,T>& input,
-            unsigned int paddingStart=0,
+            int paddingStart=0,
             unsigned int moduleStride=0, unsigned int nGroups=0, unsigned int partialSum=1, float factNew=1.f,float factOld=0.f);
 
 /**

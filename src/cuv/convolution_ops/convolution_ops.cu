@@ -178,7 +178,7 @@ template<class V, class M, class T>
     convolve2d(tensor<V,M, T>& dst, 
             const tensor<V,M, T>& img, 
             const tensor<V,M, T>& filter,
-            unsigned int paddingStart, 
+            int paddingStart, 
             unsigned int moduleStride,
             unsigned int nGroups,
             float factNew,
@@ -234,7 +234,7 @@ template<class V, class M, class L>
 	void d_conv2d_dimg(tensor<V,M,L>& dst,
 			  const tensor<V,M,L>&   delta,
 			  const tensor<V,M,L>&   filter,
-              unsigned int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld){
+              int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld){
 
 
         cuvAssert(delta.ndim()==3);
@@ -285,7 +285,7 @@ template<class V, class M, class L>
 	void d_conv2d_dfilt(tensor<V,M,L>& dst_,
 			  const tensor<V,M,L>&   delta,
 			  const tensor<V,M,L>&   input,
-              unsigned int paddingStart,
+              int paddingStart,
             unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld){
         if(IsSame<M,host_memory_space>::Result::value){
             std::cout << "warning: host version of d_conv2d_dfilt not implemented"<<std::endl;
@@ -469,9 +469,9 @@ template<>
 #define INST(V,M,T) \
 template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
-template void convolve2d(TENS(V,M,T)& dst,CTENS(V,M,T)& img,CTENS(V,M,T)& filter, unsigned int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew, float factOld); \
-template void d_conv2d_dfilt(TENS(V,M,T)& dst_, CTENS(V,M,T)& delta, CTENS(V,M,T)&   input, unsigned int paddingStart, unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld);\
-template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, unsigned int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld);
+template void convolve2d(TENS(V,M,T)& dst,CTENS(V,M,T)& img,CTENS(V,M,T)& filter, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew, float factOld); \
+template void d_conv2d_dfilt(TENS(V,M,T)& dst_, CTENS(V,M,T)& delta, CTENS(V,M,T)&   input, int paddingStart, unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld);\
+template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld);
 INST(float,host_memory_space,row_major);
 INST(float,dev_memory_space,row_major);
 }}
