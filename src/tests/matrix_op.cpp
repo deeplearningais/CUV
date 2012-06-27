@@ -527,8 +527,8 @@ BOOST_AUTO_TEST_CASE( mat_op_reduce_big_rm_to_row )
 
 BOOST_AUTO_TEST_CASE( mat_op_view )
 {
-	tensor<float,host_memory_space,column_major>* h2 = blockview(x,(unsigned int)0,(unsigned int)n,(unsigned int)1,(unsigned int)2);
-	tensor<float,dev_memory_space,column_major>*  d2 = blockview(v,(unsigned int)0,(unsigned int)n,(unsigned int)1,(unsigned int)2);
+	tensor<float,host_memory_space,column_major>* h2 = blockview(x,(int)0,(int)n,(int)1,(int)2);
+	tensor<float,dev_memory_space,column_major>*  d2 = blockview(v,(int)0,(int)n,(int)1,(int)2);
 	sequence(x);
 	sequence(v);
 	BOOST_CHECK_EQUAL(h2->shape()[0], x.shape()[0]);
