@@ -562,8 +562,8 @@ INSTANTIATE_MV(float, float, row_major);
 /*INSTANTIATE_MV(float, unsigned char, column_major);*/
 /*INSTANTIATE_MV(float, unsigned char, row_major);*/
 
-INSTANTIATE_BLOCKVIEW(float,column_major,unsigned int);
-INSTANTIATE_BLOCKVIEW(float,row_major,unsigned int);
+INSTANTIATE_BLOCKVIEW(float,column_major,int);
+INSTANTIATE_BLOCKVIEW(float,row_major,int);
 
 
 }; // cuv

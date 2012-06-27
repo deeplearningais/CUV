@@ -244,6 +244,17 @@ void export_reductions(){
     def("mean", (float (*)(const M&)) mean<value_type,typename M::memory_space_type>);
     def("var", (float (*)(const M&)) var<value_type,typename M::memory_space_type>);
     def("sum",(Vect (*)(const M&, const int&)) sum<value_type,typename M::memory_space_type>,(arg("source"), arg("axis")));
+}
+template <class M>
+void export_reductions_mv(){
+    //typedef typename switch_value_type<M, typename M::index_type>::type::vec_type idx_vec;
+    //typedef typename switch_value_type<M, float>::type::vec_type float_vec;
+    typedef typename switch_memory_layout_type<M, row_major>::type Vect;
+    typedef typename switch_value_type<Vect, typename M::index_type>::type IndexVect;
+    typedef typename switch_value_type<Vect, float>::type FloatVect;
+    typedef typename M::value_type value_type;
+    typedef typename M::memory_space_type memory_space_type;
+    typedef typename M::memory_layout_type memory_layout_type;
     def("reduce_to_col",(void (*) (Vect &, const M&, reduce_functor, const value_type &, const value_type &))
             reduce_to_col<value_type, value_type, memory_space_type, memory_layout_type>,
             (arg("vector"), arg("matrix"),arg("reduce_functor")=RF_ADD,arg("factor_new")=(value_type)1.f,arg("factor_old")=(value_type)0.f));
@@ -405,6 +416,11 @@ void export_matrix_ops(){
     export_reductions<ucdev>();
     export_reductions<uchostr>();
     export_reductions<ucdevr>();
+
+    export_reductions_mv<fhost>();
+    export_reductions_mv<fdev>();
+    export_reductions_mv<fhostr>();
+    export_reductions_mv<fdevr>();
 
     export_learn_step<fhost>();
     export_learn_step<fdev>();

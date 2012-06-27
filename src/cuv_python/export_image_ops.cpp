@@ -39,8 +39,8 @@
 #include <cuv/basics/tensor.hpp>
 #include <cuv/basics/cuda_array.hpp>
 
-#include <cuv/image_ops/move.hpp>
-#include <cuv/image_ops/image_pyramid.hpp>
+//#include <cuv/image_ops/move.hpp>
+//#include <cuv/image_ops/image_pyramid.hpp>
 
 //using namespace std;
 using namespace boost::python;
@@ -49,56 +49,56 @@ namespace ublas = boost::numeric::ublas;
 
 template<class M, class N>
 void export_move(){
-	def("image_move",
-			(void(*)(M&, const N&, const unsigned int&,const unsigned int&,const unsigned int&, const int&, const int&))
-			image_move<typename M::value_type,typename N::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (arg("dst"),arg("src"),arg("image_w"),arg("image_h"),arg("num_maps"),arg("xshift"),arg("yshift")));
+	//def("image_move",
+	//        (void(*)(M&, const N&, const unsigned int&,const unsigned int&,const unsigned int&, const int&, const int&))
+	//        image_move<typename M::value_type,typename N::value_type, typename M::memory_space_type, typename M::memory_layout_type>, (arg("dst"),arg("src"),arg("image_w"),arg("image_h"),arg("num_maps"),arg("xshift"),arg("yshift")));
 }
 
 template<class V, class S, class I>
 void export_image_pyramid_functions(){
-	def("gaussian",
-			(void(*)(tensor<V,S,row_major>&dst, const cuda_array<V,S,I>& src))
-			gaussian<V,S,I>, (arg("dst"),arg("src")));
-	def("gaussian_pyramid_downsample",
-			(void(*)(tensor<V,S,row_major>&dst, const cuda_array<V,S,I>& src, const unsigned int))
-			gaussian_pyramid_downsample<V,S,I>, (arg("dst"),arg("src"),arg("interleaved_channels")));
-	def("gaussian_pyramid_upsample",
-			(void(*)(tensor<V,S,row_major>&dst, const cuda_array<V,S,I>& src))
-			gaussian_pyramid_upsample<V,S,I>, (arg("dst"),arg("src")));
+	//def("gaussian",
+	//        (void(*)(tensor<V,S,row_major>&dst, const cuda_array<V,S,I>& src))
+	//        gaussian<V,S,I>, (arg("dst"),arg("src")));
+	//def("gaussian_pyramid_downsample",
+	//        (void(*)(tensor<V,S,row_major>&dst, const cuda_array<V,S,I>& src, const unsigned int))
+	//        gaussian_pyramid_downsample<V,S,I>, (arg("dst"),arg("src"),arg("interleaved_channels")));
+	//def("gaussian_pyramid_upsample",
+	//        (void(*)(tensor<V,S,row_major>&dst, const cuda_array<V,S,I>& src))
+	//        gaussian_pyramid_upsample<V,S,I>, (arg("dst"),arg("src")));
 }
 
 template<class VDest, class V, class S, class I>
 void export_pixel_classes(){
-	def("get_pixel_classes",
-			(void(*)(tensor<VDest,S,row_major>&dst, 
-					 const cuda_array<V,S,I>& src, 
-					 float))
-			get_pixel_classes<VDest,V,S,I>, (arg("dst"),arg("src"),arg("scale_fact")));
+	//def("get_pixel_classes",
+	//        (void(*)(tensor<VDest,S,row_major>&dst, 
+	//                 const cuda_array<V,S,I>& src, 
+	//                 float))
+	//        get_pixel_classes<VDest,V,S,I>, (arg("dst"),arg("src"),arg("scale_fact")));
 }
 
 template<class M>
 void export_image_pyramid(std::string name){
-	typedef image_pyramid<M> pyr;
-	class_<pyr>(name.c_str(), init<int,int,int,int>())
-		.def("get",             &pyr::get,(arg("depth"),arg("channel")=0), return_value_policy<manage_new_object>())
-		.def("get_all_channels",  &pyr::get_all_channels,(arg("depth")),   return_internal_reference<>())
-		.def("build",           (void (pyr::*)(const M&, const unsigned int)) &pyr::build, (arg("src"), arg("interleaved_channels")=1))
-		.add_property("base_h", &pyr::base_h)
-		.add_property("base_w", &pyr::base_w)
-		.add_property("depth",  &pyr::depth)
-		.add_property("dim",    &pyr::dim)
-		;
+	//typedef image_pyramid<M> pyr;
+	//class_<pyr>(name.c_str(), init<int,int,int,int>())
+		//.def("get",             &pyr::get,(arg("depth"),arg("channel")=0), return_value_policy<manage_new_object>())
+		//.def("get_all_channels",  &pyr::get_all_channels,(arg("depth")),   return_internal_reference<>())
+		//.def("build",           (void (pyr::*)(const M&, const unsigned int)) &pyr::build, (arg("src"), arg("interleaved_channels")=1))
+		//.add_property("base_h", &pyr::base_h)
+		//.add_property("base_w", &pyr::base_w)
+		//.add_property("depth",  &pyr::depth)
+		//.add_property("dim",    &pyr::dim)
+		//;
 }
 
 void export_image_ops(){
 	export_move<tensor<float,dev_memory_space,column_major>,tensor<unsigned char,dev_memory_space,column_major> >();
 	export_move<tensor<unsigned char,dev_memory_space,column_major>,tensor<unsigned char,dev_memory_space,column_major> >();
-	export_image_pyramid_functions<float,dev_memory_space,unsigned int>();
-	export_image_pyramid_functions<unsigned char,dev_memory_space,unsigned int>();
+	export_image_pyramid_functions<float,dev_memory_space,int>();
+	export_image_pyramid_functions<unsigned char,dev_memory_space,int>();
 	
-	export_pixel_classes<unsigned char, unsigned char,dev_memory_space,unsigned int>();
-	export_pixel_classes<unsigned char, float,dev_memory_space,unsigned int>();
-	export_pixel_classes<float, float,  dev_memory_space,unsigned int>();
+	export_pixel_classes<unsigned char, unsigned char,dev_memory_space,int>();
+	export_pixel_classes<unsigned char, float,dev_memory_space,int>();
+	export_pixel_classes<float, float,  dev_memory_space,int>();
 
 	export_image_pyramid<tensor<float, dev_memory_space,row_major> >("dev_image_pyramid_f");
 	export_image_pyramid<tensor<unsigned char, dev_memory_space,row_major> >("dev_image_pyramid_uc");
