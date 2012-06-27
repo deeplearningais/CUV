@@ -215,13 +215,14 @@ namespace python_wrapping {
     struct basic_tens2npy{
 	    typedef tensor<V,M,L> T;
 	    static boost::python::handle<> create_numpy_array_with_shape(const T& t){
-		    std::vector<npy_intp> dims(t.shape().size());
-		    std::copy(t.shape().begin(),t.shape().end(), dims.begin());
+            std::vector<unsigned int> shape = t.shape();
+		    std::vector<npy_intp> dims(shape.size());
+		    std::copy(shape.begin(),shape.end(), dims.begin());
 
 		    boost::python::handle<> result;
 		    bool is_fortran_order = IsSame<L,column_major>::Result::value;
 		    result = boost::python::handle<>(PyArray_EMPTY(
-					    t.shape().size(), &dims[0], 
+					    shape.size(), &dims[0], 
 					    pyublas::get_typenum(V()), 
 					    is_fortran_order));
 		    return result;
@@ -253,7 +254,7 @@ namespace python_wrapping {
 	    static pyublas::numpy_array<V> to_numpy_copy(const T& o){
 		    boost::python::handle<> result = my_type::create_numpy_array_with_shape(o);
 		    tensor<V,host_memory_space,L> t(o.shape(),(V*)PyArray_DATA((PyArrayObject*)result.get())); // view on numpy matrix
-		    t = o;  // pull from device; should simply copy the memory
+		    *((tensor_view<V,host_memory_space,L>*)&t) = o;  // pull from device; should simply copy the memory
 		    return result;
 	    }
     };
