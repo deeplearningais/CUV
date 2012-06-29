@@ -168,6 +168,12 @@ struct tf_dtanh:ternary_functor<R,T,T,T>{  inline __device__  __host__      T op
 
 template<class R, class T=R>
 struct tf_sqsquared_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
+    T v1 = max((T)0,(T)1-x_hat-m); 
+    T v2 = max((T)0,(T)  x_hat-m); 
+    return x*v1*v1 + ((T)1-x)*v2*v2;
+}};
+template<class R, class T=R>
+struct tf_dsqsquared_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
                //T v1 = max((T)0,(T)1-x_hat-m); 
                //T v2 = max((T)0,(T)  x_hat-m); 
 	       //return x*v1*v1 + ((T)1-x)*v2*v2;

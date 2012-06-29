@@ -436,7 +436,8 @@ namespace cuv{
 	 *  With one scalar parameter a:
 	 *  @li BF_AXPY computes x = a * x + y
 	 *  @li BF_XPBY computes x += a * y
-	 *  @li BF_SQSQLOSS computes  x*max(0,1-y-a)^2 + (1-x)*max(0,y-a)^2
+	 *  @li BF_SQSQLOSS computes  \f$ x \max(0,1-y-a)^2 + (1-x) \max(0,y-a)^2\f$
+	 *  @li BF_DSQSQLOSS computes  derivative of \f$ x \max(0,1-y-a)^2 + (1-x) \max(0,y-a)^2\f$ w.r.t. y
 	 *
 	 *  With two scalar parameters a and b:
 	 *  @li BF_AXPBY computes x = a * x + b * y
@@ -465,7 +466,8 @@ namespace cuv{
 	  BF_AXPY,
 	  BF_XPBY,
 	  BF_AXPBY,
-	  BF_SQSQLOSS
+	  BF_SQSQLOSS,
+	  BF_DSQSQLOSS
   };
 
   namespace detail{
