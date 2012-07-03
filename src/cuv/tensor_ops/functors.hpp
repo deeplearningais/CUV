@@ -15,6 +15,7 @@ namespace cuv {
  * @{
  */
 
+
 /** 
  * Unary functor base class
  */
@@ -52,6 +53,31 @@ struct fourary_functor{
 	typedef S second_argument_type;     /// the type of the 2nd argument
 	typedef U third_argument_type;      /// the type of the 3rd argument
 	typedef V fourth_argument_type;     /// the type of the 4th argument
+};
+
+/** 
+ * signum functor
+ */
+template<class R, class T>
+struct uf_signum:unary_functor<R,T>{
+    inline __host__ __device__ R operator()(const int& x, bool)const{
+        return (T(0) < x) - (x < T(0));
+    }
+    inline __host__ __device__ R operator()(const float& x, bool)const{
+        return (T(0) < x) - (x < T(0));
+    }
+    inline __host__ __device__ R operator()(const char& x, bool)const{
+        return (T(0) < x) - (x < T(0));
+    }
+    inline __host__ __device__ R operator()(const unsigned int& x, bool)const{
+        return T(0) < x;
+    }
+    inline __host__ __device__ R operator()(const unsigned char& x, bool)const{
+        return T(0) < x;
+    }
+    inline __host__ __device__ R operator()(const T& x)const{
+        return (*this)(x, true);
+    }
 };
 
 /// calculates exp(x)
@@ -167,13 +193,15 @@ template<class R, class T=R>
 struct tf_dtanh:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& a, const T& b)      const{ return b/a * (a+x) * (a-x); } };
 
 template<class R, class T=R>
-struct tf_sqsquared_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
-    T v1 = max((T)0,(T)1-x_hat-m); 
-    T v2 = max((T)0,(T)  x_hat-m); 
-    return x*v1*v1 + ((T)1-x)*v2*v2;
+struct tf_epsilon_insensitive_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
+	uf_abs<T,T> absfunc;
+	T diff    = x_hat-x;
+	T absdiff = absfunc(diff);
+	T v       = max((T)0, (T) (absdiff-m));
+    return v*v;
 }};
 template<class R, class T=R>
-struct tf_dsqsquared_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
+struct tf_depsilon_insensitive_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
                //T v1 = max((T)0,(T)1-x_hat-m); 
                //T v2 = max((T)0,(T)  x_hat-m); 
 	       //return x*v1*v1 + ((T)1-x)*v2*v2;
@@ -183,7 +211,30 @@ struct tf_dsqsquared_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__
 	//T absdiff = diff <0 ? -diff : diff;
 	T absdiff = absfunc(diff);
 	T v = max((T)0, (T) (absdiff-m));
-	return sgn(diff) * v;
+	return sgn(diff) * 2.f * v;
+}};
+
+template<class R, class T=R>
+struct tf_hinge_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
+	T v       = max((T)0, (T) (x*x_hat-m));
+    return v;
+}};
+template<class R, class T=R>
+struct tf_dhinge_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
+	T v = max((T)0, (T) (x * x_hat - m));
+    uf_signum<R,T> s;
+	return s(v) * x;
+}};
+
+template<class R, class T=R>
+struct tf_sqhinge_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
+	T v       = max((T)0, (T) (x*x_hat-m));
+    return v*v;
+}};
+template<class R, class T=R>
+struct tf_dsqhinge_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
+	T v = max((T)0, (T) (x * x_hat - m));
+	return 2.f * v * x;
 }};
 
 /// calculates the rectifying transfer function log(1+expf(a*x))/a using a numerically stable variant

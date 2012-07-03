@@ -424,8 +424,12 @@ namespace detail{
 			switch(bf){
 				case BF_AXPY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_axpy<V1,V2,V3>(p)); break;
 				case BF_XPBY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_xpby<V1,V2,V3>(p)); break;
-				case BF_SQSQLOSS: thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, make_bind3rd(tf_sqsquared_loss<V1>(),p)); break;
-				case BF_DSQSQLOSS: thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, make_bind3rd(tf_dsqsquared_loss<V1>(),p)); break;
+				case BF_EPSILON_INSENSITIVE_LOSS: thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, make_bind3rd(tf_epsilon_insensitive_loss<V1>(),p)); break;
+				case BF_DEPSILON_INSENSITIVE_LOSS: thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, make_bind3rd(tf_depsilon_insensitive_loss<V1>(),p)); break;
+				case BF_HINGE_LOSS: thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, make_bind3rd(tf_hinge_loss<V1>(),p)); break;
+				case BF_DHINGE_LOSS: thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, make_bind3rd(tf_dhinge_loss<V1>(),p)); break;
+				case BF_SQHINGE_LOSS: thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, make_bind3rd(tf_sqhinge_loss<V1>(),p)); break;
+				case BF_DSQHINGE_LOSS: thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, make_bind3rd(tf_dsqhinge_loss<V1>(),p)); break;
 						  /*case BF_XPBY:     cublasSaxpy(v.size(), param, (float*)w.ptr(), 1, (float*)v.ptr(), 1) ; break;*/
 				default: cuvAssert(false);
 			}

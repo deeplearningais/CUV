@@ -436,8 +436,12 @@ namespace cuv{
 	 *  With one scalar parameter a:
 	 *  @li BF_AXPY computes x = a * x + y
 	 *  @li BF_XPBY computes x += a * y
-	 *  @li BF_SQSQLOSS computes  \f$ x \max(0,1-y-a)^2 + (1-x) \max(0,y-a)^2\f$
-	 *  @li BF_DSQSQLOSS computes  derivative of \f$ x \max(0,1-y-a)^2 + (1-x) \max(0,y-a)^2\f$ w.r.t. y
+	 *  @li BF_EPSILON_INSENSITIVE_LOSS computes  \f$ \max(0,|x-y|-\varepsilon)^2\f$
+	 *  @li BF_DEPSILON_INSENSITIVE_LOSS computes  derivative of \f$ \max(0, |x-y|-\varepsilon)^2\f$ w.r.t. y
+	 *  @li BF_HINGE_LOSS computes  \f$ \max(0,xy-a)\f$
+	 *  @li BF_DHINGE_LOSS computes  derivative of \f$ \max(0, xy-a)\f$ w.r.t. y
+	 *  @li BF_SQHINGE_LOSS computes  \f$ \max(0,xy-a)^2\f$
+	 *  @li BF_DSQHINGE_LOSS computes  derivative of \f$ \max(0, xy-a)^2\f$ w.r.t. y
 	 *
 	 *  With two scalar parameters a and b:
 	 *  @li BF_AXPBY computes x = a * x + b * y
@@ -466,8 +470,12 @@ namespace cuv{
 	  BF_AXPY,
 	  BF_XPBY,
 	  BF_AXPBY,
-	  BF_SQSQLOSS,
-	  BF_DSQSQLOSS
+	  BF_EPSILON_INSENSITIVE_LOSS,
+	  BF_DEPSILON_INSENSITIVE_LOSS,
+	  BF_HINGE_LOSS,
+      BF_DHINGE_LOSS,
+      BF_SQHINGE_LOSS,
+      BF_DSQHINGE_LOSS
   };
 
   namespace detail{
