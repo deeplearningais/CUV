@@ -216,25 +216,25 @@ struct tf_depsilon_insensitive_loss:ternary_functor<R,T,T,T>{  inline __device__
 
 template<class R, class T=R>
 struct tf_hinge_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
-	T v       = max((T)0, (T) (x*x_hat-m));
+	T v       = max((T)0, (T) (m - x*x_hat));
     return v;
 }};
 template<class R, class T=R>
 struct tf_dhinge_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
-	T v = max((T)0, (T) (x * x_hat - m));
+	T v = max((T)0, (T) (m - x * x_hat));
     uf_signum<R,T> s;
-	return s(v) * x;
+	return - s(v) * x;
 }};
 
 template<class R, class T=R>
 struct tf_sqhinge_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
-	T v       = max((T)0, (T) (x*x_hat-m));
+	T v       = max((T)0, (T) (m - x*x_hat));
     return v*v;
 }};
 template<class R, class T=R>
 struct tf_dsqhinge_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__      T operator()(const T& x, const T& x_hat, const T& m)      const{
-	T v = max((T)0, (T) (x * x_hat - m));
-	return 2.f * v * x;
+	T v = max((T)0, (T) (m - x*x_hat));
+	return -2.f * v * x;
 }};
 
 /// calculates the rectifying transfer function log(1+expf(a*x))/a using a numerically stable variant
