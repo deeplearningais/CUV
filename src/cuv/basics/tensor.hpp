@@ -1122,7 +1122,7 @@ namespace cuv
             reference_type operator()(index_type i0){
 #ifndef NDEBUG
                 cuvAssert(ndim()==1);
-                cuvAssert((i0>=0 && i0 < shape(0)) || (i0<0 && -i0<shape(0)+1) )
+                cuvAssert((i0>=0 && (size_type)i0 < shape(0)) || (i0<0 && (size_type)(-i0)<shape(0)+1) )
 #endif
                 if(i0>=0){
                         return reference_type(m_ptr + i0);
@@ -1139,8 +1139,8 @@ namespace cuv
             reference_type operator()(index_type i0, index_type i1){
 #ifndef NDEBUG
                 cuvAssert(ndim()==2);
-                cuvAssert((i0>=0 && (size_type)i0 < shape(0)) || (i0<0 && (size_type)-i0<shape(0)+1) )
-                cuvAssert((i1>=0 && (size_type)i1 < shape(1)) || (i1<0 && (size_type)-i1<shape(1)+1) )
+                cuvAssert((i0>=0 && (size_type)i0 < shape(0)) || (i0<0 && (size_type)(-i0)<shape(0)+1) )
+                cuvAssert((i1>=0 && (size_type)i1 < shape(1)) || (i1<0 && (size_type)(-i1)<shape(1)+1) )
 #endif
                 index_type arr[2] = {i0,i1};
                 return reference_type(m_ptr + index_of( 2,arr));
