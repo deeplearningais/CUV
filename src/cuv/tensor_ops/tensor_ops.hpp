@@ -177,6 +177,10 @@ namespace cuv{
      * 	@li SF_BERNOULLI_KL  computes Kullback-Leibler divergence of two bernoulli variables \f$x\log(a/x)+(1-a)\log\frac{1-a}{1-x}\f$
      * 	@li SF_DBERNOULLI_KL computes derivative of Kullback-Leibler divergence of two bernoulli variables w.r.t. x: \f$\frac{a-x}{x(x-1)}\f$
 	 *
+	 * With two scalar parameters a and b:
+     *
+	 *  @li SF_AXPB computes a*x+b
+     *
 	 * With zero OR two scalar parameters a and b:
 	 *
 	 *  @li SF_DTANH computes a/b * (a+x) + (a-x), if no params given: a=b=1
@@ -232,6 +236,7 @@ namespace cuv{
         SF_DBERNOULLI_KL,
 
 		// with two params
+        SF_AXPB,
 		SF_TANH,
 		SF_DTANH
 	};

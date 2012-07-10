@@ -297,6 +297,7 @@ namespace detail{
 		ptr_type2 s_ptr(const_cast<V2*>(src.ptr()));
 		if(numparams==2){
 			switch(sf){
+				case SF_AXPB:      launch_unary_kernel(dst,src,make_bind2nd3rd(tf_axpb <V1>(),p,p2),mask); break;
 				case SF_TANH:      launch_unary_kernel(dst,src,make_bind2nd3rd(tf_tanh <V1>(),p,p2),mask); break;
 				case SF_DTANH:     launch_unary_kernel(dst,src,make_bind2nd3rd(tf_dtanh<V1>(),p,p2),mask); break;
 				default:
@@ -373,41 +374,8 @@ namespace detail{
         bool src1_agrees = equal_shape(dst,src1);
         bool src2_agrees = equal_shape(dst,src2);
         cuvAssert(src1_agrees || src2_agrees);
+
         
-        if(!src1_agrees && src1.size() == 1){
-			switch(bf){
-				case BF_EQ:       apply_scalar_functor(dst, src2, SF_EQ,  src1[0]); break;
-				case BF_ADD:      apply_scalar_functor(dst, src2, SF_ADD,  src1[0]);break;
-				case BF_SUBTRACT: apply_scalar_functor(dst, src2, SF_SUBTRACT,  src1[0]);break;
-				case BF_MULT:     apply_scalar_functor(dst, src2, SF_MULT,  src1[0]);break;
-				case BF_DIV:      apply_scalar_functor(dst, src2, SF_DIV,  src1[0]);break;
-				case BF_MIN:      apply_scalar_functor(dst, src2, SF_MIN,  src1[0]);break;
-				case BF_MAX:      apply_scalar_functor(dst, src2, SF_MAX,  src1[0]);break;
-				case BF_LOGADDEXP:     apply_scalar_functor(dst, src2, SF_LOGADDEXP,  src1[0]); break;
-				case BF_BERNOULLI_KL:      apply_scalar_functor(dst, src2, SF_BERNOULLI_KL,  src1[0]); break;
-				case BF_DBERNOULLI_KL:     apply_scalar_functor(dst, src2, SF_DBERNOULLI_KL,  src1[0]); break;
-                default: throw std::runtime_error("supplied binary functor broadcast not implemented");
-			}
-            return;
-        }
-        else if(!src2_agrees && src2.size() == 1){
-			switch(bf){
-				case BF_EQ:       apply_scalar_functor(dst, src1, SF_EQ,  src2[0]); break;
-				case BF_ADD:      apply_scalar_functor(dst, src1, SF_ADD,  src2[0]);break;
-				case BF_SUBTRACT: apply_scalar_functor(dst, src1, SF_SUBTRACT,  src2[0]);break;
-				case BF_MULT:     apply_scalar_functor(dst, src1, SF_MULT,  src2[0]);break;
-				case BF_DIV:      apply_scalar_functor(dst, src1, SF_DIV,  src2[0]);break;
-				case BF_MIN:      apply_scalar_functor(dst, src1, SF_MIN,  src2[0]);break;
-				case BF_MAX:      apply_scalar_functor(dst, src1, SF_MAX,  src2[0]);break;
-				case BF_LOGADDEXP:     apply_scalar_functor(dst, src1, SF_LOGADDEXP,  src2[0]); break;
-				case BF_BERNOULLI_KL:      apply_scalar_functor(dst, src1, SF_BERNOULLI_KL,  src2[0]); break;
-				case BF_DBERNOULLI_KL:     apply_scalar_functor(dst, src1, SF_DBERNOULLI_KL,  src2[0]); break;
-                default: throw std::runtime_error("supplied binary functor broadcast not implemented");
-			}
-            return;
-        }else if(!src1_agrees || !src2_agrees){
-            throw std::runtime_error("For binary functor, all dimensions must agree OR one of the argument must be a scalar vector.");
-        }
 
        
         
@@ -418,48 +386,100 @@ namespace detail{
 		ptr_type1 d_ptr(dst.ptr());
 		ptr_type2 s1_ptr(const_cast<V2*>(src1.ptr()));
 		ptr_type2 s2_ptr(const_cast<V3*>(src2.ptr()));
-		if(numparams==0){
+        if(numparams==0){
+            if(!src1_agrees && src1.size() == 1){
+                switch(bf){
+                    case BF_EQ:       apply_scalar_functor(dst, src2, SF_EQ,  src1[0]); break;
+                    case BF_ADD:      apply_scalar_functor(dst, src2, SF_ADD,  src1[0]);break;
+                    case BF_SUBTRACT: apply_scalar_functor(dst, src2, SF_SUBTRACT,  src1[0]);break;
+                    case BF_MULT:     apply_scalar_functor(dst, src2, SF_MULT,  src1[0]);break;
+                    case BF_DIV:      apply_scalar_functor(dst, src2, SF_DIV,  src1[0]);break;
+                    case BF_MIN:      apply_scalar_functor(dst, src2, SF_MIN,  src1[0]);break;
+                    case BF_MAX:      apply_scalar_functor(dst, src2, SF_MAX,  src1[0]);break;
+                    case BF_LOGADDEXP:     apply_scalar_functor(dst, src2, SF_LOGADDEXP,  src1[0]); break;
+                    case BF_BERNOULLI_KL:      apply_scalar_functor(dst, src2, SF_BERNOULLI_KL,  src1[0]); break;
+                    case BF_DBERNOULLI_KL:     apply_scalar_functor(dst, src2, SF_DBERNOULLI_KL,  src1[0]); break;
+                    default: throw std::runtime_error("supplied binary functor broadcast not implemented");
+                }
+                return;
+            }
+            else if(!src2_agrees && src2.size() == 1){
+                switch(bf){
+                    case BF_EQ:       apply_scalar_functor(dst, src1, SF_EQ,  src2[0]); break;
+                    case BF_ADD:      apply_scalar_functor(dst, src1, SF_ADD,  src2[0]);break;
+                    case BF_SUBTRACT: apply_scalar_functor(dst, src1, SF_SUBTRACT,  src2[0]);break;
+                    case BF_MULT:     apply_scalar_functor(dst, src1, SF_MULT,  src2[0]);break;
+                    case BF_DIV:      apply_scalar_functor(dst, src1, SF_DIV,  src2[0]);break;
+                    case BF_MIN:      apply_scalar_functor(dst, src1, SF_MIN,  src2[0]);break;
+                    case BF_MAX:      apply_scalar_functor(dst, src1, SF_MAX,  src2[0]);break;
+                    case BF_LOGADDEXP:     apply_scalar_functor(dst, src1, SF_LOGADDEXP,  src2[0]); break;
+                    case BF_BERNOULLI_KL:      apply_scalar_functor(dst, src1, SF_BERNOULLI_KL,  src2[0]); break;
+                    case BF_DBERNOULLI_KL:     apply_scalar_functor(dst, src1, SF_DBERNOULLI_KL,  src2[0]); break;
+                    default: throw std::runtime_error("supplied binary functor broadcast not implemented");
+                }
+                return;
+            }else if(!src1_agrees || !src2_agrees){
+                throw std::runtime_error("For binary functor, all dimensions must agree OR one of the argument must be a scalar vector.");
+            }
 #if USE_THRUST_LAUNCHER 
-			switch(bf){
-				case BF_EQ:       thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_equals<V1,V2,V3>()); break;
-				case BF_AND:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_and<V1,V2,V3>()); break;
-				case BF_OR :      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_or<V1,V2,V3>()); break;
-				case BF_ADD:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_plus<V1,V2,V3>()); break;
-				case BF_SUBTRACT: thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_minus<V1,V2,V3>()); break;
-				case BF_MULT:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_multiplies<V1,V2,V3>()); break;
-				case BF_DIV:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_divides<V1,V2,V3>()); break;
-				case BF_MIN:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_min<V1,V2,V3>()); break;
-				case BF_MAX:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_max<V1,V2,V3>()); break;
-				case BF_ATAN2:    thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_atan2<V1,V2,V3>()); break;
-				case BF_NORM:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_norm<V1,V2,V3>()); break;
-				case BF_LOGADDEXP:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logaddexp<V1>()); break;
-				case BF_LOGCE_OF_LOGISTIC:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logce_of_logistic<V1,V2,V3>()); break;
-				case BF_BERNOULLI_KL:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_bernoulli_kl<V1,V2,V3>()); break;
-				case BF_DBERNOULLI_KL:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_dbernoulli_kl<V1,V2,V3>()); break;
-				default: cuvAssert(false);
-			}
+            switch(bf){
+                case BF_EQ:       thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_equals<V1,V2,V3>()); break;
+                case BF_AND:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_and<V1,V2,V3>()); break;
+                case BF_OR :      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_or<V1,V2,V3>()); break;
+                case BF_ADD:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_plus<V1,V2,V3>()); break;
+                case BF_SUBTRACT: thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_minus<V1,V2,V3>()); break;
+                case BF_MULT:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_multiplies<V1,V2,V3>()); break;
+                case BF_DIV:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_divides<V1,V2,V3>()); break;
+                case BF_MIN:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_min<V1,V2,V3>()); break;
+                case BF_MAX:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_max<V1,V2,V3>()); break;
+                case BF_ATAN2:    thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_atan2<V1,V2,V3>()); break;
+                case BF_NORM:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_norm<V1,V2,V3>()); break;
+                case BF_LOGADDEXP:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logaddexp<V1>()); break;
+                case BF_LOGCE_OF_LOGISTIC:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logce_of_logistic<V1,V2,V3>()); break;
+                case BF_BERNOULLI_KL:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_bernoulli_kl<V1,V2,V3>()); break;
+                case BF_DBERNOULLI_KL:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_dbernoulli_kl<V1,V2,V3>()); break;
+                default: cuvAssert(false);
+            }
 #else
-			dim3 blocks, threads;
-			setLinearGridAndThreads(blocks,threads,v.size());
-			switch(bf){
-				case BF_AND:      launch_binary_kernel(v,w,bf_and<V1,V2,V3>()); break;
-				case BF_OR :      launch_binary_kernel(v,w,bf_or<V1,V2,V3>()); break;
-				case BF_ADD:      launch_binary_kernel(v,w,bf_plus<V1,V2,V3>()); break;
-				case BF_SUBTRACT: launch_binary_kernel(v,w,bf_minus<V1,V2,V3>()); break;
-				case BF_MULT:     launch_binary_kernel(v,w,bf_multiplies<V1,V2,V3>()); break;
-				case BF_DIV:      launch_binary_kernel(v,w,bf_divides<V1,V2,V3>()); break;
-				case BF_MIN:      launch_binary_kernel(v,w,bf_min<V1,V2,V3>()); break;
-				case BF_MAX:      launch_binary_kernel(v,w,bf_max<V1,V2,V3>()); break;
-				case BF_POW:      launch_binary_kernel(v,w,bf_pow<V1,V2,V3>()); break;
-				case BF_DPOW:     launch_binary_kernel(v,w,bf_dpow<V1,V2,V3>()); break;
-				case BF_ATAN2:    launch_binary_kernel(v,w,bf_atan2<V1,V2,V3>()); break;
-				case BF_NORM:    launch_binary_kernel(v,w,bf_norm<V1,V2,V3>()); break;
-				case BF_LOGADDEXP:          launch_binary_kernel(v,w,bf_logaddexp<V1>()); break;
-				case BF_LOGCE_OF_LOGISTIC:  launch_binary_kernel(v,w,bf_logce_of_logistic<V1,V2,V3>()); break;
-				default: cuvAssert(false);
-			}
+            dim3 blocks, threads;
+            setLinearGridAndThreads(blocks,threads,v.size());
+            switch(bf){
+                case BF_AND:      launch_binary_kernel(v,w,bf_and<V1,V2,V3>()); break;
+                case BF_OR :      launch_binary_kernel(v,w,bf_or<V1,V2,V3>()); break;
+                case BF_ADD:      launch_binary_kernel(v,w,bf_plus<V1,V2,V3>()); break;
+                case BF_SUBTRACT: launch_binary_kernel(v,w,bf_minus<V1,V2,V3>()); break;
+                case BF_MULT:     launch_binary_kernel(v,w,bf_multiplies<V1,V2,V3>()); break;
+                case BF_DIV:      launch_binary_kernel(v,w,bf_divides<V1,V2,V3>()); break;
+                case BF_MIN:      launch_binary_kernel(v,w,bf_min<V1,V2,V3>()); break;
+                case BF_MAX:      launch_binary_kernel(v,w,bf_max<V1,V2,V3>()); break;
+                case BF_POW:      launch_binary_kernel(v,w,bf_pow<V1,V2,V3>()); break;
+                case BF_DPOW:     launch_binary_kernel(v,w,bf_dpow<V1,V2,V3>()); break;
+                case BF_ATAN2:    launch_binary_kernel(v,w,bf_atan2<V1,V2,V3>()); break;
+                case BF_NORM:    launch_binary_kernel(v,w,bf_norm<V1,V2,V3>()); break;
+                case BF_LOGADDEXP:          launch_binary_kernel(v,w,bf_logaddexp<V1>()); break;
+                case BF_LOGCE_OF_LOGISTIC:  launch_binary_kernel(v,w,bf_logce_of_logistic<V1,V2,V3>()); break;
+                default: cuvAssert(false);
+            }
 #endif
-		}else if(numparams==1){
+        }else if(numparams==1){
+            if(!src1_agrees && src1.size() == 1){
+                switch(bf){
+                    case BF_AXPY: apply_scalar_functor(dst, src2, SF_ADD,  p * src1[0]); break;
+                    case BF_XPBY: apply_scalar_functor(dst, src2, SF_AXPB, p,  src1[0]); break;
+                    default: throw std::runtime_error("supplied binary functor broadcast not implemented");
+                }
+                return;
+            }
+            else if(!src2_agrees && src2.size() == 1){
+                switch(bf){
+                    case BF_AXPY: apply_scalar_functor(dst, src1, SF_AXPB, p,  src2[0]); break;
+                    case BF_XPBY: apply_scalar_functor(dst, src1, SF_ADD,  p * src2[0]); break;
+                    default: throw std::runtime_error("supplied binary functor broadcast not implemented");
+                }
+                return;
+            }else if(!src1_agrees || !src2_agrees){
+                throw std::runtime_error("For binary functor, all dimensions must agree OR one of the argument must be a scalar vector.");
+            }
 #if USE_THRUST_LAUNCHER
 			switch(bf){
 				case BF_AXPY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_axpy<V1,V2,V3>(p)); break;
@@ -483,6 +503,22 @@ namespace detail{
 			}
 #endif
 		}else if(numparams==2){
+            if(!src1_agrees && src1.size() == 1){
+                switch(bf){
+                    case BF_AXPBY: apply_scalar_functor(dst, src2, SF_AXPB, p2, src1[0] * p); break;
+                    default: throw std::runtime_error("supplied binary functor broadcast not implemented");
+                }
+                return;
+            }
+            else if(!src2_agrees && src2.size() == 1){
+                switch(bf){
+                    case BF_AXPBY: apply_scalar_functor(dst, src1, SF_AXPB, p, src2[0] * p2); break;
+                    default: throw std::runtime_error("supplied binary functor broadcast not implemented");
+                }
+                return;
+            }else if(!src1_agrees || !src2_agrees){
+                throw std::runtime_error("For binary functor, all dimensions must agree OR one of the argument must be a scalar vector.");
+            }
 #if USE_THRUST_LAUNCHER
 			switch(bf){
 				case BF_AXPBY:     thrust::transform(s1_ptr, s1_ptr+src1.size(), s2_ptr,  d_ptr, bf_axpby<V1,V2,V3>(p,p2)); break;

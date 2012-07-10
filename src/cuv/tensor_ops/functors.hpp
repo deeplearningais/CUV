@@ -185,6 +185,9 @@ struct uf_poslin:unary_functor<R,T>{  inline __device__  __host__     R operator
 template<class R, class T>
 struct bf_sigm_temp:binary_functor<R,T,T>{ inline __device__  __host__       R operator()(const T& t, const T& temp)           const{ return ((T)1)/(((T)1)+expf(-t / (T)(temp))); } };
 
+/// calculates a*x + b
+template<class R, class T=R>
+struct tf_axpb:ternary_functor<R,T,T,T>{  inline __device__  __host__       T operator()(const T& x, const T& a, const T& b)      const{ return a * x + b; } };
 /// calculates the hyperbolic tangent with parameters, a*tanh(b*x)
 template<class R, class T=R>
 struct tf_tanh:ternary_functor<R,T,T,T>{  inline __device__  __host__       T operator()(const T& x, const T& a, const T& b)      const{ return a * tanhf(b * x); } };
