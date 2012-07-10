@@ -153,6 +153,26 @@ BOOST_AUTO_TEST_CASE( vec_ops_unary_add )
 		BOOST_CHECK_EQUAL(v[i], i+3.8f);
 	}
 }
+BOOST_AUTO_TEST_CASE( vec_ops_unary_add_broadcast1 )
+{
+	sequence(v);
+	w.resize(extents[1]);
+    w = 3.8f;
+	apply_binary_functor(v,w,BF_ADD);
+	for(int i=0;i<N;i++){
+		BOOST_CHECK_EQUAL(v[i], i+3.8f);
+	}
+}
+BOOST_AUTO_TEST_CASE( vec_ops_unary_add_broadcast2 )
+{
+	sequence(v);
+	w.resize(extents[1]);
+    w = 3.8f;
+	apply_binary_functor(v,w,v,BF_ADD);
+	for(int i=0;i<N;i++){
+		BOOST_CHECK_EQUAL(v[i], i+3.8f);
+	}
+}
 BOOST_AUTO_TEST_CASE( vec_ops_axpby )
 {
 	// generate data

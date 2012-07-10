@@ -370,8 +370,46 @@ namespace detail{
 	// **********************************
 	template<class V1, class V2, class V3, class M, class S1, class S2>
 	  void apply_binary_functor(tensor<V1, M>& dst,const tensor<V2, M>& src1, const tensor<V3, M>& src2, const BinaryFunctor& bf, const int& numparams, const S1& p, const S2& p2){
-		cuvAssert(equal_shape(dst,src1));
-		cuvAssert(equal_shape(dst,src2));
+        bool src1_agrees = equal_shape(dst,src1);
+        bool src2_agrees = equal_shape(dst,src2);
+        cuvAssert(src1_agrees || src2_agrees);
+        
+        if(!src1_agrees && src1.size() == 1){
+			switch(bf){
+				case BF_EQ:       apply_scalar_functor(dst, src2, SF_EQ,  src1[0]); break;
+				case BF_ADD:      apply_scalar_functor(dst, src2, SF_ADD,  src1[0]);break;
+				case BF_SUBTRACT: apply_scalar_functor(dst, src2, SF_SUBTRACT,  src1[0]);break;
+				case BF_MULT:     apply_scalar_functor(dst, src2, SF_MULT,  src1[0]);break;
+				case BF_DIV:      apply_scalar_functor(dst, src2, SF_DIV,  src1[0]);break;
+				case BF_MIN:      apply_scalar_functor(dst, src2, SF_MIN,  src1[0]);break;
+				case BF_MAX:      apply_scalar_functor(dst, src2, SF_MAX,  src1[0]);break;
+				case BF_LOGADDEXP:     apply_scalar_functor(dst, src2, SF_LOGADDEXP,  src1[0]); break;
+				case BF_BERNOULLI_KL:      apply_scalar_functor(dst, src2, SF_BERNOULLI_KL,  src1[0]); break;
+				case BF_DBERNOULLI_KL:     apply_scalar_functor(dst, src2, SF_DBERNOULLI_KL,  src1[0]); break;
+				default: cuvAssert(false);
+			}
+            return;
+        }
+        else if(!src2_agrees && src2.size() == 1){
+			switch(bf){
+				case BF_EQ:       apply_scalar_functor(dst, src1, SF_EQ,  src2[0]); break;
+				case BF_ADD:      apply_scalar_functor(dst, src1, SF_ADD,  src2[0]);break;
+				case BF_SUBTRACT: apply_scalar_functor(dst, src1, SF_SUBTRACT,  src2[0]);break;
+				case BF_MULT:     apply_scalar_functor(dst, src1, SF_MULT,  src2[0]);break;
+				case BF_DIV:      apply_scalar_functor(dst, src1, SF_DIV,  src2[0]);break;
+				case BF_MIN:      apply_scalar_functor(dst, src1, SF_MIN,  src2[0]);break;
+				case BF_MAX:      apply_scalar_functor(dst, src1, SF_MAX,  src2[0]);break;
+				case BF_LOGADDEXP:     apply_scalar_functor(dst, src1, SF_LOGADDEXP,  src2[0]); break;
+				case BF_BERNOULLI_KL:      apply_scalar_functor(dst, src1, SF_BERNOULLI_KL,  src2[0]); break;
+				case BF_DBERNOULLI_KL:     apply_scalar_functor(dst, src1, SF_DBERNOULLI_KL,  src2[0]); break;
+				default: cuvAssert(false);
+			}
+            return;
+        }
+
+       
+        
+
 		typedef typename memspace_cuv2thrustptr<V1, M>::ptr_type ptr_type1;
 		typedef typename memspace_cuv2thrustptr<V2,M>::ptr_type ptr_type2;
 		typedef typename memspace_cuv2thrustptr<V3,M>::ptr_type ptr_type3;
