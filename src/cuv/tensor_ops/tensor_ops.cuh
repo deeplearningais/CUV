@@ -386,7 +386,7 @@ namespace detail{
 				case BF_LOGADDEXP:     apply_scalar_functor(dst, src2, SF_LOGADDEXP,  src1[0]); break;
 				case BF_BERNOULLI_KL:      apply_scalar_functor(dst, src2, SF_BERNOULLI_KL,  src1[0]); break;
 				case BF_DBERNOULLI_KL:     apply_scalar_functor(dst, src2, SF_DBERNOULLI_KL,  src1[0]); break;
-				default: cuvAssert(false);
+                default: throw std::runtime_error("supplied binary functor broadcast not implemented");
 			}
             return;
         }
@@ -402,9 +402,11 @@ namespace detail{
 				case BF_LOGADDEXP:     apply_scalar_functor(dst, src1, SF_LOGADDEXP,  src2[0]); break;
 				case BF_BERNOULLI_KL:      apply_scalar_functor(dst, src1, SF_BERNOULLI_KL,  src2[0]); break;
 				case BF_DBERNOULLI_KL:     apply_scalar_functor(dst, src1, SF_DBERNOULLI_KL,  src2[0]); break;
-				default: cuvAssert(false);
+                default: throw std::runtime_error("supplied binary functor broadcast not implemented");
 			}
             return;
+        }else if(!src1_agrees || !src2_agrees){
+            throw std::runtime_error("For binary functor, all dimensions must agree OR one of the argument must be a scalar vector.");
         }
 
        
