@@ -32,6 +32,7 @@
 #define RND_MULTIPLIERS_FILE ("rnd_multipliers_32bit.txt")
 #endif
 
+#include <map>
 #include <cublas.h>
 #include <cuda.h>
 #include <curand.h>
@@ -66,12 +67,9 @@ private:
     bool _isTrans;
     bool _ownsData;
 
-//    static unsigned int hostRndMults[NUM_RND_STREAMS];
-    static bool rndInitialized;
-//    static unsigned int *devRndMults;
-//    static unsigned long long *devRndWords;
-    static curandGenerator_t rndGen;
-    static curandState *rndDevStates;
+//    static std::map<int,curandGenerator_t> rndGen;
+    static std::map<int,curandState*> rndDevStates;
+    static pthread_mutex_t *_rndMutex;
 
     static void checkCublasError(const char* msg) {
         cublasStatus status = cublasGetError();
@@ -98,8 +96,8 @@ private:
     void _init(int numRows, int numCols, int stride, bool isTrans);
     void _sum_setParams(int n, dim3* blocks, dim3* threads, int* numCols);
     template<class Agg> float _totalAgg(Agg agg);
-    template<class Agg> void _aggregate(int axis, NVMatrix& target, Agg agg);
-    template<class Agg> NVMatrix& _aggregate(int axis, Agg agg);
+    template<class Agg, class BinaryOp> void _aggregate(int axis, NVMatrix& target, Agg agg, BinaryOp op);
+    template<class Agg, class BinaryOp> NVMatrix& _aggregate(int axis, Agg agg, BinaryOp op);
     template <class Randomizer> void _unaryRandomize(NVMatrix& target, Randomizer rnd);
     template <class Randomizer> void _binaryRandomize(NVMatrix& data2, NVMatrix& target, Randomizer rnd);   
 public:
@@ -115,7 +113,11 @@ public:
 
     static void initRandom(unsigned long long seed);
     static void initRandom();
+    static int getDeviceID();
+    static bool isRndInitialized();
+    static curandState* getCurandState();
     static void destroyRandom();
+    static pthread_mutex_t* makeMutex();
 
     /*
      * DO NOT DEREFERENCE IN HOST CODE! This is a device memory pointer.
@@ -202,6 +204,7 @@ public:
     void truncate() {
         resize(0,0);
     }
+   
 
     void copyFromHost(const Matrix& hostMatrix);
     void copyFromHost(const Matrix& hostMatrix, bool resizeDeviceMatrix);
@@ -215,8 +218,9 @@ public:
     void rightMult(const NVMatrix &b, NVMatrix &target) const;
     void rightMult(const NVMatrix &b, float scaleAB);
     void randomizeUniform();
-    void addGaussianNoise(NVMatrix& stdevs, NVMatrix& target);
+    void addGaussianNoise(NVMatrix& stdevs, bool var, NVMatrix& target);
     void addGaussianNoise(float stdev, NVMatrix& target);
+    void addGaussianNoise(NVMatrix& stdevs, bool var);
     void addGaussianNoise(NVMatrix& stdevs);
     void addGaussianNoise(float stdev);
     void addGaussianNoise();
@@ -316,8 +320,27 @@ public:
                                                                getStride(), target.getStride(), op);
                 }
             }
-            cuvSafeCall(cudaThreadSynchronize());
+            cutilCheckMsg("kEltwiseBinaryOpTrans: Kernel execution failed");
         }
+    }
+    
+    template <class Op> void applyTernary(Op op, NVMatrix& b, NVMatrix& c, NVMatrix& target) {
+        assert(this->isSameDims(b));
+        assert(this->isSameDims(c));
+        // For now ternary ops are only supported for matrices of same transposedness
+        assert(isTrans() == b.isTrans());
+        assert(isTrans() == c.isTrans());
+        if (!target.isSameDims(*this) || target.isTrans() != isTrans()) {
+            target.resize(*this);
+        }
+
+        int height = target.getFollowingDim(), width = target.getLeadingDim();
+        dim3 blocks(std::min(NUM_BLOCKS_MAX, DIVUP(width, ELTWISE_THREADS_X)),
+                    std::min(NUM_BLOCKS_MAX, DIVUP(height, ELTWISE_THREADS_Y)));
+        dim3 threads(ELTWISE_THREADS_X, ELTWISE_THREADS_Y);
+        kEltwiseTernaryOp<Op><<<blocks, threads>>>(_devData, b._devData, c._devData, target._devData, height, width,
+                                                   getStride(), b.getStride(), c.getStride(), target.getStride(), op);
+        cutilCheckMsg("kEltwiseTernaryOp: Kernel execution failed");
     }
 
     bool resize(int numRows, int numCols);
@@ -352,6 +375,7 @@ public:
     void eltwiseDivideByVector(NVMatrix& vec);
     void tile(int timesY, int timesX, NVMatrix& target);
 
+    void addSum(NVMatrix& a, int axis, float scaleThis, float scaleSum);
     void sum(int axis, NVMatrix& target);
     NVMatrix& sum(int axis);
     void max(int axis, NVMatrix& target);

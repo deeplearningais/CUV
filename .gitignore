@@ -1,6 +1,4 @@
 build/*
-build2/*
-build_atlas/*
 src/tags
 src/call_tags
 src/cscope.files
