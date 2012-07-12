@@ -1176,7 +1176,7 @@ __global__ void filterActs_YxX_sparse_random(float* images, float* filters, floa
         }
     }
     
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 void convFilterActs(NVMatrix& images, NVMatrix& filters, NVMatrix& targets,
@@ -1410,7 +1410,7 @@ void _filterActsSparse(NVMatrix& images, NVMatrix& filters, NVMatrix& targets, i
         }
     }
     
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 void convFilterActsSparse(NVMatrix& images, NVMatrix& filters, NVMatrix& targets, int* dColorIndices,

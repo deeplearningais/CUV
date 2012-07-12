@@ -949,7 +949,7 @@ void _weightActs(NVMatrix& images, NVMatrix& hidActs, NVMatrix& targets,
             }
         }
     }
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 void convWeightActs(NVMatrix& images, NVMatrix& hidActs, NVMatrix& targets,
@@ -1213,7 +1213,7 @@ void _weightActsSparse(NVMatrix& images, NVMatrix& hidActs, NVMatrix& targets, i
             }
         }
     }
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 void convWeightActsSparse(NVMatrix& images, NVMatrix& hidActs, NVMatrix& targets, int* dColorIndices,

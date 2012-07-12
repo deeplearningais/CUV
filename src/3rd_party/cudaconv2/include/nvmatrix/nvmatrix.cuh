@@ -320,7 +320,7 @@ public:
                                                                getStride(), target.getStride(), op);
                 }
             }
-            cutilCheckMsg("kEltwiseBinaryOpTrans: Kernel execution failed");
+            cuvAssert(cudaThreadSynchronize());
         }
     }
     
@@ -340,7 +340,7 @@ public:
         dim3 threads(ELTWISE_THREADS_X, ELTWISE_THREADS_Y);
         kEltwiseTernaryOp<Op><<<blocks, threads>>>(_devData, b._devData, c._devData, target._devData, height, width,
                                                    getStride(), b.getStride(), c.getStride(), target.getStride(), op);
-        cutilCheckMsg("kEltwiseTernaryOp: Kernel execution failed");
+        cuvAssert(cudaThreadSynchronize());
     }
 
     bool resize(int numRows, int numCols);

@@ -51,31 +51,33 @@
 
 #define NVView3D(X)  \
         (const_cast<float*>(X.ptr()), X.shape(0)*X.shape(1), X.shape(2), X.shape(2),false)
+#define NVView4D(X)  \
+        (const_cast<float*>(X.ptr()), X.shape(0)*X.shape(1)*X.shape(2), X.shape(3), X.shape(3),false)
 
 namespace cuv{ namespace alex_conv{
 
 template<class V,class M, class T>
     void reorder_for_conv(tensor<V,M,T>& dst, const tensor<V,M,T>& src){
-        cuvAssert(src.ndim()==3);
-        cuvAssert(dst.ndim()==3);
+        cuvAssert(src.ndim()==4);
+        cuvAssert(dst.ndim()==4);
         std::vector<unsigned int> s = src.shape();
         /*tensor<V,M,T> src_view(indices[index_range()][index_range()][index_range()], src);*/
         tensor<V,M,T>& src_view  = const_cast<tensor<V,M,T>&>(src);
-        src_view.reshape(extents[s[0]][s[1]*s[2]]);
-        dst.reshape(extents[s[1]*s[2]][s[0]]);
+        src_view.reshape(extents[s[0]][s[1]*s[2]*s[3]]);
+        dst.reshape(extents[s[1]*s[2]*s[3]][s[0]]);
         cuv::transpose(dst,src_view);
         src_view.reshape(s);
-        dst.reshape(extents[s[1]][s[2]][s[0]]);
+        dst.reshape(extents[s[1]][s[2]][s[3]][s[0]]);
     }
 template<class V,class M, class T>
     void reorder_from_conv(tensor<V,M,T>& dst, const tensor<V,M,T>& src){
-        cuvAssert(src.ndim()==3);
-        cuvAssert(dst.ndim()==3);
-        tensor_view<V,M,T> src_view(indices[index_range()][index_range()][index_range()], src);
-        src_view.reshape(extents[src.shape(0)*src.shape(1)][src.shape(2)]);
-        dst.reshape(extents[dst.shape(0)][dst.shape(1)*dst.shape(2)]);
+        cuvAssert(src.ndim()==4);
+        cuvAssert(dst.ndim()==4);
+        tensor_view<V,M,T> src_view(indices[index_range()][index_range()][index_range()][index_range()], src);
+        src_view.reshape(extents[src.shape(0)*src.shape(1)*src.shape(2)][src.shape(3)]);
+        dst.reshape(extents[src.shape(3)][src.shape(0)*src.shape(1)*src.shape(2)]);
         cuv::transpose(dst,src_view);
-        dst.reshape(extents[src.shape(2)][src.shape(0)][src.shape(1)]);
+        dst.reshape(extents[src.shape(3)][src.shape(0)][src.shape(1)][src.shape(2)]);
     }
 
 /*
@@ -185,10 +187,11 @@ template<class V, class M, class T>
             float factOld){
         // check compatibility before converting to NVMatrix format
         /*cuvAssert(dst.ndim()==3);*/
-        cuvAssert(img.ndim()==3);
-        unsigned int nImgChan = img.shape(0);
-        unsigned int nImgPix  = img.shape(1);
-        unsigned int nImg     = img.shape(2);
+        cuvAssert(img.ndim()==4);
+        unsigned int nImgChan  = img.shape(0);
+        unsigned int nImgPixY  = img.shape(1);
+        unsigned int nImgPixX  = img.shape(2);
+        unsigned int nImg      = img.shape(3);
 
         cuvAssert(filter.ndim()==3);
         unsigned int nFiltChan = filter.shape(0);
@@ -196,14 +199,13 @@ template<class V, class M, class T>
         unsigned int nFilt     = filter.shape(2);
 
         cuvAssert(dst.shape(0)==nFilt);
-        unsigned int nModules = dst.shape(1);
-        unsigned int nModulesX = sqrt(nModules);
-        cuvAssert(nModules == nModulesX * nModulesX);
-        cuvAssert(dst.shape(2)==nImg);
+        unsigned int nModulesY = dst.shape(1);
+        unsigned int nModulesX = dst.shape(2);
+        cuvAssert(dst.shape(3)==nImg);
 
         // make NVMatrices with this data
-        NVMatrix nv_dst    NVView3D(dst);
-        NVMatrix nv_img    NVView3D(img);
+        NVMatrix nv_dst    NVView4D(dst);
+        NVMatrix nv_img    NVView4D(img);
         NVMatrix nv_filter NVView3D(filter);
 
         if(nFilt<16){
@@ -212,19 +214,17 @@ template<class V, class M, class T>
             // since the non-sparse conv only allows 
             int* colorIndices = new int[nGroups*nFiltChan]; 
             for(unsigned int i=0;i<nGroups*nFiltChan;i++) colorIndices[i]=i;
-            convFilterActsSparse(nv_img, nv_filter, nv_dst, colorIndices, nModulesX, paddingStart, moduleStride, nImgChan, nFiltChan, nGroups,factOld,factNew);
+            convFilterActsSparse(nv_img, nv_filter, nv_dst, colorIndices, nImgPixY, nModulesY, nModulesX, paddingStart, moduleStride, nImgChan, nFiltChan, nGroups,factOld,factNew);
         }{
             if(IsSame<M,dev_memory_space>::Result::value){
-                convFilterActs(nv_img, nv_filter, nv_dst, nModulesX, paddingStart, moduleStride, nImgChan, nGroups, factOld,factNew);
+                convFilterActs(nv_img, nv_filter, nv_dst, nImgPixY, nModulesY, nModulesX, paddingStart, moduleStride, nImgChan, nGroups, factOld,factNew);
             }else{
-                unsigned int imgX = sqrt(nImgPix);
-                cuvAssert(imgX*imgX == nImgPix);
                 unsigned int filtX  = sqrt(nFiltPix);
                 cuvAssert(filtX*filtX == nFiltPix);
 
                 cpuFilterActs(img.ptr(), filter.ptr(), dst.ptr(), 
                         nImg, nFilt, 
-                        imgX, filtX, paddingStart,
+                        nImgPixX, filtX, paddingStart,
                         moduleStride, nModulesX, 
                         nImgChan, nGroups, true, factOld,factNew);
             }
@@ -237,12 +237,11 @@ template<class V, class M, class L>
               int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld){
 
 
-        cuvAssert(delta.ndim()==3);
-        unsigned int nFilt    = delta.shape(0);
-        unsigned int nModules = delta.shape(1); 
-        unsigned int nImg     = delta.shape(2);
-        unsigned int nModulesX = sqrt(nModules);
-        cuvAssert(nModules==nModulesX*nModulesX);
+        cuvAssert(delta.ndim()==4);
+        unsigned int nFilt     = delta.shape(0);
+        unsigned int nModulesY = delta.shape(1); 
+        unsigned int nModulesX = delta.shape(2); 
+        unsigned int nImg      = delta.shape(3);
 
         cuvAssert(filter.ndim()==3);
         unsigned int nFiltChan = filter.shape(0);
@@ -250,24 +249,21 @@ template<class V, class M, class L>
         /*unsigned int nFilt     = filter.shape(2);*/
         cuvAssert(filter.shape(2) == nFilt);
 
-        cuvAssert(dst.ndim()==3);
+        cuvAssert(dst.ndim()==4);
         unsigned int nImgChan  = dst.shape(0);
-        unsigned int nImgPix   = dst.shape(1);
-        cuvAssert(dst.shape(2) == nImg);
-
-        unsigned int imgSize = sqrt(nImgPix);
-        cuvAssert(nImgPix == imgSize*imgSize);
-
+        unsigned int nImgPixY  = dst.shape(1);
+        unsigned int nImgPixX  = dst.shape(2);
+        cuvAssert(dst.shape(3) == nImg);
 
         if(IsSame<M,dev_memory_space>::Result::value){
-            NVMatrix nv_dst    NVView3D(dst);
-            NVMatrix nv_delta  NVView3D(delta);
+            NVMatrix nv_dst    NVView4D(dst);
+            NVMatrix nv_delta  NVView4D(delta);
             NVMatrix nv_filter NVView3D(filter);
 
             /*void convImgActs(NVMatrix& hidActs, NVMatrix& filters, NVMatrix& targets,*/
             /*    int imgSize, int paddingStart, int moduleStride, int numImgColors, int numGroups);*/
             convImgActs(nv_delta, nv_filter, nv_dst,
-                    imgSize, paddingStart, moduleStride, nImgChan, nGroups,factOld,factNew);
+                    nImgPixY, nImgPixX, nModulesY, paddingStart, moduleStride, nImgChan, nGroups,factOld,factNew);
         }else{
             /*void cpuImgActs(float* hidActs, float* filters, float* targets,*/
                            /*int numModulesX,  int numImages,  int numFilters,*/
@@ -277,7 +273,7 @@ template<class V, class M, class L>
                 dst = 0.f;
             cpuImgActs(delta.ptr(), filter.ptr(), dst.ptr(),
                     nModulesX, nImg, nFilt, 
-                    sqrt(nFiltPix), imgSize, paddingStart,
+                    sqrt(nFiltPix), nImgPixX, paddingStart,
                     moduleStride, nImgChan, nGroups,true);
         }
     }
@@ -303,36 +299,32 @@ template<class V, class M, class L>
         cuvAssert ( nFiltPix == filtSize*filtSize );
 
 
-        cuvAssert(delta.ndim()==3);
+        cuvAssert(delta.ndim()==4);
         cuvAssert(delta.shape(0) == nFilt);
-        unsigned int nModules  = delta.shape(1);
-        unsigned int nImg      = delta.shape(2);
+        unsigned int nModulesY = delta.shape(1);
+        unsigned int nModulesX = delta.shape(2);
+        unsigned int nImg      = delta.shape(3);
 
-        unsigned int nModulesX = sqrt(nModules);
-        cuvAssert(nModules == nModulesX * nModulesX);
+        cuv::tensor<float,M> dst(extents[(nModulesX*nModulesY)/partialSum][nFiltChan*nFiltPix][nFilt]); // make 3D for NVView3D
 
-        cuv::tensor<float,M> dst(extents[nModules/partialSum][nFiltChan*nFiltPix][nFilt]); // make 3D for NVView3D
-
-        cuvAssert(input.ndim()==3);
+        cuvAssert(input.ndim()==4);
         unsigned int nImgChan = input.shape(0);
-        unsigned int nImgPix  = input.shape(1);
-        cuvAssert(input.shape(2) == nImg);
-
-        unsigned int imgSize = sqrt(nImgPix);
-        cuvAssert(nImgPix == imgSize*imgSize);
-
+        unsigned int nImgPixY = input.shape(1);
+        unsigned int nImgPixX = input.shape(2);
+        cuvAssert(input.shape(3) == nImg);
 
         /*void convWeightActs(NVMatrix& images, NVMatrix& hidActs, NVMatrix& targets,*/
         /*                    int numModulesX, int filterSize, int paddingStart,*/
         /*                    int moduleStride, int numImgColors, int numGroups, int partialSum);*/
         NVMatrix nv_dst   NVView3D(dst);
-        NVMatrix nv_delta NVView3D(delta);
-        NVMatrix nv_input NVView3D(input);
+        NVMatrix nv_delta NVView4D(delta);
+        NVMatrix nv_input NVView4D(input);
         convWeightActs(nv_input, nv_delta, nv_dst,
+                nImgPixY, nModulesY,
                 nModulesX, filtSize, paddingStart,
                 moduleStride, nImgChan, nGroups, partialSum,factOld,factNew);
 
-        dst.reshape(extents[nModules/partialSum][nFiltChan*nFiltPix*nFilt]);
+        dst.reshape(extents[(nModulesX*nModulesY)/partialSum][nFiltChan*nFiltPix*nFilt]);
         dst_.reshape(extents[nFiltChan*nFiltPix*nFilt]);
         cuv::reduce_to_row(dst_,dst);
         dst_.reshape(extents[nFiltChan][nFiltPix][nFilt]);
@@ -349,37 +341,33 @@ template<>
             const tensor<float,dev_memory_space>& images,
             int subsX, int startX, int strideX, int outputsX, pool_type pooler){
 
-        cuvAssert(images.ndim()==3);
-        unsigned int nFilt   = images.shape(0);
-        unsigned int nImgPix = images.shape(1);
-        unsigned int nImg    = images.shape(2);
+        cuvAssert(images.ndim()==4);
+        unsigned int nFilt    = images.shape(0);
+        unsigned int nImgPixY = images.shape(1);
+        unsigned int nImgPixX = images.shape(2);
+        unsigned int nImg     = images.shape(3);
 
-        cuvAssert(target.ndim()==3);
+        cuvAssert(target.ndim()==4);
         cuvAssert(target.shape(0) == nFilt);
-        unsigned int outputs = target.shape(1);
-        cuvAssert(target.shape(2) == nImg);
+        unsigned int nOutPixY = target.shape(1);
+        unsigned int nOutPixX = target.shape(2);
+        cuvAssert(target.shape(3) == nImg);
 
-        unsigned int imgSize = sqrt(nImgPix);
-        cuvAssert(imgSize*imgSize == nImgPix);
+        unsigned int poolSize = nImgPixY / nOutPixY;
+        cuvAssert(poolSize*nOutPixY == nImgPixY);
 
-        unsigned int outSize = sqrt(outputs);
-        cuvAssert(outSize*outSize == outputs);
-
-        unsigned int poolSize = imgSize / outSize;
-        cuvAssert(poolSize*outSize == imgSize);
-
-        NVMatrix nv_target NVView3D(target);
-        NVMatrix nv_images NVView3D(images);
+        NVMatrix nv_target NVView4D(target);
+        NVMatrix nv_images NVView4D(images);
         
 
         switch(pooler){
             case PT_MAX:
                 convLocalPool(nv_images, nv_target, nFilt,
-                        subsX, startX, strideX, outputsX, MaxPooler());
+                        subsX, startX, strideX, nOutPixX, MaxPooler());
                 break;
             case PT_AVG:
                 convLocalPool(nv_images, nv_target, nFilt,
-                        subsX, startX, strideX, outputsX, AvgPooler(poolSize*poolSize));
+                        subsX, startX, strideX, nOutPixX, AvgPooler(poolSize*poolSize));
                 break;
         }
     }
@@ -398,38 +386,39 @@ template<>
  * target:      (numFilters, imgPixels, numImages)
  */
 
-        cuvAssert(target.ndim()==3);
+        cuvAssert(target.ndim()==4);
         unsigned int nImgChan  = target.shape(0);
-        unsigned int nImgPix   = target.shape(1);
-        unsigned int nImg      = target.shape(2);
+        unsigned int nImgPixY  = target.shape(1);
+        unsigned int nImgPixX  = target.shape(2);
+        unsigned int nImg      = target.shape(3);
 
-        cuvAssert(images.ndim()==3);
-        cuvAssert(nImgChan == images.shape(0));
-        cuvAssert(nImgPix  == images.shape(1));
-        cuvAssert(nImg     == images.shape(2));
+        cuvAssert(images.ndim()==4);
+        cuvAssert(nImgChan  == images.shape(0));
+        cuvAssert(nImgPixY  == images.shape(1));
+        cuvAssert(nImgPixX  == images.shape(2));
+        cuvAssert(nImg      == images.shape(3));
 
-        cuvAssert(maxGrads.ndim()==3);
+        cuvAssert(maxGrads.ndim()==4);
         cuvAssert(nImgChan == maxGrads.shape(0));
-        unsigned int nOutPix = maxGrads.shape(1);
-        cuvAssert(nImg     == maxGrads.shape(2));
+        unsigned int nOutPixY = maxGrads.shape(1);
+        unsigned int nOutPixX = maxGrads.shape(2);
+        cuvAssert(nImg     == maxGrads.shape(3));
 
-        cuvAssert(maxActs.ndim()==3);
+        cuvAssert(maxActs.ndim()==4);
         cuvAssert(nImgChan == maxActs.shape(0));
-        cuvAssert(nOutPix  == maxGrads.shape(1));
-        cuvAssert(nImg     == maxActs.shape(2));
+        cuvAssert(nOutPixY == maxGrads.shape(1));
+        cuvAssert(nOutPixX == maxGrads.shape(2));
+        cuvAssert(nImg     == maxActs.shape(3));
 
-        unsigned int outputsX = sqrt(nOutPix);
-        cuvAssert(outputsX*outputsX==nOutPix);
-
-        NVMatrix nv_target NVView3D(target);
-        NVMatrix nv_images NVView3D(images);
-        NVMatrix nv_maxGrads NVView3D(maxGrads);
-        NVMatrix nv_maxActs NVView3D(maxActs);
+        NVMatrix nv_target NVView4D(target);
+        NVMatrix nv_images NVView4D(images);
+        NVMatrix nv_maxGrads NVView4D(maxGrads);
+        NVMatrix nv_maxActs NVView4D(maxActs);
         
 /*void convLocalMaxUndo(NVMatrix& images, NVMatrix& maxGrads, NVMatrix& maxActs, NVMatrix& target,*/
 /*                      int subsX, int startX, int strideX, int outputsX);*/
         convLocalMaxUndo(nv_images,nv_maxGrads, nv_maxActs, nv_target, 
-                subsX,startX,strideX,outputsX,factOld,factNew);
+                subsX,startX,strideX,nOutPixX,factOld,factNew);
     }
 
 template<>
@@ -441,26 +430,22 @@ template<>
             int subsX, int startX, int strideX){
 
 
-        cuvAssert(target.ndim()==3);
+        cuvAssert(target.ndim()==4);
         unsigned int nImgChan  = target.shape(0);
-        unsigned int nImgPix   = target.shape(1);
-        unsigned int nImg      = target.shape(2);
+        unsigned int nImgPixY  = target.shape(1);
+        unsigned int nImgPixX  = target.shape(2);
+        unsigned int nImg      = target.shape(3);
 
-        cuvAssert(avgGrads.ndim()==3);
+        cuvAssert(avgGrads.ndim()==4);
         cuvAssert(nImgChan == avgGrads.shape(0));
-        unsigned int nOutPix = avgGrads.shape(1);
-        cuvAssert(nImg == avgGrads.shape(2));
-
-        unsigned int outputsX = sqrt(nOutPix);
-        cuvAssert(outputsX*outputsX==nOutPix);
-
-        unsigned int imgX = sqrt(nImgPix);
-        cuvAssert(imgX*imgX == nImgPix);
+        unsigned int nOutPixY = avgGrads.shape(1);
+        unsigned int nOutPixX = avgGrads.shape(2);
+        cuvAssert(nImg == avgGrads.shape(3));
 
         NVMatrix nv_target NVView3D(target);
         NVMatrix nv_avgGrads NVView3D(avgGrads);
         
-        convLocalAvgUndo(nv_avgGrads, nv_target, subsX,startX,strideX,outputsX,imgX);
+        convLocalAvgUndo(nv_avgGrads, nv_target, subsX,startX,strideX,nOutPixX,nImgPixX);
     }
 
 // instantiate

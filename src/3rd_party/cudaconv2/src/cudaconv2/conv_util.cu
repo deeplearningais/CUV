@@ -1948,7 +1948,7 @@ void convLocalMaxUndo(NVMatrix& images, NVMatrix& maxGrads, NVMatrix& maxActs, N
         }
     }
 
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 void convLocalAvgUndo(NVMatrix& avgGrads, NVMatrix& target, int subsX, int startX, int strideX, int outputsX, int imgSize) {
@@ -2052,7 +2052,7 @@ void convLocalAvgUndo(NVMatrix& avgGrads, NVMatrix& target,
         }
     }
 
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 void convResponseNorm(NVMatrix& images, NVMatrix& denoms, NVMatrix& target, int numFilters, int sizeX, float addScale, float powScale) {
@@ -2202,7 +2202,7 @@ void convContrastNorm(NVMatrix& images, NVMatrix& meanDiffs, NVMatrix& denoms, N
             }
         }
     }
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 void convContrastNormUndo(NVMatrix& outGrads, NVMatrix& denoms, NVMatrix& meanDiffs, NVMatrix& acts, NVMatrix& target, int numFilters,
@@ -2399,7 +2399,7 @@ void convResponseNormUndo(NVMatrix& outGrads, NVMatrix& denoms, NVMatrix& inputs
             }
         }
     }
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 /*
@@ -2455,7 +2455,7 @@ void convResizeBilinear(NVMatrix& images, NVMatrix& target, int imgSize, int tgt
             kResizeBilinear<1, false><<<blocks, threads>>>(images.getDevData(), target.getDevData(), imgSize, tgtSize, numImages, images.getStride(), scale, centerScale);
         }
     }
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 /*
@@ -2501,7 +2501,7 @@ void convRGBToYUV(NVMatrix& images, NVMatrix& target) {
             kRGBToYUV<1, false><<<blocks, threads>>>(images.getDevData(), target.getDevData(), imgPixels, numImages, images.getStride());
         }
     }
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 /*
@@ -2578,7 +2578,7 @@ void convRGBToLAB(NVMatrix& images, NVMatrix& target, bool center) {
             }
         }
     }
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 /*
@@ -2621,7 +2621,7 @@ void convCrop(NVMatrix& imgs, NVMatrix& target, int imgSize, int tgtSize, int st
             kCrop<1, false><<<blocks, threads>>>(imgs.getDevData(), target.getDevData(), numImages, imgs.getStride(), imgSize, tgtSize, startY, startX);
         }
     }
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 /*
@@ -2673,7 +2673,7 @@ void convTICAGrad(NVMatrix& images, NVMatrix& ticas, NVMatrix& target, int numFi
                                                                       imgSize, numFilters, numImages, sizeX, scaleTarget, scaleOutput);
     }
  
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 /*
@@ -2721,7 +2721,7 @@ void convTICA(NVMatrix& images, NVMatrix& target, int numFilters, int sizeX, flo
                                                                   imgSize, numFilters, numImages, sizeX, scaleTarget, scaleOutput);
     }
  
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 
@@ -2781,7 +2781,7 @@ void convContrastNormCrossMap(NVMatrix& images, NVMatrix& meanDiffs, NVMatrix& d
         }
     }
 
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 /*
@@ -2881,7 +2881,7 @@ void convResponseNormCrossMapUndo(NVMatrix& outGrads, NVMatrix& denoms, NVMatrix
         }
     }
 
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 void convResponseNormCrossMap(NVMatrix& images, NVMatrix& denoms, NVMatrix& target, int numFilters, int sizeF, float addScale, float powScale, bool blocked) {

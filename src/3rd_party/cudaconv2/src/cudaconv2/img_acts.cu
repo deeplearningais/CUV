@@ -1888,7 +1888,7 @@ void _imgActs(NVMatrix& hidActs, NVMatrix& filters, NVMatrix& targets,
         }
     }
     
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 
@@ -2556,7 +2556,7 @@ void _imgActsSparse(NVMatrix& hidActs, NVMatrix& filters, NVMatrix& targets, int
         }
     }
     
-    cuvAssert(cudaThreadSynchronize());
+    cuvSafeCall(cudaThreadSynchronize());
 }
 
 void convImgActsSparse(NVMatrix& hidActs, NVMatrix& filters, NVMatrix& targets, int* dColorIndices,

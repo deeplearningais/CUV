@@ -53,8 +53,8 @@ namespace alex_conv{
  * Reorder memory for application of Alex' convolution routines.
  *
  * The routines by Alex require images to be in a slightly unintuitive memory order:
- * (nChannels, nPixH*nPixW, nImages). This is a convenience function to
- * change images of the form (nImages,nChannels,nPixH*nPixW) to the required
+ * (nChannels, nPixH, nPixW, nImages). This is a convenience function to
+ * change images of the form (nImages,nChannels,nPixH,nPixW) to the required
  * format at the cost of one transpose operation.
  *
  */
@@ -62,7 +62,7 @@ template<class V,class M, class T>
     void reorder_for_conv(tensor<V,M,T>& dst, const tensor<V,M,T>& src);
 
 /**
- * Reverse operation of @see reorder_for_conv
+ * Reverse operation of \c reorder_for_conv
  *
  */
 template<class V,class M, class T>
@@ -71,8 +71,8 @@ template<class V,class M, class T>
 /**
  * convolve a set of images with a set of filters
  *
- * @param dst       (nFilt, nModules, nImg)
- * @param img       (nImgChan, nImgPix, nImg)
+ * @param dst       (nFilt, nModulesY, nModulesX, nImg)
+ * @param img       (nImgChan, nImgPixY, nImgPixX, nImg)
  * @param filter    (nFiltChan, nFiltPix, nFilt)
  *
  */
@@ -83,8 +83,8 @@ template<class V, class M, class T>
 /**
  * determine the gradient of a convolution w.r.t. the inputs
  *
- *  @param dst (nImageColors, imgPixels, nImages)
- *  @param delta (nFilt, nModules, nImg)
+ *  @param dst (nImageColors, nImgPixY, nImgPixX, nImages)
+ *  @param delta (nFilt, nModulesY, nModulesX, nImg)
  *  @param filters (nFilterColors, filterPixels, nFilters)
  */
 template<class V, class M, class T>
@@ -96,8 +96,8 @@ template<class V, class M, class T>
  * determine the gradient of a convolution w.r.t. the filters
  *
  *  @param dst  (nModules/partialSum, nFilterColors, filterPixels, nFilters)
- *  @param input   (nImgColors, imgPixels, nImages), with stride given
- *  @param hidActs  (nFilters, numModules, nImages)
+ *  @param input   (nImgColors, nImgPixY, nImgPixX, nImages), with stride given
+ *  @param hidActs  (nFilters, nModulesY, nModulesX, nImages)
  *
  */
 template<class V, class M, class T>
@@ -117,8 +117,8 @@ enum pool_type {
 /**
  * local pooling (average/max)
  *
- * @param images    (numFilters, imgPixels, numImages)
- * @param dst:      (numFilters, outputs, numImages)
+ * @param images    (numFilters, nImgPixY, nImgPixX, numImages)
+ * @param dst:      (numFilters, nImgPixY/n, nImgPixX/n, numImages)
  */
 template<class V, class M, class T>
 void local_pool(tensor<V,M,T>& dst, const tensor<V,M,T>& images,  
