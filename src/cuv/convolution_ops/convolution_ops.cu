@@ -442,8 +442,8 @@ template<>
         unsigned int nOutPixX = avgGrads.shape(2);
         cuvAssert(nImg == avgGrads.shape(3));
 
-        NVMatrix nv_target NVView3D(target);
-        NVMatrix nv_avgGrads NVView3D(avgGrads);
+        NVMatrix nv_target NVView4D(target);
+        NVMatrix nv_avgGrads NVView4D(avgGrads);
         
         convLocalAvgUndo(nv_avgGrads, nv_target, subsX,startX,strideX,nOutPixX,nImgPixX);
     }
