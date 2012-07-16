@@ -138,6 +138,103 @@ template<class V, class M, class T>
 void local_avg_pool_grad(tensor<V,M,T>& target, const tensor<V,M,T>& avgGrads, 
         int subsX, int startX, int strideX);
 
+/**
+ * response normalization.
+ *
+ * in a local patch \f$\mathrm{Patch}(x)\f$ around \i x, calculates 
+ * \f[ x' = \frac{x}{1 + \frac{\alpha}{|\mathrm{Patch}(x)|} \sum_{i\in\mathrm{Patch}(x)}  (x_i^2)^\beta\f]
+ *
+ * @param target OUT \f$x'\f$
+ * @param denoms OUT needed for gradient calculation, same shape as inputs
+ * @param images IN inputs
+ * @param float IN addScale \f$\alpha\f$
+ * @param float IN powScale \f$\beta\f$
+ */
+template<class V, class M, class T>
+void response_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& images, float addScale, float powScale);
+
+/**
+ * derivative of \c response_normalization.
+ *
+ * @param float OUT input_gradients the gradient w.r.t. \i x
+ * @param float INOUT original_outputs (will be overwritten during calculation)
+ * @param float IN original_inputs the original inputs to \c response_normalization
+ * @param float IN denoms the intermediate result returned by \c response_normalization
+ * @param float IN delta outer derivative of the current function (=backpropagated gradient)
+ * @param float IN addScale \f$\alpha\f$
+ * @param float IN powScale \f$\beta\f$
+ */
+template<class V, class M, class T>
+void response_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& original_outputs, const tensor<V,M,T>& original_inputs, 
+        const tensor<V,M,T>& delta, const tensor<V,M,T>& denoms, float addScale, float powScale, float factNew=1.f, float factOld=0.f);
+
+/**
+ * response normalization accross maps.
+ * @param target OUT normalized outputs are written here.
+ * @param denoms OUT intermediate output used for gradient calculation
+ * @param images IN the images which are to be normalized (4D: nChannels x nImgPixY x nImgPixX x nImg)
+ * @param sizeF  IN the number of filters to normalize over
+ */
+template<class V, class M, class T>
+void response_norm_cross_map(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& images, int sizeF, float addScale, float powScale, bool blocked);
+
+/**
+ * gradient of \c response_norm_cross_map
+ */
+template<class V, class M, class T>
+void response_norm_cross_map_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& original_outputs, const tensor<V,M,T>& original_inputs, 
+        const tensor<V,M,T>& delta, const tensor<V,M,T>& denoms, int sizeF, float addScale, float powScale, bool blocked, float factNew=1.f, float factOld=0.f);
+
+/**
+ * gaussian blur (keeps size constant!).
+ *
+ * @param target OUT where blurred data is written to
+ * @param images IN  (unblurred) inputs
+ * @param filter IN  filter to convolve with (2k+1)
+ * @param factNew IN  multiplier for newly calculated values
+ * @param factOld IN  multiplier for data already in target
+ */
+template<class V, class M, class T>
+void gaussian_blur(tensor<V,M,T>& target, const tensor<V,M,T>& images, const tensor<V,M,T>& filter, bool horiz, float factNew=1.f, float factOld=0.f);
+
+/**
+ * Bed of nails subsampling (take every n-th value in each direction).
+ *
+ * @param target OUT Where result is written to (smaller)
+ * @param images IN  inputs (nChannels x nImgPixY x nImgPixX x nImg)
+ * @param startX IN  where to start sampling
+ * @param strideX IN  distance btw. picked values
+ * @param factNew IN  multiplier for newly calculated values
+ * @param factOld IN  multiplier for data already in target
+ */
+template<class V, class M, class T>
+void bed_of_nails(tensor<V,M,T>& target, const tensor<V,M,T>& images, int startX, int strideX, float factNew=1.f, float factOld=0.f);
+
+/**
+ * Gradient of \c bed_of_nails
+ *
+ * @param target OUT Where result is written to (larger)
+ * @param delta  IN outer derivative of current function
+ * @param startX IN  where to start sampling
+ * @param strideX IN  distance btw. picked values
+ * @param factNew IN  multiplier for newly calculated values
+ * @param factOld IN  multiplier for data already in target
+ */
+template<class V, class M, class T>
+void bed_of_nails_grad(tensor<V,M,T>& target, const tensor<V,M,T>& delta, int startX, int strideX, float factNew=1.f, float factOld=0.f);
+
+/**
+ * cropping
+ */
+template<class V, class M, class T>
+void crop(tensor<V,M,T>& cropped, const tensor<V,M,T>& images, int startY, int startX);
+
+/**
+ * bilinear resizing
+ */
+template<class V, class M, class T>
+void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float scale);
+
 }
 /** @} */ //end group convolution_ops
 }

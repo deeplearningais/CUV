@@ -49,6 +49,8 @@
 /*#include <3rd_party/cudaconv2/include/convCPU.h>*/
 #include <cuv/convolution_ops/convolution_ops.hpp>
 
+#define NVView1D(X)  \
+        (const_cast<float*>(X.ptr()), 1, X.shape(0), X.shape(0), false)
 #define NVView3D(X)  \
         (const_cast<float*>(X.ptr()), X.shape(0)*X.shape(1), X.shape(2), X.shape(2),false)
 #define NVView4D(X)  \
@@ -448,12 +450,188 @@ template<>
         convLocalAvgUndo(nv_avgGrads, nv_target, subsX,startX,strideX,nOutPixX,nImgPixX);
     }
 
+template<class V, class M, class T>
+void response_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& images, float addScale, float powScale){
+#ifndef NDEBUG
+    if(!images.ndim()==4)
+        throw std::runtime_error("response_normalization: images must have dimension 4.");
+    if(!target.ndim()==4)
+        throw std::runtime_error("response_normalization: target must have dimension 4.");
+    if(images.shape()!=target.shape())
+        throw std::runtime_error("response_normalization: target must have same shape as images");
+    if(denoms.shape()!=target.shape())
+        throw std::runtime_error("response_normalization: target must have same shape as denoms");
+#endif
+
+    NVMatrix nv_target NVView4D(target);
+    NVMatrix nv_denoms NVView4D(denoms);
+    NVMatrix nv_images NVView4D(images);
+    convResponseNorm(nv_images,nv_denoms,nv_target, target.shape(0), target.shape(1), addScale, powScale);
+}
+template<class V, class M, class T>
+void response_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& original_outputs, const tensor<V,M,T>& original_inputs,
+        const tensor<V,M,T>& delta, const tensor<V,M,T>& denoms, float addScale, float powScale, float factNew, float factOld){
+#ifndef NDEBUG
+    if(!input_gradients.ndim()==4)
+        throw std::runtime_error("response_normalization_grad: input_gradients must have dimension 4.");
+    if(!original_outputs.ndim()==4)
+        throw std::runtime_error("response_normalization_grad: original_outputs must have dimension 4.");
+    if(!original_inputs.ndim()==4)
+        throw std::runtime_error("response_normalization_grad: original_inputs must have dimension 4.");
+    if(!delta.ndim()==4)
+        throw std::runtime_error("response_normalization_grad: delta must have dimension 4.");
+    if(!denoms.ndim()==4)
+        throw std::runtime_error("response_normalization_grad: denoms must have dimension 4.");
+    if(input_gradients.shape() != original_outputs.shape())
+        throw std::runtime_error("response_normalization_grad: input_gradients/original_outputs shapes do not match.");
+    if(input_gradients.shape() != original_inputs.shape())
+        throw std::runtime_error("response_normalization_grad: input_gradients/original_inputs shapes do not match.");
+    if(input_gradients.shape() != delta.shape())
+        throw std::runtime_error("response_normalization_grad: input_gradients/delta shapes do not match.");
+    if(input_gradients.shape() != denoms.shape())
+        throw std::runtime_error("response_normalization_grad: input_gradients/denoms shapes do not match.");
+#endif
+
+    NVMatrix nv_input_grad NVView4D(input_gradients);
+    NVMatrix nv_orig_out NVView4D(original_outputs);
+    NVMatrix nv_orig_in  NVView4D(original_inputs);
+    NVMatrix nv_delta NVView4D(delta);
+    NVMatrix nv_denoms NVView4D(denoms);
+    convResponseNormUndo(nv_delta,nv_denoms,nv_orig_in, nv_orig_out, nv_input_grad, input_gradients.shape(0), input_gradients.shape(1), addScale, powScale, factOld, factNew);
+}
+
+template<class V, class M, class T>
+void gaussian_blur(tensor<V,M,T>& target, const tensor<V,M,T>& images, const tensor<V,M,T>& filter, bool horiz, float factNew, float factOld){
+#ifndef NDEBUG
+    if(!target.ndim()==4)
+        throw std::runtime_error("gaussian_blur: target must have dimension 4.");
+    if(!images.ndim()==4)
+        throw std::runtime_error("gaussian_blur: images must have dimension 4.");
+    if(filter.ndim()!=1)
+        throw std::runtime_error("gaussian_blur: filter must have dimension 1.");
+    if(((filter.size() + 1) / 2) * 2 + 1 != filter.size())
+        throw std::runtime_error("gaussian_blur: filter must have size 2*k+1.");
+    if(target.shape() != images.shape())
+        throw std::runtime_error("gaussian_blur: images and targets must have same shape.");
+#endif
+    NVMatrix nv_images NVView4D(images);
+    NVMatrix nv_target NVView4D(target);
+    NVMatrix nv_filter NVView1D(filter);
+    convGaussianBlur(nv_images, nv_filter, nv_target, horiz, images.shape(0), factOld, factNew);
+}
+
+template<class V, class M, class T>
+void bed_of_nails(tensor<V,M,T>& target, const tensor<V,M,T>& images, int startX, int strideX, float factNew, float factOld){
+#ifndef NDEBUG
+    if(!target.ndim()==4)
+        throw std::runtime_error("bed_of_nails: target must have dimension 4.");
+    if(!images.ndim()==4)
+        throw std::runtime_error("bed_of_nails: images must have dimension 4.");
+    if(target.shape(1) != images.shape(1) / strideX)
+        throw std::runtime_error("bed_of_nails: images and targets shapes must relate by strideX.");
+#endif
+    NVMatrix nv_images NVView4D(images);
+    NVMatrix nv_target NVView4D(target);
+    convBedOfNails(nv_images, nv_target, images.shape(0), images.shape(1), startX, strideX, factOld, factNew);
+}
+
+template<class V, class M, class T>
+void bed_of_nails_grad(tensor<V,M,T>& target, const tensor<V,M,T>& delta, int startX, int strideX, float factNew, float factOld){
+#ifndef NDEBUG
+    if(!target.ndim()==4)
+        throw std::runtime_error("bed_of_nails_grad: target must have dimension 4.");
+    if(!delta.ndim()==4)
+        throw std::runtime_error("bed_of_nails_grad: delta must have dimension 4.");
+    if(delta.shape(1) != target.shape(1) / strideX)
+        throw std::runtime_error("bed_of_nails_grad: deltas and targets shapes must relate by strideX.");
+#endif
+    NVMatrix nv_delta NVView4D(delta);
+    NVMatrix nv_target NVView4D(target);
+    convBedOfNailsUndo(nv_delta, nv_target, target.shape(0), target.shape(1), startX, strideX, factOld, factNew);
+}
+
+template<class V, class M, class T>
+void crop(tensor<V,M,T>& cropped, const tensor<V,M,T>& images, int startY, int startX){
+    NVMatrix nv_cropped NVView4D(cropped);
+    NVMatrix nv_images NVView4D(images);
+
+    convCrop(nv_images, nv_cropped, images.shape(1), cropped.shape(1), startY, startX);
+}
+
+template<class V, class M, class T>
+void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float scale){
+    NVMatrix nv_dest NVView4D(dest);
+    NVMatrix nv_images NVView4D(images);
+
+    convResizeBilinear(nv_images, nv_dest, images.shape(1), dest.shape(1), scale);
+}
+
+template<class V, class M, class T>
+void response_norm_cross_map(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& images, int sizeF, float addScale, float powScale, bool blocked){
+#ifndef NDEBUG
+    if(!images.ndim()==4)
+        throw std::runtime_error("response_norm_cross_map: images must have dimension 4.");
+    if(!target.ndim()==4)
+        throw std::runtime_error("response_norm_cross_map: target must have dimension 4.");
+    if(images.shape()!=target.shape())
+        throw std::runtime_error("response_norm_cross_map: target must have same shape as images");
+    if(denoms.shape()!=target.shape())
+        throw std::runtime_error("response_norm_cross_map: target must have same shape as denoms");
+#endif
+
+    NVMatrix nv_target NVView4D(target);
+    NVMatrix nv_denoms NVView4D(denoms);
+    NVMatrix nv_images NVView4D(images);
+    convResponseNormCrossMap(nv_images,nv_denoms,nv_target, target.shape(0), sizeF, addScale, powScale, blocked);
+}
+
+template<class V, class M, class T>
+void response_norm_cross_map_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& original_outputs, const tensor<V,M,T>& original_inputs, 
+        const tensor<V,M,T>& delta, const tensor<V,M,T>& denoms, int sizeF, float addScale, float powScale, bool blocked, float factNew, float factOld){
+#ifndef NDEBUG
+    if(!input_gradients.ndim()==4)
+        throw std::runtime_error("response_norm_cross_map_grad: input_gradients must have dimension 4.");
+    if(!original_outputs.ndim()==4)
+        throw std::runtime_error("response_norm_cross_map_grad: original_outputs must have dimension 4.");
+    if(!original_inputs.ndim()==4)
+        throw std::runtime_error("response_norm_cross_map_grad: original_inputs must have dimension 4.");
+    if(!delta.ndim()==4)
+        throw std::runtime_error("response_norm_cross_map_grad: delta must have dimension 4.");
+    if(!denoms.ndim()==4)
+        throw std::runtime_error("response_norm_cross_map_grad: denoms must have dimension 4.");
+    if(input_gradients.shape() != original_outputs.shape())
+        throw std::runtime_error("response_norm_cross_map_grad: input_gradients/original_outputs shapes do not match.");
+    if(input_gradients.shape() != original_inputs.shape())
+        throw std::runtime_error("response_norm_cross_map_grad: input_gradients/original_inputs shapes do not match.");
+    if(input_gradients.shape() != delta.shape())
+        throw std::runtime_error("response_norm_cross_map_grad: input_gradients/delta shapes do not match.");
+    if(input_gradients.shape() != denoms.shape())
+        throw std::runtime_error("response_norm_cross_map_grad: input_gradients/denoms shapes do not match.");
+#endif
+
+    NVMatrix nv_input_grad NVView4D(input_gradients);
+    NVMatrix nv_orig_out NVView4D(original_outputs);
+    NVMatrix nv_orig_in  NVView4D(original_inputs);
+    NVMatrix nv_delta NVView4D(delta);
+    NVMatrix nv_denoms NVView4D(denoms);
+    convResponseNormCrossMapUndo(nv_delta,nv_denoms,nv_orig_in, nv_orig_out, nv_input_grad, input_gradients.shape(0), sizeF, addScale, powScale, blocked, factOld, factNew);
+}
+
 // instantiate
 #define  TENS(V,M,T)       tensor<V,M,T>
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
 template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
+template void crop<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int); \
+template void resize_bilinear<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, float); \
+template void response_normalization<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, float, float); \
+template void response_normalization_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, float, float, float, float); \
+template void response_norm_cross_map<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, int, float, float, bool); \
+template void response_norm_cross_map_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, int, float, float, bool, float, float); \
+template void bed_of_nails<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int, float, float); \
+template void bed_of_nails_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int, float, float); \
+template void gaussian_blur<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, bool, float, float); \
 template void convolve2d(TENS(V,M,T)& dst,CTENS(V,M,T)& img,CTENS(V,M,T)& filter, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew, float factOld); \
 template void d_conv2d_dfilt(TENS(V,M,T)& dst_, CTENS(V,M,T)& delta, CTENS(V,M,T)&   input, int paddingStart, unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld);\
 template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld);
