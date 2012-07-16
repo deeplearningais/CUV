@@ -147,11 +147,12 @@ void local_avg_pool_grad(tensor<V,M,T>& target, const tensor<V,M,T>& avgGrads,
  * @param target OUT \f$x'\f$
  * @param denoms OUT needed for gradient calculation, same shape as inputs
  * @param images IN inputs
+ * @param patchSize IN width of (square) patches to operate on
  * @param float IN addScale \f$\alpha\f$
  * @param float IN powScale \f$\beta\f$
  */
 template<class V, class M, class T>
-void response_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& images, float addScale, float powScale);
+void response_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& images, int patchSize, float addScale, float powScale);
 
 /**
  * derivative of \c response_normalization.
@@ -166,7 +167,7 @@ void response_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const 
  */
 template<class V, class M, class T>
 void response_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& original_outputs, const tensor<V,M,T>& original_inputs, 
-        const tensor<V,M,T>& delta, const tensor<V,M,T>& denoms, float addScale, float powScale, float factNew=1.f, float factOld=0.f);
+        const tensor<V,M,T>& delta, const tensor<V,M,T>& denoms, int patchSize, float addScale, float powScale, float factNew=1.f, float factOld=0.f);
 
 /**
  * response normalization accross maps.

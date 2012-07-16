@@ -451,7 +451,7 @@ template<>
     }
 
 template<class V, class M, class T>
-void response_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& images, float addScale, float powScale){
+void response_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& images, int patchSize, float addScale, float powScale){
 #ifndef NDEBUG
     if(!images.ndim()==4)
         throw std::runtime_error("response_normalization: images must have dimension 4.");
@@ -466,11 +466,11 @@ void response_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const 
     NVMatrix nv_target NVView4D(target);
     NVMatrix nv_denoms NVView4D(denoms);
     NVMatrix nv_images NVView4D(images);
-    convResponseNorm(nv_images,nv_denoms,nv_target, target.shape(0), target.shape(1), addScale, powScale);
+    convResponseNorm(nv_images,nv_denoms,nv_target, target.shape(0), patchSize, addScale, powScale);
 }
 template<class V, class M, class T>
 void response_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& original_outputs, const tensor<V,M,T>& original_inputs,
-        const tensor<V,M,T>& delta, const tensor<V,M,T>& denoms, float addScale, float powScale, float factNew, float factOld){
+        const tensor<V,M,T>& delta, const tensor<V,M,T>& denoms, int patchSize, float addScale, float powScale, float factNew, float factOld){
 #ifndef NDEBUG
     if(!input_gradients.ndim()==4)
         throw std::runtime_error("response_normalization_grad: input_gradients must have dimension 4.");
@@ -497,7 +497,7 @@ void response_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& 
     NVMatrix nv_orig_in  NVView4D(original_inputs);
     NVMatrix nv_delta NVView4D(delta);
     NVMatrix nv_denoms NVView4D(denoms);
-    convResponseNormUndo(nv_delta,nv_denoms,nv_orig_in, nv_orig_out, nv_input_grad, input_gradients.shape(0), input_gradients.shape(1), addScale, powScale, factOld, factNew);
+    convResponseNormUndo(nv_delta,nv_denoms,nv_orig_in, nv_orig_out, nv_input_grad, input_gradients.shape(0), patchSize, addScale, powScale, factOld, factNew);
 }
 
 template<class V, class M, class T>
@@ -625,8 +625,8 @@ template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void crop<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int); \
 template void resize_bilinear<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, float); \
-template void response_normalization<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, float, float); \
-template void response_normalization_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, float, float, float, float); \
+template void response_normalization<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, int, float, float); \
+template void response_normalization_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, int, float, float, float, float); \
 template void response_norm_cross_map<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, int, float, float, bool); \
 template void response_norm_cross_map_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, int, float, float, bool, float, float); \
 template void bed_of_nails<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int, float, float); \
