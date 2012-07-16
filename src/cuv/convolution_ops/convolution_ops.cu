@@ -449,7 +449,6 @@ template<>
         
         convLocalAvgUndo(nv_avgGrads, nv_target, subsX,startX,strideX,nOutPixX,nImgPixX);
     }
-
 template<class V, class M, class T>
 void response_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& images, int patchSize, float addScale, float powScale){
 #ifndef NDEBUG
@@ -466,7 +465,7 @@ void response_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const 
     NVMatrix nv_target NVView4D(target);
     NVMatrix nv_denoms NVView4D(denoms);
     NVMatrix nv_images NVView4D(images);
-    convResponseNorm(nv_images,nv_denoms,nv_target, target.shape(0), patchSize, addScale, powScale);
+    convResponseNorm(nv_images, nv_denoms, nv_target, target.shape(0), patchSize, addScale, powScale);
 }
 template<class V, class M, class T>
 void response_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& original_outputs, const tensor<V,M,T>& original_inputs,
@@ -497,7 +496,58 @@ void response_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& 
     NVMatrix nv_orig_in  NVView4D(original_inputs);
     NVMatrix nv_delta NVView4D(delta);
     NVMatrix nv_denoms NVView4D(denoms);
-    convResponseNormUndo(nv_delta,nv_denoms,nv_orig_in, nv_orig_out, nv_input_grad, input_gradients.shape(0), patchSize, addScale, powScale, factOld, factNew);
+    convResponseNormUndo(nv_delta, nv_denoms, nv_orig_in, nv_orig_out, nv_input_grad, input_gradients.shape(0), patchSize, addScale, powScale, factOld, factNew);
+}
+
+template<class V, class M, class T>
+void contrast_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& meanDiffs, const tensor<V,M,T>& images, int patchSize, float addScale, float powScale){
+#ifndef NDEBUG
+    if(!images.ndim()==4)
+        throw std::runtime_error("response_normalization: images must have dimension 4.");
+    if(!target.ndim()==4)
+        throw std::runtime_error("response_normalization: target must have dimension 4.");
+    if(images.shape()!=target.shape())
+        throw std::runtime_error("response_normalization: target must have same shape as images");
+    if(denoms.shape()!=target.shape())
+        throw std::runtime_error("response_normalization: target must have same shape as denoms");
+#endif
+
+    NVMatrix nv_target NVView4D(target);
+    NVMatrix nv_denoms NVView4D(denoms);
+    NVMatrix nv_meandiffs NVView4D(meanDiffs);
+    NVMatrix nv_images NVView4D(images);
+    convContrastNorm(nv_images,nv_meandiffs, nv_denoms,nv_target, target.shape(0), patchSize, addScale, powScale);
+}
+template<class V, class M, class T>
+void contrast_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& original_outputs, const tensor<V,M,T>& meanDiffs, 
+        const tensor<V,M,T>& delta, const tensor<V,M,T>& denoms, int patchSize, float addScale, float powScale, float factNew, float factOld){
+#ifndef NDEBUG
+    if(!input_gradients.ndim()==4)
+        throw std::runtime_error("response_normalization_grad: input_gradients must have dimension 4.");
+    if(!original_outputs.ndim()==4)
+        throw std::runtime_error("response_normalization_grad: original_outputs must have dimension 4.");
+    if(!meanDiffs.ndim()==4)
+        throw std::runtime_error("response_normalization_grad: meanDiffs must have dimension 4.");
+    if(!delta.ndim()==4)
+        throw std::runtime_error("response_normalization_grad: delta must have dimension 4.");
+    if(!denoms.ndim()==4)
+        throw std::runtime_error("response_normalization_grad: denoms must have dimension 4.");
+    if(input_gradients.shape() != original_outputs.shape())
+        throw std::runtime_error("response_normalization_grad: input_gradients/original_outputs shapes do not match.");
+    if(input_gradients.shape() != meanDiffs.shape())
+        throw std::runtime_error("response_normalization_grad: input_gradients/meanDiffs shapes do not match.");
+    if(input_gradients.shape() != delta.shape())
+        throw std::runtime_error("response_normalization_grad: input_gradients/delta shapes do not match.");
+    if(input_gradients.shape() != denoms.shape())
+        throw std::runtime_error("response_normalization_grad: input_gradients/denoms shapes do not match.");
+#endif
+
+    NVMatrix nv_input_grad NVView4D(input_gradients);
+    NVMatrix nv_orig_out NVView4D(original_outputs);
+    NVMatrix nv_meandiffs  NVView4D(meanDiffs);
+    NVMatrix nv_delta NVView4D(delta);
+    NVMatrix nv_denoms NVView4D(denoms);
+    convContrastNormUndo(nv_delta, nv_denoms, nv_meandiffs, nv_orig_out, nv_input_grad, input_gradients.shape(0), patchSize, addScale, powScale, factOld, factNew);
 }
 
 template<class V, class M, class T>
@@ -625,6 +675,8 @@ template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void crop<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int); \
 template void resize_bilinear<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, float); \
+template void contrast_normalization<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, int, float, float); \
+template void contrast_normalization_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, int, float, float, float, float); \
 template void response_normalization<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, int, float, float); \
 template void response_normalization_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, int, float, float, float, float); \
 template void response_norm_cross_map<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, int, float, float, bool); \

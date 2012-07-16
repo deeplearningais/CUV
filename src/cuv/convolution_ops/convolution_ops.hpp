@@ -170,6 +170,39 @@ void response_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& 
         const tensor<V,M,T>& delta, const tensor<V,M,T>& denoms, int patchSize, float addScale, float powScale, float factNew=1.f, float factOld=0.f);
 
 /**
+ * contrast normalization.
+ *
+ * in a local patch \f$\mathrm{Patch}(x)\f$ around \i x, calculates 
+ * \f[ x' = \frac{x}{1 + \frac{\alpha}{|\mathrm{Patch}(x)|} \sum_{i\in\mathrm{Patch}(x)}  (x_i^2)^\beta\f]
+ *
+ * @param target OUT \f$x'\f$
+ * @param denoms OUT needed for gradient calculation, same shape as inputs
+ * @param meanDiffs IN difference to mean
+ * @param images IN inputs
+ * @param patchSize IN width of (square) patches to operate on
+ * @param float IN addScale \f$\alpha\f$
+ * @param float IN powScale \f$\beta\f$
+ */
+template<class V, class M, class T>
+void contrast_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& meanDiffs, const tensor<V,M,T>& images, int patchSize, float addScale, float powScale);
+
+/**
+ * derivative of \c response_normalization.
+ *
+ * @param float OUT input_gradients the gradient w.r.t. \i x
+ * @param float INOUT original_outputs (will be overwritten during calculation)
+ * @param meanDiffs IN difference to mean
+ * @param float IN original_inputs the original inputs to \c response_normalization
+ * @param float IN denoms the intermediate result returned by \c response_normalization
+ * @param float IN delta outer derivative of the current function (=backpropagated gradient)
+ * @param float IN addScale \f$\alpha\f$
+ * @param float IN powScale \f$\beta\f$
+ */
+template<class V, class M, class T>
+void contrast_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& original_outputs, const tensor<V,M,T>& meanDiffs,
+        const tensor<V,M,T>& delta, const tensor<V,M,T>& denoms, int patchSize, float addScale, float powScale, float factNew=1.f, float factOld=0.f);
+
+/**
  * response normalization accross maps.
  * @param target OUT normalized outputs are written here.
  * @param denoms OUT intermediate output used for gradient calculation
