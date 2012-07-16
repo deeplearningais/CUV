@@ -191,6 +191,7 @@ void response_norm_cross_map_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>&
  * @param target OUT where blurred data is written to
  * @param images IN  (unblurred) inputs
  * @param filter IN  filter to convolve with (2k+1)
+ * @param horiz  IN whether this is the horizontal or vertical filter pass
  * @param factNew IN  multiplier for newly calculated values
  * @param factOld IN  multiplier for data already in target
  */

@@ -509,7 +509,7 @@ void gaussian_blur(tensor<V,M,T>& target, const tensor<V,M,T>& images, const ten
         throw std::runtime_error("gaussian_blur: images must have dimension 4.");
     if(filter.ndim()!=1)
         throw std::runtime_error("gaussian_blur: filter must have dimension 1.");
-    if(((filter.size() + 1) / 2) * 2 + 1 != filter.size())
+    if(filter.size()==1 || (((filter.size() - 1) / 2) * 2 + 1 != filter.size()))
         throw std::runtime_error("gaussian_blur: filter must have size 2*k+1.");
     if(target.shape() != images.shape())
         throw std::runtime_error("gaussian_blur: images and targets must have same shape.");
