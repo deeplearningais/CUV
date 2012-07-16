@@ -552,6 +552,10 @@ void contrast_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& 
     NVMatrix nv_delta NVView4D(delta);
     NVMatrix nv_denoms NVView4D(denoms);
     convContrastNormUndo(nv_delta, nv_denoms, nv_meandiffs, nv_orig_out, nv_input_grad, input_gradients.shape(0), patchSize, addScale, powScale, factOld, factNew);
+
+    // "spread" delta from above according to mean
+    convLocalAvgUndo(nv_delta, nv_orig_out, patchSize, -patchSize/2, 1, input_gradients.shape(1), input_gradients.shape(1));
+    nv_input_grad.add(nv_orig_out, 1,-1);
 }
 
 template<class V, class M, class T>
