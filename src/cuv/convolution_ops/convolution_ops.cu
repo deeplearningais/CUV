@@ -534,8 +534,6 @@ void contrast_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& 
         throw std::runtime_error("response_normalization_grad: denoms must have dimension 4.");
     if(input_gradients.shape() != original_outputs.shape())
         throw std::runtime_error("response_normalization_grad: input_gradients/original_outputs shapes do not match.");
-    if(input_gradients.shape() != meanDiffs.shape())
-        throw std::runtime_error("response_normalization_grad: input_gradients/meanDiffs shapes do not match.");
     if(input_gradients.shape() != delta.shape())
         throw std::runtime_error("response_normalization_grad: input_gradients/delta shapes do not match.");
     if(input_gradients.shape() != denoms.shape())
