@@ -324,11 +324,11 @@ template<class V, class M, class L>
         convWeightActs(nv_input, nv_delta, nv_dst,
                 nImgPixY, nModulesY,
                 nModulesX, filtSize, paddingStart,
-                moduleStride, nImgChan, nGroups, partialSum,factOld,factNew);
+                moduleStride, nImgChan, nGroups, partialSum);
 
         dst.reshape(extents[(nModulesX*nModulesY)/partialSum][nFiltChan*nFiltPix*nFilt]);
         dst_.reshape(extents[nFiltChan*nFiltPix*nFilt]);
-        cuv::reduce_to_row(dst_,dst);
+        cuv::reduce_to_row(dst_,dst, cuv::RF_ADD, factNew, factOld);
         dst_.reshape(extents[nFiltChan][nFiltPix][nFilt]);
     }
 
