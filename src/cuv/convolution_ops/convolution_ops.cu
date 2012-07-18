@@ -307,6 +307,7 @@ template<class V, class M, class L>
         unsigned int nModulesX = delta.shape(2);
         unsigned int nImg      = delta.shape(3);
 
+        assert((nModulesX * nModulesY) % partialSum == 0);
         cuv::tensor<float,M> dst(extents[(nModulesX*nModulesY)/partialSum][nFiltChan*nFiltPix][nFilt]); // make 3D for NVView3D
 
         cuvAssert(input.ndim()==4);
