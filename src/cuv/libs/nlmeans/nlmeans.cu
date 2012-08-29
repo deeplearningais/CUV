@@ -50,19 +50,19 @@ namespace nlmeans{
 	template<int dim, class T> struct texref{ };
 	template<> struct texref<2,float>{
 		typedef texture<float, 2, cudaReadModeElementType> type;
-		static 	inline __device__ __host__ type& get(){ return cuda_array_tex_float2d; }; 
+		static 	inline __device__ __host__ type get(){ return cuda_array_tex_float2d; }; 
 	};
 	template<> struct texref<2,unsigned char>{
 		typedef texture<unsigned char, 2, cudaReadModeElementType> type;
-		static inline __device__ __host__ type& get(){ return cuda_array_tex_uchar2d; }; 
+		static inline __device__ __host__ type get(){ return cuda_array_tex_uchar2d; }; 
 	};
 	template<> struct texref<3,float>{
 		typedef texture<float, 3, cudaReadModeElementType> type;
-		static 	inline __device__ __host__ type& get(){ return cuda_array_tex_float3d; }; 
+		static 	inline __device__ __host__ type get(){ return cuda_array_tex_float3d; }; 
 	};
 	template<> struct texref<3,unsigned char>{
 		typedef texture<unsigned char, 3, cudaReadModeElementType> type;
-		static inline __device__ __host__ type& get(){ return cuda_array_tex_uchar3d; }; 
+		static inline __device__ __host__ type get(){ return cuda_array_tex_uchar3d; }; 
 	};
 
 	template<class V, class I1>
@@ -183,7 +183,7 @@ namespace nlmeans{
 		ca.assign(src);
 
 		typedef typename texref<3,T>::type textype;
-		textype& tex = texref<3,T>::get();
+		textype tex = texref<3,T>::get();
 		cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<T>();
 		tex.normalized = false;
 		tex.filterMode = cudaFilterModePoint;
