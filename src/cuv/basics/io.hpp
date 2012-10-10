@@ -173,7 +173,7 @@ namespace boost
 			ar <<  t.info().host_shape
                 << t.info().host_stride;
             ar << t.mem();
-			if(t.ndim()>0){
+			if(t.ndim()>0 && t.mem()){
                 long int i = (long int)t.ptr() - (long int)t.mem()->ptr();
                 ar << i;
 			}
@@ -190,7 +190,7 @@ namespace boost
 			ar >> t.info().host_shape;
 			ar >> t.info().host_stride;
             ar >> t.mem();
-			if(t.ndim()>0){
+			if(t.ndim()>0 && t.mem()){
                 long int i;
                 ar >> i;
                 t.set_ptr_offset(i);
