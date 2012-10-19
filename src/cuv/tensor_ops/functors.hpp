@@ -244,9 +244,10 @@ struct tf_dsqhinge_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__  
 template<class R, class T, class A>
 struct bf_rect:binary_functor<R,T,A>{  inline __device__  __host__       R operator()(const T& x, const A& a)      const{
 	T ax = a*x;
-	if(ax > 87.33f)
+	if(ax > 87.33f) // exp(ax) > float precision
 		return (T) x;
-	return log(1.0f+expf(ax))/a;
+    bf_logaddexp<float> lae;
+	return lae(0.f, ax)/a;
 }};
 /// calculates the derivative of the rectifying transfer function 1-1/(x*exp(a))
 template<class R, class T, class A>
