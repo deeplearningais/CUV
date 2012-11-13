@@ -283,36 +283,15 @@ struct Fix{
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
-/*
- *BOOST_AUTO_TEST_CASE( test_rprop_optimization_host )
- *{
- *    rprop_optimization<host_memory_space>(N);
- *}
- *
- *BOOST_AUTO_TEST_CASE( test_rprop_optimization_dev )
- *{
- *    rprop_optimization<dev_memory_space>(N);
- *}
- *
- *BOOST_AUTO_TEST_CASE( test_lswd_optimization_host )
- *{
- *    lswd_optimization<host_memory_space>(N);
- *}
- *
- *BOOST_AUTO_TEST_CASE( test_lswd_optimization_dev )
- *{
- *    lswd_optimization<dev_memory_space>(N);
- *}
- *
- *BOOST_AUTO_TEST_CASE( test_rprop_optimization_l1_host )
- *{
- *    rprop_optimization_decay_l1<host_memory_space>(N);
- *}
- *BOOST_AUTO_TEST_CASE( test_rprop_optimization_l1_dev )
- *{
- *    rprop_optimization_decay_l1<dev_memory_space>(N);
- *}
- */
+BOOST_AUTO_TEST_CASE( test_rprop_optimization_host )
+{
+   rprop_optimization<host_memory_space>(N);
+}
+
+BOOST_AUTO_TEST_CASE( test_rprop_optimization_dev )
+{
+   rprop_optimization<dev_memory_space>(N);
+}
 
 BOOST_AUTO_TEST_CASE( test_adagrad_optimization_l1_host )
 {
@@ -330,6 +309,24 @@ BOOST_AUTO_TEST_CASE( test_adagrad_optimization_l1_dev )
 BOOST_AUTO_TEST_CASE( test_adagrad_optimization_dev )
 {
    adagrad_optimization<dev_memory_space>(N,false);
+}
+BOOST_AUTO_TEST_CASE( test_lswd_optimization_host )
+{
+   lswd_optimization<host_memory_space>(N);
+}
+
+BOOST_AUTO_TEST_CASE( test_lswd_optimization_dev )
+{
+   lswd_optimization<dev_memory_space>(N);
+}
+
+BOOST_AUTO_TEST_CASE( test_rprop_optimization_l1_host )
+{
+   rprop_optimization_decay_l1<host_memory_space>(N);
+}
+BOOST_AUTO_TEST_CASE( test_rprop_optimization_l1_dev )
+{
+   rprop_optimization_decay_l1<dev_memory_space>(N);
 }
 
 BOOST_AUTO_TEST_CASE( test_softmax )
