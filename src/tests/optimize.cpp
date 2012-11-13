@@ -70,7 +70,7 @@ void lswd_optimization(int N){
 
 	
 	for (int iter = 0; iter < 1000; ++iter) {
-		dW = optimum-W;
+		dW = W-optimum;
 		learn_step_weight_decay(W,dW,0.01,0.0);
 	}
 
@@ -144,7 +144,7 @@ void rprop_optimization_decay_l1(int N){
 	fill(rate, 0.001f); // initialize learning rates
 	
 	for (int iter = 0; iter < 300; ++iter) {
-		dW = optimum-W;
+		dW = W-optimum;
 		rprop(W,dW,dW_old,rate,0.00,0.001);
 	}
 
@@ -182,7 +182,7 @@ void rprop_optimization(int N){
 	fill(rate, 0.001f); // initialize learning rates
 	
 	for (int iter = 0; iter < 300; ++iter) {
-		dW = optimum-W;
+		dW = W-optimum;
 		rprop(W,dW,dW_old,rate);
 	}
 
@@ -207,8 +207,8 @@ void softmax_derivative(int n_var, int n_val){
     tensor<float,M,L> Y(extents[n_val][n_var]); Y = 0.f; // softmax result
     tensor<float,M,L> D(extents[n_val][n_var]); D = 0.f; // delta
     tensor<float,M,L> R(extents[n_val][n_var]); fill_rnd_uniform(R); // residual
-    X+=0.1f;
-    R+=0.3f;
+    X+=1.1f;
+    R+=1.3f;
 
     cuv::libs::opt::softmax(Y,X,1);
     cuv::libs::opt::softmax_derivative(D,Y,R,1);
@@ -233,7 +233,7 @@ void softmax_derivative(int n_var, int n_val){
 
     cuv::prod(D2,Jtilde,R,'t','n');
     for(int i=0;i<D2.size();i++){
-            BOOST_CHECK_CLOSE((float)D[i], (float)D2[i], 5.0f); // usually below 1.5%, but 5% stop this from failing occasionally
+            BOOST_CHECK_CLOSE((float)D[i] + 1.f, (float)D2[i] + 1.f, 1.0f); // usually below 1.5%, but 5% stop this from failing occasionally
     }
 
 }
