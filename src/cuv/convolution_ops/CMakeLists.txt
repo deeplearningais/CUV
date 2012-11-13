@@ -16,13 +16,13 @@ CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/tensor_ops )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/convert )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/tools )
 
-CUDA_ADD_LIBRARY(cuv_convolution_ops SHARED
-	convolution_ops.cu
-  )
+#CUDA_ADD_LIBRARY(cuv_convolution_ops SHARED
+#    convolution_ops.cu
+#  )
 
-TARGET_LINK_LIBRARIES(cuv_convolution_ops ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY} ${BLAS_LIBRARIES} tp_cudaconv2)
+#TARGET_LINK_LIBRARIES(cuv_convolution_ops ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY} ${BLAS_LIBRARIES} tp_cudaconv2)
 
-install(TARGETS cuv_convolution_ops
-	RUNTIME DESTINATION bin
-	LIBRARY DESTINATION lib
-	ARCHIVE DESTINATION lib/static)
+#install(TARGETS cuv_convolution_ops
+#    RUNTIME DESTINATION bin
+#    LIBRARY DESTINATION lib
+#    ARCHIVE DESTINATION lib/static)

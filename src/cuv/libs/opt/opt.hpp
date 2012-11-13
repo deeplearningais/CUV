@@ -73,6 +73,20 @@ namespace cuv{ namespace libs{
 		template<class V, class M, class L>
 		void softmax_derivative(cuv::tensor<V, M,L>& dst, const cuv::tensor<V, M,L>& softmax_act, const cuv::tensor<V,M,L>& residual, unsigned int vardim=1);
 
+        /**
+         * @brief Do a gradient update step using AdaGrad.
+         * 
+         * @param W 	Destination matrix
+         * @param dW	The gradient of W. This is a tensor of same shape as W. 
+         * @param sW	The sum of the squared gradients for each component as W (therefore also same shape as W).
+         * @param learnrate Scalar learnreate 
+         * @param decay	(optional) Scalar L2 penalty 
+         * @param sparsedecay	(optional) Scalar L1 penalty 
+         * 
+         */
+        template<class V, class M>
+            void adagrad(tensor<V,M>& W, const tensor<V,M>& dW, const float& learnrate, const float& decay = 0.0f, const float& sparsedecay=0.0f);
+
 		/**
 		 * @}
 		 * @}
