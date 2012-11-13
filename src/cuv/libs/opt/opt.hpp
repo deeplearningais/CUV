@@ -80,12 +80,13 @@ namespace cuv{ namespace libs{
          * @param dW	The gradient of W. This is a tensor of same shape as W. 
          * @param sW	The sum of the squared gradients for each component as W (therefore also same shape as W).
          * @param learnrate Scalar learnreate 
+         * @param delta	added in denominator of adagrad
          * @param decay	(optional) Scalar L2 penalty 
          * @param sparsedecay	(optional) Scalar L1 penalty 
          * 
          */
-        template<class V, class M>
-            void adagrad(tensor<V,M>& W, const tensor<V,M>& dW, const float& learnrate, const float& decay = 0.0f, const float& sparsedecay=0.0f);
+        template<class V, class M, class L>
+            void adagrad(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& sW, const float& learnrate, const float& delta, const float& decay = 0.0f, const float& sparsedecay=0.0f);
 
 		/**
 		 * @}

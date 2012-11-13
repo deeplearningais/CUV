@@ -87,6 +87,45 @@ void lswd_optimization(int N){
 }
 
 template<class M>
+void adagrad_optimization(int N, bool l1decay=false){
+	tensor<float,M>       W(N);
+	tensor<float,M>       dW(N);
+	tensor<float,M>       sW(N);
+
+	// we will optimize the function f(W) = 2 * (W-optimum)^2
+	tensor<float,M>       optimum(N);
+	fill_rnd_uniform(optimum);
+	optimum -= 0.5f;
+
+	// start at random value
+	fill_rnd_uniform(W);
+	W -= 0.5f;
+	fill(sW, 0.001f); // initialize learning rates
+	
+    float l1d = l1decay ? 0.001f : 0.0f;
+	for (int iter = 0; iter < 300; ++iter) {
+		dW = W-optimum;
+        cuv::libs::opt::adagrad(W,dW,sW,1.0, 0.01, 0.f, l1d);
+	}
+
+	std::cout << "Adagrad: L1-Norm of W (l1-reg'n: "<<l1decay<<"): " << cuv::norm1(W)<<std::endl;
+	std::cout << " number exact zeros: " << cuv::count(W, 0.f)<<std::endl;
+    if(l1decay) {
+        BOOST_CHECK_GT(cuv::count(W, 0.f), 0); // number of exact zeros should be >0 in l1-optimization!
+    }
+	tensor<float,M>   f = W-optimum;
+	double tendency = norm1(f*f) - norm1(optimum*optimum);
+	BOOST_CHECK_LT(tendency,0); // weights should be a bit too cose to 0
+	f *= f;
+	f *= 2.f;
+	double error = mean(f);
+	BOOST_CHECK_CLOSE(error+1.0,1.0,0.01);
+
+	for(int i=0;i<N;i++){
+	       BOOST_CHECK_CLOSE((float)W[i] + 10.f,(float)optimum[i]+ 10.f,0.1f);
+	}
+}
+template<class M>
 void rprop_optimization_decay_l1(int N){
 	tensor<signed char,M> dW_old(N);
 	tensor<float,M>       W(N);
@@ -274,6 +313,24 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
  *    rprop_optimization_decay_l1<dev_memory_space>(N);
  *}
  */
+
+BOOST_AUTO_TEST_CASE( test_adagrad_optimization_l1_host )
+{
+   adagrad_optimization<host_memory_space>(N,true);
+}
+BOOST_AUTO_TEST_CASE( test_adagrad_optimization_host )
+{
+   adagrad_optimization<host_memory_space>(N,false);
+}
+
+BOOST_AUTO_TEST_CASE( test_adagrad_optimization_l1_dev )
+{
+   adagrad_optimization<dev_memory_space>(N,true);
+}
+BOOST_AUTO_TEST_CASE( test_adagrad_optimization_dev )
+{
+   adagrad_optimization<dev_memory_space>(N,false);
+}
 
 BOOST_AUTO_TEST_CASE( test_softmax )
 {
