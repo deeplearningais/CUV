@@ -67,7 +67,7 @@ namespace cuv{
         /**
          * @overload
          *
-         * casting column major to row major since working on linear memory anyway
+         * casting column major to row major since working on linear memory anyway.
          */
         template<class __value_type, class __memory_space_type, class S>
 	void rprop(tensor<__value_type,__memory_space_type, column_major>& W, tensor<__value_type,__memory_space_type, column_major>& dW, tensor<S,__memory_space_type, column_major>& dW_old, tensor<__value_type,__memory_space_type, column_major>& rate, const float& decay = 0.0f, const float& sparsedecay=0.0f){
@@ -92,7 +92,7 @@ namespace cuv{
         /**
          * @overload
          *
-         * casting column major to row major since working on linear memory anyway
+         * casting column major to row major since working on linear memory anyway.
          */
         template<class __value_type, class __memory_space_type>
 	void learn_step_weight_decay(tensor<__value_type,__memory_space_type, column_major>& W, const tensor<__value_type,__memory_space_type, column_major>& dW, const float& learnrate, const float& decay = 0.0f, const float& sparsedecay=0.0f){
