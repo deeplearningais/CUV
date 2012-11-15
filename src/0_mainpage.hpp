@@ -113,7 +113,6 @@
  * - cmake (and cmake-curses-gui for easy configuration)
  * - libboost-dev >= 1.37
  * - libblas-dev
- * - libtemplate-perl -- (we might get rid of this dependency soon)
  * - NVIDIA CUDA (tm), including SDK. We support versions 3.X and 4.0
  * - thrust library - included in CUDA since 4.0 (otherwise available from http://code.google.com/p/thrust/) 
  * - doxygen (if you want to build the documentation yourself)
@@ -139,7 +138,7 @@
  * Building CUV:
  *
  * @code
- * $ sudo apt-get install cmake cmake-curses-gui libblas-dev libboost-all-dev libtemplate-perl doxygen python-nose python-dev cimg-dev
+ * $ sudo apt-get install cmake cmake-curses-gui libblas-dev libboost-all-dev doxygen python-nose python-dev cimg-dev
  * $ # download and install pyublas if you want python-bindings
  * $ cd cuv-version-source
  * $ mkdir -p build/release

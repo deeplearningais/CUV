@@ -16,7 +16,7 @@ namespace cuv{
 	 */
 	int getFreeDeviceMemory(){
         size_t free, total;
-        cuvSafeCall(cuMemGetInfo(&free, &total));
+        //cuvSafeCall(cuMemGetInfo(&free, &total));
         return free;
 	}
 
@@ -27,7 +27,7 @@ namespace cuv{
 	 */
 	int getMaxDeviceMemory(){
         size_t free, total;
-        cuvSafeCall(cuMemGetInfo(&free, &total));
+        //cuvSafeCall(cuMemGetInfo(&free, &total));
         return total;
 	}
 

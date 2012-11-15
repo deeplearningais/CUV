@@ -1,5 +1,9 @@
 debug/*
 build/*
+build2/*
+build_atlas/*
+build1/*
+build_cuda1/*
 src/tags
 src/call_tags
 src/cscope.files
