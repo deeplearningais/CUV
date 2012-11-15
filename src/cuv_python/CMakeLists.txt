@@ -56,6 +56,6 @@ ENDIF( CUV_CIMG_BINDINGS )
 #        ARCHIVE DESTINATION lib/static)
 
 execute_process ( COMMAND python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
-install(TARGETS cuv_python  DESTINATION ${PYTHON_SITE_PACKAGES}/cuv_python)
-install(FILES   __init__.py DESTINATION ${PYTHON_SITE_PACKAGES}/cuv_python)
+install(TARGETS cuv_python  DESTINATION ${PYTHON_SITE_PACKAGES}/cuv_python${LIB_SUFFIX})
+install(FILES   __init__.py DESTINATION ${PYTHON_SITE_PACKAGES}/cuv_python${LIB_SUFFIX})
 

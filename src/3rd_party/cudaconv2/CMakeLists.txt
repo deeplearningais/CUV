@@ -1,7 +1,7 @@
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/include/nvmatrix )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/include/common )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/include/cudaconv2 )
-CUDA_ADD_LIBRARY(tp_cudaconv2 SHARED
+CUDA_ADD_LIBRARY("tp_cudaconv2${LIB_SUFFIX}" SHARED
 	include/common/matrix.cpp
 	src/nvmatrix/nvmatrix.cu
 	src/nvmatrix/nvmatrix_kernels.cu
@@ -11,7 +11,7 @@ CUDA_ADD_LIBRARY(tp_cudaconv2 SHARED
 	src/cudaconv2/weight_acts.cu
   )
 
-install(TARGETS tp_cudaconv2
+install(TARGETS "tp_cudaconv2${LIB_SUFFIX}"
 	RUNTIME DESTINATION bin
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib/static)
