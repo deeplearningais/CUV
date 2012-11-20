@@ -99,7 +99,7 @@ namespace integral_img{
 
 	template<class V,class W, class L>
 		void scan(cuv::tensor<V, dev_memory_space, L>& dst, const cuv::tensor<W, dev_memory_space, L>& src) {
-			scan_kernel<256,V><<<src.shape()[0], 128>>>(dst.ptr(), src.ptr(), src.shape(1), (unsigned int)dst.stride(0), (unsigned int)src.stride(0));
+			scan_kernel<256,V><<<src.shape(0), 128>>>(dst.ptr(), src.ptr(), src.shape(1), (unsigned int)dst.stride(0), (unsigned int)src.stride(0));
 			cuvSafeCall(cudaThreadSynchronize());
 		}
 
@@ -108,10 +108,10 @@ namespace integral_img{
 		{
 			const W* src_ptr = src.ptr();
 			V* dst_ptr = dst.ptr();
-			for(int i = 0; i<src.shape()[0]; i++) {
+			for(int i = 0; i<src.shape(0); i++) {
 				*dst_ptr = 0;
 				dst_ptr++;
-				for(int j =0; j< src.shape()[1]-1; j++) {
+				for(int j =0; j< src.shape(1)-1; j++) {
 					*dst_ptr = *(dst_ptr-1) + *(src_ptr);
 					dst_ptr++;
 					src_ptr++;
@@ -124,8 +124,8 @@ namespace integral_img{
 		void integral_image(cuv::tensor<V, T, M>& dst, const cuv::tensor<W, T, M>& src)
 		{
 			cuvAssert(src.ndim()==2);
-			cuvAssert(src.shape()[0]==dst.shape()[1]);
-			cuvAssert(src.shape()[1]==dst.shape()[0]);
+			cuvAssert(src.shape(0)==dst.shape(1));
+			cuvAssert(src.shape(1)==dst.shape(0));
 			tensor<V,T,M> temp (src.shape(),pitched_memory_tag());
 			tensor<V,T,M> temp1(dst.shape(),pitched_memory_tag());
 
