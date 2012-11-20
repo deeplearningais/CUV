@@ -45,58 +45,58 @@ namespace cuv
 {
 namespace integral_img{
 	template<int BLOCK_SIZE,class DstT, class SrcT, class I>
-		__global__ void scan_kernel(DstT *output, const SrcT *input, I width, I dpitch, I spitch) {
-			__shared__ DstT sum1, sum2;
+        __global__ void scan_kernel(DstT *output, const SrcT *input, I width, I dpitch, I spitch) {
+            __shared__ DstT sum1, sum2;
 
-			I blockCol = blockIdx.x;
-			I tdx      = threadIdx.x;
-			if(tdx==0)
-				sum1 = sum2 = 0;
+            I blockCol = blockIdx.x;
+            I tdx      = threadIdx.x;
+            if(tdx==0)
+                sum1 = sum2 = 0;
 
-			const SrcT* src = PITCH(input, spitch,blockCol,0);
-			      DstT* dst = PITCH(output,dpitch,blockCol,0);
+            const SrcT* src = PITCH(input, spitch,blockCol,0);
+            DstT* dst       = PITCH(output,dpitch,blockCol,0);
 
-			      for(I i = 0; i< width; i+=BLOCK_SIZE) {
-				      __syncthreads();
-				      __shared__ DstT temp[BLOCK_SIZE];
-				      I offset =1;
+            for(I i = 0; i< width; i+=BLOCK_SIZE) {
+                __syncthreads();
+                __shared__ DstT temp[BLOCK_SIZE];
+                I offset =1;
 
-				      temp[2*tdx]   = (i+2*tdx  )<width ? src[i+2*tdx]   : 0;
-				      temp[2*tdx+1] = (i+2*tdx+1)<width ? src[i+2*tdx+1] : 0;
+                temp[2*tdx]   = (i+2*tdx  )<width ? src[i+2*tdx]   : 0;
+                temp[2*tdx+1] = (i+2*tdx+1)<width ? src[i+2*tdx+1] : 0;
 
-				      for(I outerd = BLOCK_SIZE/2; outerd > 0; outerd /= 2) {
-					      __syncthreads();
-					      if(tdx < outerd) {
-						      I ai      = offset*(2*tdx+1)-1;
-						      I bi      = offset*(2*tdx+2)-1;
-						      temp[bi] += temp[ai];
-					      }
-					      offset   *= 2;
+                for(I outerd = BLOCK_SIZE/2; outerd > 0; outerd /= 2) {
+                    __syncthreads();
+                    if(tdx < outerd) {
+                        I ai      = offset*(2*tdx+1)-1;
+                        I bi      = offset*(2*tdx+2)-1;
+                        temp[bi] += temp[ai];
+                    }
+                    offset   *= 2;
 
-				      }
-				      if(tdx == 0) {
-					      sum2               = temp[BLOCK_SIZE-1];
-					      temp[BLOCK_SIZE-1] = 0;
-				      }
-				      for(I innerd = 1; innerd < BLOCK_SIZE; innerd *= 2) {
-					      offset >>= 1;
-					      __syncthreads();
-					      if(tdx < innerd) {
-						      I ai      = offset*(2*tdx+1)-1;
-						      I bi      = offset*(2*tdx+2)-1;
-						      DstT t    = temp[ai];
-						      temp[ai]  = temp[bi];
-						      temp[bi] += t;
-					      }
-				      }
-				      __syncthreads();
+                }
+                if(tdx == 0) {
+                    sum2               = temp[BLOCK_SIZE-1];
+                    temp[BLOCK_SIZE-1] = 0;
+                }
+                for(I innerd = 1; innerd < BLOCK_SIZE; innerd *= 2) {
+                    offset >>= 1;
+                    __syncthreads();
+                    if(tdx < innerd) {
+                        I ai      = offset*(2*tdx+1)-1;
+                        I bi      = offset*(2*tdx+2)-1;
+                        DstT t    = temp[ai];
+                        temp[ai]  = temp[bi];
+                        temp[bi] += t;
+                    }
+                }
+                __syncthreads();
 
-				      if(i+2*tdx  <width) dst[i+2*tdx]   = temp[2*tdx]  +sum1;
-				      if(i+2*tdx+1<width) dst[i+2*tdx+1] = temp[2*tdx+1]+sum1;
-				      if(tdx == 0) 
-					      sum1 += sum2;
-			      }
-		}
+                if(i+2*tdx  <width) dst[i+2*tdx]   = temp[2*tdx]  +sum1;
+                if(i+2*tdx+1<width) dst[i+2*tdx+1] = temp[2*tdx+1]+sum1;
+                if(tdx == 0) 
+                    sum1 += sum2;
+            }
+        }
 
 	template<class V,class W, class L>
 		void scan(cuv::tensor<V, dev_memory_space, L>& dst, const cuv::tensor<W, dev_memory_space, L>& src) {
