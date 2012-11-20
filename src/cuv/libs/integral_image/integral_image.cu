@@ -147,11 +147,13 @@ namespace integral_img{
                 I nRows = gridDim.x;
 
                 I colStride = 1         * nImg;
-                I rowStride = colStride * width;
-                I mapStride = rowStride * nRows;
+                I rowStride_src = colStride * width;
+                I rowStride_dst = colStride * (width+1);
+                I mapStride_src = rowStride_src * nRows;
+                I mapStride_dst = rowStride_dst * nRows;
 
-                const SrcT* src = input + map * mapStride + row * rowStride;
-                DstT* dst       = output + map * mapStride + row * rowStride;
+                const SrcT* src = input + map * mapStride_src + row * rowStride_src;
+                DstT* dst       = output + map * mapStride_dst + row * rowStride_dst;
 
                 float sum = 0.f;
                 if(threadIdx.x < nImg)
@@ -175,11 +177,12 @@ namespace integral_img{
                 /*I nCols = gridDim.x;*/
 
                 I colStride = 1         * nImg;
-                I rowStride = colStride * width;
-                I mapStride = rowStride * height;
+                I rowStride = colStride * width; 
+                I mapStride_src = rowStride * height; // height_src+1 == height_dst
+                I mapStride_dst = rowStride * (height+1); // height_src+1 == height_dst
 
-                const SrcT* src = input + map * mapStride + col * colStride;
-                DstT* dst       = output + map * mapStride + col * colStride;
+                const SrcT* src = input + map * mapStride_src + col * colStride;
+                DstT* dst       = output + map * mapStride_dst + col * colStride;
 
                 float sum = 0.f;
                 if(threadIdx.x < nImg)
@@ -194,44 +197,49 @@ namespace integral_img{
             }
         template<class V>
         void scan_horiz_4d(cuv::tensor<V,host_memory_space>& dst, const cuv::tensor<V,host_memory_space>& src){
+            assert(src.shape(2)+1 == dst.shape(2));
             int colStride = 1         * src.shape(3);
-            int rowStride = colStride * src.shape(2);
-            int mapStride = rowStride * src.shape(1);
+            int rowStride_src = colStride * src.shape(2); // widths differ by one
+            int rowStride_dst = colStride * dst.shape(2);
+            int mapStride_src = rowStride_src * src.shape(1);
+            int mapStride_dst = rowStride_dst * dst.shape(1);
 
             for (int map = 0; map < src.shape(0); ++map) {
                 for (int row = 0; row < src.shape(1); ++row) {
                     std::vector<V> sums(src.shape(3), 0);
-                    const V*  srcp = src.ptr() + map*mapStride + row*rowStride;
-                    V* tempp         = dst.ptr() + map*mapStride + row*rowStride;
+                    const V*  srcp = src.ptr() + map*mapStride_src + row*rowStride_src;
+                    V* dstp        = dst.ptr() + map*mapStride_dst + row*rowStride_dst;
                     int col;
                     for (col = 0; col < src.shape(2) * colStride; col+=colStride) {
                         for (int img = 0; img < src.shape(3); ++img) {
-                            tempp[col+img] = sums[img];
+                            dstp[col+img] = sums[img];
                             sums[img] += srcp[col+img];
                         }
                     }
                     // one more each -- exclusive scan.
                     for (int img = 0; img < src.shape(3); ++img) {
-                        tempp[col+img] = sums[img];
+                        dstp[col+img] = sums[img];
                     }
                 }
             }
         }
         template<class V>
         void scan_vert_4d(cuv::tensor<V,host_memory_space>& dst, const cuv::tensor<V,host_memory_space>& src){
+            assert(src.shape(1)+1 == dst.shape(1));
             int colStride = 1         * src.shape(3);
             int rowStride = colStride * src.shape(2);
-            int mapStride = rowStride * src.shape(1);
+            int mapStride_src = rowStride * src.shape(1); // src.shape(1)+1 == dst.shape(1)
+            int mapStride_dst = rowStride * dst.shape(1); 
             for (int map = 0; map < src.shape(0); ++map) {
                 for (int col = 0; col < src.shape(2); ++col) {
                     std::vector<V> sums(src.shape(3), 0);
-                    const V*  tempp = src.ptr() + map*mapStride + col*colStride;
-                    V* dstp         = dst.ptr() + map*mapStride + col*colStride;
+                    const V*  srcp = src.ptr() + map*mapStride_src + col*colStride;
+                    V* dstp         = dst.ptr() + map*mapStride_dst + col*colStride;
                     int row;
                     for (row = 0; row < rowStride*src.shape(1); row+=rowStride) {
                         for (int img = 0; img < src.shape(3); ++img) {
                             dstp[row+img]  = sums[img];
-                            sums[img] += tempp[row+img];
+                            sums[img] += srcp[row+img];
                         }
                     }
                     // one more each -- exclusive scan.
