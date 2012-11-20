@@ -37,6 +37,8 @@
 #include <cuv/libs/integral_image/integral_image.hpp>
 #include <cuv/tools/timing.hpp>
 #include <cuv/tools/cuv_test.hpp>
+#include <cuv/random/random.hpp>
+#include <cuv/tensor_ops/tensor_ops.hpp>
 
 using namespace cuv;
 using namespace cuv::integral_img;
@@ -129,6 +131,55 @@ BOOST_AUTO_TEST_CASE( test_integral_image )
 			BOOST_CHECK_CLOSE((float)mh(j,i), (float)md(j,i),0.1);
 		}
 	MAT_CMP(mh,md,0.1);
+}
+
+template<class V, class M>
+void test_iimg_4d_util(){
+    cuv::tensor<float, cuv::dev_memory_space> t(
+            cuv::extents[32][12][12][16]);
+    cuv::tensor<float, cuv::dev_memory_space> t2(
+            cuv::extents[32][12+1][12+1][16]);
+    t = (V) 1;
+    t2 = (V) 0;
+    cuv::integral_img::integral_image_4d(t2, t);
+
+    for (int map = 0; map < t.shape(0); ++map) {
+        for (int row = 0; row < t.shape(1); ++row) {
+            for (int col = 0; col < t.shape(2); ++col) {
+                for (int img = 0; img < t.shape(3); ++img) {
+                    BOOST_CHECK_LT( fabs(t2(map, row, col, img) - row * col) , 0.001f);
+                    if (fabs(t2(map, row, col, img) - row * col) >= 0.001f) {
+                        std::cout << "map=" << map << ", row=" << row
+                            << ", col=" << col << ", img=" << img
+                            << ", val=" << t2(map, row, col, img)
+                            << ", target=" << col * row << ", "
+                            << (col - 1) * (row - 1) << std::endl;
+                    }
+                }
+            }
+        }
+    }
+}
+BOOST_AUTO_TEST_CASE( test_iimg_4d_ones )
+{
+   test_iimg_4d_util<float,cuv::host_memory_space>();
+   test_iimg_4d_util<float,cuv::dev_memory_space>();
+}
+BOOST_AUTO_TEST_CASE( test_iimg_4d_same )
+{
+    cuv::tensor<float, cuv::dev_memory_space> t( cuv::extents[32][12][12][16]);
+    cuv::tensor<float, cuv::dev_memory_space> t2( cuv::extents[32][12+1][12+1][16]);
+    cuv::tensor<float, cuv::host_memory_space> th( cuv::extents[32][12][12][16]);
+    cuv::tensor<float, cuv::host_memory_space> t2h( cuv::extents[32][12+1][12+1][16]);
+
+    cuv::fill_rnd_uniform(t);
+    th = t;
+    cuv::integral_img::integral_image_4d(t2,t);
+    cuv::integral_img::integral_image_4d(t2h,th);
+
+    th = t2; // copy to host
+    
+    BOOST_CHECK_LT(cuv::norm1(th-t2h), 0.01f);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
