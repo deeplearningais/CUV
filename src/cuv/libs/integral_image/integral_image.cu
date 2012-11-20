@@ -38,7 +38,8 @@
 #define NUM_BANKS 16  
 #define LOG_NUM_BANKS 4  
 #define CONFLICT_FREE_OFFSET(x) ((x) >> NUM_BANKS + (x) >> (2 * LOG_NUM_BANKS))
-#define PITCH(PTR,PITCH,Y,X) ((typeof(PTR))((char*)(PTR) + (PITCH)*(Y)) + (X))
+/*#define PITCH(PTR,PITCH,Y,X) ((typeof(PTR))((char*)(PTR) + (PITCH)*(Y)) + (X))*/
+#define PITCH(PTR,PITCH,Y,X) (PTR + ((Y)*(PITCH) + (X)))
 
 namespace cuv
 {
