@@ -289,7 +289,7 @@ namespace cuv
                     if (m_ptr)
                         m_allocator.dealloc(&this->m_ptr);
                     this->m_ptr=NULL;
-                    this->m_size=NULL;
+                    this->m_size=0;
                 }
 
                 /** 
