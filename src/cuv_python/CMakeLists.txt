@@ -19,7 +19,7 @@ PYTHON_ADD_MODULE(cuv_python SHARED
         python_bindings.cpp
         export_tensor.cpp
         export_cuda_array.cpp
-        export_dia_mat.cpp
+        #export_dia_mat.cpp
         export_matrix_ops.cpp
         export_tensor_ops.cpp
         export_random.cpp
@@ -37,25 +37,10 @@ CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py ${CMAKE_CURRENT_BINARY_D
 
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES OUTPUT_NAME "_cuv_python")
 SET_TARGET_PROPERTIES(cuv_python PROPERTIES PREFIX "")
-TARGET_LINK_LIBRARIES(cuv_python 
-                cuv_tools
-                cuv_basics
-                cuv_tensor_ops
-                cuv_matrix_ops
-                cuv_convert
-                cuv_random
-                cuv_matrix_ops
-                cuv_convolution_ops
-                cuv_image_ops
-                cuv_rbm
-                cuv_kmeans
-                cuv_kernels
-                cuv_cimg
-                cuv_hog
-                cuv_nlmeans
+TARGET_LINK_LIBRARIES(cuv_python cuv
         #${Boost_LIBRARIES}
-                ${Boost_DATE_TIME_LIBRARY_RELEASE}
-                ${Boost_PYTHON_LIBRARY_RELEASE}
+        ${Boost_DATE_TIME_LIBRARY_RELEASE}
+        ${Boost_PYTHON_LIBRARY_RELEASE}
         ${PYTHON_LIBRARY}
         ${CUDA_CUBLAS_LIBRARIES}
 )
@@ -71,6 +56,6 @@ ENDIF( CUV_CIMG_BINDINGS )
 #        ARCHIVE DESTINATION lib/static)
 
 execute_process ( COMMAND python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
-install(TARGETS cuv_python  DESTINATION ${PYTHON_SITE_PACKAGES}/cuv_python)
-install(FILES   __init__.py DESTINATION ${PYTHON_SITE_PACKAGES}/cuv_python)
+install(TARGETS cuv_python  DESTINATION ${PYTHON_SITE_PACKAGES}/cuv_python${LIB_SUFFIX})
+install(FILES   __init__.py DESTINATION ${PYTHON_SITE_PACKAGES}/cuv_python${LIB_SUFFIX})
 

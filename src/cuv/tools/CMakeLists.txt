@@ -1,13 +1,13 @@
 INCLUDE_DIRECTORIES( ${CUDA_SDK_INCLUDE_DIR}/common/inc )
-CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} )
-CUDA_ADD_LIBRARY(cuv_tools SHARED
-	cuv_general.cu
-	device_tools.cpp
-	progressbar.cpp
-  )
-TARGET_LINK_LIBRARIES(cuv_tools ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY})
+#CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} )
+#CUDA_ADD_LIBRARY(cuv_tools SHARED
+#    cuv_general.cu
+#    device_tools.cpp
+#    progressbar.cpp
+#  )
+#TARGET_LINK_LIBRARIES(cuv_tools ${CUDA_LIBRARIES} ${CUDA_CUT_LIBRARY})
 
-install(TARGETS cuv_tools 
-	RUNTIME DESTINATION bin
-	LIBRARY DESTINATION lib
-	ARCHIVE DESTINATION lib/static)
+#install(TARGETS cuv_tools 
+#    RUNTIME DESTINATION bin
+#    LIBRARY DESTINATION lib
+#    ARCHIVE DESTINATION lib/static)

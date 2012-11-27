@@ -56,7 +56,7 @@ __global__ void rprop_kernel(T*W, T* dW, S* dW_old, T* rate, int n, T decay, T s
 			http://research.microsoft.com/en-us/downloads/b1eb1016-1738-4bd5-83a9-370c9d498a03/
                 */
 
-		T pg   = dW[i]; // projected gradient
+		T pg   = -dW[i]; // projected gradient
 		T oldW = W[i];
 		S sdW  = sgn(pg);
 		pg    -= decay * oldW;
@@ -131,7 +131,7 @@ namespace cuv{
 				http://research.microsoft.com/en-us/downloads/b1eb1016-1738-4bd5-83a9-370c9d498a03/
 			 */
 
-			T pg   = dW[i]; // projected gradient
+			T pg   = -dW[i]; // projected gradient
 			T oldW = W[i];
 			S sdW  = sgn(pg);
 			pg    -= decay * oldW;
@@ -200,7 +200,7 @@ namespace cuv{
 		cuvAssert(dW.ptr());
 		cuvAssert(W.ptr());
 		cuvAssert(W.size() == dW.size());
-		learn_step_weight_decay_impl(W,dW,learnrate,1.f-learnrate*decay,sparsedecay);
+		learn_step_weight_decay_impl(W,dW,-learnrate,1.f-learnrate*decay,sparsedecay);
 	}
 
 #define RPROP_INSTANTIATE(V,S) \

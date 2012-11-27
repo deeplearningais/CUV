@@ -1,3 +1,6 @@
+#ifndef __CUV_CIMG_HPP__
+#     define __CUV_CIMG_HPP__
+
 #include <cuv/basics/tensor.hpp>
 namespace cuv{
 	namespace libs{
@@ -48,3 +51,4 @@ namespace cuv{
 	
 }
 
+#endif /* __CUV_CIMG_HPP__ */

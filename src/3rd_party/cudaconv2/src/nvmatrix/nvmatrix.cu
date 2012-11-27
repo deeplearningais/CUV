@@ -29,7 +29,7 @@
 #include <map>
 #include <assert.h>
 #include <cublas.h>
-#include <cutil_inline.h>
+/*#include <cutil_inline.h>*/
 #include <stdlib.h>
 #include <stdio.h>
 #include <fstream>

@@ -8,91 +8,93 @@ INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/random )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src )
 
 FIND_PACKAGE( BLAS REQUIRED)
+SET (TEST_LINK_LIBS ${BLAS_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${Boost_LIBRARIES} cuv${LIB_SUFFIX})
 
 SET (CUDA_TEST_DEVICE "0" CACHE STRING "Which CUDA device should the tests be run on, if multiple devices are present.")
 add_definitions(-DCUDA_TEST_DEVICE=${CUDA_TEST_DEVICE})
 
 ADD_EXECUTABLE( test_tensor tensor.cpp )
-TARGET_LINK_LIBRARIES( test_tensor cuv_basics cuv_tools cuv_matrix_ops cuv_convert cuv_tensor_ops)
+TARGET_LINK_LIBRARIES( test_tensor ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_tensor_serialization tensor_serialization.cpp )
-TARGET_LINK_LIBRARIES( test_tensor_serialization cuv_basics cuv_tools cuv_matrix_ops cuv_convert cuv_tensor_ops ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES( test_tensor_serialization ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_basic basic.cpp )
-TARGET_LINK_LIBRARIES( test_basic cuv_basics cuv_tools cuv_convert)
+TARGET_LINK_LIBRARIES( test_basic ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_convert convert.cpp )
-TARGET_LINK_LIBRARIES( test_convert cuv_tensor_ops cuv_basics cuv_tools cuv_convert)
+TARGET_LINK_LIBRARIES( test_convert ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_tensor_op tensor_op.cpp )
-TARGET_LINK_LIBRARIES( test_tensor_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops)
+TARGET_LINK_LIBRARIES( test_tensor_op ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_tensor_op_speed tensor_op_speed.cpp )
-TARGET_LINK_LIBRARIES( test_tensor_op_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random )
+TARGET_LINK_LIBRARIES( test_tensor_op_speed ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_optimize optimize.cpp )
-TARGET_LINK_LIBRARIES( test_optimize cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random cuv_opt)
+TARGET_LINK_LIBRARIES( test_optimize ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_mat_op matrix_op.cpp )
 #TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
-TARGET_LINK_LIBRARIES( test_mat_op cuv ${CUDA_CUBLAS_LIBRARIES} )
+TARGET_LINK_LIBRARIES( test_mat_op ${TEST_LINK_LIBS})
 
-ADD_EXECUTABLE( test_dia_mat dia_mat.cpp )
-TARGET_LINK_LIBRARIES( test_dia_mat cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+#ADD_EXECUTABLE( test_dia_mat dia_mat.cpp )
+#TARGET_LINK_LIBRARIES( test_dia_mat ${TEST_LINK_LIBS})
 
-ADD_EXECUTABLE( test_spmv spmv.cpp )
-TARGET_LINK_LIBRARIES( test_spmv         cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+#ADD_EXECUTABLE( test_spmv spmv.cpp )
+#TARGET_LINK_LIBRARIES( test_spmv   ${TEST_LINK_LIBS})
 
-ADD_EXECUTABLE( test_spmv_speed spmv_speed.cpp )
-TARGET_LINK_LIBRARIES( test_spmv_speed   cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+#ADD_EXECUTABLE( test_spmv_speed spmv_speed.cpp )
+#TARGET_LINK_LIBRARIES( test_spmv_speed   ${TEST_LINK_LIBS})
 
-ADD_EXECUTABLE( test_densedense_to_dia densedense_to_dia.cpp )
-TARGET_LINK_LIBRARIES( test_densedense_to_dia     cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+#ADD_EXECUTABLE( test_densedense_to_dia densedense_to_dia.cpp )
+#TARGET_LINK_LIBRARIES( test_densedense_to_dia   ${TEST_LINK_LIBS})
 
-ADD_EXECUTABLE( test_densedense_to_dia_speed densedense_to_dia_speed.cpp )
-TARGET_LINK_LIBRARIES( test_densedense_to_dia_speed     cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+#ADD_EXECUTABLE( test_densedense_to_dia_speed densedense_to_dia_speed.cpp )
+#TARGET_LINK_LIBRARIES( test_densedense_to_dia_speed     ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_mat_op_speed matrix_op_speed.cpp )
-TARGET_LINK_LIBRARIES( test_mat_op_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
+TARGET_LINK_LIBRARIES( test_mat_op_speed ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_conv_op conv_op.cpp )
-TARGET_LINK_LIBRARIES( test_conv_op cuv_convolution_ops cuv_matrix_ops cuv_random cuv_tools cuv_convert cuv_tensor_ops cuv_basics ${CUDA_CUBLAS_LIBRARIES})
+TARGET_LINK_LIBRARIES( test_conv_op ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_conv_op_speed conv_op_speed.cpp )
-TARGET_LINK_LIBRARIES( test_conv_op_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_convolution_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} ${BLAS_LIBRARIES} )
+TARGET_LINK_LIBRARIES( test_conv_op_speed ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_random random.cpp )
-TARGET_LINK_LIBRARIES( test_random cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random)
+TARGET_LINK_LIBRARIES( test_random ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_random_speed random_speed.cpp )
-TARGET_LINK_LIBRARIES( test_random_speed cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_random)
+TARGET_LINK_LIBRARIES( test_random_speed ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_memory memory.cpp )
-TARGET_LINK_LIBRARIES( test_memory cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops ${CUDA_CUBLAS_LIBRARIES} )
+TARGET_LINK_LIBRARIES( test_memory ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_lib_rbm lib_rbm.cpp )
-TARGET_LINK_LIBRARIES( test_lib_rbm cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_rbm ${CUDA_CUBLAS_LIBRARIES} )
+TARGET_LINK_LIBRARIES( test_lib_rbm ${TEST_LINK_LIBS})
 
 ADD_EXECUTABLE( test_lib_kmeans lib_kmeans.cpp )
 #TARGET_LINK_LIBRARIES( test_lib_kmeans cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_kmeans ${CUDA_CUBLAS_LIBRARIES} )
-TARGET_LINK_LIBRARIES( test_lib_kmeans cuv ${CUDA_CUBLAS_LIBRARIES} )
+TARGET_LINK_LIBRARIES( test_lib_kmeans ${TEST_LINK_LIBS})
 
 IF(CUV_CIMG_BINDINGS)
 	FIND_PACKAGE( PNG REQUIRED)
 	ADD_EXECUTABLE( test_lib_cimg cimg.cpp )
-	TARGET_LINK_LIBRARIES( test_lib_cimg cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_cimg cuv_matrix_ops X11 pthread ${PNG_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} )
+    SET(TEST_LINK_LIBS ${TEST_LINK_LIBS} X11 pthread ${PNG_LIBRARIES})
+    TARGET_LINK_LIBRARIES( test_lib_cimg ${TEST_LINK_LIBS})
 
 	ADD_EXECUTABLE( test_lib_sep_conv lib_sep_conv.cpp )
-	TARGET_LINK_LIBRARIES( test_lib_sep_conv cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_separable_conv cuv_cimg cuv_matrix_ops X11 pthread ${PNG_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} )
+    TARGET_LINK_LIBRARIES( test_lib_sep_conv ${TEST_LINK_LIBS})
 
 	ADD_EXECUTABLE( test_lib_intimg lib_intimg.cpp )
-	TARGET_LINK_LIBRARIES( test_lib_intimg cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_intimg cuv_cimg cuv_matrix_ops X11 pthread ${PNG_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} )
+    TARGET_LINK_LIBRARIES( test_lib_intimg ${TEST_LINK_LIBS})
 
 	ADD_EXECUTABLE( test_nlmeans lib_nlmean.cpp )
-	TARGET_LINK_LIBRARIES( test_nlmeans cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_nlmeans cuv_cimg cuv_matrix_ops X11 pthread ${PNG_LIBRARIES})
+    TARGET_LINK_LIBRARIES( test_nlmeans ${TEST_LINK_LIBS})
 
 	ADD_EXECUTABLE( test_hog lib_hog.cpp )
-	TARGET_LINK_LIBRARIES( test_hog cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_separable_conv cuv_hog cuv_nlmeans cuv_cimg cuv_matrix_ops X11 pthread ${PNG_LIBRARIES})
+    TARGET_LINK_LIBRARIES( test_hog ${TEST_LINK_LIBS})
 
         FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -104,9 +106,9 @@ ADD_TEST( convert "${CMAKE_BINARY_DIR}/src/tests/test_convert" )
 ADD_TEST( tensor_op "${CMAKE_BINARY_DIR}/src/tests/test_tensor_op" )
 ADD_TEST( optimize "${CMAKE_BINARY_DIR}/src/tests/test_optimize" )
 ADD_TEST( matrix_op "${CMAKE_BINARY_DIR}/src/tests/test_mat_op" )
-ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/src/tests/test_dia_mat" )
-ADD_TEST( spmv "${CMAKE_BINARY_DIR}/src/tests/test_spmv" )
-ADD_TEST( densedense_to_dia "${CMAKE_BINARY_DIR}/src/tests/test_densedense_to_dia" )
+#ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/src/tests/test_dia_mat" )
+#ADD_TEST( spmv "${CMAKE_BINARY_DIR}/src/tests/test_spmv" )
+#ADD_TEST( densedense_to_dia "${CMAKE_BINARY_DIR}/src/tests/test_densedense_to_dia" )
 ADD_TEST( random "${CMAKE_BINARY_DIR}/src/tests/test_random" )
 ADD_TEST( lib_rbm "${CMAKE_BINARY_DIR}/src/tests/test_lib_rbm" )
 ADD_TEST( lib_kmeans "${CMAKE_BINARY_DIR}/src/tests/test_lib_kmeans" )
