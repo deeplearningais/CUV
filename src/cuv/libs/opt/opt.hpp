@@ -102,7 +102,7 @@ namespace cuv{ namespace libs{
          * 
          */
         template<class V, class M, class L>
-            void rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& sW, const float& learnrate, const float& delta, const float& decay = 0.0f, const float& sparsedecay=0.0f, const float& grad_avg);
+            void rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& sW, const float& learnrate, const float& delta, const float& decay = 0.0f, const float& sparsedecay=0.0f, const float& grad_avg=0.9f);
 		/**
 		 * @}
 		 * @}

@@ -87,7 +87,7 @@ void lswd_optimization(int N){
 }
 
 template<class M>
-void adagrad_optimization(int N, bool l1decay=false){
+void adagrad_optimization(int N, bool l1decay, bool rmsprop){
 	tensor<float,M>       W(N);
 	tensor<float,M>       dW(N);
 	tensor<float,M>       sW(N);
@@ -100,12 +100,21 @@ void adagrad_optimization(int N, bool l1decay=false){
 	// start at random value
 	fill_rnd_uniform(W);
 	W -= 0.5f;
-	fill(sW, 0.001f); // initialize learning rates
+	fill(sW, 0.0f); // sum of squares
 	
     float l1d = l1decay ? 0.001f : 0.0f;
-	for (int iter = 0; iter < 300; ++iter) {
+    float learningrate = 1.0;
+    int max_iter = 1000;
+    float delta = 0.00001f;
+	for (int iter = 0; iter < max_iter; ++iter) {
 		dW = W-optimum;
-        cuv::libs::opt::adagrad(W,dW,sW,1.0, 0.01, 0.f, l1d);
+        if(iter == 0 && rmsprop)
+            sW = dW * dW; // initialize squared grad avg
+        float lr = learningrate * (1.f - iter / (float) max_iter); // decrease linearly
+        if(rmsprop)
+            cuv::libs::opt::rmsprop(W,dW,sW,lr, delta, 0.f, l1d);
+        else
+            cuv::libs::opt::adagrad(W,dW,sW,lr, delta, 0.f, l1d);
 	}
 
 	std::cout << "Adagrad: L1-Norm of W (l1-reg'n: "<<l1decay<<"): " << cuv::norm1(W)<<std::endl;
@@ -119,9 +128,15 @@ void adagrad_optimization(int N, bool l1decay=false){
 	f *= f;
 	f *= 2.f;
 	double error = mean(f);
-	BOOST_CHECK_CLOSE(error+1.0,1.0,0.01);
+    if(l1decay)
+        BOOST_CHECK_CLOSE(error+1.0,1.0,1.00); // less strict if l1decay used
+    else
+        BOOST_CHECK_CLOSE(error+1.0,1.0,0.01);
 
 	for(int i=0;i<N;i++){
+        if(l1decay)
+	       BOOST_CHECK_CLOSE((float)W[i] + 10.f,(float)optimum[i]+ 10.f,1.0f); // less strict if l1decay used
+        else
 	       BOOST_CHECK_CLOSE((float)W[i] + 10.f,(float)optimum[i]+ 10.f,0.1f);
 	}
 }
@@ -293,22 +308,36 @@ BOOST_AUTO_TEST_CASE( test_rprop_optimization_dev )
    rprop_optimization<dev_memory_space>(N);
 }
 
+
+
+
+BOOST_AUTO_TEST_CASE( test_rmsprop_optimization_host )
+{
+   adagrad_optimization<host_memory_space>(N,false, true);
+}
+BOOST_AUTO_TEST_CASE( test_rmsprop_optimization_dev )
+{
+   adagrad_optimization<dev_memory_space>(N,false, true);
+}
+
+
+
 BOOST_AUTO_TEST_CASE( test_adagrad_optimization_l1_host )
 {
-   adagrad_optimization<host_memory_space>(N,true);
+   adagrad_optimization<host_memory_space>(N,true, false);
 }
 BOOST_AUTO_TEST_CASE( test_adagrad_optimization_host )
 {
-   adagrad_optimization<host_memory_space>(N,false);
+   adagrad_optimization<host_memory_space>(N,false, false);
 }
 
 BOOST_AUTO_TEST_CASE( test_adagrad_optimization_l1_dev )
 {
-   adagrad_optimization<dev_memory_space>(N,true);
+   adagrad_optimization<dev_memory_space>(N,true, false);
 }
 BOOST_AUTO_TEST_CASE( test_adagrad_optimization_dev )
 {
-   adagrad_optimization<dev_memory_space>(N,false);
+   adagrad_optimization<dev_memory_space>(N,false, false);
 }
 BOOST_AUTO_TEST_CASE( test_lswd_optimization_host )
 {

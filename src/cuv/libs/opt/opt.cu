@@ -100,7 +100,7 @@ namespace impl{
         }
 
     template<class V, class L>
-        void rmsprop_memory_space, L>& W, const tensor<V,host_memory_space, L>& dW, tensor<V,host_memory_space, L>& sW, const float& learnrate, const float& delta, const float& decay, const float& sparsedecay, const float& grad_avg){
+        void rmsprop(tensor<V,host_memory_space, L>& W, const tensor<V,host_memory_space, L>& dW, tensor<V,host_memory_space, L>& sW, const float& learnrate, const float& delta, const float& decay, const float& sparsedecay, const float& grad_avg){
             unsigned int size = W.size();
             V* Wptr = W.ptr();
             const V* dWptr = dW.ptr();
@@ -114,7 +114,7 @@ namespace impl{
             }
         }
     template<class V, class L>
-        void rmsprop_memory_space,L>& W, const tensor<V,dev_memory_space,L>& dW, tensor<V,dev_memory_space,L>& sW, const float& learnrate, const float& delta, const float& decay, const float& sparsedecay, const float& grad_avg){
+        void rmsprop(tensor<V,dev_memory_space,L>& W, const tensor<V,dev_memory_space,L>& dW, tensor<V,dev_memory_space,L>& sW, const float& learnrate, const float& delta, const float& decay, const float& sparsedecay, const float& grad_avg){
             unsigned int size = dW.size();
             unsigned int num_threads = 512;
             unsigned int num_blocks  = min(512,(unsigned int)ceil((float)dW.size() / num_threads));
@@ -156,7 +156,7 @@ void softmax(cuv::tensor<V, M,L>& dst, const cuv::tensor<V, M,L>& src,unsigned i
 #define INSTANTIATE(V,M,L) \
   template void softmax_derivative(TENSOR(V,M,L)&, const TENSOR(V,M,L)&, const TENSOR(V,M,L)&,unsigned int);\
   template void softmax(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,unsigned int); \
-  template void adagrad(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,TENSOR(V,M,L)&,const float&, const float&, const float&, const float&); 
+  template void adagrad(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,TENSOR(V,M,L)&,const float&, const float&, const float&, const float&); \
   template void rmsprop(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,TENSOR(V,M,L)&,const float&, const float&, const float&, const float&, const float&); 
 
 INSTANTIATE(float,host_memory_space,row_major);
