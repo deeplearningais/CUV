@@ -48,7 +48,7 @@ void export_tensor_ops();
 void export_cuda_array();
 void export_matrix_ops();
 void export_random();
-void export_dia_matrix();
+//void export_dia_matrix();
 void export_convolution_ops();
 void export_image_ops();
 void export_tools();
@@ -69,7 +69,7 @@ BOOST_PYTHON_MODULE(_cuv_python){
         export_cuda_array();
         export_matrix_ops();
         export_random();
-        export_dia_matrix();
+        //export_dia_matrix();
         export_convolution_ops();
         export_image_ops();
         export_tools();
