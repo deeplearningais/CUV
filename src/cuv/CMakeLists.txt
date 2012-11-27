@@ -26,7 +26,6 @@ set(CUV_SRC
     libs/separable_conv/separable_convolution.cu
     libs/opt/opt.cu
     libs/integral_image/integral_image.cu
-    libs/cimg/cuv_cimg.cu
     libs/nlmeans/conv3d.cu
     libs/nlmeans/nlmeans.cu
     libs/rbm/rbm.cu
