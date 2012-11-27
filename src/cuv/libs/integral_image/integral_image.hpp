@@ -60,6 +60,26 @@ namespace cuv{
 		 */
 		template<class V1, class V2, class T, class M>
 		void scan(cuv::tensor<V1, T, M>& dst, const cuv::tensor<V2, T, M>& src);
+
+        /**
+         * calculates many integral images in parallel, for data given in
+         * format required by Alex' convolutions. 
+         *
+         * The input (and output) is assumed to be row-major and
+         *
+         *   nChannels x nRows x nCols x nImages.
+         *
+         * every channel of every image is integrated separately.
+         *
+         * We compute the /exclusive/ scan, s.t. the output is
+         *
+         *   nChannels x (nRows+1) x (nCols+1) x nImages.
+         *
+         * @param src source
+         * @param dst destination
+         */
+        template<class V, class M>
+        void integral_image_4d(cuv::tensor<V,M>& dst, const cuv::tensor<V,M>& src);
 		/**
 		 * @}
 		 * @}
