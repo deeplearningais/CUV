@@ -133,12 +133,12 @@ def __matrix_setitem__(x,key,value):
 # Combine strings to form all exported combinations of types
 # For all types add convenience functions
 
-for memory_space in ["dev","host"]:
-    dia_type=eval(memory_space+"_dia_matrix_f")
-    #dia_type.__str__=lambda x:(_matstr(x,memory_space+"_matrix_"+memory_layout+value_type))
+#for memory_space in ["dev","host"]:
+#    dia_type=eval(memory_space+"_dia_matrix_f")
+#    #dia_type.__str__=lambda x:(_matstr(x,memory_space+"_matrix_"+memory_layout+value_type))
 
-    dia_type.shape = property(__shape)
-    dia_type.np = property(__np)
+#    dia_type.shape = property(__shape)
+#    dia_type.np = property(__np)
 
 for memory_space in ["dev","host"]:
     for value_type in ["float","int","uc","uint"]:
