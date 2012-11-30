@@ -87,6 +87,42 @@ void lswd_optimization(int N){
 }
 
 template<class M>
+void lswd_momentum_optimization(int N){
+	tensor<float,M>       W(N);
+	tensor<float,M>       dW(N);
+	tensor<float,M>       mom(N);
+
+	// we will optimize the function f(W) = 2 * (W-optimum)^2
+	tensor<float,M>       optimum(N);
+	fill_rnd_uniform(optimum);
+
+	// start at random value
+	fill_rnd_uniform(W);
+    fill(mom,0.f);
+
+	
+    int max_iter = 1000;
+	for (int iter = 0; iter < max_iter; ++iter) {
+		dW = W-optimum;
+        cuvAssert(!has_nan(W));
+        cuvAssert(!has_nan(dW));
+        cuvAssert(!has_nan(mom));
+		learn_step_weight_decay_momentum(W,mom,dW,0.01, 1.f - iter/(float)max_iter,0.0);
+	}
+
+	tensor<float,M>       f = (W-optimum);
+	f *= f;
+	f *= 2.f;
+	double error = mean(f);
+	BOOST_CHECK_CLOSE((float)error+1.f,(float)1.f,0.01f);
+
+
+	for(int i=0;i<N;i++){
+	       BOOST_CHECK_CLOSE((float)W[i]+1.f,(float)optimum[i]+1.f,0.01f);
+	}
+}
+
+template<class M>
 void adagrad_optimization(int N, bool l1decay, bool rmsprop){
 	tensor<float,M>       W(N);
 	tensor<float,M>       dW(N);
@@ -338,6 +374,15 @@ BOOST_AUTO_TEST_CASE( test_adagrad_optimization_l1_dev )
 BOOST_AUTO_TEST_CASE( test_adagrad_optimization_dev )
 {
    adagrad_optimization<dev_memory_space>(N,false, false);
+}
+BOOST_AUTO_TEST_CASE( test_lswd_mom_optimization_host )
+{
+   lswd_momentum_optimization<host_memory_space>(N);
+}
+
+BOOST_AUTO_TEST_CASE( test_lswd_mom_optimization_dev )
+{
+   lswd_momentum_optimization<dev_memory_space>(N);
 }
 BOOST_AUTO_TEST_CASE( test_lswd_optimization_host )
 {

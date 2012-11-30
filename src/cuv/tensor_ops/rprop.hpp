@@ -89,6 +89,21 @@ namespace cuv{
         template<class __value_type, class __memory_space_type>
 	void learn_step_weight_decay(tensor<__value_type,__memory_space_type>& W, const tensor<__value_type,__memory_space_type>& dW, const float& learnrate, const float& decay = 0.0f, const float& sparsedecay=0.0f);
 
+	/** 
+	 * @brief Same as learn_step_weight_decay, but with momentum.
+	 * 
+	 * @param W 	Destination matrix
+	 * @param momentum The accumulated momentum (IN and OUT)
+	 * @param dW	Direction of gradient descent. Vector of same size as W. 
+	 * @param learnrate Scalar learnreate 
+	 * @param momentum_weight how strong to rely on accumulated momentum
+	 * @param decay	Scalar L2 weight decay (cost) parameter
+	 * @param sparsedecay	Scalar L1 weight decay (cost) parameter
+	 * 
+	 */
+        template<class V, class M>
+	void learn_step_weight_decay_momentum(tensor<V,M>& W, tensor<V,M>& momentum, const tensor<V,M>& dW, const float& learnrate, const float& momentum_weight=0.9, const float& decay = 0.0f, const float& sparsedecay=0.0f);
+
         /**
          * @overload
          *
