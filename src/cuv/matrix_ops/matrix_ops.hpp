@@ -277,11 +277,30 @@ void transpose(tensor<V,M, L>& dst, const tensor<V,M, L>& src);
   template<class V, class M>
 	  void spmv(tensor<V, M>& dst, const dia_matrix<V, M>& A, const tensor<V, M>& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
   
+  /**
+   * @brief Apply a binary functor on one axis of a tensor and a n-1-dimensional tensor.
+   *
+   * @param Dst Destination matrix, same shape as Src
+   * @param Src Source matrix
+   * @param v vector, v.size()=Src.size()/Src.shape(axis)
+   * @param axis axis of Src to work on. 0: v is row vector, 1: v is column vector, ...
+   * @param bf a binary functor applied to elements of a column of Src and v
+   * @param n_params number of optional params following
+   * @param factNew multiplier of op(Src,v)
+   * @param factOld multiplier of Dst
+   * @param param0 first optional parameter
+   * @param param1 second optional parameter
+   */
+  template<class V, class V2, class M, class L>
+    void matrix_op_vec(tensor<V,M,L>& Dst, const tensor<V,M,L>& Src, const tensor<V2,M>& v, int axis, BinaryFunctor bf, float factNew=1.f, float factOld=0.f, int n_params=0, float param0=0.f, float param1=0.f);
+
+
   /** 
    * @brief Add a vector to each column of a matrix A.
    * 
    * @param A Destination matrix 
    * @param v Vector, v.size()=A.h() 
+   * @deprecated
    * 
    */
   template<class V, class M, class L>
@@ -292,6 +311,7 @@ void transpose(tensor<V,M, L>& dst, const tensor<V,M, L>& src);
    * 
    * @param A Destination matrix 
    * @param v Vector, v.size()=A.h() 
+   * @deprecated
    * 
    */
   template<class V, class M, class L>
@@ -302,6 +322,7 @@ void transpose(tensor<V,M, L>& dst, const tensor<V,M, L>& src);
    * 
    * @param A Destination matrix 
    * @param v Vector, v.size()=A.h() 
+   * @deprecated
    * 
    */
   template<class V, class M, class L>
@@ -312,6 +333,7 @@ void transpose(tensor<V,M, L>& dst, const tensor<V,M, L>& src);
    * 
    * @param A Destination matrix 
    * @param v Vector, v.size()=A.h() 
+   * @deprecated
    * 
    */
   template<class V, class M, class L>
@@ -322,6 +344,7 @@ void transpose(tensor<V,M, L>& dst, const tensor<V,M, L>& src);
    * 
    * @param A Destination matrix 
    * @param v Vector, v.size()=A.h() 
+   * @deprecated
    * 
    */
   template<class V, class M, class L>
@@ -332,6 +355,7 @@ void transpose(tensor<V,M, L>& dst, const tensor<V,M, L>& src);
    * 
    * @param A Destination matrix 
    * @param v Vector, v.size()=A.h() 
+   * @deprecated
    * 
    */
   template<class V, class M, class L>

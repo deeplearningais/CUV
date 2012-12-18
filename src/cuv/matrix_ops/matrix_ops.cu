@@ -303,28 +303,34 @@ void prod(tensor<float,host_memory_space,row_major>& dst,
 			factAB, A.ptr(), A.shape(1),B.ptr(), B.shape(1), factC, dst.ptr(), dst.shape(1));
 }
 
-template<class V, class I, class V2, class OP>
+template<bool UseFacts, class V, class I, class V2, class OP>
 __global__
-void matrix_plus_vector_kernel_column_major(V*A,V2* v,I w,I h, OP op) {
+void matrix_plus_vector_kernel_column_major(V* Dst, const V*Src, const V2* v,I w,I h, OP op, float factNew, float factOld) {
 	int tid = blockDim.x*blockIdx.x + threadIdx.x;
 	if(tid>h) return;
 	V2 tid_v = v[tid];
 	for(int i=tid;i<w;i++)
-	A[i] = op(A[i],tid_v);
+        if(!UseFacts)
+            Dst[i] = op(Src[i],tid_v);
+        else
+            Dst[i] = factOld * Dst[i] + op(Src[i],tid_v)*factNew;
 }
-template<class V, class I, class V2, class OP>
+template<bool UseFacts, class V, class I, class V2, class OP>
 __global__
-void matrix_plus_vector_kernel_column_major2 (V *A, const V2* v, I h, I w, OP op) {
+void matrix_plus_vector_kernel_column_major2 (V *Dst, const V* Src, const V2* v, I h, I w, OP op, float factNew, float factOld) {
 	const unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
 	const unsigned int numThreads = __mul24(blockDim.x , gridDim.x);
 
 	int stop = w*h;
 	for (unsigned int i = idx; i < stop; i += numThreads)
-	A[i] = op(A[i] , v[i % h]);
+        if(!UseFacts)
+            Dst[i] = op(Src[i] , v[i % h]);
+        else
+            Dst[i] = factOld * Dst[i] + factNew * op(Src[i] , v[i % h]);
 }
-template<class V, class I, class V2, class OP>
+template<bool UseFact, class V, class I, class V2, class OP>
 __global__
-void matrix_plus_vector_kernel_row_major (V *A, V2* v, I h, I w, OP op) {
+void matrix_plus_vector_kernel_row_major (V *Dst, const V* Src, const V2* v, I h, I w, OP op, float factNew, float factOld) {
 	__shared__ V scalar;
 	for(unsigned int baseidx = blockIdx.x; baseidx < h; baseidx += gridDim.x) {
 		if (threadIdx.x == 0) {
@@ -333,89 +339,156 @@ void matrix_plus_vector_kernel_row_major (V *A, V2* v, I h, I w, OP op) {
 		__syncthreads();
 		for (unsigned int i = threadIdx.x; i < w; i += blockDim.x) {
 			const unsigned int k = baseidx * w + i;
-			A[k] = op(A[k] , scalar);
+            if(!UseFact)
+                Dst[k] = op(Src[k] , scalar);
+            else
+                Dst[k] = Dst[k] * factOld + op(Src[k] , scalar) * factNew;
 		}
 		__syncthreads(); // necessary, otherwise the threads use different values of scalar!
 	}
 }
 
-namespace matrix_plus_vector_impl {
+namespace matrix_op_col_impl {
 	template<class V, class V2, class OP>
-	void matrix_plus_col(tensor<V,dev_memory_space,row_major>& A, const tensor<V2,dev_memory_space>& v, const OP& op) {
-		cuvAssert(A.shape(0) == v.size());
-        unsigned int other_dim = A.size()/A.shape(0);
+	void matrix_op_col(tensor<V,dev_memory_space,row_major>& Dst, const tensor<V,dev_memory_space,row_major>& Src, const tensor<V2,dev_memory_space>& v, const OP& op, float factNew, float factOld) {
+		cuvAssert(Src.shape(0) == v.size());
+        unsigned int other_dim = Src.size()/Src.shape(0);
 		const unsigned int num_threads = min(512,other_dim);
-		const unsigned int num_blocks  = min(1024,A.shape(0));
-		matrix_plus_vector_kernel_row_major<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.shape(0), other_dim, op);
+		const unsigned int num_blocks  = min(1024,Src.shape(0));
+        if(factNew == 1.f && factOld == 0.f)
+            matrix_plus_vector_kernel_row_major<false><<<num_blocks,num_threads>>>(Dst.ptr(),Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
+        else
+            matrix_plus_vector_kernel_row_major<true><<<num_blocks,num_threads>>>(Dst.ptr(),Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class V2, class OP>
-	void matrix_plus_col(tensor<V,dev_memory_space,column_major>& A, const tensor<V2,dev_memory_space>& v, const OP& op) {
-		cuvAssert(A.shape(0) == v.size());
-        unsigned int other_dim = A.size()/A.shape(0);
+	void matrix_op_col(tensor<V,dev_memory_space,column_major>& Dst, const tensor<V,dev_memory_space,column_major>& Src, const tensor<V2,dev_memory_space>& v, const OP& op, float factNew, float factOld) {
+		cuvAssert(Src.shape(0) == v.size());
+        unsigned int other_dim = Src.size()/Src.shape(0);
 		const unsigned int num_threads = 512;
-		const unsigned int num_blocks  = min(512,(int)ceil((float)A.size() / num_threads));
-		matrix_plus_vector_kernel_column_major2<<<num_blocks,num_threads>>>(A.ptr(), v.ptr(), A.shape(0), other_dim, op);
+		const unsigned int num_blocks  = min(512,(int)ceil((float)Src.size() / num_threads));
+        if(factNew == 1.f && factOld == 0.f)
+            matrix_plus_vector_kernel_column_major2<false><<<num_blocks,num_threads>>>(Dst.ptr(), Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
+        else
+            matrix_plus_vector_kernel_column_major2<true><<<num_blocks,num_threads>>>(Dst.ptr(), Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class V2, class OP>
-	void matrix_plus_col(tensor<V,host_memory_space,column_major>& A, const tensor<V2,host_memory_space>& v, const OP& op) {
-		cuvAssert(A.shape(0) == v.size());
-        unsigned int other_dim = A.size()/A.shape(0);
+	void matrix_op_col(tensor<V,host_memory_space,column_major>& Dst, const tensor<V,host_memory_space,column_major>& Src, const tensor<V2,host_memory_space>& v, const OP& op, float factNew, float factOld) {
+		cuvAssert(Src.shape(0) == v.size());
+        unsigned int other_dim = Src.size()/Src.shape(0);
 		const V2* v_ptr = v.ptr();
-		V * A_ptr = A.ptr();
-        unsigned int Ashape0 = A.shape(0);
-		for(int j=0;j<other_dim;j++) {
-			v_ptr = v.ptr();
-			for(int i=0;i<Ashape0;i++,A_ptr++,v_ptr++)
-			*A_ptr = op(*A_ptr,*v_ptr);
-		}
+		const V * Src_ptr = Src.ptr();
+		V * Dst_ptr = Dst.ptr();
+        unsigned int Srcshape0 = Src.shape(0);
+
+        // move src ptr, dst ptr and vptr at the same time
+
+        if(factNew == 1.f && factOld == 0.f)
+            for(int j=0;j<other_dim;j++) {
+                v_ptr = v.ptr();
+                for(int i=0;i<Srcshape0;i++,Src_ptr++,v_ptr++,Dst_ptr++)
+                    *Dst_ptr = op(*Src_ptr,*v_ptr);
+            }
+        else
+            for(int j=0;j<other_dim;j++) {
+                v_ptr = v.ptr();
+                for(int i=0;i<Srcshape0;i++,Src_ptr++,v_ptr++,Dst_ptr++)
+                    *Dst_ptr = *Dst_ptr * factOld + factNew * op(*Src_ptr,*v_ptr);
+            }
 	}
 	template<class V, class V2, class OP>
-	void matrix_plus_col(tensor<V,host_memory_space,row_major>& A, const tensor<V2,host_memory_space>& v, const OP& op) {
-		cuvAssert(A.shape(0) == v.size());
-        unsigned int other_dim = A.size()/A.shape(0);
+	void matrix_op_col(tensor<V,host_memory_space,row_major>& Dst, const tensor<V,host_memory_space,row_major>& Src, const tensor<V2,host_memory_space>& v, const OP& op, float factNew, float factOld) {
+		cuvAssert(Src.shape(0) == v.size());
+        unsigned int other_dim = Src.size()/Src.shape(0);
 		const V2* v_ptr = v.ptr();
-		V * A_ptr = A.ptr();
-        unsigned int Ashape0 = A.shape(0);
-		for(int i=0;i<Ashape0;i++, v_ptr++) {
-			for(int j=0;j<other_dim;j++)
-			*A_ptr++ = op(*A_ptr,*v_ptr);
-		}
+		const V * Src_ptr = Src.ptr();
+		V * Dst_ptr = Dst.ptr();
+        unsigned int Srcshape0 = Src.shape(0);
+
+        // in this version, we only move along src+dst horizontally, but keep pos in column vector v constant
+
+        if(factNew == 1.f && factOld == 0.f)
+            for(int i=0;i<Srcshape0;i++, v_ptr++) {
+                for(int j=0;j<other_dim;j++)
+                    *Dst_ptr++ = op(*Src_ptr++,*v_ptr);
+            }
+        else
+            for(int i=0;i<Srcshape0;i++, v_ptr++) {
+                for(int j=0;j<other_dim;j++)
+                    *Dst_ptr++ = *Dst_ptr * factOld + factNew * op(*Src_ptr++,*v_ptr);
+            }
 	}
 	// ====================  row ======================
 	template<class V, class V2, class T, class M, class OP>
-	void matrix_plus_row(tensor<V,T,M>& A, const tensor<V2,T>& v, const OP& op) {
-		cuvAssert(A.shape(A.ndim()-1) == v.size());
-		matrix_plus_col(*(transposed_view(A)),v,op);
+	void matrix_op_row(tensor<V,T,M>& Dst, const tensor<V,T,M>& Src, const tensor<V2,T>& v, const OP& op, float factNew, float factOld) {
+		cuvAssert(Src.shape(Src.ndim()-1) == v.size());
+		matrix_op_col(*(transposed_view(Dst)), *(transposed_view(Src)),v,op, factNew, factOld);
 	}
 }
+
+template<class V, class V2, class M, class L>
+    void matrix_op_vec(tensor<V,M,L>& Dst, const tensor<V,M,L>& Src, const tensor<V2,M>& v, int axis, BinaryFunctor bf, float factNew, float factOld, int n_params, float param0, float param1){
+        if(axis == 0)
+            switch(bf){
+                case BF_ADD:
+                    matrix_op_col_impl::matrix_op_row(Dst, Src,v, thrust::plus<V>(), factNew, factOld);
+                    break;
+                case BF_MULT:
+                    matrix_op_col_impl::matrix_op_row(Dst, Src,v, thrust::multiplies<V>(), factNew, factOld);
+                    break;
+                case BF_DIV:
+                    matrix_op_col_impl::matrix_op_row(Dst, Src,v, thrust::divides<V>(), factNew, factOld);
+                    break;
+            }
+        else if(axis == Src.ndim()-1)
+            switch(bf){
+                case BF_ADD:
+                    matrix_op_col_impl::matrix_op_col(Dst, Src,v, thrust::plus<V>(), factNew, factOld);
+                    break;
+                case BF_MULT:
+                    matrix_op_col_impl::matrix_op_col(Dst, Src,v, thrust::multiplies<V>(), factNew, factOld);
+                    break;
+                case BF_DIV:
+                    matrix_op_col_impl::matrix_op_col(Dst, Src,v, thrust::divides<V>(), factNew, factOld);
+                    break;
+            }
+        else {
+            std::runtime_error("The axis parameter supplied to matrix_op_vec should be 0 or n-1, where n is the dimension of the first parameter");
+        }
+    }
 
 // ====================  col ======================
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_plus_col(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::plus<__value_type>());
+	/*matrix_op_col_impl::matrix_op_col(A,A,v, thrust::plus<__value_type>());*/
+    matrix_op_vec(A, A, v, A.ndim()-1, BF_ADD);
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_times_col(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::multiplies<__value_type>());
+	/*matrix_op_col_impl::matrix_op_col(A,A,v, thrust::multiplies<__value_type>());*/
+    matrix_op_vec(A, A, v, A.ndim()-1, BF_MULT);
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_divide_col(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_col(A,v, thrust::divides<__value_type>());
+	/*matrix_op_col_impl::matrix_op_col(A,A,v, thrust::divides<__value_type>());*/
+    matrix_op_vec(A, A, v, A.ndim()-1, BF_DIV);
 }
 // ====================  row ======================
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_plus_row(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::plus<__value_type>());
+	/*matrix_op_col_impl::matrix_op_row(A,A,v, thrust::plus<__value_type>());*/
+    matrix_op_vec(A, A, v, 0, BF_ADD);
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_times_row(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::multiplies<__value_type>());
+	/*matrix_op_col_impl::matrix_op_row(A,A,v, thrust::multiplies<__value_type>());*/
+    matrix_op_vec(A, A, v, 0, BF_MULT);
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_divide_row(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	matrix_plus_vector_impl::matrix_plus_row(A,v, thrust::divides<__value_type>());
+	/*matrix_op_col_impl::matrix_op_row(A,A,v, thrust::divides<__value_type>());*/
+    matrix_op_vec(A, A, v, 0, BF_DIV);
 }
 
 namespace transpose_impl{
@@ -511,6 +584,10 @@ const cuv::tensor<V,T,typename other_memory_layout<M>::type> * transposed_view_p
 	return new tensor<V,T,typename other_memory_layout<M>::type>(shape,const_cast<V*>(src.ptr()));
 }
 
+#define INSTANTIATE_MOV(V1,V2,M) \
+  template void matrix_op_vec(tensor<V1,dev_memory_space,M>&, const tensor<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&, int, BinaryFunctor, float,float, int, float,float);   \
+  template void matrix_op_vec(tensor<V1,host_memory_space,M>&, const tensor<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&, int, BinaryFunctor, float,float, int, float,float);   \
+
 #define INSTANTIATE_MV(V1,V2,M) \
   template void matrix_plus_col(tensor<V1,dev_memory_space,M>&, const tensor<V2,dev_memory_space>&);   \
   template void matrix_plus_col(tensor<V1,host_memory_space,M>&, const tensor<V2,host_memory_space>&); \
@@ -556,6 +633,9 @@ INSTANTIATE_TRANSPOSED_VIEW(int);
 INSTANTIATE_TRANSPOSED_VIEW(unsigned int);
 INSTANTIATE_TRANSPOSED_VIEW(char);
 INSTANTIATE_TRANSPOSED_VIEW(unsigned char);
+
+INSTANTIATE_MOV(float, float, column_major);
+INSTANTIATE_MOV(float, float, row_major);
 
 INSTANTIATE_MV(float, float, column_major);
 INSTANTIATE_MV(float, float, row_major);
