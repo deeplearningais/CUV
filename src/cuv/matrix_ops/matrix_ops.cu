@@ -303,19 +303,23 @@ void prod(tensor<float,host_memory_space,row_major>& dst,
 			factAB, A.ptr(), A.shape(1),B.ptr(), B.shape(1), factC, dst.ptr(), dst.shape(1));
 }
 
-template<bool UseFacts, class V, class I, class V2, class OP>
+template<bool UseFactNew, bool UseFactOld, class V, class I, class V2, class OP>
 __global__
 void matrix_plus_vector_kernel_column_major(V* Dst, const V*Src, const V2* v,I w,I h, OP op, float factNew, float factOld) {
 	int tid = blockDim.x*blockIdx.x + threadIdx.x;
 	if(tid>h) return;
 	V2 tid_v = v[tid];
 	for(int i=tid;i<w;i++)
-        if(!UseFacts)
+        if(!UseFactOld && !UseFactNew)
             Dst[i] = op(Src[i],tid_v);
-        else
+        else if(!UseFactOld && UseFactNew)
+            Dst[i] = op(Src[i],tid_v)*factNew;
+        else if(UseFactOld && !UseFactNew)
+            Dst[i] = factOld * Dst[i] + op(Src[i],tid_v);
+        else if(UseFactOld && UseFactNew)
             Dst[i] = factOld * Dst[i] + op(Src[i],tid_v)*factNew;
 }
-template<bool UseFacts, class V, class I, class V2, class OP>
+template<bool UseFactNew, bool UseFactOld, class V, class I, class V2, class OP>
 __global__
 void matrix_plus_vector_kernel_column_major2 (V *Dst, const V* Src, const V2* v, I h, I w, OP op, float factNew, float factOld) {
 	const unsigned int idx = __mul24(blockIdx.x , blockDim.x) + threadIdx.x;
@@ -323,12 +327,16 @@ void matrix_plus_vector_kernel_column_major2 (V *Dst, const V* Src, const V2* v,
 
 	int stop = w*h;
 	for (unsigned int i = idx; i < stop; i += numThreads)
-        if(!UseFacts)
+        if(!UseFactNew && !UseFactOld)
             Dst[i] = op(Src[i] , v[i % h]);
-        else
+        else if(!UseFactNew && UseFactOld)
+            Dst[i] = factOld * Dst[i] + op(Src[i] , v[i % h]);
+        else if(UseFactNew && !UseFactOld)
+            Dst[i] = factNew * op(Src[i] , v[i % h]);
+        else if(UseFactNew && UseFactOld)
             Dst[i] = factOld * Dst[i] + factNew * op(Src[i] , v[i % h]);
 }
-template<bool UseFact, class V, class I, class V2, class OP>
+template<bool UseFactNew, bool UseFactOld, class V, class I, class V2, class OP>
 __global__
 void matrix_plus_vector_kernel_row_major (V *Dst, const V* Src, const V2* v, I h, I w, OP op, float factNew, float factOld) {
 	__shared__ V scalar;
@@ -339,9 +347,13 @@ void matrix_plus_vector_kernel_row_major (V *Dst, const V* Src, const V2* v, I h
 		__syncthreads();
 		for (unsigned int i = threadIdx.x; i < w; i += blockDim.x) {
 			const unsigned int k = baseidx * w + i;
-            if(!UseFact)
+            if(!UseFactOld && !UseFactNew)
                 Dst[k] = op(Src[k] , scalar);
-            else
+            else if(!UseFactOld && UseFactNew)
+                Dst[k] = op(Src[k] , scalar) * factNew;
+            else if(UseFactOld && !UseFactNew)
+                Dst[k] = Dst[k] * factOld + op(Src[k] , scalar);
+            else if(UseFactOld && UseFactNew)
                 Dst[k] = Dst[k] * factOld + op(Src[k] , scalar) * factNew;
 		}
 		__syncthreads(); // necessary, otherwise the threads use different values of scalar!
@@ -356,9 +368,13 @@ namespace matrix_op_col_impl {
 		const unsigned int num_threads = min(512,other_dim);
 		const unsigned int num_blocks  = min(1024,Src.shape(0));
         if(factNew == 1.f && factOld == 0.f)
-            matrix_plus_vector_kernel_row_major<false><<<num_blocks,num_threads>>>(Dst.ptr(),Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
+            matrix_plus_vector_kernel_row_major<false,false><<<num_blocks,num_threads>>>(Dst.ptr(),Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
+        else if(factNew == 1.f)
+            matrix_plus_vector_kernel_row_major<false,true><<<num_blocks,num_threads>>>(Dst.ptr(),Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
+        else if(factOld == 0.f)
+            matrix_plus_vector_kernel_row_major<true,false><<<num_blocks,num_threads>>>(Dst.ptr(),Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
         else
-            matrix_plus_vector_kernel_row_major<true><<<num_blocks,num_threads>>>(Dst.ptr(),Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
+            matrix_plus_vector_kernel_row_major<true,true><<<num_blocks,num_threads>>>(Dst.ptr(),Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class V2, class OP>
@@ -368,9 +384,13 @@ namespace matrix_op_col_impl {
 		const unsigned int num_threads = 512;
 		const unsigned int num_blocks  = min(512,(int)ceil((float)Src.size() / num_threads));
         if(factNew == 1.f && factOld == 0.f)
-            matrix_plus_vector_kernel_column_major2<false><<<num_blocks,num_threads>>>(Dst.ptr(), Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
-        else
-            matrix_plus_vector_kernel_column_major2<true><<<num_blocks,num_threads>>>(Dst.ptr(), Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
+            matrix_plus_vector_kernel_column_major2<false,false><<<num_blocks,num_threads>>>(Dst.ptr(), Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
+        else if(                  factOld == 0.f)
+            matrix_plus_vector_kernel_column_major2<true,false><<<num_blocks,num_threads>>>(Dst.ptr(), Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
+        else if(factNew == 1.f                  )
+            matrix_plus_vector_kernel_column_major2<false,true><<<num_blocks,num_threads>>>(Dst.ptr(), Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
+        else // if(factNew == 1.f && factOld == 0.f)
+            matrix_plus_vector_kernel_column_major2<true,true><<<num_blocks,num_threads>>>(Dst.ptr(), Src.ptr(), v.ptr(), Src.shape(0), other_dim, op, factNew, factOld);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V, class V2, class OP>
@@ -384,18 +404,33 @@ namespace matrix_op_col_impl {
 
         // move src ptr, dst ptr and vptr at the same time
 
-        if(factNew == 1.f && factOld == 0.f)
-            for(int j=0;j<other_dim;j++) {
-                v_ptr = v.ptr();
-                for(int i=0;i<Srcshape0;i++,Src_ptr++,v_ptr++,Dst_ptr++)
-                    *Dst_ptr = op(*Src_ptr,*v_ptr);
-            }
-        else
-            for(int j=0;j<other_dim;j++) {
-                v_ptr = v.ptr();
-                for(int i=0;i<Srcshape0;i++,Src_ptr++,v_ptr++,Dst_ptr++)
-                    *Dst_ptr = *Dst_ptr * factOld + factNew * op(*Src_ptr,*v_ptr);
-            }
+        if(factOld == 0.f){
+            if(factNew == 1.f)
+                for(int j=0;j<other_dim;j++) {
+                    v_ptr = v.ptr();
+                    for(int i=0;i<Srcshape0;i++,Src_ptr++,v_ptr++,Dst_ptr++)
+                        *Dst_ptr = factNew * op(*Src_ptr,*v_ptr);
+                }
+            else
+                for(int j=0;j<other_dim;j++) {
+                    v_ptr = v.ptr();
+                    for(int i=0;i<Srcshape0;i++,Src_ptr++,v_ptr++,Dst_ptr++)
+                        *Dst_ptr = op(*Src_ptr,*v_ptr);
+                }
+        }else{
+            if(factNew == 1.f)
+                for(int j=0;j<other_dim;j++) {
+                    v_ptr = v.ptr();
+                    for(int i=0;i<Srcshape0;i++,Src_ptr++,v_ptr++,Dst_ptr++)
+                        *Dst_ptr = *Dst_ptr * factOld + op(*Src_ptr,*v_ptr);
+                }
+            else
+                for(int j=0;j<other_dim;j++) {
+                    v_ptr = v.ptr();
+                    for(int i=0;i<Srcshape0;i++,Src_ptr++,v_ptr++,Dst_ptr++)
+                        *Dst_ptr = *Dst_ptr * factOld + factNew * op(*Src_ptr,*v_ptr);
+                }
+        }
 	}
 	template<class V, class V2, class OP>
 	void matrix_op_col(tensor<V,host_memory_space,row_major>& Dst, const tensor<V,host_memory_space,row_major>& Src, const tensor<V2,host_memory_space>& v, const OP& op, float factNew, float factOld) {
@@ -408,16 +443,29 @@ namespace matrix_op_col_impl {
 
         // in this version, we only move along src+dst horizontally, but keep pos in column vector v constant
 
-        if(factNew == 1.f && factOld == 0.f)
-            for(int i=0;i<Srcshape0;i++, v_ptr++) {
-                for(int j=0;j<other_dim;j++)
-                    *Dst_ptr++ = op(*Src_ptr++,*v_ptr);
-            }
-        else
-            for(int i=0;i<Srcshape0;i++, v_ptr++) {
-                for(int j=0;j<other_dim;j++)
-                    *Dst_ptr++ = *Dst_ptr * factOld + factNew * op(*Src_ptr++,*v_ptr);
-            }
+        if(factOld == 0.f){
+            if(factNew == 1.f )
+                for(int i=0;i<Srcshape0;i++, v_ptr++) {
+                    for(int j=0;j<other_dim;j++)
+                        *Dst_ptr++ = op(*Src_ptr++,*v_ptr);
+                }
+            else
+                for(int i=0;i<Srcshape0;i++, v_ptr++) {
+                    for(int j=0;j<other_dim;j++)
+                        *Dst_ptr++ = *Dst_ptr * factOld + factNew * op(*Src_ptr++,*v_ptr);
+                }
+        }else{
+            if(factNew == 1.f)
+                for(int i=0;i<Srcshape0;i++, v_ptr++) {
+                    for(int j=0;j<other_dim;j++)
+                        *Dst_ptr++ = *Dst_ptr * factOld + factNew * op(*Src_ptr++,*v_ptr);
+                }
+            else
+                for(int i=0;i<Srcshape0;i++, v_ptr++) {
+                    for(int j=0;j<other_dim;j++)
+                        *Dst_ptr++ = *Dst_ptr * factOld + op(*Src_ptr++,*v_ptr);
+                }
+        }
 	}
 	// ====================  row ======================
 	template<class V, class V2, class T, class M, class OP>
