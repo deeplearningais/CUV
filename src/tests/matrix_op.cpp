@@ -317,18 +317,64 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row )
 
 BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row_fact )
 {
-	sequence(v); sequence(w);
-	sequence(x); sequence(z);
-	tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
-	tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
-	matrix_op_vec(v, v,v_vec,0,BF_ADD, 1.f, 2.f);
-	matrix_op_vec(x, x,x_vec,0,BF_ADD, 1.f, 2.f);
-	for(int i=0;i<n;i++){
-		for(int j=0;j<n;j++){
-			BOOST_CHECK_CLOSE((float)v(i,j), (float)x(i,j), 0.01);
-			//BOOST_CHECK_CLOSE((float)v(i,j), 2.f * w(i,j)+v_vec[j], 0.01);
-			//BOOST_CHECK_CLOSE((float)x(i,j), 2.f * z(i,j)+x_vec[j], 0.01);
-		}
+	{   // both factors
+        sequence(v); sequence(w);
+        sequence(x); sequence(z);
+        tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
+        tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
+        matrix_op_vec(v, v,v_vec,0,BF_ADD, 1.5f, 2.f);
+        matrix_op_vec(x, x,x_vec,0,BF_ADD, 1.5f, 2.f);
+
+
+        // v = 2 v + 1.5 (v + v_vec)
+
+        for(int i=0;i<n;i++){
+            for(int j=0;j<n;j++){
+                BOOST_CHECK_CLOSE((float)v(i,j), (float)x(i,j), 0.01);
+                BOOST_CHECK_CLOSE((float)v(i,j), 2.f * w(i,j) + 1.5 * (w(i,j) + v_vec[j]), 0.01);
+                BOOST_CHECK_CLOSE((float)x(i,j), 2.f * z(i,j) + 1.5 * (z(i,j) + x_vec[j]), 0.01);
+            }
+        }
+	}
+
+	{   // only factNew
+        sequence(v); sequence(w);
+        sequence(x); sequence(z);
+        tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
+        tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
+        matrix_op_vec(v, v,v_vec,0,BF_ADD, 1.5f);
+        matrix_op_vec(x, x,x_vec,0,BF_ADD, 1.5f);
+
+
+        // v = 1.5 (v + v_vec)
+
+        for(int i=0;i<n;i++){
+            for(int j=0;j<n;j++){
+                BOOST_CHECK_CLOSE((float)v(i,j), (float)x(i,j), 0.01);
+                BOOST_CHECK_CLOSE((float)v(i,j), 1.5 * (w(i,j) + v_vec[j]), 0.01);
+                BOOST_CHECK_CLOSE((float)x(i,j), 1.5 * (z(i,j) + x_vec[j]), 0.01);
+            }
+        }
+	}
+
+	{   // only factOld
+        sequence(v); sequence(w);
+        sequence(x); sequence(z);
+        tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
+        tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
+        matrix_op_vec(v, v,v_vec,0,BF_ADD, 1.0f, 2.f);
+        matrix_op_vec(x, x,x_vec,0,BF_ADD, 1.0f, 2.f);
+
+
+        // v = 2 v + (v + v_vec)
+
+        for(int i=0;i<n;i++){
+            for(int j=0;j<n;j++){
+                BOOST_CHECK_CLOSE((float)v(i,j), (float)x(i,j), 0.01);
+                BOOST_CHECK_CLOSE((float)v(i,j), 2.f * w(i,j) + (w(i,j) + v_vec[j]), 0.01);
+                BOOST_CHECK_CLOSE((float)x(i,j), 2.f * z(i,j) + (z(i,j) + x_vec[j]), 0.01);
+            }
+        }
 	}
 
 }

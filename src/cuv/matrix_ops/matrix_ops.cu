@@ -409,13 +409,13 @@ namespace matrix_op_col_impl {
                 for(int j=0;j<other_dim;j++) {
                     v_ptr = v.ptr();
                     for(int i=0;i<Srcshape0;i++,Src_ptr++,v_ptr++,Dst_ptr++)
-                        *Dst_ptr = factNew * op(*Src_ptr,*v_ptr);
+                        *Dst_ptr = op(*Src_ptr,*v_ptr);
                 }
             else
                 for(int j=0;j<other_dim;j++) {
                     v_ptr = v.ptr();
                     for(int i=0;i<Srcshape0;i++,Src_ptr++,v_ptr++,Dst_ptr++)
-                        *Dst_ptr = op(*Src_ptr,*v_ptr);
+                        *Dst_ptr = factNew * op(*Src_ptr,*v_ptr);
                 }
         }else{
             if(factNew == 1.f)
@@ -458,12 +458,12 @@ namespace matrix_op_col_impl {
             if(factNew == 1.f)
                 for(int i=0;i<Srcshape0;i++, v_ptr++) {
                     for(int j=0;j<other_dim;j++)
-                        *Dst_ptr++ = *Dst_ptr * factOld + factNew * op(*Src_ptr++,*v_ptr);
+                        *Dst_ptr++ = *Dst_ptr * factOld + op(*Src_ptr++,*v_ptr);
                 }
             else
                 for(int i=0;i<Srcshape0;i++, v_ptr++) {
                     for(int j=0;j<other_dim;j++)
-                        *Dst_ptr++ = *Dst_ptr * factOld + op(*Src_ptr++,*v_ptr);
+                        *Dst_ptr++ = *Dst_ptr * factOld + factNew * op(*Src_ptr++,*v_ptr);
                 }
         }
 	}
