@@ -423,6 +423,8 @@ namespace detail{
             }
 #if USE_THRUST_LAUNCHER 
             switch(bf){
+                case BF_1ST:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_1st<V1,V2,V3>()); break;
+                case BF_2ND:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_2nd<V1,V2,V3>()); break;
                 case BF_EQ:       thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_equals<V1,V2,V3>()); break;
                 case BF_AND:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_and<V1,V2,V3>()); break;
                 case BF_OR :      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_or<V1,V2,V3>()); break;

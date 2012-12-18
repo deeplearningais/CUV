@@ -479,6 +479,12 @@ template<class V, class V2, class M, class L>
     void matrix_op_vec(tensor<V,M,L>& Dst, const tensor<V,M,L>& Src, const tensor<V2,M>& v, int axis, BinaryFunctor bf, float factNew, float factOld, int n_params, float param0, float param1){
         if(axis == 0)
             switch(bf){
+                case BF_1ST:
+                    matrix_op_col_impl::matrix_op_row(Dst, Src,v, bf_1st<V,V,V2>(), factNew, factOld);
+                    break;
+                case BF_2ND:
+                    matrix_op_col_impl::matrix_op_row(Dst, Src,v, bf_2nd<V,V,V2>(), factNew, factOld);
+                    break;
                 case BF_ADD:
                     matrix_op_col_impl::matrix_op_row(Dst, Src,v, thrust::plus<V>(), factNew, factOld);
                     break;
@@ -491,6 +497,12 @@ template<class V, class V2, class M, class L>
             }
         else if(axis == Src.ndim()-1)
             switch(bf){
+                case BF_1ST:
+                    matrix_op_col_impl::matrix_op_col(Dst, Src,v, bf_1st<V,V,V2>(), factNew, factOld);
+                    break;
+                case BF_2ND:
+                    matrix_op_col_impl::matrix_op_col(Dst, Src,v, bf_2nd<V,V,V2>(), factNew, factOld);
+                    break;
                 case BF_ADD:
                     matrix_op_col_impl::matrix_op_col(Dst, Src,v, thrust::plus<V>(), factNew, factOld);
                     break;

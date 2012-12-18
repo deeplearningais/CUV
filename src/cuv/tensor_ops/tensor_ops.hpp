@@ -423,6 +423,8 @@ namespace cuv{
 	 *
 	 *  Without scalar parameters:
 	 *
+	 * 	@li BF_1ST evaluates to x
+	 * 	@li BF_2ND evaluates to y
 	 * 	@li BF_EQ  computes  x == y
 	 * 	@li BF_AND computes  x && y
 	 * 	@li BF_OR  computes  x || y
@@ -454,6 +456,8 @@ namespace cuv{
 	 */
   enum BinaryFunctor{
 	  // w/o params
+	  BF_1ST,
+	  BF_2ND,
 	  BF_EQ,
 	  BF_AND,
 	  BF_OR,

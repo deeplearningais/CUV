@@ -355,6 +355,12 @@ make_bind2nd3rd(const __ternary_functor& tf, const typename __ternary_functor::s
  * @{
  */
 
+/// evaluates to x
+template<class R, class T, class U>
+struct bf_1st : binary_functor<R,T,U> {  inline __device__  __host__       R operator()(const T& t, const U& u)      const{ return  t; } };
+/// evaluates to y
+template<class R, class T, class U>
+struct bf_2nd : binary_functor<R,T,U> {  inline __device__  __host__       R operator()(const T& t, const U& u)      const{ return  u; } };
 /// calculates x==y
 template<class R, class T, class U>
 struct bf_equals : binary_functor<R,T,U> {  inline __device__  __host__       R operator()(const T& t, const U& u)      const{ return  t == (T)u; } };
