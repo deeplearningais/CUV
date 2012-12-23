@@ -241,22 +241,6 @@ BOOST_AUTO_TEST_CASE( vec_ops_0ary1 )
 	}
 }
 
-BOOST_AUTO_TEST_CASE( vec_ops_lswd )
-{
-	sequence(v);
-	tensor<float,dev_memory_space> v_old(N);
-	copy(v_old,v);
-	sequence(w);
-	tensor<float,host_memory_space> v2(N); sequence(v2);
-	tensor<float,host_memory_space> w2(N); sequence(w2);
-	learn_step_weight_decay(v,w,0.1f,0.05f);
-	learn_step_weight_decay(v2,w2,0.1f,0.05f);
-	for(int i=0;i<N;i++){
-		BOOST_CHECK_CLOSE((float)v[i],(float)v2[i],0.01f);
-		BOOST_CHECK_CLOSE((float)v[i],v_old[i] + 0.1f *(w[i] - 0.05f *v_old[i]),0.01f);
-	}
-
-}
 BOOST_AUTO_TEST_CASE( vec_ops_has_inf )
 {
 	tensor<float,host_memory_space> v2(N); fill(v2,0.f);
