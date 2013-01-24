@@ -1563,9 +1563,8 @@ namespace cuv
 
                     std::vector<int> shapes;
                     std::vector<int> strides;
-                    shapes.reserve(D);
-                    strides.reserve(D);
-                    cuvAssert(o.ndim()==D);
+                    shapes.reserve(o.ndim());
+                    strides.reserve(o.ndim());
                     for(std::size_t i=0;i<D;i++){
                         int start  = idx.ranges_[i].get_start(0);
                         int finish = idx.ranges_[i].get_finish(o.shape(i));
@@ -1583,6 +1582,14 @@ namespace cuv
                             strides.push_back(o.stride(i)*stride);
                         }
                     }
+
+
+                    // adds missing shapes 
+                    for(unsigned int i = D; i < o.ndim();i++){
+                       shapes.push_back(o.shape(i));
+                       strides.push_back(o.stride(i));
+                    }
+
                     // store in m_info
                     t.m_info.resize(shapes.size());
                     std::copy(shapes.begin(),shapes.end(),t.m_info.host_shape[0].ptr);
