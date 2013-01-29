@@ -676,10 +676,60 @@ void response_norm_cross_map_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>&
     convResponseNormCrossMapUndo(nv_delta,nv_denoms,nv_orig_in, nv_orig_out, nv_input_grad, input_gradients.shape(0), sizeF, addScale, powScale, blocked, factOld, factNew);
 }
 
+
+template<class T>
+__global__
+void pairwise_norm_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned int dst_cols){
+    unsigned int line = blockIdx.x;
+    unsigned int item = threadIdx.x;
+    const T* src0 = src + (2 * line + 0) * dst_cols;
+    const T* src1 = src + (2 * line + 1) * dst_cols;
+    T* dst0 = dst + line * dst_cols;
+
+    for(; item < dst_cols; item += gridDim.x * blockDim.x){
+        T s0 = src0[item];
+        T s1 = src1[item];
+
+        dst0[item] = sqrt(s0*s0 + s1*s1);
+    }
+}
+
+
+template<class V,class M, class T>
+    void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src){
+        cuvAssert(src.ndim()==4);
+        cuvAssert(dst.ndim()==4);
+        cuvAssert(dst.shape(0)==src.shape(0)/2);
+
+        unsigned int items = dst.size() / dst.shape(0);
+        unsigned int lines = dst.shape(0);
+        if(IsSame<M,host_memory_space>::Result::value){
+            for(unsigned int line = 0; line < lines; line++){
+                const V* src_ptr0 = src.ptr() + (2 * line + 0) * items;
+                const V* src_ptr1 = src.ptr() + (2 * line + 1) * items;
+                V* dst_ptr = dst.ptr() + line * items;
+                for(unsigned int i=0; i < items; i++){
+                    dst_ptr[i] = sqrt( src_ptr0[i] * src_ptr0[i] + src_ptr1[i] * src_ptr1[i] );
+                }
+            }
+        }else{
+            // device: run kernel
+            const unsigned int num_threads = min(512, int(32 * ceil( items / 32. )));
+
+            cuvAssert(lines < 1024);
+            const unsigned int num_blocks  = min(1024, lines);
+
+            std::cout << "running kernel t:"<<num_threads << " b:"<<num_blocks<<std::endl;
+            pairwise_norm_kernel<<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items);
+            cuvSafeCall(cudaThreadSynchronize());
+        }
+    }
+
 // instantiate
 #define  TENS(V,M,T)       tensor<V,M,T>
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
+template void pairwise_norm<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void crop<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int); \

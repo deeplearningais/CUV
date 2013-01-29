@@ -270,6 +270,18 @@ void crop(tensor<V,M,T>& cropped, const tensor<V,M,T>& images, int startY, int s
 template<class V, class M, class T>
 void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float scale);
 
+/**
+ * square the input, then add every map pair and take the square root.
+ *
+ * In NumPy notation, this implements:
+ *
+ *   dst = sqrt((src ** 2)[::2] + (src ** 2)[1::2])
+ * 
+ * I.e., if pairs of src represent the result of convolution with orthogonal
+ * filters, then this calculates the norm.
+ */
+template<class V, class M, class T>
+void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src);
 }
 /** @} */ //end group convolution_ops
 }
