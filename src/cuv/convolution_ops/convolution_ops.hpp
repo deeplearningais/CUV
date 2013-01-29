@@ -282,6 +282,25 @@ void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float sca
  */
 template<class V, class M, class T>
 void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src);
+
+/**
+ * calculates the gradient of pairwise_norm.
+ *
+ * In NumPy notation, this implements:
+ *
+ *   dst[::2] = 2.0 / PN * X[::2]
+ *   dst[1::2] = 2.0 / PN * X[1::2]
+ *
+ * where
+ *   
+ *   PN = pairwise_norm(X)
+ *
+ * @param PN the result of pairwise_norm(X)
+ * @param X  the original input to the pairwise norm
+ * 
+ */
+template<class V, class M, class T>
+void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& PN, const tensor<V,M,T>& X);
 }
 /** @} */ //end group convolution_ops
 }

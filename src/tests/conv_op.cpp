@@ -283,4 +283,46 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm )
             }
 }
 
+BOOST_AUTO_TEST_CASE( test_pairwise_norm_grad )
+{
+    using namespace cuv::alex_conv;
+    unsigned int nImg = 2;
+    unsigned int nPix = 4;
+    unsigned int nChan = 8;
+    tensor<float,dev_memory_space,row_major> inp_grad(cuv::extents[nChan][nPix][nPix][nImg]);
+    tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
+    tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan/2][nPix][nPix][nImg]);
+
+    tensor<float,host_memory_space,row_major> inp_grad_h(cuv::extents[nChan][nPix][nPix][nImg]);
+    tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nChan][nPix][nPix][nImg]);
+    tensor<float,host_memory_space,row_major> res_h(cuv::extents[nChan/2][nPix][nPix][nImg]);
+
+    cuv::sequence(inp);
+    cuv::sequence(inp_h);
+
+    res = 0.f;
+    res_h = 0.f;
+    pairwise_norm(res,inp);
+    pairwise_norm(res_h,inp_h);
+
+    pairwise_norm_grad(inp_grad,res,inp);
+    pairwise_norm_grad(inp_grad_h,res_h,inp_h);
+
+    for(unsigned int i=0;i<nChan/2;i++)
+        for(unsigned int j=0;j<nPix;j++)
+            for(unsigned int k=0;k<nPix;k++){
+                for(unsigned int l=0;l<nImg;l++){
+                    BOOST_CHECK_EQUAL(inp_grad(i,j,k,l), inp_grad_h(i,j,k,l));
+
+                    float s0 = inp_h(2*i+0,j,k,l);
+                    float s1 = inp_h(2*i+1,j,k,l);
+                    float r  = res_h(  i  ,j,k,l);
+                    float f0 = 2.f / (r+0.0001f) * s0;
+                    float f1 = 2.f / (r+0.0001f) * s1;
+                    BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(2*i + 0,j,k,l) - f0, 0.01f);
+                    BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(2*i + 1,j,k,l) - f1, 0.01f);
+                }
+            }
+}
+
 BOOST_AUTO_TEST_SUITE_END()

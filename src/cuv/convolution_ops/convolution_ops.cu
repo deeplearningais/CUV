@@ -694,6 +694,27 @@ void pairwise_norm_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned 
     }
 }
 
+template<class T>
+__global__
+void pairwise_norm_grad_kernel(T* dst, const T* pn, const T* src, unsigned int dst_rows, unsigned int dst_cols){
+    unsigned int line = blockIdx.x;
+    unsigned int item = threadIdx.x;
+    const T* src0 = src + (2 * line + 0) * dst_cols;
+    const T* src1 = src + (2 * line + 1) * dst_cols;
+    T* dst0 = dst + (2 * line + 0) * dst_cols;
+    T* dst1 = dst + (2 * line + 1) * dst_cols;
+    const T* pn0 = pn + line * dst_cols;
+
+    for(; item < dst_cols; item += gridDim.x * blockDim.x){
+        T p  = 2.f / (pn0[item] + 0.0001f);
+        T s0 = src0[item];
+        T s1 = src1[item];
+
+        dst0[item] = p * s0;
+        dst1[item] = p * s1;
+    }
+}
+
 
 template<class V,class M, class T>
     void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src){
@@ -719,8 +740,42 @@ template<class V,class M, class T>
             cuvAssert(lines < 1024);
             const unsigned int num_blocks  = min(1024, lines);
 
-            std::cout << "running kernel t:"<<num_threads << " b:"<<num_blocks<<std::endl;
             pairwise_norm_kernel<<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items);
+            cuvSafeCall(cudaThreadSynchronize());
+        }
+    }
+
+template<class V,class M, class T>
+    void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& pn, const tensor<V,M,T>& src){
+        cuvAssert(src.ndim()==4);
+        cuvAssert(dst.ndim()==4);
+        cuvAssert(pn.ndim()==4);
+        assert(dst.shape()==src.shape());
+        cuvAssert(pn.shape(0)==src.shape(0)/2);
+
+        unsigned int items = pn.size() / pn.shape(0);
+        unsigned int lines = pn.shape(0);
+        if(IsSame<M,host_memory_space>::Result::value){
+            for(unsigned int line = 0; line < lines; line++){
+                const V* src_ptr0 = src.ptr() + (2 * line + 0) * items;
+                const V* src_ptr1 = src.ptr() + (2 * line + 1) * items;
+                V* dst_ptr0 = dst.ptr() + (2 * line + 0) * items;
+                V* dst_ptr1 = dst.ptr() + (2 * line + 1) * items;
+                const V* pn_ptr = pn.ptr() + line * items;
+                for(unsigned int i=0; i < items; i++){
+                    float f = 2.f / (pn_ptr[i] + .0001f);
+                    dst_ptr0[i] = f * src_ptr0[i];
+                    dst_ptr1[i] = f * src_ptr1[i];
+                }
+            }
+        }else{
+            // device: run kernel
+            const unsigned int num_threads = min(512, int(32 * ceil( items / 32. )));
+
+            cuvAssert(lines < 1024);
+            const unsigned int num_blocks  = min(1024, lines);
+
+            pairwise_norm_grad_kernel<<<num_blocks,num_threads>>>(dst.ptr(), pn.ptr(), src.ptr(), lines, items);
             cuvSafeCall(cudaThreadSynchronize());
         }
     }
@@ -730,6 +785,7 @@ template<class V,class M, class T>
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
 template void pairwise_norm<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
+template void pairwise_norm_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void crop<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int); \
