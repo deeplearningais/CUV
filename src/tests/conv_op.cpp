@@ -310,8 +310,8 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm_grad )
     pairwise_norm(res,inp);
     pairwise_norm(res_h,inp_h);
 
-    pairwise_norm_grad(inp_grad,res,inp,delta);
-    pairwise_norm_grad(inp_grad_h,res_h,inp_h,delta_h);
+    pairwise_norm_grad(inp_grad,inp,delta);
+    pairwise_norm_grad(inp_grad_h,inp_h,delta_h);
 
     for(unsigned int i=0;i<nChan/2;i++)
         for(unsigned int j=0;j<nPix;j++)
@@ -324,8 +324,8 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm_grad )
                     float s1 = inp_h(2*i+1,j,k,l);
                     float r  = res_h(  i  ,j,k,l);
                     float d  = delta(  i  ,j,k,l);
-                    float f0 = 2.f * d / (r+0.0001f) * s0;
-                    float f1 = 2.f * d / (r+0.0001f) * s1;
+                    float f0 = d / (r+0.0001f) * s0;
+                    float f1 = d / (r+0.0001f) * s1;
                     BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(2*i + 0,j,k,l) - f0, 0.01f);
                     BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(2*i + 1,j,k,l) - f1, 0.01f);
                 }

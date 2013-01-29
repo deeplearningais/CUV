@@ -295,13 +295,13 @@ void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src);
  *   
  *   PN = pairwise_norm(X)
  *
- * @param PN the result of pairwise_norm(X)
+ * @param dst where to write result
  * @param X  the original input to the pairwise norm
  * @param D  the backpropagated delta
  * 
  */
 template<class V, class M, class T>
-void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& PN, const tensor<V,M,T>& X, const tensor<V,M,T>& D);
+void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D);
 }
 /** @} */ //end group convolution_ops
 }
