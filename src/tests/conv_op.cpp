@@ -66,6 +66,7 @@ struct MyConfig {
 	MyConfig()   { 
 		printf("Testing on device=%d\n",dev);
 		initCUDA(dev); 
+        initialize_mersenne_twister_seeds();
 	}
 	~MyConfig()  { exitCUDA();  }
 };
@@ -253,8 +254,8 @@ BOOST_AUTO_TEST_CASE( test_conv2d )
 BOOST_AUTO_TEST_CASE( test_pairwise_norm )
 {
     using namespace cuv::alex_conv;
-    unsigned int nImg = 2;
-    unsigned int nPix = 4;
+    unsigned int nImg = 4;
+    unsigned int nPix = 16;
     unsigned int nChan = 8;
     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
     tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan/2][nPix][nPix][nImg]);
@@ -262,8 +263,8 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm )
     tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nChan][nPix][nPix][nImg]);
     tensor<float,host_memory_space,row_major> res_h(cuv::extents[nChan/2][nPix][nPix][nImg]);
 
-    cuv::sequence(inp);
-    cuv::sequence(inp_h);
+    fill_rnd_uniform(inp_h);
+    inp = inp_h;
 
     res = 0.f;
     res_h = 0.f;
@@ -274,11 +275,11 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm )
         for(unsigned int j=0;j<nPix;j++)
             for(unsigned int k=0;k<nPix;k++){
                 for(unsigned int l=0;l<nImg;l++){
-                    BOOST_CHECK_EQUAL(res(i,j,k,l), res_h(i,j,k,l));
+                    BOOST_CHECK_CLOSE(1.f, 1.f + res(i,j,k,l) - res_h(i,j,k,l), 0.001f);
 
                     float s0 = inp_h(2*i+0,j,k,l);
                     float s1 = inp_h(2*i+1,j,k,l);
-                    BOOST_CHECK_CLOSE(1.f, 1.f + res_h(i,j,k,l)-sqrt(s0*s0 + s1*s1), 0.01f);
+                    BOOST_CHECK_CLOSE(1.f, 1.f + res_h(i,j,k,l)-sqrt(s0*s0 + s1*s1), 0.001f);
                 }
             }
 }
@@ -286,39 +287,45 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm )
 BOOST_AUTO_TEST_CASE( test_pairwise_norm_grad )
 {
     using namespace cuv::alex_conv;
-    unsigned int nImg = 2;
-    unsigned int nPix = 4;
+    unsigned int nImg = 4;
+    unsigned int nPix = 16;
     unsigned int nChan = 8;
     tensor<float,dev_memory_space,row_major> inp_grad(cuv::extents[nChan][nPix][nPix][nImg]);
     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
     tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan/2][nPix][nPix][nImg]);
+    tensor<float,dev_memory_space,row_major> delta(cuv::extents[nChan/2][nPix][nPix][nImg]);
 
     tensor<float,host_memory_space,row_major> inp_grad_h(cuv::extents[nChan][nPix][nPix][nImg]);
     tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nChan][nPix][nPix][nImg]);
     tensor<float,host_memory_space,row_major> res_h(cuv::extents[nChan/2][nPix][nPix][nImg]);
+    tensor<float,host_memory_space,row_major> delta_h(cuv::extents[nChan/2][nPix][nPix][nImg]);
 
-    cuv::sequence(inp);
-    cuv::sequence(inp_h);
+    fill_rnd_uniform(inp_h);
+    inp = inp_h;
 
     res = 0.f;
     res_h = 0.f;
+    fill_rnd_uniform(delta);
+    delta_h = delta;
     pairwise_norm(res,inp);
     pairwise_norm(res_h,inp_h);
 
-    pairwise_norm_grad(inp_grad,res,inp);
-    pairwise_norm_grad(inp_grad_h,res_h,inp_h);
+    pairwise_norm_grad(inp_grad,res,inp,delta);
+    pairwise_norm_grad(inp_grad_h,res_h,inp_h,delta_h);
 
     for(unsigned int i=0;i<nChan/2;i++)
         for(unsigned int j=0;j<nPix;j++)
             for(unsigned int k=0;k<nPix;k++){
                 for(unsigned int l=0;l<nImg;l++){
-                    BOOST_CHECK_EQUAL(inp_grad(i,j,k,l), inp_grad_h(i,j,k,l));
+                    BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(2*i+0,j,k,l) - inp_grad_h(2*i+0,j,k,l), 0.001);
+                    BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(2*i+1,j,k,l) - inp_grad_h(2*i+1,j,k,l), 0.001);
 
                     float s0 = inp_h(2*i+0,j,k,l);
                     float s1 = inp_h(2*i+1,j,k,l);
                     float r  = res_h(  i  ,j,k,l);
-                    float f0 = 2.f / (r+0.0001f) * s0;
-                    float f1 = 2.f / (r+0.0001f) * s1;
+                    float d  = delta(  i  ,j,k,l);
+                    float f0 = 2.f * d / (r+0.0001f) * s0;
+                    float f1 = 2.f * d / (r+0.0001f) * s1;
                     BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(2*i + 0,j,k,l) - f0, 0.01f);
                     BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(2*i + 1,j,k,l) - f1, 0.01f);
                 }
