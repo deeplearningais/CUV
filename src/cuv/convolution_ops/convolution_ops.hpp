@@ -142,7 +142,7 @@ void local_avg_pool_grad(tensor<V,M,T>& target, const tensor<V,M,T>& avgGrads,
  * response normalization.
  *
  * in a local patch \f$\mathrm{Patch}(x)\f$ around \i x, calculates 
- * \f[ x' = \frac{x}{1 + \frac{\alpha}{|\mathrm{Patch}(x)|} \sum_{i\in\mathrm{Patch}(x)}  (x_i^2)^\beta\f]
+ * \f[ x' = \frac{x}{1 + \frac{\alpha}{|\mathrm{Patch}(x)|} \sum_{i\in\mathrm{Patch}(x)}  (x_i^2)^\beta}\f]
  *
  * @param target OUT \f$x'\f$
  * @param denoms OUT needed for gradient calculation, same shape as inputs
@@ -173,7 +173,7 @@ void response_normalization_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>& 
  * contrast normalization.
  *
  * in a local patch \f$\mathrm{Patch}(x)\f$ around \i x, calculates 
- * \f[ x' = \frac{x}{1 + \frac{\alpha}{|\mathrm{Patch}(x)|} \sum_{i\in\mathrm{Patch}(x)}  (x_i^2)^\beta\f]
+ * \f[ x' = \frac{x}{1 + \frac{\alpha}{|\mathrm{Patch}(x)|} \sum_{i\in\mathrm{Patch}(x)}  (x_i^2)^\beta}\f]
  *
  * @param target OUT \f$x'\f$
  * @param denoms OUT needed for gradient calculation, same shape as inputs
