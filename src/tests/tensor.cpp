@@ -299,6 +299,138 @@ BOOST_AUTO_TEST_CASE( lowdim_views ) {
 	test_lowdim_views<float,dev_memory_space>();
 }
 
+
+
+
+
+
+
+template<class V, class M>
+void test_lowdim_sub_views(){
+    {
+        static const int d=3,h=123,w=247;
+        tensor<V,M,row_major> t2d(extents[d][h][w]);
+
+        for(int k=0;k<d;k++)
+            for(int i=0;i<h; i++)
+                for(int j=0;j<w; j++){
+                    t2d(k,i,j) = (float) drand48();
+                }
+
+        // ***************************************
+        // 2D View on 3D tensor
+        // ***************************************
+
+        {
+            tensor_view<V,M,row_major> view(indices[2], t2d);
+            BOOST_CHECK_EQUAL(  view.ndim() , 2);
+            BOOST_CHECK_EQUAL(  view.shape(0) , h);
+            BOOST_CHECK_EQUAL(  view.shape(1) , w);
+            BOOST_CHECK_EQUAL(  view.stride(0) , 247);
+            BOOST_CHECK_EQUAL(  view.stride(1) , 1);
+            for(int i=0;i<h; i++)
+                for(int j=0;j<w; j++)
+                    BOOST_CHECK_EQUAL( (V) view(i,j) , (V) t2d(2,i,j) );
+
+        }
+        {
+            tensor_view<V,M,row_major> view(indices[2][5], t2d);
+            BOOST_CHECK_EQUAL(  view.ndim() , 1);
+            BOOST_CHECK_EQUAL(  view.shape(0) , w);
+            for(int j=0;j<w; j++)
+                BOOST_CHECK_EQUAL( (V) view(j) , (V) t2d(2,5,j) );
+
+        }
+        {
+            tensor_view<V,M,row_major> view(indices[cuv::index_range(0,2)], t2d);
+            BOOST_CHECK_EQUAL(  view.ndim() , 3);
+            BOOST_CHECK_EQUAL(  view.shape(0) , 2);
+            BOOST_CHECK_EQUAL(  view.shape(1) , h);
+            BOOST_CHECK_EQUAL(  view.shape(2) , w);
+            for(int k=0;k<2;k++)
+                for(int i=0;i<h; i++)
+                    for(int j=0;j<w; j++)
+                        BOOST_CHECK_EQUAL( (V) view(k,i,j) , (V) t2d(k,i,j) );
+        }
+        {
+            tensor_view<V,M,row_major> view(indices[cuv::index_range(0,2)][cuv::index_range(0,50)], t2d);
+            BOOST_CHECK_EQUAL(  view.ndim() , 3);
+            BOOST_CHECK_EQUAL(  view.shape(0) , 2);
+            BOOST_CHECK_EQUAL(  view.shape(1) , 50);
+            BOOST_CHECK_EQUAL(  view.shape(2) , w);
+            for(int k=0;k<2;k++)
+                for(int i=0;i<50; i++)
+                    for(int j=0;j<w; j++)
+                        BOOST_CHECK_EQUAL( (V) view(k,i,j) , (V) t2d(k,i,j) );
+        }
+        {
+            tensor_view<V,M,row_major> view(indices[2][cuv::index_range(0,50)], t2d);
+            BOOST_CHECK_EQUAL(  view.ndim() , 2);
+            BOOST_CHECK_EQUAL(  view.shape(0) , 50);
+            BOOST_CHECK_EQUAL(  view.shape(1) , w);
+            for(int i=0;i<50; i++)
+                for(int j=0;j<w; j++)
+                    BOOST_CHECK_EQUAL( (V) view(i,j) , (V) t2d(2,i,j) );
+        }
+        {
+            tensor_view<V,M,row_major> view(indices[cuv::index_range(0,2)][50], t2d);
+            BOOST_CHECK_EQUAL(  view.ndim() , 2);
+            BOOST_CHECK_EQUAL(  view.shape(0) , 2);
+            BOOST_CHECK_EQUAL(  view.shape(1) , w);
+            for(int i=0;i<2; i++)
+                for(int j=0;j<w; j++)
+                    BOOST_CHECK_EQUAL( (V) view(i,j) , (V) t2d(i,50,j) );
+        }
+        {
+            tensor_view<V,M,row_major> view(indices[cuv::index_range()][cuv::index_range(0,50)], t2d);
+            BOOST_CHECK_EQUAL(  view.ndim() , 3);
+            BOOST_CHECK_EQUAL(  view.shape(0) , d);
+            BOOST_CHECK_EQUAL(  view.shape(1) , 50);
+            BOOST_CHECK_EQUAL(  view.shape(2) , w);
+            BOOST_CHECK_EQUAL(  view.stride(0) , 123*247);
+            BOOST_CHECK_EQUAL(  view.stride(1) , 247);
+            BOOST_CHECK_EQUAL(  view.stride(2) , 1);
+            for(int k=0;k<d;k++)
+                for(int i=0;i<50; i++)
+                    for(int j=0;j<w; j++)
+                        BOOST_CHECK_EQUAL( (V) view(k,i,j) , (V) t2d(k,i,j) );
+        }
+    }
+
+        // ***************************************
+        // 2D  tensor
+        // ***************************************
+    {
+        static const int d=8,h=16;
+        tensor<V,M,row_major> t2d(extents[d][h]);
+
+        for(int k=0;k<d;k++)
+            for(int i=0;i<h; i++){
+                t2d(k,i) = (float) drand48();
+            }
+
+        tensor_view<V,M,row_major> view(indices[cuv::index_range(0,4)], t2d);
+        BOOST_CHECK_EQUAL(  view.ndim() , 2);
+        BOOST_CHECK_EQUAL(  view.shape(0) , 4);
+        BOOST_CHECK_EQUAL(  view.shape(1) , h);
+        BOOST_CHECK_EQUAL(  view.stride(0) , 16);
+        BOOST_CHECK_EQUAL(  view.stride(1) , 1);
+        for(int i=0;i<4; i++)
+            for(int j=0;j<h; j++)
+                BOOST_CHECK_EQUAL( (V) view(i,j) , (V) t2d(i,j) );
+
+    }
+
+}
+
+
+BOOST_AUTO_TEST_CASE( lowdim_sub_views ) {
+	test_lowdim_sub_views<float,host_memory_space>();
+	test_lowdim_sub_views<float,dev_memory_space>();
+}
+
+
+
 BOOST_AUTO_TEST_CASE( tensor_wrapping ){
     {
         std::vector<float>    v_orig(10, 0.f);
@@ -360,103 +492,5 @@ BOOST_AUTO_TEST_CASE( pushpull_nd )
 //        }
 //    }
 //}
-
-
-
-
-template<class V, class M>
-void test_lower_dim_views(){
-	static const int d=3,h=123,w=247;
-	tensor<V,M,row_major>              t1d(extents[d][h][w]);
-	tensor<V,M,row_major> t2d(extents[d][h][w]);
-
-	for(int k=0;k<d;k++)
-		for(int i=0;i<h; i++)
-			for(int j=0;j<w; j++){
-				t2d(k,i,j) = (float) drand48();
-			}
-
-	// ***************************************
-	// Only one dimensional index_gen 
-	// ***************************************
-    {
-        tensor<V,M,row_major> sub_tensor = t2d[indices[cuv::index_range(0,2)]];
-        BOOST_CHECK_EQUAL(  sub_tensor.ndim() , 3);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(0) , 2);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(1) , h);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(2) , w);
-        for(int k=0;k<sub_tensor.shape(0);k++)
-            for(int i=0;i<sub_tensor.shape(1); i++)
-                for(int j=0;j<sub_tensor.shape(2); j++){
-                    BOOST_REQUIRE_EQUAL( (V) sub_tensor(k,i,j) , (V) t2d(k,i,j) );
-                }
-    }
-    {
-        tensor<V,M,row_major> sub_tensor = t2d[indices[cuv::index_range()]];
-        BOOST_CHECK_EQUAL(  sub_tensor.ndim() , 3);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(0) , d);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(1) , h);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(2) , w);
-        for(int k=0;k<sub_tensor.shape(0);k++)
-            for(int i=0;i<sub_tensor.shape(1); i++)
-                for(int j=0;j<sub_tensor.shape(2); j++){
-                    BOOST_REQUIRE_EQUAL( (V) sub_tensor(k,i,j) , (V) t2d(k,i,j) );
-                }
-    }
-    {
-        tensor<V,M,row_major> sub_tensor = t2d[indices[2]];
-        BOOST_CHECK_EQUAL(  sub_tensor.ndim() , 2);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(0) , h);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(1) , w);
-        for(int k=0;k<sub_tensor.shape(0);k++)
-            for(int i=0;i<sub_tensor.shape(1); i++){
-                BOOST_REQUIRE_EQUAL( (V) sub_tensor(k,i) , (V) t2d(2,k,i) );
-            }
-    }
-
-
-
-	// ***************************************
-	// Only 2 dimensional index_gen 
-	// ***************************************
-    {
-        tensor<V,M,row_major> sub_tensor = t2d[indices[2][cuv::index_range(0,10)]];
-        BOOST_CHECK_EQUAL(  sub_tensor.ndim() , 2);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(0) , 10);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(1) , w);
-        for(int k=0;k<sub_tensor.shape(0);k++)
-            for(int i=0;i<sub_tensor.shape(1); i++){
-                BOOST_REQUIRE_EQUAL( (V) sub_tensor(k,i) , (V) t2d(2,k,i) );
-            }
-    }
-    {
-        tensor<V,M,row_major> sub_tensor = t2d[indices[cuv::index_range(0,2)][cuv::index_range(0,10)]];
-        BOOST_CHECK_EQUAL(  sub_tensor.ndim() , 3);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(0) , 2);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(1) , 10);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(2) , w);
-        for(int k=0;k<sub_tensor.shape(0);k++)
-            for(int i=0;i<sub_tensor.shape(1); i++)
-                for(int j=0;j<sub_tensor.shape(2); j++){
-                    BOOST_REQUIRE_EQUAL( (V) sub_tensor(k,i,j) , (V) t2d(k,i,j) );
-                }
-    }
-    {
-        tensor<V,M,row_major> sub_tensor = t2d[indices[1][0]];
-        BOOST_CHECK_EQUAL(  sub_tensor.ndim() , 1);
-        BOOST_CHECK_EQUAL(  sub_tensor.shape(0) , w);
-        for(int j=0;j<sub_tensor.shape(0); j++){
-            BOOST_REQUIRE_EQUAL( (V) sub_tensor(j) , (V) t2d(1,0,j) );
-        }
-    }
-
-}
-
-BOOST_AUTO_TEST_CASE( lower_dim_views ) {
-	test_lower_dim_views<float,host_memory_space>();
-	test_lower_dim_views<float,dev_memory_space>();
-}
-
-
 
 BOOST_AUTO_TEST_SUITE_END()
