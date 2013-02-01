@@ -281,7 +281,7 @@ void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float sca
  * filters, then this calculates the norm.
  */
 template<class V, class M, class T>
-void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src);
+void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim);
 
 /**
  * calculates the gradient of pairwise_norm.
@@ -301,7 +301,7 @@ void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src);
  * 
  */
 template<class V, class M, class T>
-void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D);
+void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim);
 }
 /** @} */ //end group convolution_ops
 }
