@@ -1,0 +1,14 @@
+Source: cuv
+Section: devel
+Priority: extra
+Maintainer: Hannes Schulz <schulz@ais.uni-bonn.de>
+Build-Depends: debhelper (>= 8.0.0), cmake, libboost-python-dev, libboost-serialization-dev, libboost-date-time-dev, libboost-test-dev, libblas-dev, gfortran, libjpeg-dev, libpng12-dev, python-pyublas
+Standards-Version: 3.9.2
+Homepage: https://github.com/deeplearningais/CUV
+#Vcs-Git: git://git.debian.org/collab-maint/cuv.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/cuv.git;a=summary
+
+Package: cuv
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Library providing (operations on) n-dimensional arrays for CPU and GPU computing.

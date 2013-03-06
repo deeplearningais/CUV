@@ -1,0 +1,5 @@
+cuv (0.9-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Wed, 06 Mar 2013 11:20:07 +0100
