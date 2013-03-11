@@ -11,3 +11,9 @@
 
 %:
 	dh $@ 
+
+# turn off dh_shlibdeps errors: we cannot find a package that contains
+# libcudart and libcublas, since there aren't any ubuntu packages for those
+# (yet).
+override_dh_shlibdeps:
+	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):/usr/local/cuda/lib dh_shlibdeps -- --ignore-missing-info
