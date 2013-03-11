@@ -56,7 +56,6 @@ find_package (PythonLibs REQUIRED)
 if (PYTHONLIBS_FOUND )
     include_directories(${PYTHON_INCLUDE_DIRS} )
     SET(CUV_LIBRARIES  ${CUV_LIBRARIES} tp_theano ${PYTHON_LIBRARIES})
-    #LINK_DIRECTORIES(${PYTHON_LIBRARIES})
 endif(PYTHONLIBS_FOUND )
 
 
