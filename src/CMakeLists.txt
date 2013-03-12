@@ -42,7 +42,7 @@ INCLUDE_DIRECTORIES(      ${THRUST_PATH}                                )
 
 add_subdirectory(3rd_party)
 add_subdirectory(cuv)
-add_subdirectory(tests)
+add_subdirectory(tests EXCLUDE_FROM_ALL)
 
 IF(CUV_PYTHON_BINDINGS)
 	add_subdirectory(cuv_python)
