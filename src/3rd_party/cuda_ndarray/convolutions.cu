@@ -1,15 +1,30 @@
-#define THEANO_KERN_WID 0
-#include <ctime>
+/*#include <ctime>*/
 #include <unistd.h>
-#include <sys/time.h>
+/*#include <sys/time.h>*/
 
-#include <cuv.hpp>
+/*#include <cuv.hpp>*/
+#include "convolutions.hpp"
 #include"conv.cu"
 #include"cuda_ndarray.cuh"
 
-PyMODINIT_FUNC initcuda_ndarray(void);
-
 CudaNdarray* cnda_flip_dims2and3(CudaNdarray* self);
+namespace cuv{
+
+namespace theano_conv{
+
+
+PyMODINIT_FUNC initcuda_ndarray(void);
+PyObject * CudaNdarray_Dimshuffle(PyObject* _unused, PyObject* args);
+
+void initcuda(){
+    std::cout << "init cuda and py" << std::endl;
+    Py_Initialize();
+    initcuda_ndarray();
+}
+
+void finalize_cuda(){
+   Py_Finalize();
+}
 
 void empty_like(CudaNdarray*& nda, cuv::tensor<float,cuv::dev_memory_space>& ct){
     int nd = ct.ndim();
@@ -22,7 +37,8 @@ void view(CudaNdarray*& nda, cuv::tensor<float,cuv::dev_memory_space>& ct){
     nda = (CudaNdarray*)CudaNdarray_New(nd); // same number of dimensions
     int size = 1; // strides in contiguous tensor
     for(int i=nd-1;i>=0;--i){
-        CudaNdarray_set_stride(nda, i, ct.shape(i)==1 ? 0: size);
+        /*CudaNdarray_set_stride(nda, i, ct.shape(i)==1 ? 0: size);*/
+        CudaNdarray_set_stride(nda, i, ct.stride(i));
         CudaNdarray_set_dim(nda, i, ct.shape(i));
         size = size * ct.shape(i);
     }
@@ -30,7 +46,7 @@ void view(CudaNdarray*& nda, cuv::tensor<float,cuv::dev_memory_space>& ct){
     nda->devdata = ct.ptr();
 }
 
-void convolve(cuv::tensor<float,cuv::dev_memory_space>& out, cuv::tensor<float,cuv::dev_memory_space>& images, cuv::tensor<float,cuv::dev_memory_space>& kern, const std::string& mode, int version=-1){
+void convolve_2d(cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& kern, const std::string& mode, int version){
     cuvAssert(images.shape(0)==out.shape(0));
     cuvAssert(kern.shape(0)==out.shape(1));
     if(mode=="valid"){
@@ -43,10 +59,12 @@ void convolve(cuv::tensor<float,cuv::dev_memory_space>& out, cuv::tensor<float,c
         throw std::runtime_error("undefined convolution mode `"+mode+"'");
     }
 
+    cuv::tensor<float,cuv::dev_memory_space> img = images;
+    cuv::tensor<float,cuv::dev_memory_space> krn = kern;
     CudaNdarray *cimages, *ckern, *cout;
 
-    view(cimages, images);
-    view(ckern, kern);
+    view(cimages, img);
+    view(ckern, krn);
     view(cout, out);
 
     if(mode=="valid")
@@ -59,7 +77,10 @@ void convolve(cuv::tensor<float,cuv::dev_memory_space>& out, cuv::tensor<float,c
     Py_DECREF(cout);
 }
 
-void d_convolve_d_images(cuv::tensor<float,cuv::dev_memory_space>& images, cuv::tensor<float,cuv::dev_memory_space>& out, cuv::tensor<float,cuv::dev_memory_space>& kern, const std::string& mode){
+
+
+
+void d_convolve_d_images(cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& kern, const std::string& mode){
     cuvAssert(images.shape(0)==out.shape(0));
     cuvAssert(kern.shape(0)==out.shape(1));
     if(mode=="valid"){
@@ -72,11 +93,13 @@ void d_convolve_d_images(cuv::tensor<float,cuv::dev_memory_space>& images, cuv::
         throw std::runtime_error("undefined convolution mode `"+mode+"'");
     }
 
+    cuv::tensor<float,cuv::dev_memory_space> output = out;
+    cuv::tensor<float,cuv::dev_memory_space> kernel = kern;
     CudaNdarray *cimages, *ckern, *cout;
 
     view(cimages, images);
-    view(ckern, kern);
-    view(cout, out);
+    view(ckern, kernel);
+    view(cout, output);
 
     int kern_dims[] = {1,0,2,3};
     if(0 != CudaNdarray_dimshuffle(ckern, 4,kern_dims))
@@ -97,7 +120,7 @@ void d_convolve_d_images(cuv::tensor<float,cuv::dev_memory_space>& images, cuv::
     Py_DECREF(cout);
 }
 
-void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern_, cuv::tensor<float,cuv::dev_memory_space>& images, cuv::tensor<float,cuv::dev_memory_space>& out, const std::string& mode){
+void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern_, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const std::string& mode){
     cuvAssert(images.shape(0)==out.shape(0));
     cuvAssert(kern_.shape(0)==out.shape(1));
     if(mode=="valid"){
@@ -110,11 +133,13 @@ void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern_, cuv::ten
         throw std::runtime_error("undefined convolution mode `"+mode+"'");
     }
 
+    cuv::tensor<float,cuv::dev_memory_space> img = images;
+    cuv::tensor<float,cuv::dev_memory_space> output = out;
     CudaNdarray *cimages, *ckern, *ckern_, *cout;
 
-    view(cimages, images);
+    view(cimages, img);
     view(ckern_,      kern_);
-    view(cout, out);
+    view(cout, output);
 
     
 
@@ -159,7 +184,7 @@ void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern_, cuv::ten
 
         CudaNdarray *cflipped_ckern = cnda_flip_dims2and3(ckern);       // flip kern
 
-        if(CudaNdarray_CopyFromCudaNdarray(ckern_, ckern))// ckern is not c-contiguous, so we need to copy :/
+        if(CudaNdarray_CopyFromCudaNdarray(ckern_, cflipped_ckern))// ckern is not c-contiguous, so we need to copy :/
             throw std::runtime_error("could not copy ckern");
 
         Py_DECREF(ckern);
@@ -176,66 +201,68 @@ void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern_, cuv::ten
 }
 
 void printdiff(timeval& start, timeval& end, long int nIter){
-    long seconds  = end.tv_sec  - start.tv_sec;
-    long useconds = end.tv_usec - start.tv_usec;
-    long mtime = ((seconds) * 1000 + useconds/1000.0)/nIter + 0.5;
-    std::cout << "ms per iter: "<< mtime<<std::endl;
+   long seconds  = end.tv_sec  - start.tv_sec;
+   long useconds = end.tv_usec - start.tv_usec;
+   long mtime = ((seconds) * 1000 + useconds/1000.0)/nIter + 0.5;
+   std::cout << "ms per iter: "<< mtime<<std::endl;
 }
 
-int
-main(int argc, char **argv)
+void theano_test()
 {
-    unsigned int nImg  =  32;
-    unsigned int nMaps =  8;
-    unsigned int imgH  = 176, imgW=176;
-    unsigned int nFilt = 32;
-    unsigned int fsX   = 7, fsY = 7;
-    std::string mode   = "valid";
-    unsigned int dstH = mode == "full" ? imgH+fsY-1 : imgH-fsY+1;
-    unsigned int dstW = mode == "full" ? imgW+fsX-1 : imgW-fsX+1;
-    // images: (nImg,nMaps,imgH,imgW)
-    // out   : (nImg,nFilt,imgH-fsY+1,imgW-fsX+1)
-    // kern  : (nFilt,nMaps,fsY,fsX)
-    cuv::tensor<float,cuv::dev_memory_space> images(cuv::extents[nImg][nMaps][imgH][imgW]);
-    cuv::tensor<float,cuv::dev_memory_space> kern(cuv::extents[nFilt][nMaps][fsY][fsX]);
-    cuv::tensor<float,cuv::dev_memory_space> out(cuv::extents[nImg][nFilt][dstH][dstW]);
-    images = 0.001f;
-    kern = 0.001f;
-    out = 0.001f;
+   unsigned int nImg  =  32;
+   unsigned int nMaps =  8;
+   unsigned int imgH  = 176, imgW=176;
+   unsigned int nFilt = 32;
+   unsigned int fsX   = 7, fsY = 7;
+   std::string mode   = "valid";
+   unsigned int dstH = mode == "full" ? imgH+fsY-1 : imgH-fsY+1;
+   unsigned int dstW = mode == "full" ? imgW+fsX-1 : imgW-fsX+1;
+   // images: (nImg,nMaps,imgH,imgW)
+   // out   : (nImg,nFilt,imgH-fsY+1,imgW-fsX+1)
+   // kern  : (nFilt,nMaps,fsY,fsX)
+   cuv::tensor<float,cuv::dev_memory_space> images(cuv::extents[nImg][nMaps][imgH][imgW]);
+   cuv::tensor<float,cuv::dev_memory_space> kern(cuv::extents[nFilt][nMaps][fsY][fsX]);
+   cuv::tensor<float,cuv::dev_memory_space> out(cuv::extents[nImg][nFilt][dstH][dstW]);
+   images = 0.001f;
+   kern = 0.001f;
+   out = 0.001f;
 
-    Py_Initialize();
-    initcuda_ndarray();
-    timeval a, b;
+   Py_Initialize();
+   initcuda_ndarray();
+   timeval a, b;
 
-    std::cout << "--------------------------------------- CONVOLVE ---------------"<<std::endl;
+   std::cout << "--------------------------------------- CONVOLVE ---------------"<<std::endl;
 for(int ver=-1;ver<0;ver++){
-        gettimeofday(&a, 0);
-        for(unsigned int i=0;i<10;i++){
-            convolve(out,images,kern, mode,ver);
-        }
-        gettimeofday(&b, 0);
-        printdiff(a,b,10);
+       gettimeofday(&a, 0);
+       for(unsigned int i=0;i<10;i++){
+           convolve_2d(out,images,kern, mode,ver);
+       }
+       gettimeofday(&b, 0);
+       printdiff(a,b,10);
 }
 
-    std::cout << "--------------------------------------- DIMG ---------------"<<std::endl;
-    gettimeofday(&a, 0);
-    for(unsigned int i=0;i<10;i++){
-        d_convolve_d_images(images,out,kern, mode);
-    }
-    gettimeofday(&b, 0);
-    printdiff(a,b,10);
+   std::cout << "--------------------------------------- DIMG ---------------"<<std::endl;
+   gettimeofday(&a, 0);
+   for(unsigned int i=0;i<10;i++){
+       d_convolve_d_images(images,out,kern, mode);
+   }
+   gettimeofday(&b, 0);
+   printdiff(a,b,10);
 
-    std::cout << "--------------------------------------- DKRN ---------------"<<std::endl;
-    gettimeofday(&a, 0);
-    for(unsigned int i=0;i<10;i++){
-        d_convolve_d_kern(kern,images, out, mode);
-    }
-    gettimeofday(&b, 0);
-    printdiff(a,b,10);
+   std::cout << "--------------------------------------- DKRN ---------------"<<std::endl;
+   gettimeofday(&a, 0);
+   for(unsigned int i=0;i<10;i++){
+       d_convolve_d_kern(kern,images, out, mode);
+   }
+   gettimeofday(&b, 0);
+   printdiff(a,b,10);
 
-    /*PyArrayObject* pa = (PyArrayObject*)CudaNdarray_CreateArrayObj(cnda);*/
-    /*print_numeric_array(pa);*/
+   /*PyArrayObject* pa = (PyArrayObject*)CudaNdarray_CreateArrayObj(cnda);*/
+   /*print_numeric_array(pa);*/
 
-    Py_Finalize();
-    return 0;
+   Py_Finalize();
+}
+
+
+}
 }
