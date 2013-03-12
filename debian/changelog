@@ -1,3 +1,9 @@
+cuv (0.92-1ubuntu1) precise; urgency=low
+
+  * commit instantiation files for easier building w/o additional dependencies
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Tue, 12 Mar 2013 20:41:39 +0100
+
 cuv (0.91-1ubuntu1) precise; urgency=low
 
   [ Nenad Biresev ]
