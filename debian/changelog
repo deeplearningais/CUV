@@ -1,3 +1,20 @@
+cuv (0.91-1ubuntu1) precise; urgency=low
+
+  [ Nenad Biresev ]
+  * added subdirectory for cuda_ndarray
+  * deleted main.cu of cuda_ndarray
+  * python is searched in CMakeList.txt
+  * added wrappers for cuda_ndarray convolutions from theano
+  * added test for theano convolution
+  * lib_suffix added in CMakeList.txt
+
+  [ Hannes Schulz ]
+  * leave packaging to debian branch (cpack is not doing its job well...)
+  * Revert "remove the tests, since pbuilder does not have cuda driver installed"
+  * add patches
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Tue, 12 Mar 2013 14:22:36 +0100
+
 cuv (0.9-1) precise; urgency=low
 
   * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
