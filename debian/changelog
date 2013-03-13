@@ -1,3 +1,9 @@
+cuv (0.93-1ubuntu1) precise; urgency=low
+
+  * Default to release build (mainly for debian packaging)
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Wed, 13 Mar 2013 11:06:01 +0100
+
 cuv (0.92-1ubuntu1) precise; urgency=low
 
   * commit instantiation files for easier building w/o additional dependencies
