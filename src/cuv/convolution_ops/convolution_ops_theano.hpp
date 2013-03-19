@@ -37,7 +37,7 @@ namespace cuv{
 
 namespace theano_conv{
 
-void printdiff(timeval& start, timeval& end, long int nIter);
+//void printdiff(timeval& start, timeval& end, long int nIter);
 void initcuda();
 void finalize_cuda();
 void convolve_2d(cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& kern, const std::string& mode, int version=-1);
