@@ -1,3 +1,26 @@
+cuv (0.93-1ubuntu2~1.gbp9cbc9b) precise; urgency=low
+
+  ** SNAPSHOT build @9cbc9bfbaeeeec9aca9c3e3885f7462ded7fbcf4 **
+
+  * added debian files
+  * add build script that cleans up a bit and then calls git-buildpackage
+  * move build_package.sh out of sourcetree into debian directory
+  * remove the tests, since pbuilder does not have cuda driver installed
+  * add cimg dependency to debian control
+  * use ubuntu series name
+  * do not request a dependency resolving for cuda libs
+  * Revert "remove the tests, since pbuilder does not have cuda driver installed"
+  * add patches
+  * updated changelog
+  * do not build tests in the make-all target
+  * commit instantiation files for easier building w/o additional dependencies
+  * update changelog
+  * Default to release build (mainly for debian packaging)
+  * update changelog
+  * allow parallel builds
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Tue, 19 Mar 2013 12:25:35 +0100
+
 cuv (0.93-1ubuntu1) precise; urgency=low
 
   * Default to release build (mainly for debian packaging)
