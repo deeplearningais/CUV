@@ -49,6 +49,7 @@ namespace theano_conv{
  * initializes cuda using theano implementation 
  *
  */
+//void printdiff(timeval& start, timeval& end, long int nIter);
 void initcuda();
 /**
  * finalizes cuda using theano implementation 

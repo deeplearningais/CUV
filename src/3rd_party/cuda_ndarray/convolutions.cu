@@ -3,6 +3,7 @@
 /*#include <sys/time.h>*/
 
 /*#include <cuv.hpp>*/
+#include <cuv/convolution_ops/convolution_ops_theano.hpp>
 #include"conv.cu"
 #include"cuda_ndarray.cuh"
 
