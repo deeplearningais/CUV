@@ -3,7 +3,6 @@
 /*#include <sys/time.h>*/
 
 /*#include <cuv.hpp>*/
-#include "convolutions.hpp"
 #include"conv.cu"
 #include"cuda_ndarray.cuh"
 
@@ -151,15 +150,6 @@ void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern_, const cu
 
     if(mode=="valid") {
         CudaNdarray *cflipped_cout = cnda_flip_dims2and3(cout);       // flip kern
-        /*fprint_CudaNdarray(stdout, cimages);*/
-        /*fprint_CudaNdarray(stdout, cflipped_cout);*/
-        /*fprint_CudaNdarray(stdout, ckern);*/
-
-        // ckern is new anyway, so we allocated it "shuffled".
-        /*
-         *if(0 != CudaNdarray_dimshuffle(ckern, 4,new_dims))           
-         *    throw std::runtime_error("could not dimshuffle tensor");
-         */
         ckern = (CudaNdarray*) CudaNdarray_New();
         {
             // create ckern like kern_, but switch the 1st and 2nd dimension
@@ -199,70 +189,6 @@ void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern_, const cu
     Py_DECREF(ckern_);
     Py_DECREF(cout);
 }
-
-void printdiff(timeval& start, timeval& end, long int nIter){
-   long seconds  = end.tv_sec  - start.tv_sec;
-   long useconds = end.tv_usec - start.tv_usec;
-   long mtime = ((seconds) * 1000 + useconds/1000.0)/nIter + 0.5;
-   std::cout << "ms per iter: "<< mtime<<std::endl;
-}
-
-void theano_test()
-{
-   unsigned int nImg  =  32;
-   unsigned int nMaps =  8;
-   unsigned int imgH  = 176, imgW=176;
-   unsigned int nFilt = 32;
-   unsigned int fsX   = 7, fsY = 7;
-   std::string mode   = "valid";
-   unsigned int dstH = mode == "full" ? imgH+fsY-1 : imgH-fsY+1;
-   unsigned int dstW = mode == "full" ? imgW+fsX-1 : imgW-fsX+1;
-   // images: (nImg,nMaps,imgH,imgW)
-   // out   : (nImg,nFilt,imgH-fsY+1,imgW-fsX+1)
-   // kern  : (nFilt,nMaps,fsY,fsX)
-   cuv::tensor<float,cuv::dev_memory_space> images(cuv::extents[nImg][nMaps][imgH][imgW]);
-   cuv::tensor<float,cuv::dev_memory_space> kern(cuv::extents[nFilt][nMaps][fsY][fsX]);
-   cuv::tensor<float,cuv::dev_memory_space> out(cuv::extents[nImg][nFilt][dstH][dstW]);
-   images = 0.001f;
-   kern = 0.001f;
-   out = 0.001f;
-
-   Py_Initialize();
-   initcuda_ndarray();
-   timeval a, b;
-
-   std::cout << "--------------------------------------- CONVOLVE ---------------"<<std::endl;
-for(int ver=-1;ver<0;ver++){
-       gettimeofday(&a, 0);
-       for(unsigned int i=0;i<10;i++){
-           convolve_2d(out,images,kern, mode,ver);
-       }
-       gettimeofday(&b, 0);
-       printdiff(a,b,10);
-}
-
-   std::cout << "--------------------------------------- DIMG ---------------"<<std::endl;
-   gettimeofday(&a, 0);
-   for(unsigned int i=0;i<10;i++){
-       d_convolve_d_images(images,out,kern, mode);
-   }
-   gettimeofday(&b, 0);
-   printdiff(a,b,10);
-
-   std::cout << "--------------------------------------- DKRN ---------------"<<std::endl;
-   gettimeofday(&a, 0);
-   for(unsigned int i=0;i<10;i++){
-       d_convolve_d_kern(kern,images, out, mode);
-   }
-   gettimeofday(&b, 0);
-   printdiff(a,b,10);
-
-   /*PyArrayObject* pa = (PyArrayObject*)CudaNdarray_CreateArrayObj(cnda);*/
-   /*print_numeric_array(pa);*/
-
-   Py_Finalize();
-}
-
 
 }
 }
