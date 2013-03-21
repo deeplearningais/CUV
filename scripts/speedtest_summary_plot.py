@@ -5,11 +5,12 @@ import os, sys, re
 from glob import glob
 
 def get_desc(name):
-    if name.find("bigcuda1_0")>=0: return "GTX580"
-    if name.find("bigcuda1_3")>=0: return "GTX295"
-    if name.find("cuda7_0")>=0:    return "GTX480"
-    if name.find("cuda6_1")>=0:    return "GTX285"
-    if name.find("cuda4_0")>=0:    return "9800 GX2"
+    if name.find("bigcuda1_dev0")>=0: return "GTX680"
+    if name.find("bigcuda1_dev1")>=0: return "GTX295"
+    if name.find("bigcuda1_dev5")>=0: return "GTX580"
+    if name.find("cuda7_dev0")>=0:    return "GTX480"
+    if name.find("cuda6_dev1")>=0:    return "GTX285"
+    if name.find("cuda4_dev0")>=0:    return "9800 GX2"
     print "no name for", name
     sys.exit()
 
@@ -17,6 +18,7 @@ def get_data(file):
     L = []
     D = []
     for s in open(file,"r").readlines():
+        if "checking" in s: continue
         it = re.split(r'\s+', s)
         print it
         D.append(it[0])
@@ -38,7 +40,7 @@ def plot_all(reference, path):
     #ax.set_yscale('log')
     plt.axhline(1)
 
-    color_array = np.vstack(np.array(pylab.cm.datad["gist_rainbow"].values()))
+    color_array = np.vstack(np.array(dict(pylab.cm.datad["gist_rainbow"]).values()))
     lc = len(color_array)
     lf = len(files)
     color_array = color_array[::lc/lf,:]
