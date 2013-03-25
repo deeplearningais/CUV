@@ -2,6 +2,8 @@ ADD_DEFINITIONS(-DTHEANO_KERN_WID=0)
 
 
 
+# no support for python 3 yet
+SET(Python_ADDITIONAL_VERSIONS 2.6 2.7)
 find_package (PythonLibs REQUIRED)
 if (PYTHONLIBS_FOUND )
     include_directories(${PYTHON_INCLUDE_DIRS} )
