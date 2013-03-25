@@ -12,6 +12,12 @@ SET (CUDA_SDK_ROOT_DIR "/usr/local/cuda/C" CACHE STRING "Location of CUDA SDK (c
 FIND_PACKAGE(CUDA)
 #SET (CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -arch=sm_21")
 
+if ( NOT CUDA_ARCH )
+    SET( CUDA_ARCH "-gencode arch=compute_20,\"code=sm_20,compute_20\" -gencode arch=compute_21,\"code=sm_21,compute_21\" -gencode arch=compute_30,\"code=sm_30,compute_30\" -gencode arch=compute_35,\"code=sm_35,compute_35\" " )
+endif()
+
+SET( CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_ARCH} )
+
 # ---------- Find Boost Headers/Libraries -----------------------
 SET (Boost_FIND_REQUIRED TRUE)
 SET (Boost_FIND_QUIETLY TRUE)
