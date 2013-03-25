@@ -7,6 +7,7 @@ sub get_speed_test_binaries{
 	my $path = shift();
 	print "checking $path\n";
 	my @l = glob("$path/*_speed");
+    push @l, "$path/test_conv_op";
 	return sort(@l);
 }
 

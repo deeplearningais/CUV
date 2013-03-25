@@ -357,7 +357,7 @@ template<>
         cuvAssert(target.shape(3) == nImg);
 
         unsigned int poolSize = nImgPixY / nOutPixY;
-        cuvAssert(poolSize*nOutPixY == nImgPixY);
+        /*cuvAssert(poolSize*nOutPixY == nImgPixY);*/
 
         NVMatrix nv_target NVView4D(target);
         NVMatrix nv_images NVView4D(images);

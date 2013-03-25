@@ -34,18 +34,63 @@
 #include <cuv.hpp>
 
 namespace cuv{
+/*
+ * Wrappers for theano CUDA convolution functions
+ */
+
+/** @defgroup convolution_ops_theano Convolution and pooling operations
+* @{
+*/
 
 namespace theano_conv{
 
-void printdiff(timeval& start, timeval& end, long int nIter);
+
+/**
+ * initializes cuda using theano implementation 
+ *
+ */
+//void printdiff(timeval& start, timeval& end, long int nIter);
 void initcuda();
+/**
+ * finalizes cuda using theano implementation 
+ *
+ */
 void finalize_cuda();
+
+/**
+ * convolve a set of images with a set of filters
+ *
+ * @param out       (nImg, nFilt, nModulesY, nModulesX)
+ * @param images       (nImg, nImgChan, nImgPixY, nImgPixX)
+ * @param filter    (nFilt, nFiltChan, nFiltPixY, nFiltPixX)
+ * @param mode  valid or full convolution
+ * @param version  version of the convolution
+ *
+ */
 void convolve_2d(cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& kern, const std::string& mode, int version=-1);
 
+/**
+ * determine the gradient of a convolution w.r.t. the inputs
+ *
+ *  @param dst (nImages, nImageColors, nImgPixY, nImgPixX)
+ *  @param delta (nImg, nFilt, nModulesY, nModulesX)
+ *  @param filters (nFilters, nFilterColors, filterPixelsY, filterPixelsX)
+ *  @param mode  valid or full convolution
+ */
 void d_convolve_d_images(cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& kern, const std::string& mode);
 
-void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern_, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const std::string& mode);
+/**
+ * determine the gradient of a convolution w.r.t. the filters
+ *
+ *  @param kern  (nFilters, nInpMaps, filterPixelsY, filterPixelsX)
+ *  @param images   (nImages, nInpMaps, nImgPixY, nImgPixX)
+ *  @param out  (nImages, nFilters, nModulesY, nModulesX, )
+ *  @param mode  valid or full convolution
+ *
+ */
+void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const std::string& mode);
 
 }
+/** @} */ //end group convolution_ops_theano
 }
 #endif /* __THEANO_CONVOLUTIONS_HPP__ */
