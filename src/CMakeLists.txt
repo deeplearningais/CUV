@@ -12,6 +12,15 @@ SET (CUDA_SDK_ROOT_DIR "/usr/local/cuda/C" CACHE STRING "Location of CUDA SDK (c
 FIND_PACKAGE(CUDA)
 #SET (CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -arch=sm_21")
 
+option (CUDA_ENFORCE_HOST_COMPILER "Force nvcc to use the same compiler used to compile .c(pp) files insted of gcc/g++" ON)
+if (CUDA_ENFORCE_HOST_COMPILER)
+    set (CMAKE_GCC_TEMP_DIR "${CMAKE_BINARY_DIR}/CMakeGCC")
+    file(MAKE_DIRECTORY ${CMAKE_GCC_TEMP_DIR})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_C_COMPILER} ${CMAKE_GCC_TEMP_DIR}/gcc)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CXX_COMPILER} ${CMAKE_GCC_TEMP_DIR}/g++)
+    set(CUDA_NVCC_FLAGS -ccbin ${CMAKE_GCC_TEMP_DIR} ${CUDA_NVCC_FLAGS})
+endif()
+
 if ( NOT CUDA_ARCH )
     SET( CUDA_ARCH "-gencode arch=compute_20,\"code=sm_20,compute_20\" -gencode arch=compute_30,\"code=sm_30,compute_30\" -gencode arch=compute_35,\"code=sm_35,compute_35\" " )
 endif()
