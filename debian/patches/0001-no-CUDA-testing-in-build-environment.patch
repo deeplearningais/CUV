@@ -8,10 +8,10 @@ build env typically does not have cuda driver installed
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e31cd7a..80bd164 100644
+index 2a128a5..e1b31d8 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -51,7 +51,7 @@ IF(DOXYGEN_FOUND)
+@@ -62,7 +62,7 @@ IF(DOXYGEN_FOUND)
      ADD_CUSTOM_TARGET(doc DEPENDS ${CMAKE_BINARY_DIR}/docs/html/index.html ${CMAKE_BINARY_DIR}/docs/Doxyfile)
  ENDIF(DOXYGEN_FOUND)
  
@@ -20,4 +20,3 @@ index e31cd7a..80bd164 100644
  add_subdirectory(src)
  
  
--- 

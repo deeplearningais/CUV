@@ -1,0 +1,22 @@
+From: Hannes Schulz <schulz@ais.uni-bonn.de>
+Date: Wed, 27 Mar 2013 17:27:19 +0100
+Subject: force 4.6 version compiler on debian
+
+---
+ CMakeLists.txt |    4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e1b31d8..b556f77 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,5 +1,9 @@
+ cmake_minimum_required( VERSION 2.6 FATAL_ERROR )
+ 
++# DEBIAN specific stuff
++set(CMAKE_C_COMPILER CACHE FILEPATH /usr/bin/gcc-4.6)
++set(CMAKE_CXX_COMPILER CACHE FILEPATH /usr/bin/g++-4.6)
++
+ #
+ # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their
+ # definition # and dump it in the cache along with proper documentation,
