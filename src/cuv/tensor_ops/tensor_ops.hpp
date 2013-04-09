@@ -143,6 +143,8 @@ namespace cuv{
 	 *  @li SF_SIGN computes sign(x)
 	 *  @li SF_SIGM computes 1/(1+exp(-x))
 	 *  @li SF_DSIGM computes x * (1-x)
+	 *  @li SF_TANH computes tanh(x)
+	 *  @li SF_DTANH computes x - x^2
 	 *  @li SF_SIN computes sin(x)
 	 *  @li SF_COS computes cos(x)
 	 *  @li SF_SQUARE computes x*x

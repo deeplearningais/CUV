@@ -147,9 +147,13 @@ namespace cuv
 		 *
 		 * Example:
 		 * @code
-		 * tensor_view<...> v(indices[index_range(1,3)][index_range()], other_tensor);
+         * // if other_tensor has shape (6, 7), then v will have shape (2, 7)
+         * // and contain the second and third line of other_tensor.
+		 * tensor_view<...> v(other_tensor, indices[index_range(1,3)][index_range()]);
          * // or, equivalently
-		 * other_tensor[indices[index_range(1,3)][index_range()]];
+		 * tensor_view<...> v = other_tensor[indices[index_range(1,3)][index_range()]];
+         * // you can also remove trailing index_range()s, resulting in
+		 * tensor_view<...> v = other_tensor[indices[index_range(1,3)]];
 		 * @endcode
 		 */
 		index_gen<0,0> indices;
@@ -353,7 +357,7 @@ namespace cuv
                 }
 
                 /**
-                 * @return a reference to memory at a position
+                 * @return a scalar reference to memory at a position
                  * @param idx position
                  */
                 reference_type
@@ -367,7 +371,7 @@ namespace cuv
                 /**
                  * @overload
                  * 
-                 * @return a reference to memory at a position
+                 * @return a scalar reference to memory at a position
                  * @param idx position
                  */
                 const_reference_type
@@ -696,7 +700,7 @@ namespace cuv
                     }
 
                 /**
-                 * @return a reference to memory at a position as if this were pitched memory
+                 * @return a scalar reference to memory at a position as if this were pitched memory
                  * @param idx position
                  */
                 reference_type
@@ -713,7 +717,7 @@ namespace cuv
                 /**
                  * @overload
                  * 
-                 * @return a reference to memory at a position
+                 * @return a scalar reference to memory at a position
                  * @param idx position
                  */
                 const_reference_type
@@ -1074,7 +1078,7 @@ namespace cuv
              */
 
             /**
-             * member access: "flat" access as if memory was linear
+             * scalar referecne access: "flat" access as if memory was linear.
              */
             reference_type operator[](index_type idx){
                 size_type ndim = m_info.host_shape.size();
@@ -1548,9 +1552,29 @@ namespace cuv
 
 
             /**
-             * create a subtensor of the current tensor 
+             * create a subtensor of the current tensor.
              *
              * this works in O(1).
+             *
+             * Example:
+             * @code
+             * tensor<float,host_memory_space> v(extents[5][10]);
+             *
+             * // these are equivalent:
+             * v[indices[index_range(2,3)][index_range(0,10)]];
+             * v[indices[index_range(2,3)][index_range()]];
+             * v[indices[index_range(2,3)]];
+             * v[indices[index_range(2,3)][index_range() < index(10)]];
+             * v[indices[index_range(2,3)][index(0) < index_range() < index(10)]];
+             *
+             * // In the previous example, all parameters to indices above are *ranges*.
+             * // This causes the number of dimensions to stay the same in the view and the tensor.
+             * // You can also provide a 'degenerate' range, which removes the respective dimension.
+             * // These yields a 1D-tensor corresponding to the 2nd slice in the 1st dimension:
+             * v[indices[1][index_range()]];
+             * v[indices[1]];
+             * @endcode
+             *
              */
             template<int D, int E>
                 tensor_view<V,M,L>
@@ -1775,13 +1799,18 @@ namespace cuv
                  * tensor<float,host_memory_space> v(extents[5][10]);
                  *
                  * // these are equivalent:
-                 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range(0,10)]);
-                 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range()]);
-                 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range() < index(10)]);
-                 * tensor<float,host_memory_space> w0(v,indices[index_range(2,3)][index(0) < index_range() < index(10)]);
+                 * tensor_view<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range(0,10)]);
+                 * tensor_view<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range()]);
+                 * tensor_view<float,host_memory_space> w0(v,indices[index_range(2,3)]);
+                 * tensor_view<float,host_memory_space> w0(v,indices[index_range(2,3)][index_range() < index(10)]);
+                 * tensor_view<float,host_memory_space> w0(v,indices[index_range(2,3)][index(0) < index_range() < index(10)]);
                  *
-                 * // yields a 1D-tensor corresponding to the 2nd slice in the 1st dimension:
-                 * tensor<float,host_memory_space> w0(indices[1][index_range()]);
+                 * // In the previous example, all parameters to indices above are *ranges*.
+                 * // This causes the number of dimensions to stay the same in the view and the tensor.
+                 * // You can also provide a 'degenerate' range, which removes the respective dimension.
+                 * // These yields a 1D-tensor corresponding to the 2nd slice in the 1st dimension:
+                 * tensor<float,host_memory_space> w0(v, indices[1][index_range()]);
+                 * tensor<float,host_memory_space> w0(v, indices[1]);
                  * @endcode
                  */
                 template<int D, int E>
