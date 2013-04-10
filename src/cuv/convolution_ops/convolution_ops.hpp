@@ -35,6 +35,7 @@
 #define __CONVOLUTION_OPS_HPP__
 
 #include <cuv/basics/tensor.hpp>
+
 namespace cuv{
 
 /*
@@ -281,7 +282,7 @@ void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float sca
  * filters, then this calculates the norm.
  */
 template<class V, class M, class T>
-void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim);
+void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim, unsigned int subspace_size = 2);
 
 /**
  * calculates the gradient of pairwise_norm.
@@ -301,7 +302,7 @@ void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int di
  * 
  */
 template<class V, class M, class T>
-void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim);
+void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int subspace_size = 2);
 }
 /** @} */ //end group convolution_ops
 }

@@ -177,6 +177,89 @@ void cpuFilterActs(const float* images, const float* filters, float* targets,
     }
 }
 
+
+/*template<class T>*/
+/*__global__*/
+/*void convolve1d_kernel(tensor<V,M, T>& dst,  const tensor<V,M, T>& img, const tensor<V,M, T>& filter){*/
+
+
+/*    unsigned int flt = threadIdx.x;*/
+/*    [>unsigned int flt = blockIdx.x;<]*/
+
+
+
+/*    if(FirstDim){*/
+
+/*        unsigned int line = blockIdx.x;*/
+/*        unsigned int item = threadIdx.x;*/
+/*        const T* src0 = src + (2 * line + 0) * dst_cols;*/
+/*        const T* src1 = src + (2 * line + 1) * dst_cols;*/
+/*        T* dst0 = dst + line * dst_cols;*/
+
+/*        for(; item < dst_cols; item += blockDim.x){*/
+/*            T s0 = src0[item];*/
+/*            T s1 = src1[item];*/
+
+/*            dst0[item] = sqrt(s0*s0 + s1*s1);*/
+/*        }*/
+/*    }else{*/
+/*        unsigned int item = blockIdx.x;*/
+/*        unsigned int line = threadIdx.x;*/
+/*        const T* src0 = src + (2*dst_rows * item + 0);*/
+/*        const T* src1 = src + (2*dst_rows * item + 1);*/
+/*        T* dst0 = dst + item * dst_rows;*/
+
+/*        for(; line < dst_rows; line += blockDim.x){*/
+/*            T s0 = src0[2*line];*/
+/*            T s1 = src1[2*line];*/
+
+/*            dst0[line] = sqrt(s0*s0 + s1*s1);*/
+/*        }*/
+/*    }*/
+/*}*/
+
+
+/*template<class V, class M, class T>*/
+/*    void */
+/*    convolve1d(tensor<V,M, T>& dst, const tensor<V,M, T>& img, const tensor<V,M, T>& filter){*/
+
+/*        unsigned int nImg     = img.shape(0);*/
+/*        unsigned int nImgPix  = img.shape(1);*/
+/*        cuvAssert(filter.ndim()==2);*/
+/*        unsigned int nFiltPix  = filter.shape(0);*/
+/*        unsigned int nFilt     = filter.shape(1);*/
+        
+/*        cuvAssert(dst.shape(1)==nFilt);*/
+/*        unsigned int nModules = dst.shape(2);*/
+/*        cuvAssert(dst.shape(0)==nImg);*/
+
+/*        if(IsSame<M,host_memory_space>::Result::value){*/
+/*            for(unsigned int img_id = 0; img_id < nImg; img_id++){*/
+/*                for(unsigned int flt_id = 0; flt_id < n_Filt; flt_id++){*/
+/*                    for(unsigned int mod_id = 0; mod_id < nModules; mod_id++){*/
+/*                        float sum = 0;*/
+/*                        for(unsigned int fltpix_id = 0; fltpix_id < nFiltPix; fltpix_id++){*/
+/*                            int index = mod_id + fltpix_id;*/
+/*                            // wrap around*/
+/*                            if (index > nImgPix){*/
+/*                                index = nImgPix - index;*/
+/*                            }*/
+
+/*                            sum += src(img_id, index) * filter(fltpix_id, flt_id);*/
+/*                        }*/
+/*                        dst(img_id, flt_id, mod_id) = sum;*/
+/*                    }*/
+/*                }*/
+/*            }*/
+/*        }*/
+/*        else{  // run on device*/
+            
+/*        }*/
+/*    }*/
+
+
+
+
 template<class V, class M, class T>
     void 
     convolve2d(tensor<V,M, T>& dst, 
@@ -677,106 +760,144 @@ void response_norm_cross_map_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>&
 }
 
 
-/*template<bool FirstDim, class T>*/
-template<class T>
+template<bool FirstDim, class T>
 __global__
-void pairwise_norm_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned int dst_cols, bool FirstDim){
+void pairwise_norm_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned int dst_cols, unsigned int subspace_size){
     if(FirstDim){
         unsigned int line = blockIdx.x;
         unsigned int item = threadIdx.x;
-        const T* src0 = src + (2 * line + 0) * dst_cols;
-        const T* src1 = src + (2 * line + 1) * dst_cols;
         T* dst0 = dst + line * dst_cols;
+        const T* src_ptr = src + (subspace_size * line) * dst_cols;
 
         for(; item < dst_cols; item += blockDim.x){
-            T s0 = src0[item];
-            T s1 = src1[item];
-
-            dst0[item] = sqrt(s0*s0 + s1*s1);
+            unsigned int index = item;
+            T squared_sum = src_ptr[index] * src_ptr[index];
+            for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+                index += dst_cols;
+                T s = src_ptr[index];
+                squared_sum += s * s;
+            }
+            dst0[item] = sqrt(squared_sum);
         }
     }else{
         unsigned int item = blockIdx.x;
         unsigned int line = threadIdx.x;
-        const T* src0 = src + (2*dst_rows * item + 0);
-        const T* src1 = src + (2*dst_rows * item + 1);
         T* dst0 = dst + item * dst_rows;
+        const T* src_ptr = src + (subspace_size*dst_rows * item);
 
         for(; line < dst_rows; line += blockDim.x){
-            T s0 = src0[2*line];
-            T s1 = src1[2*line];
+            unsigned int index = subspace_size*line;
+            T s0 = src_ptr[index];
+            T squared_sum =  s0*s0;
+            for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+                index ++;
+                T s = src_ptr[index];
+                squared_sum +=  s*s;
+            }
 
-            dst0[line] = sqrt(s0*s0 + s1*s1);
+            dst0[line] = sqrt(squared_sum);
         }
     }
 }
 
-/*template<bool FirstDim, class T>*/
-template<class T>
+template<bool FirstDim, class T>
 __global__
-void pairwise_norm_grad_kernel(T* dst, const T* src, const T* delta, unsigned int dst_rows, unsigned int dst_cols, bool FirstDim){
+void pairwise_norm_grad_kernel(T* dst, const T* src, const T* delta, unsigned int dst_rows, unsigned int dst_cols, unsigned int subspace_size){
     if(FirstDim){
         unsigned int line = blockIdx.x;
         unsigned int item = threadIdx.x;
-        const T* src0 = src + (2 * line + 0) * dst_cols;
-        const T* src1 = src + (2 * line + 1) * dst_cols;
-        T* dst0 = dst + (2 * line + 0) * dst_cols;
-        T* dst1 = dst + (2 * line + 1) * dst_cols;
+        const T* src_ptr = src + (subspace_size * line) * dst_cols;
+        T* dst_ptr = dst + (subspace_size * line) * dst_cols;
         const T* d0  = delta + line * dst_cols;
 
         for(; item < dst_cols; item += blockDim.x){
-            T s0 = src0[item];
-            T s1 = src1[item];
-            T p  = d0[item] / (sqrt(s0*s0 + s1*s1) + 0.0001f);
+            unsigned int index = item;
+            T s = src_ptr[index];
+            float squared_sum = s*s;
+            // calculates squared sum
+            for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+                index += dst_cols;
+                s = src_ptr[index];
+                squared_sum += s*s;
+            }
 
-            dst0[item] = p * s0;
-            dst1[item] = p * s1;
+           T p  = d0[item] / (sqrt(squared_sum) + 0.0001f);
+
+           // updates dst for each feature in subspace 
+           index = item;
+           dst_ptr[index] = p * src_ptr[index];
+           for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+               index += dst_cols;
+               dst_ptr[index] = p * src_ptr[index];
+           }
         }
     }else{
         unsigned int item = blockIdx.x;
         unsigned int line = threadIdx.x;
-        const T* src0 = src + (item * 2*dst_rows + 0);
-        const T* src1 = src + (item * 2*dst_rows + 1);
-        T* dst0 = dst + (item * 2*dst_rows + 0);
-        T* dst1 = dst + (item * 2*dst_rows + 1);
+        const T* src_ptr = src + (item * subspace_size*dst_rows);
+        T* dst_ptr = dst + (item * subspace_size*dst_rows);
         const T* d0  = delta + item * dst_rows;
         
         for(; line < dst_rows; line += blockDim.x){
-            T s0 = src0[2*line];
-            T s1 = src1[2*line];
-            T p  = d0[line] / (sqrt(s0*s0 + s1*s1) + 0.0001f);
+            unsigned int index = subspace_size*line;
+            T s = src_ptr[index];
+            float squared_sum = s * s;
+            for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+                index++;
+                s = src_ptr[index];
+                squared_sum += s * s;
+            }
 
-            dst0[2*line] = p * s0;
-            dst1[2*line] = p * s1;
+            T p  = d0[line] / (sqrt(squared_sum) + 0.0001f);
+
+            index = subspace_size*line;
+            dst_ptr[index] = p * src_ptr[index];
+            for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+                index++;
+                dst_ptr[index] = p * src_ptr[index];
+            }
         }
     }
 }
 
 
 template<class V,class M, class T>
-    void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim){
+    void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim, unsigned int subspace_size){
         assert(dim == 0 || dim == src.ndim()-1);
         unsigned int items = dst.size() / dst.shape(dim);
         unsigned int lines = dst.shape(dim);
 
-        cuvAssert(dst.shape(dim)==src.shape(dim)/2);
+        cuvAssert(dst.shape(dim)==src.shape(dim)/subspace_size);
+        cuvAssert(src.shape(dim) % subspace_size == 0)
 
         if(IsSame<M,host_memory_space>::Result::value){
             if(dim == 0){
                 for(unsigned int line = 0; line < lines; line++){
-                    const V* src_ptr0 = src.ptr() + (2 * line + 0) * items;
-                    const V* src_ptr1 = src.ptr() + (2 * line + 1) * items;
                     V* dst_ptr = dst.ptr() + line * items;
+                    const V* src_ptr = src.ptr() + (subspace_size * line) * items;
+
                     for(unsigned int i=0; i < items; i++){
-                        dst_ptr[i] = sqrt( src_ptr0[i] * src_ptr0[i] + src_ptr1[i] * src_ptr1[i] );
+                        unsigned int index = i;
+                        float squared_sum = src_ptr[index] * src_ptr[index];
+                        for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+                            index += items;
+                            squared_sum += src_ptr[index] * src_ptr[index];
+                        }
+                        dst_ptr[i] = sqrt(squared_sum);
                     }
                 }
             }else{
                 for(unsigned int item = 0; item < items; item++){
-                    const V* src_ptr0 = src.ptr() + (item * 2*lines + 0);
-                    const V* src_ptr1 = src.ptr() +  (item * 2*lines + 1);
                     V* dst_ptr = dst.ptr() + item * lines;
+                    const V* src_ptr = src.ptr() + (item * subspace_size * lines);
                     for(unsigned int i = 0; i < lines; i++){
-                        dst_ptr[i] = sqrt( src_ptr0[2*i] * src_ptr0[2*i] + src_ptr1[2*i] * src_ptr1[2*i] );
+                        unsigned int index = subspace_size*i;
+                        float squared_sum = src_ptr[index] * src_ptr[index];
+                        for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+                            index++;
+                            squared_sum += src_ptr[index] * src_ptr[index];
+                        }
+                        dst_ptr[i] = sqrt(squared_sum);
                     }
                 }
                 
@@ -786,55 +907,81 @@ template<class V,class M, class T>
             // device: run kernel
             unsigned int num_threads = min(512, int(32 * ceil( items / 32. )));
 
-            cuvAssert(lines < 1024);
-            unsigned int num_blocks  = min(1024, lines);
+            /*cuvAssert(lines < 1024);*/
+            /*unsigned int num_blocks  = min(1024, lines);*/
+            unsigned int num_blocks  = lines;
             
             if(dim != 0){
                 num_threads = min(512, int(32 * ceil( lines / 32. )));
-                num_blocks  = min(1024, items);
+                /*num_blocks  = min(1024, items);*/
+                num_blocks  = items;
             }
-            bool first_dim = dim == 0;
-            /*pairwise_norm_kernel<first_dim><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items);*/
-            pairwise_norm_kernel<<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, first_dim);
+            if(dim == 0){
+               pairwise_norm_kernel<true><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+            }else{
+               pairwise_norm_kernel<false><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+            }
             cuvSafeCall(cudaThreadSynchronize());
         }
     }
 
 template<class V,class M, class T>
-    void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, unsigned int dim){
+    void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, unsigned int dim, unsigned int subspace_size){
         assert(dim == 0 || dim == src.ndim()-1);
         assert(dst.shape()==src.shape());
-        cuvAssert(delta.shape(dim)==src.shape(dim)/2);
+        cuvAssert(delta.shape(dim)==src.shape(dim)/subspace_size);
 
         unsigned int items = delta.size() / delta.shape(dim);
         unsigned int lines = delta.shape(dim);
         if(IsSame<M,host_memory_space>::Result::value){
-
             if(dim == 0){
                 for(unsigned int line = 0; line < lines; line++){
-                    const V* src_ptr0 = src.ptr() + (2 * line + 0) * items;
-                    const V* src_ptr1 = src.ptr() + (2 * line + 1) * items;
-                    V* dst_ptr0 = dst.ptr() + (2 * line + 0) * items;
-                    V* dst_ptr1 = dst.ptr() + (2 * line + 1) * items;
-                    const V* d_ptr  = delta.ptr() + line * items;
-                    for(unsigned int i=0; i < items; i++){
-                        float f = d_ptr[i] / (sqrt(src_ptr0[i]*src_ptr0[i] + src_ptr1[i]*src_ptr1[i]) + .0001f);
-                        dst_ptr0[i] = f * src_ptr0[i];
-                        dst_ptr1[i] = f * src_ptr1[i];
-                    }
+                   const V* d_ptr  = delta.ptr() + line * items;
+                   const V* src_ptr = src.ptr() + (subspace_size * line) * items;
+                   V* dst_ptr = dst.ptr() + (subspace_size * line) * items;
+
+                   for(unsigned int i=0; i < items; i++){
+                       unsigned int index = i;
+                       float squared_sum = src_ptr[index] * src_ptr[index];
+                       // calculates squared sum
+                       for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+                           index += items;
+                           squared_sum += src_ptr[index] * src_ptr[index];
+                       }
+
+                       float f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
+                       // updates dst for each feature in subspace 
+                       index = i;
+                       dst_ptr[index] = f * src_ptr[index];
+                       for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+                           index += items;
+                           dst_ptr[index] = f * src_ptr[index];
+                       }
+                   }
                 }
+
             }else{
                 for(unsigned int item = 0; item < items; item++){
-                    const V* src_ptr0 = src.ptr() + (item * 2*lines + 0);
-                    const V* src_ptr1 = src.ptr() + (item * 2*lines + 1);
+                    const V* src_ptr = src.ptr() + (item * subspace_size * lines);
 
-                    V* dst_ptr0 = dst.ptr() + (item * 2*lines + 0);
-                    V* dst_ptr1 = dst.ptr() + (item * 2*lines + 1);
+                    V* dst_ptr = dst.ptr() + (item * subspace_size * lines);
                     const V* d_ptr  = delta.ptr() + item * lines;
                     for(unsigned int i=0; i < lines; i++){
-                        float f = d_ptr[i] / (sqrt(src_ptr0[2*i]*src_ptr0[2*i] + src_ptr1[2*i]*src_ptr1[2*i]) + .0001f);
-                        dst_ptr0[2*i] = f * src_ptr0[2*i];
-                        dst_ptr1[2*i] = f * src_ptr1[2*i];
+                        unsigned int index = subspace_size*i;
+                        float squared_sum = src_ptr[index] * src_ptr[index];
+                        for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+                            index++;
+                            squared_sum += src_ptr[index] * src_ptr[index];
+                        }
+
+                        float f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
+
+                        index = subspace_size*i;
+                        dst_ptr[index] = f * src_ptr[index];
+                        for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
+                            index++;
+                            dst_ptr[index] = f * src_ptr[index];
+                        }
                     }
                 }
             }
@@ -842,17 +989,21 @@ template<class V,class M, class T>
             // device: run kernel
             unsigned int num_threads = min(512, int(32 * ceil( items / 32. )));
 
-            cuvAssert(lines < 1024);
-            unsigned int num_blocks  = min(1024, lines);
+            /*cuvAssert(lines < 1024);*/
+            /*unsigned int num_blocks  = min(1024, lines);*/
+            unsigned int num_blocks  = lines;
             
             if(dim != 0){
                 num_threads = min(512, int(32 * ceil( lines / 32. )));
-                num_blocks  = min(1024, items);
+                /*num_blocks  = min(1024, items);*/
+                num_blocks  = items;
             }
 
-            bool first_dim = dim == 0;
-            /*pairwise_norm_grad_kernel<first_dim><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(), lines, items);*/
-            pairwise_norm_grad_kernel<<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(), lines, items, first_dim);
+            if(dim == 0){
+               pairwise_norm_grad_kernel<true><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(), lines, items, subspace_size);
+            }else{
+               pairwise_norm_grad_kernel<false><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(), lines, items, subspace_size);
+            }
             cuvSafeCall(cudaThreadSynchronize());
         }
     }
@@ -861,8 +1012,8 @@ template<class V,class M, class T>
 #define  TENS(V,M,T)       tensor<V,M,T>
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
-template void pairwise_norm<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int); \
-template void pairwise_norm_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int); \
+template void pairwise_norm<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int); \
+template void pairwise_norm_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int); \
 template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void crop<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int); \
