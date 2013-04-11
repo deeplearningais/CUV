@@ -760,9 +760,11 @@ void response_norm_cross_map_grad(tensor<V,M,T>& input_gradients, tensor<V,M,T>&
 }
 
 
-template<bool FirstDim, class T>
+
+
+template<bool FirstDim, tuplewise_op_functor to,class T>
 __global__
-void pairwise_norm_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned int dst_cols, unsigned int subspace_size){
+void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned int dst_cols, unsigned int subspace_size){
     if(FirstDim){
         unsigned int line = blockIdx.x;
         unsigned int item = threadIdx.x;
@@ -774,9 +776,19 @@ void pairwise_norm_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned 
             unsigned int end = item + subspace_size * dst_cols;
             for (unsigned int index = item; index <  end; index+=dst_cols){
                 T s = src_ptr[index];
-                squared_sum += s * s;
+                switch(to){
+                    case TO_NORM:
+                        squared_sum += s * s;
+                        break;
+                    case TO_MAX:
+                        squared_sum = max(s, squared_sum);
+                        break;
+                }
             }
-            dst0[item] = sqrt(squared_sum);
+            if(to == TO_NORM)
+                dst0[item] = sqrt(squared_sum);
+            else
+                dst0[item] = squared_sum;
         }
     }else{
         unsigned int item = blockIdx.x;
@@ -786,20 +798,29 @@ void pairwise_norm_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned 
 
         for(; line < dst_rows; line += blockDim.x){
             T squared_sum =  0.f;
-            unsigned int end = index < subspace_size*(line+1);
-            for (unsigned int index = subspace_size*line; end; index++){
+            unsigned int end =  subspace_size*(line+1);
+            for (unsigned int index = subspace_size*line; index < end; index++){
                 T s = src_ptr[index];
-                squared_sum +=  s*s;
+                switch(to){
+                    case TO_NORM:
+                        squared_sum += s * s;
+                        break;
+                    case TO_MAX:
+                        squared_sum = max(s, squared_sum);
+                        break;
+                }
             }
-
-            dst0[line] = sqrt(squared_sum);
+            if(to == TO_NORM)
+                dst0[line] = sqrt(squared_sum);
+            else
+                dst0[line] = squared_sum;
         }
     }
 }
 
-template<bool FirstDim, class T>
+template<bool FirstDim, tuplewise_op_functor to, class T>
 __global__
-void pairwise_norm_grad_kernel(T* dst, const T* src, const T* delta, unsigned int dst_rows, unsigned int dst_cols, unsigned int subspace_size){
+void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int dst_rows, unsigned int dst_cols, unsigned int subspace_size){
     if(FirstDim){
         unsigned int line = blockIdx.x;
         unsigned int item = threadIdx.x;
@@ -807,20 +828,40 @@ void pairwise_norm_grad_kernel(T* dst, const T* src, const T* delta, unsigned in
         T* dst_ptr = dst + (subspace_size * line) * dst_cols;
         const T* d0  = delta + line * dst_cols;
 
+        T p;
         for(; item < dst_cols; item += blockDim.x){
             // calculates squared sum
             float squared_sum = 0.f; 
             unsigned int end = item + subspace_size * dst_cols;
             for (unsigned int index = item; index < end; index += dst_cols){
                 T s = src_ptr[index];
-                squared_sum += s*s;
+                switch(to){
+                    case TO_NORM:
+                        squared_sum += s*s;
+                        break;
+                    case TO_MAX:
+                        if (s > squared_sum)
+                            squared_sum  =  index;
+                        break;
+                }
             }
-
-            T p  = d0[item] / (sqrt(squared_sum) + 0.0001f);
+            
+            if (to == TO_NORM)
+                 p  = d0[item] / (sqrt(squared_sum) + 0.0001f);
 
             // updates dst for each feature in subspace 
             for (unsigned int index = item; index < end; index+= dst_cols){
-                dst_ptr[index] = p * src_ptr[index];
+                switch(to){
+                    case TO_NORM:
+                        dst_ptr[index] = p * src_ptr[index];
+                        break;
+                    case TO_MAX:
+                        if (squared_sum == index)
+                            dst_ptr[index] = 1;
+                        else 
+                            dst_ptr[index] = 0;
+                        break;
+                }
             }
         }
     }else{
@@ -829,80 +870,133 @@ void pairwise_norm_grad_kernel(T* dst, const T* src, const T* delta, unsigned in
         const T* src_ptr = src + (item * subspace_size*dst_rows);
         T* dst_ptr = dst + (item * subspace_size*dst_rows);
         const T* d0  = delta + item * dst_rows;
-        
+        T p;
+
         for(; line < dst_rows; line += blockDim.x){
             float squared_sum = 0.f;
             unsigned int end = subspace_size*(line+1);
 
             for (unsigned int index = subspace_size*line; index < end; index++){
                 T s = src_ptr[index];
-                squared_sum += s * s;
+                switch(to){
+                    case TO_NORM:
+                        squared_sum += s*s;
+                        break;
+                    case TO_MAX:
+                        if (s > squared_sum)
+                            squared_sum  =  index;
+                        break;
+                }
             }
 
-            T p  = d0[line] / (sqrt(squared_sum) + 0.0001f);
+            if (to == TO_NORM)
+                p  = d0[line] / (sqrt(squared_sum) + 0.0001f);
 
             for (unsigned int index = subspace_size*line; index < end; index++){
-                dst_ptr[index] = p * src_ptr[index];
+                switch(to){
+                    case TO_NORM:
+                        dst_ptr[index] = p * src_ptr[index];
+                        break;
+                    case TO_MAX:
+                        if (squared_sum == index)
+                            dst_ptr[index] = 1;
+                        else 
+                            dst_ptr[index] = 0;
+                        break;
+                }
             }
         }
     }
 }
 
 
-enum tuplewise_op_functor{
-    TO_NORM,
-    TO_MAX
-};
+
+
+
+template<bool FirstDim, tuplewise_op_functor to, class T>
+    void tuplewise_op_host(T* dst, const T* src, unsigned int lines, unsigned int items, unsigned int subspace_size){
+        if(FirstDim){
+            for(unsigned int line = 0; line < lines; line++){
+                T* dst_ptr = dst + line * items;
+                const T* src_ptr = src + (subspace_size * line) * items;
+
+                for(unsigned int i=0; i < items; i++){
+                    float squared_sum = 0.f;
+                    for (unsigned int index = i; index < i + subspace_size * items; index += items){
+                        switch(to){
+                            case TO_NORM:
+                                squared_sum += src_ptr[index] * src_ptr[index];
+                                break;
+                            case TO_MAX:
+                                squared_sum = max(src_ptr[index], squared_sum);
+                                break;
+                        }
+                    }
+
+                    if(to == TO_NORM)
+                        dst_ptr[i] = sqrt(squared_sum);
+                    else
+                        dst_ptr[i] = squared_sum;
+                }
+            }
+        }else{
+            for(unsigned int item = 0; item < items; item++){
+                T* dst_ptr = dst + item * lines;
+                const T* src_ptr = src + (item * subspace_size * lines);
+                for(unsigned int i = 0; i < lines; i++){
+                    float squared_sum = 0.f;
+                    for (unsigned int index = subspace_size*i; index < subspace_size*(i+1); index++){
+                        switch(to){
+                            case TO_NORM:
+                                squared_sum += src_ptr[index] * src_ptr[index];
+                                break;
+                            case TO_MAX:
+                                squared_sum = max(src_ptr[index], squared_sum);
+                                break;
+                        }
+                    }
+                    if(to == TO_NORM)
+                        dst_ptr[i] = sqrt(squared_sum);
+                    else
+                        dst_ptr[i] = squared_sum;
+                }
+            }
+
+        }
+
+    }
+
 
 template<class V,class M, class T>
-    void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim, unsigned int subspace_size, tuplewise_op_functor to){
+    void tuplewise_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim, unsigned int subspace_size, tuplewise_op_functor to){
         assert(dim == 0 || dim == src.ndim()-1);
         unsigned int items = dst.size() / dst.shape(dim);
         unsigned int lines = dst.shape(dim);
 
         cuvAssert(dst.shape(dim)==src.shape(dim)/subspace_size);
-        cuvAssert(src.shape(dim) % subspace_size == 0)
+        cuvAssert(src.shape(dim) % subspace_size == 0);
+
+        
+
 
         if(IsSame<M,host_memory_space>::Result::value){
-            if(dim == 0){
-                for(unsigned int line = 0; line < lines; line++){
-                    V* dst_ptr = dst.ptr() + line * items;
-                    const V* src_ptr = src.ptr() + (subspace_size * line) * items;
-
-                    for(unsigned int i=0; i < items; i++){
-                        float squared_sum = 0.f;
-                        for (unsigned int index = i; index < i + subspace_size * items; index += items){
-                            switch(to){
-                                case TO_NORM:
-                                    squared_sum += src_ptr[index] * src_ptr[index];
-                                    break;
-                                case TO_MAX:
-                                    squared_sum = max(src_ptr[index], squared_sum);
-                                    break;
-                            }
-                        }
-
-                        if(to == TO_NORM)
-                            dst_ptr[i] = sqrt(squared_sum);
-                        else
-                            dst_ptr[i] = squared_sum;
+            switch(to){
+                case TO_NORM:
+                    if(dim == 0){
+                        tuplewise_op_host<true, TO_NORM>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+                    }else{
+                        tuplewise_op_host<false, TO_NORM>(dst.ptr(), src.ptr(), lines, items, subspace_size);
                     }
-                }
-            }else{
-                for(unsigned int item = 0; item < items; item++){
-                    V* dst_ptr = dst.ptr() + item * lines;
-                    const V* src_ptr = src.ptr() + (item * subspace_size * lines);
-                    for(unsigned int i = 0; i < lines; i++){
-                        float squared_sum = 0.f;
-                        for (unsigned int index = subspace_size*i; index < subspace_size*(i+1); index++){
-                            squared_sum += src_ptr[index] * src_ptr[index];
-                        }
-                        dst_ptr[i] = sqrt(squared_sum);
+                    break;
+                case TO_MAX:
+                    if(dim == 0){
+                        tuplewise_op_host<true, TO_MAX>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+
+                    }else{
+                        tuplewise_op_host<false, TO_MAX>(dst.ptr(), src.ptr(), lines, items, subspace_size);
                     }
-                }
-                
+                    break;
             }
-
         }else{
             // device: run kernel
             unsigned int num_threads = min(512, int(32 * ceil( items / 32. )));
@@ -916,17 +1010,114 @@ template<class V,class M, class T>
                 /*num_blocks  = min(1024, items);*/
                 num_blocks  = items;
             }
-            if(dim == 0){
-               pairwise_norm_kernel<true><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
-            }else{
-               pairwise_norm_kernel<false><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+
+            switch(to){
+                case TO_NORM:
+                    if(dim == 0){
+                        tuplewise_op_kernel<true, TO_NORM><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+                    }else{
+                        tuplewise_op_kernel<false, TO_NORM><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+
+                    }
+                    break;
+                case TO_MAX:
+                    if(dim == 0){
+                        tuplewise_op_kernel<true, TO_MAX><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+                    }else{
+                        tuplewise_op_kernel<false, TO_MAX><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+
+                    }
+                    break;
             }
             cuvSafeCall(cudaThreadSynchronize());
         }
     }
 
+
+template<bool FirstDim, tuplewise_op_functor to,class T>
+void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int lines, unsigned int items, unsigned int subspace_size){
+    if(FirstDim){
+        for(unsigned int line = 0; line < lines; line++){
+            const T* d_ptr  = delta + line * items;
+            const T* src_ptr = src + (subspace_size * line) * items;
+            T* dst_ptr = dst + (subspace_size * line) * items;
+
+            for(unsigned int i=0; i < items; i++){
+                float squared_sum = 0;
+                // calculates squared sum
+                for (unsigned int index = i; index < i + subspace_size * items; index+= items){
+                    switch(to){
+                        case TO_NORM:
+                            squared_sum += src_ptr[index] * src_ptr[index];
+                            break;
+                        case TO_MAX:
+                            if (src_ptr[index] > squared_sum)
+                                squared_sum  =  index;
+                            break;
+                    }
+                }
+
+                float f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
+                // updates dst for each feature in subspace 
+                for (unsigned int index = i; index < i + subspace_size * items; index+= items){
+                    switch(to){
+                        case TO_NORM:
+                            dst_ptr[index] = f * src_ptr[index];
+                            break;
+                        case TO_MAX:
+                            if (squared_sum == index)
+                                dst_ptr[index] = 1;
+                            else 
+                                dst_ptr[index] = 0;
+                            break;
+                    }
+                }
+            }
+        }
+    }else{
+        for(unsigned int item = 0; item < items; item++){
+            const T* src_ptr = src + (item * subspace_size * lines);
+
+            T* dst_ptr = dst + (item * subspace_size * lines);
+            const T* d_ptr  = delta + item * lines;
+            for(unsigned int i=0; i < lines; i++){
+                float squared_sum = 0.f;
+                unsigned int end = subspace_size*(i+1);
+                for (unsigned int index = subspace_size*i; index < end; index++){
+                    switch(to){
+                        case TO_NORM:
+                            squared_sum += src_ptr[index] * src_ptr[index];
+                            break;
+                        case TO_MAX:
+                            if (src_ptr[index] > squared_sum)
+                                squared_sum  =  index;
+                            break;
+                    }
+                }
+
+                float f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
+
+                for (unsigned int index = subspace_size*i; index < end; index++){
+                    switch(to){
+                        case TO_NORM:
+                            dst_ptr[index] = f * src_ptr[index];
+                            break;
+                        case TO_MAX:
+                            if (squared_sum == index)
+                                dst_ptr[index] = 1;
+                            else 
+                                dst_ptr[index] = 0;
+                            break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 template<class V,class M, class T>
-    void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, unsigned int dim, unsigned int subspace_size){
+    void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, unsigned int dim, unsigned int subspace_size, tuplewise_op_functor to){
         assert(dim == 0 || dim == src.ndim()-1);
         assert(dst.shape()==src.shape());
         cuvAssert(delta.shape(dim)==src.shape(dim)/subspace_size);
@@ -934,47 +1125,22 @@ template<class V,class M, class T>
         unsigned int items = delta.size() / delta.shape(dim);
         unsigned int lines = delta.shape(dim);
         if(IsSame<M,host_memory_space>::Result::value){
-            if(dim == 0){
-                for(unsigned int line = 0; line < lines; line++){
-                   const V* d_ptr  = delta.ptr() + line * items;
-                   const V* src_ptr = src.ptr() + (subspace_size * line) * items;
-                   V* dst_ptr = dst.ptr() + (subspace_size * line) * items;
-
-                   for(unsigned int i=0; i < items; i++){
-                       float squared_sum = 0;
-                       // calculates squared sum
-                       for (unsigned int index = i; index < i + subspace_size * items; index+= items){
-                           squared_sum += src_ptr[index] * src_ptr[index];
-                       }
-
-                       float f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
-                       // updates dst for each feature in subspace 
-                       for (unsigned int index = i; index < i + subspace_size * items; index+= items){
-                           dst_ptr[index] = f * src_ptr[index];
-                       }
-                   }
-                }
-
-            }else{
-                for(unsigned int item = 0; item < items; item++){
-                    const V* src_ptr = src.ptr() + (item * subspace_size * lines);
-
-                    V* dst_ptr = dst.ptr() + (item * subspace_size * lines);
-                    const V* d_ptr  = delta.ptr() + item * lines;
-                    for(unsigned int i=0; i < lines; i++){
-                        float squared_sum = 0.f;
-                        unsigned int end = subspace_size*(i+1);
-                        for (unsigned int index = subspace_size*i; index < end; index++){
-                            squared_sum += src_ptr[index] * src_ptr[index];
-                        }
-
-                        float f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
-
-                        for (unsigned int index = subspace_size*i; index < end; index++){
-                            dst_ptr[index] = f * src_ptr[index];
-                        }
+            switch(to){
+                case TO_NORM:
+                    if(dim == 0){
+                        tuplewise_op_grad_host<true, TO_NORM>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
+                    }else{
+                        tuplewise_op_grad_host<false, TO_NORM>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
                     }
-                }
+                    break;
+                case TO_MAX:
+                    if(dim == 0){
+                        tuplewise_op_grad_host<true, TO_MAX>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
+
+                    }else{
+                        tuplewise_op_grad_host<false, TO_MAX>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
+                    }
+                    break;
             }
         }else{
             // device: run kernel
@@ -990,11 +1156,24 @@ template<class V,class M, class T>
                 num_blocks  = items;
             }
 
-            if(dim == 0){
-               pairwise_norm_grad_kernel<true><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(), lines, items, subspace_size);
-            }else{
-               pairwise_norm_grad_kernel<false><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(), lines, items, subspace_size);
+            switch(to){
+                case TO_NORM:
+                    if(dim == 0){
+                        tuplewise_op_grad_kernel<true, TO_NORM><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
+                    }else{
+                        tuplewise_op_grad_kernel<false, TO_NORM><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
+                    }
+                    break;
+                case TO_MAX:
+                    if(dim == 0){
+                        tuplewise_op_grad_kernel<true, TO_MAX><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
+
+                    }else{
+                        tuplewise_op_grad_kernel<false, TO_MAX><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
+                    }
+                    break;
             }
+
             cuvSafeCall(cudaThreadSynchronize());
         }
     }
@@ -1003,8 +1182,8 @@ template<class V,class M, class T>
 #define  TENS(V,M,T)       tensor<V,M,T>
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
-template void pairwise_norm<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int); \
-template void pairwise_norm_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int); \
+template void tuplewise_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor); \
+template void tuplewise_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor); \
 template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void crop<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int); \

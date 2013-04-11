@@ -271,6 +271,10 @@ void crop(tensor<V,M,T>& cropped, const tensor<V,M,T>& images, int startY, int s
 template<class V, class M, class T>
 void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float scale);
 
+enum tuplewise_op_functor{
+    TO_NORM,
+    TO_MAX
+};
 /**
  * square the input, then add every map pair and take the square root.
  *
@@ -282,7 +286,7 @@ void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float sca
  * filters, then this calculates the norm.
  */
 template<class V, class M, class T>
-void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim, unsigned int subspace_size = 2);
+void tuplewise_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim, unsigned int subspace_size = 2, tuplewise_op_functor = TO_NORM);
 
 /**
  * calculates the gradient of pairwise_norm.
@@ -302,7 +306,7 @@ void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int di
  * 
  */
 template<class V, class M, class T>
-void pairwise_norm_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int subspace_size = 2);
+void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int subspace_size = 2, tuplewise_op_functor to = TO_NORM);
 }
 /** @} */ //end group convolution_ops
 }
