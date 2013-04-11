@@ -440,7 +440,7 @@ template<>
         cuvAssert(target.shape(3) == nImg);
 
         unsigned int poolSize = nImgPixY / nOutPixY;
-        cuvAssert(poolSize*nOutPixY == nImgPixY);
+        /*cuvAssert(poolSize*nOutPixY == nImgPixY);*/
 
         NVMatrix nv_target NVView4D(target);
         NVMatrix nv_images NVView4D(images);
@@ -770,10 +770,9 @@ void pairwise_norm_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned 
         const T* src_ptr = src + (subspace_size * line) * dst_cols;
 
         for(; item < dst_cols; item += blockDim.x){
-            unsigned int index = item;
-            T squared_sum = src_ptr[index] * src_ptr[index];
-            for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-                index += dst_cols;
+            T squared_sum = 0.f;
+            unsigned int end = item + subspace_size * dst_cols;
+            for (unsigned int index = item; index <  end; index+=dst_cols){
                 T s = src_ptr[index];
                 squared_sum += s * s;
             }
@@ -786,11 +785,9 @@ void pairwise_norm_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned 
         const T* src_ptr = src + (subspace_size*dst_rows * item);
 
         for(; line < dst_rows; line += blockDim.x){
-            unsigned int index = subspace_size*line;
-            T s0 = src_ptr[index];
-            T squared_sum =  s0*s0;
-            for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-                index ++;
+            T squared_sum =  0.f;
+            unsigned int end = index < subspace_size*(line+1);
+            for (unsigned int index = subspace_size*line; end; index++){
                 T s = src_ptr[index];
                 squared_sum +=  s*s;
             }
@@ -811,25 +808,20 @@ void pairwise_norm_grad_kernel(T* dst, const T* src, const T* delta, unsigned in
         const T* d0  = delta + line * dst_cols;
 
         for(; item < dst_cols; item += blockDim.x){
-            unsigned int index = item;
-            T s = src_ptr[index];
-            float squared_sum = s*s;
             // calculates squared sum
-            for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-                index += dst_cols;
-                s = src_ptr[index];
+            float squared_sum = 0.f; 
+            unsigned int end = item + subspace_size * dst_cols;
+            for (unsigned int index = item; index < end; index += dst_cols){
+                T s = src_ptr[index];
                 squared_sum += s*s;
             }
 
-           T p  = d0[item] / (sqrt(squared_sum) + 0.0001f);
+            T p  = d0[item] / (sqrt(squared_sum) + 0.0001f);
 
-           // updates dst for each feature in subspace 
-           index = item;
-           dst_ptr[index] = p * src_ptr[index];
-           for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-               index += dst_cols;
-               dst_ptr[index] = p * src_ptr[index];
-           }
+            // updates dst for each feature in subspace 
+            for (unsigned int index = item; index < end; index+= dst_cols){
+                dst_ptr[index] = p * src_ptr[index];
+            }
         }
     }else{
         unsigned int item = blockIdx.x;
@@ -839,21 +831,17 @@ void pairwise_norm_grad_kernel(T* dst, const T* src, const T* delta, unsigned in
         const T* d0  = delta + item * dst_rows;
         
         for(; line < dst_rows; line += blockDim.x){
-            unsigned int index = subspace_size*line;
-            T s = src_ptr[index];
-            float squared_sum = s * s;
-            for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-                index++;
-                s = src_ptr[index];
+            float squared_sum = 0.f;
+            unsigned int end = subspace_size*(line+1);
+
+            for (unsigned int index = subspace_size*line; index < end; index++){
+                T s = src_ptr[index];
                 squared_sum += s * s;
             }
 
             T p  = d0[line] / (sqrt(squared_sum) + 0.0001f);
 
-            index = subspace_size*line;
-            dst_ptr[index] = p * src_ptr[index];
-            for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-                index++;
+            for (unsigned int index = subspace_size*line; index < end; index++){
                 dst_ptr[index] = p * src_ptr[index];
             }
         }
@@ -861,8 +849,13 @@ void pairwise_norm_grad_kernel(T* dst, const T* src, const T* delta, unsigned in
 }
 
 
+enum tuplewise_op_functor{
+    TO_NORM,
+    TO_MAX
+};
+
 template<class V,class M, class T>
-    void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim, unsigned int subspace_size){
+    void pairwise_norm(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim, unsigned int subspace_size, tuplewise_op_functor to){
         assert(dim == 0 || dim == src.ndim()-1);
         unsigned int items = dst.size() / dst.shape(dim);
         unsigned int lines = dst.shape(dim);
@@ -877,13 +870,22 @@ template<class V,class M, class T>
                     const V* src_ptr = src.ptr() + (subspace_size * line) * items;
 
                     for(unsigned int i=0; i < items; i++){
-                        unsigned int index = i;
-                        float squared_sum = src_ptr[index] * src_ptr[index];
-                        for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-                            index += items;
-                            squared_sum += src_ptr[index] * src_ptr[index];
+                        float squared_sum = 0.f;
+                        for (unsigned int index = i; index < i + subspace_size * items; index += items){
+                            switch(to){
+                                case TO_NORM:
+                                    squared_sum += src_ptr[index] * src_ptr[index];
+                                    break;
+                                case TO_MAX:
+                                    squared_sum = max(src_ptr[index], squared_sum);
+                                    break;
+                            }
                         }
-                        dst_ptr[i] = sqrt(squared_sum);
+
+                        if(to == TO_NORM)
+                            dst_ptr[i] = sqrt(squared_sum);
+                        else
+                            dst_ptr[i] = squared_sum;
                     }
                 }
             }else{
@@ -891,10 +893,8 @@ template<class V,class M, class T>
                     V* dst_ptr = dst.ptr() + item * lines;
                     const V* src_ptr = src.ptr() + (item * subspace_size * lines);
                     for(unsigned int i = 0; i < lines; i++){
-                        unsigned int index = subspace_size*i;
-                        float squared_sum = src_ptr[index] * src_ptr[index];
-                        for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-                            index++;
+                        float squared_sum = 0.f;
+                        for (unsigned int index = subspace_size*i; index < subspace_size*(i+1); index++){
                             squared_sum += src_ptr[index] * src_ptr[index];
                         }
                         dst_ptr[i] = sqrt(squared_sum);
@@ -941,20 +941,15 @@ template<class V,class M, class T>
                    V* dst_ptr = dst.ptr() + (subspace_size * line) * items;
 
                    for(unsigned int i=0; i < items; i++){
-                       unsigned int index = i;
-                       float squared_sum = src_ptr[index] * src_ptr[index];
+                       float squared_sum = 0;
                        // calculates squared sum
-                       for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-                           index += items;
+                       for (unsigned int index = i; index < i + subspace_size * items; index+= items){
                            squared_sum += src_ptr[index] * src_ptr[index];
                        }
 
                        float f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
                        // updates dst for each feature in subspace 
-                       index = i;
-                       dst_ptr[index] = f * src_ptr[index];
-                       for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-                           index += items;
+                       for (unsigned int index = i; index < i + subspace_size * items; index+= items){
                            dst_ptr[index] = f * src_ptr[index];
                        }
                    }
@@ -967,19 +962,15 @@ template<class V,class M, class T>
                     V* dst_ptr = dst.ptr() + (item * subspace_size * lines);
                     const V* d_ptr  = delta.ptr() + item * lines;
                     for(unsigned int i=0; i < lines; i++){
-                        unsigned int index = subspace_size*i;
-                        float squared_sum = src_ptr[index] * src_ptr[index];
-                        for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-                            index++;
+                        float squared_sum = 0.f;
+                        unsigned int end = subspace_size*(i+1);
+                        for (unsigned int index = subspace_size*i; index < end; index++){
                             squared_sum += src_ptr[index] * src_ptr[index];
                         }
 
                         float f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
 
-                        index = subspace_size*i;
-                        dst_ptr[index] = f * src_ptr[index];
-                        for (unsigned int sub_idx = 1; sub_idx < subspace_size; sub_idx++){
-                            index++;
+                        for (unsigned int index = subspace_size*i; index < end; index++){
                             dst_ptr[index] = f * src_ptr[index];
                         }
                     }
