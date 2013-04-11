@@ -46,7 +46,6 @@
 #include <cuv/random/random.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/convolution_ops/convolution_ops_theano.hpp>
-
 #define MEASURE_TIME(MSG, OPERATION, ITERS)     \
 	float MSG;                                  \
 	if(1){                                      \
@@ -208,7 +207,6 @@ BOOST_AUTO_TEST_CASE( test_conv2d )
 	unsigned int nImg     = 16;
     unsigned int nGroups  = 1;      // must be divisible by 2 ??
    
-<<<<<<< HEAD
    unsigned int nFiltChan = nImgChan/nGroups;
    unsigned int nFiltPix  = 7;
    unsigned int nFilt     = 32; 
@@ -355,19 +353,11 @@ BOOST_AUTO_TEST_CASE( test_conv1d_theano )
 }
 
 
-=======
-	unsigned int nFiltChan = nImgChan/nGroups;
-	unsigned int nFiltPix  = 7;
-	unsigned int nFilt     = 32; 
->>>>>>> 288322e490c427624efcf93d928fdc6da3db1799
-
-    unsigned int nResPix   = nImgPix-nFiltPix+1;
-
-<<<<<<< HEAD
-BOOST_AUTO_TEST_CASE( test_pairwise_norm )
+BOOST_AUTO_TEST_CASE( test_tuplewise_op )
 {
    using namespace cuv::alex_conv;
 
+   // norm test
    {
      unsigned int sub_size = 4;
      unsigned int nImg = 4;
@@ -384,8 +374,8 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm )
 
      res = 0.f;
      res_h = 0.f;
-     pairwise_norm(res,inp, 0, sub_size);
-     pairwise_norm(res_h,inp_h, 0, sub_size);
+     tuplewise_op(res,inp, 0, sub_size);
+     tuplewise_op(res_h,inp_h, 0, sub_size);
 
      for(unsigned int i=0;i<nChan/sub_size;i++)
          for(unsigned int j=0;j<nPix;j++)
@@ -418,8 +408,8 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm )
 
    res = 0.f;
    res_h = 0.f;
-   pairwise_norm(res,inp,3, sub_size);
-   pairwise_norm(res_h,inp_h,3,sub_size);
+   tuplewise_op(res,inp,3, sub_size);
+   tuplewise_op(res_h,inp_h,3,sub_size);
 
    for(unsigned int i=0;i<nPix;i++)
       for(unsigned int j=0;j<nPix;j++)
@@ -452,8 +442,8 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm )
 
        res = 0.f;
        res_h = 0.f;
-       pairwise_norm(res,inp,1, sub_size);
-       pairwise_norm(res_h,inp_h,1, sub_size);
+       tuplewise_op(res,inp,1, sub_size);
+       tuplewise_op(res_h,inp_h,1, sub_size);
 
        for(unsigned int k=0;k<nImg;k++){
            for(unsigned int l=0;l<nChan/sub_size;l++){
@@ -470,16 +460,54 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm )
        }
 
    }
-}
-
-BOOST_AUTO_TEST_CASE( test_pairwise_norm_grad )
-{
+   // max out test
    {
-     using namespace cuv::alex_conv;
      unsigned int sub_size = 4;
      unsigned int nImg = 4;
      unsigned int nPix = 16;
-     unsigned int nChan = 8 * sub_size;
+     unsigned int nChan = 8*sub_size;
+     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+
+     tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> res_h(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+
+     fill_rnd_uniform(inp_h);
+     inp = inp_h;
+
+     res = 0.f;
+     res_h = 0.f;
+     tuplewise_op(res,inp, 0, sub_size, TO_MAX);
+     tuplewise_op(res_h,inp_h, 0, sub_size, TO_MAX);
+
+     for(unsigned int i=0;i<nChan/sub_size;i++)
+         for(unsigned int j=0;j<nPix;j++)
+             for(unsigned int k=0;k<nPix;k++){
+                 for(unsigned int l=0;l<nImg;l++){
+                     BOOST_CHECK_CLOSE(1.f, 1.f + res(i,j,k,l) - res_h(i,j,k,l), 0.001f);
+
+                     float max_act = inp_h(sub_size*i,j,k,l);
+                     for(unsigned int sub_idx = 1; sub_idx < sub_size; sub_idx++){
+                        float s = inp_h(sub_size*i+sub_idx,j,k,l);
+                        if(max_act < s){
+                            max_act = s;
+                        }
+                     }
+                     BOOST_CHECK_CLOSE(1.f, 1.f + res_h(i,j,k,l)- max_act, 0.001f);
+                 }
+             }
+   }
+   std::cout << "testing norm done" << std::endl;/* cursor */
+}
+
+BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
+{
+   {
+     using namespace cuv::alex_conv;
+     unsigned int sub_size = 2;
+     unsigned int nImg = 4;
+     unsigned int nPix = 10;
+     unsigned int nChan = 2 * sub_size;
      tensor<float,dev_memory_space,row_major> inp_grad(cuv::extents[nChan][nPix][nPix][nImg]);
      tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
      tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
@@ -495,19 +523,19 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm_grad )
 
      res = 0.f;
      res_h = 0.f;
-     fill_rnd_uniform(delta);
-     delta_h = delta;
-     pairwise_norm(res,inp, 0, sub_size);
-     pairwise_norm(res_h,inp_h, 0, sub_size);
+     fill_rnd_uniform(delta_h);
+     delta = delta_h;
+     tuplewise_op(res,inp, 0, sub_size);
+     tuplewise_op(res_h,inp_h, 0, sub_size);
 
-     pairwise_norm_grad(inp_grad,inp,delta, 0, sub_size);
-     pairwise_norm_grad(inp_grad_h,inp_h,delta_h, 0, sub_size);
+     tuplewise_op_grad(inp_grad,inp,delta, 0, sub_size);
+     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 0, sub_size);
 
      for(unsigned int i=0;i<nChan/sub_size;i++)
          for(unsigned int j=0;j<nPix;j++)
              for(unsigned int k=0;k<nPix;k++){
                  for(unsigned int l=0;l<nImg;l++){
-                     for (unsigned int sub_idx; sub_idx < sub_size; sub_idx++){
+                     for (unsigned int sub_idx = 0; sub_idx < sub_size; sub_idx++){
                          BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(sub_size*i+sub_idx,j,k,l) - inp_grad_h(sub_size*i+sub_idx,j,k,l), 0.001);
 
                          float s0 = inp_h(sub_size*i+sub_idx,j,k,l);
@@ -523,75 +551,99 @@ BOOST_AUTO_TEST_CASE( test_pairwise_norm_grad )
    }
 
    {
-     using namespace cuv::alex_conv;
-     unsigned int sub_size = 3;
-     unsigned int nImg = 4;
-     unsigned int nPix = 16;
-     unsigned int nChan = 8 * sub_size;
-     tensor<float,dev_memory_space,row_major> inp_grad(cuv::extents[nPix][nPix][nImg][nChan]);
-     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nPix][nPix][nImg][nChan]);
-     tensor<float,dev_memory_space,row_major> res(cuv::extents[nPix][nPix][nImg][nChan/sub_size]);
-     tensor<float,dev_memory_space,row_major> delta(cuv::extents[nPix][nPix][nImg][nChan/sub_size]);
+    using namespace cuv::alex_conv;
+    unsigned int sub_size = 3;
+    unsigned int nImg = 4;
+    unsigned int nPix = 16;
+    unsigned int nChan = 8 * sub_size;
+    tensor<float,dev_memory_space,row_major> inp_grad(cuv::extents[nPix][nPix][nImg][nChan]);
+    tensor<float,dev_memory_space,row_major> inp(cuv::extents[nPix][nPix][nImg][nChan]);
+    tensor<float,dev_memory_space,row_major> res(cuv::extents[nPix][nPix][nImg][nChan/sub_size]);
+    tensor<float,dev_memory_space,row_major> delta(cuv::extents[nPix][nPix][nImg][nChan/sub_size]);
 
-     tensor<float,host_memory_space,row_major> inp_grad_h(cuv::extents[nPix][nPix][nImg][nChan]);
-     tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nPix][nPix][nImg][nChan]);
-     tensor<float,host_memory_space,row_major> res_h(cuv::extents[nPix][nPix][nImg][nChan/sub_size]);
-     tensor<float,host_memory_space,row_major> delta_h(cuv::extents[nPix][nPix][nImg][nChan/sub_size]);
+    tensor<float,host_memory_space,row_major> inp_grad_h(cuv::extents[nPix][nPix][nImg][nChan]);
+    tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nPix][nPix][nImg][nChan]);
+    tensor<float,host_memory_space,row_major> res_h(cuv::extents[nPix][nPix][nImg][nChan/sub_size]);
+    tensor<float,host_memory_space,row_major> delta_h(cuv::extents[nPix][nPix][nImg][nChan/sub_size]);
+
+    fill_rnd_uniform(inp_h);
+    inp = inp_h;
+
+    res = 0.f;
+    res_h = 0.f;
+    fill_rnd_uniform(delta_h);
+    delta = delta_h;
+    tuplewise_op(res,inp, 3, sub_size);
+    tuplewise_op(res_h,inp_h, 3, sub_size);
+
+    tuplewise_op_grad(inp_grad,inp,delta, 3, sub_size);
+    tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 3, sub_size);
+
+    for(unsigned int i=0;i<nPix;i++)
+        for(unsigned int j=0;j<nPix;j++)
+            for(unsigned int k=0;k<nImg;k++){
+                for(unsigned int l=0;l<nChan/sub_size;l++){
+                    for (unsigned int sub_idx = 0; sub_idx < sub_size; sub_idx++){
+                        BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(i,j,k,sub_size*l+sub_idx) - inp_grad_h(i,j,k,sub_size*l+sub_idx), 0.001);
+
+                        float s0 = inp_h(i,j,k,sub_size*l+sub_idx);
+                        float r  = res_h(  i  ,j,k,l);
+                        float d  = delta(  i  ,j,k,l);
+                        float f0 = d / (r+0.0001f) * s0;
+                        BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(i,j,k,sub_size*l + sub_idx) - f0, 0.01f);
+                    }
+
+                }
+            }
+    std::cout << "test 2 pairwise_grad finished" << std::endl;/* cursor */
+   }
+   {
+     using namespace cuv::alex_conv;
+     unsigned int sub_size = 2;
+     unsigned int nImg = 4;
+     unsigned int nPix = 10;
+     unsigned int nChan = 2 * sub_size;
+     tensor<float,dev_memory_space,row_major> inp_grad(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> delta(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+
+     tensor<float,host_memory_space,row_major> inp_grad_h(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> res_h(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> delta_h(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
 
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
      res = 0.f;
      res_h = 0.f;
-     fill_rnd_uniform(delta);
-     delta_h = delta;
-     pairwise_norm(res,inp, 3, sub_size);
-     pairwise_norm(res_h,inp_h, 3, sub_size);
+     fill_rnd_uniform(delta_h);
+     delta = delta_h;
+     tuplewise_op(res,inp, 0, sub_size, TO_MAX);
+     tuplewise_op(res_h,inp_h, 0, sub_size, TO_MAX);
 
-     pairwise_norm_grad(inp_grad,inp,delta, 3, sub_size);
-     pairwise_norm_grad(inp_grad_h,inp_h,delta_h, 3, sub_size);
+     tuplewise_op_grad(inp_grad,inp,delta, 0, sub_size, TO_MAX);
+     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 0, sub_size, TO_MAX);
 
-     for(unsigned int i=0;i<nPix;i++)
+     for(unsigned int i=0;i<nChan/sub_size;i++)
          for(unsigned int j=0;j<nPix;j++)
-             for(unsigned int k=0;k<nChan/sub_size;k++){
+             for(unsigned int k=0;k<nPix;k++){
                  for(unsigned int l=0;l<nImg;l++){
-                     for (unsigned int sub_idx; sub_idx < sub_size; sub_idx++){
-                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(i,j,k,sub_size*l+sub_idx) - inp_grad_h(i,j,k,sub_size*l+sub_idx), 0.001);
+                     float max_act = inp_h(sub_size*i,j,k,l);
+                     for (unsigned int sub_idx = 1; sub_idx < sub_size; sub_idx++){
+                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(sub_size*i+sub_idx,j,k,l) - inp_grad_h(sub_size*i+sub_idx,j,k,l), 0.001);
 
-                         float s0 = inp_h(i,j,k,sub_size*i+sub_idx);
-                         float r  = res_h(  i  ,j,k,l);
-                         float d  = delta(  i  ,j,k,l);
-                         float f0 = d / (r+0.0001f) * s0;
-                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(i,j,k,sub_size*l + sub_idx) - f0, 0.01f);
+                         //float s0 = inp_h(sub_size*i+sub_idx,j,k,l);
+                         //if (s0 > max_act)
+                         //    max_act = s0;
+                         //BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(sub_size*i + sub_idx,j,k,l) - max_act, 0.01f);
                      }
 
                  }
              }
-     std::cout << "test 2 pairwise_grad finished" << std::endl;/* cursor */
+     std::cout << "test 3 pairwise_grad finished" << std::endl;/* cursor */
    }
-=======
-    tensor<float,dev_memory_space,row_major> inp(cuv::extents[nImg][nImgChan][nImgPix*nImgPix]);
-
-	tensor<float,dev_memory_space,row_major> src(cuv::extents[nImgChan][nImgPix*nImgPix][nImg]);
-	tensor<float,dev_memory_space,row_major> dst(cuv::extents[nFilt][nResPix*nResPix][nImg]);
-
-	tensor<float,dev_memory_space,row_major> flt(cuv::extents[nFiltChan][nFiltPix*nFiltPix][nFilt]);
-
-    cuv::alex_conv::reorder_for_conv(src,inp);
-
-    //convolve2d(tensor<float,dev_memory_space>& dst, 
-    //        const tensor<float,dev_memory_space>& img, 
-    //        const tensor<float,dev_memory_space>& filter,
-    //        unsigned int nModulesX,
-    //        unsigned int paddingStart, 
-    //        unsigned int moduleStride,
-    //        unsigned int nGroups){
-
-    MEASURE_TIME(conv_dev,         convolve2d(dst,src,flt, 0, 1, nGroups), 10);
-    MEASURE_TIME(d_conv_dimg_dev,  d_conv2d_dimg(src,dst,flt, 0, 1, nGroups), 10);
-    MEASURE_TIME(d_conv_dfilt_dev, d_conv2d_dfilt(flt,dst,src, 0, 1, nGroups,4), 10);
-
->>>>>>> 288322e490c427624efcf93d928fdc6da3db1799
 }
 
 BOOST_AUTO_TEST_SUITE_END()
