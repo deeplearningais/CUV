@@ -599,10 +599,10 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
    }
    {
      using namespace cuv::alex_conv;
-     unsigned int sub_size = 2;
+     unsigned int sub_size = 4;
      unsigned int nImg = 4;
      unsigned int nPix = 10;
-     unsigned int nChan = 2 * sub_size;
+     unsigned int nChan = 8 * sub_size;
      tensor<float,dev_memory_space,row_major> inp_grad(cuv::extents[nChan][nPix][nPix][nImg]);
      tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
      tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
@@ -631,13 +631,24 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
              for(unsigned int k=0;k<nPix;k++){
                  for(unsigned int l=0;l<nImg;l++){
                      float max_act = inp_h(sub_size*i,j,k,l);
-                     for (unsigned int sub_idx = 1; sub_idx < sub_size; sub_idx++){
+                     unsigned int max_index = 0;
+                     for (unsigned int sub_idx = 0; sub_idx < sub_size; sub_idx++){
                          BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(sub_size*i+sub_idx,j,k,l) - inp_grad_h(sub_size*i+sub_idx,j,k,l), 0.001);
 
-                         //float s0 = inp_h(sub_size*i+sub_idx,j,k,l);
-                         //if (s0 > max_act)
-                         //    max_act = s0;
-                         //BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(sub_size*i + sub_idx,j,k,l) - max_act, 0.01f);
+                         float s0 = inp_h(sub_size*i+sub_idx,j,k,l);
+                         if (s0 > max_act){
+                             max_index = sub_idx; 
+                             max_act = s0;
+                         }
+                     }
+                     for (unsigned int sub_idx = 1; sub_idx < sub_size; sub_idx++){
+                         //std::cout << "it is " << inp_grad_h(sub_size*i + sub_idx,j,k,l) << "     ";
+                         if (sub_idx == max_index){
+                             BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(sub_size*i + sub_idx,j,k,l) - 1, 0.01f);
+                         }else{
+                             BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(sub_size*i + sub_idx,j,k,l) - 0, 0.01f);
+                         }
+
                      }
 
                  }

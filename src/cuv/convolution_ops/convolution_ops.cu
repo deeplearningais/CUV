@@ -832,6 +832,7 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
         for(; item < dst_cols; item += blockDim.x){
             // calculates squared sum
             float squared_sum = 0.f; 
+            unsigned int max_index = 0;
             unsigned int end = item + subspace_size * dst_cols;
             for (unsigned int index = item; index < end; index += dst_cols){
                 T s = src_ptr[index];
@@ -840,8 +841,10 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         squared_sum += s*s;
                         break;
                     case TO_MAX:
-                        if (s > squared_sum)
-                            squared_sum  =  index;
+                        if (s > squared_sum){
+                            squared_sum  = s;
+                            max_index = index;
+                        }
                         break;
                 }
             }
@@ -856,7 +859,7 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         dst_ptr[index] = p * src_ptr[index];
                         break;
                     case TO_MAX:
-                        if (squared_sum == index)
+                        if (max_index == index)
                             dst_ptr[index] = 1;
                         else 
                             dst_ptr[index] = 0;
@@ -874,6 +877,7 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
 
         for(; line < dst_rows; line += blockDim.x){
             float squared_sum = 0.f;
+            unsigned int max_index = 0;
             unsigned int end = subspace_size*(line+1);
 
             for (unsigned int index = subspace_size*line; index < end; index++){
@@ -883,8 +887,10 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         squared_sum += s*s;
                         break;
                     case TO_MAX:
-                        if (s > squared_sum)
-                            squared_sum  =  index;
+                        if (s > squared_sum){
+                            squared_sum  =  s;
+                            max_index = index;
+                        }
                         break;
                 }
             }
@@ -898,7 +904,7 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         dst_ptr[index] = p * src_ptr[index];
                         break;
                     case TO_MAX:
-                        if (squared_sum == index)
+                        if (max_index == index)
                             dst_ptr[index] = 1;
                         else 
                             dst_ptr[index] = 0;
@@ -1044,6 +1050,7 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
 
             for(unsigned int i=0; i < items; i++){
                 float squared_sum = 0;
+                unsigned int max_index = 0;
                 // calculates squared sum
                 for (unsigned int index = i; index < i + subspace_size * items; index+= items){
                     switch(to){
@@ -1051,8 +1058,10 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                             squared_sum += src_ptr[index] * src_ptr[index];
                             break;
                         case TO_MAX:
-                            if (src_ptr[index] > squared_sum)
-                                squared_sum  =  index;
+                            if (src_ptr[index] > squared_sum){
+                                squared_sum  =  src_ptr[index];
+                                max_index = index;
+                            }
                             break;
                     }
                 }
@@ -1065,10 +1074,12 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                             dst_ptr[index] = f * src_ptr[index];
                             break;
                         case TO_MAX:
-                            if (squared_sum == index)
+                            if (max_index == index){
                                 dst_ptr[index] = 1;
-                            else 
+                            }
+                            else{ 
                                 dst_ptr[index] = 0;
+                            }
                             break;
                     }
                 }
@@ -1082,6 +1093,7 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
             const T* d_ptr  = delta + item * lines;
             for(unsigned int i=0; i < lines; i++){
                 float squared_sum = 0.f;
+                unsigned int max_index = 0;
                 unsigned int end = subspace_size*(i+1);
                 for (unsigned int index = subspace_size*i; index < end; index++){
                     switch(to){
@@ -1089,8 +1101,10 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                             squared_sum += src_ptr[index] * src_ptr[index];
                             break;
                         case TO_MAX:
-                            if (src_ptr[index] > squared_sum)
-                                squared_sum  =  index;
+                            if (src_ptr[index] > squared_sum){
+                                squared_sum  =  src_ptr[index];
+                                max_index = index;
+                            }
                             break;
                     }
                 }
@@ -1103,7 +1117,7 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                             dst_ptr[index] = f * src_ptr[index];
                             break;
                         case TO_MAX:
-                            if (squared_sum == index)
+                            if (max_index == index)
                                 dst_ptr[index] = 1;
                             else 
                                 dst_ptr[index] = 0;
