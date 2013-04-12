@@ -22,7 +22,8 @@ if (CUDA_ENFORCE_HOST_COMPILER)
 endif()
 
 if ( NOT CUDA_ARCH )
-    SET( CUDA_ARCH "-gencode arch=compute_20,\"code=sm_20,compute_20\" -gencode arch=compute_30,\"code=sm_30,compute_30\" -gencode arch=compute_35,\"code=sm_35,compute_35\" " )
+    SET( CUDA_ARCH -gencode;arch=compute_13,code=sm_13;-gencode;arch=compute_20,code=sm_20;-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35 )
+    #SET( CUDA_ARCH -gencode;arch=compute_20,code=\"sm_20,compute_20\";-gencode;arch=compute_30,code=\"sm_30,compute_30\";-gencode;arch=compute_35,code=\"sm_35,compute_35\" )
 endif()
 
 SET( CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_ARCH} )
