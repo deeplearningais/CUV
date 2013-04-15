@@ -273,7 +273,8 @@ void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float sca
 
 enum tuplewise_op_functor{
     TO_NORM,
-    TO_MAX
+    TO_MAX,
+    TO_SQR_NORM
 };
 /**
  * square the input, then add every map pair and take the square root.
@@ -289,7 +290,7 @@ template<class V, class M, class T>
 void tuplewise_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim, unsigned int subspace_size = 2, tuplewise_op_functor = TO_NORM);
 
 /**
- * calculates the gradient of pairwise_norm.
+ * calculates the gradient of tuplewise_op.
  *
  * In NumPy notation, this implements:
  *
@@ -307,6 +308,33 @@ void tuplewise_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim
  */
 template<class V, class M, class T>
 void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int subspace_size = 2, tuplewise_op_functor to = TO_NORM);
+
+
+
+/**
+ * square the input, then add every map pair and take the square root. Similar to tuplewise_op, but it does it also over spatial dimension
+ *
+ * @param dst where to write result
+ * @param X  the original input 
+ * @param subspace_size  the number of features grouped in different channels
+ * @param spatial_size  the number of features grouped in spatial dimension
+ */
+template<class V, class M, class T>
+void tuplewise_spatial_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int subspace_size = 2, unsigned int spatial_size);
+
+/**
+ * calculates the gradient of tuplewise_spatial_op.
+ *
+ *
+ * @param dst where to write result
+ * @param X  the original input 
+ * @param D  the backpropagated delta
+ * @param subspace_size  the number of features grouped in different channels
+ * @param spatial_size  the number of features grouped in spatial dimension
+ * 
+ */
+template<class V, class M, class T>
+void tuplewise_spatial_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int subspace_size = 2, unsigned int spatial_size);
 }
 /** @} */ //end group convolution_ops
 }
