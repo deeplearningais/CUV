@@ -852,10 +852,18 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                 }
             }
             
-            if (to == TO_NORM)
-                 p  = d0[item] / (sqrt(squared_sum) + 0.0001f);
-            else if (to == TO_SQR_NORM)
-                 p  = 2.f * d0[item];
+            switch(to){
+                case TO_NORM:
+                    p  = d0[item] / (sqrt(squared_sum) + 0.0001f);
+                    break;
+                case TO_MAX:
+                    p  = d0[item];
+                    break;
+                case TO_SQR_NORM:
+                    p  = 2.f * d0[item];
+                    break;
+            };
+            
 
             // updates dst for each feature in subspace 
             for (unsigned int index = item; index < end; index+= dst_cols){
@@ -865,9 +873,9 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         break;
                     case TO_MAX:
                         if (max_index == index)
-                            dst_ptr[index] = 1;
+                            dst_ptr[index] = p;
                         else 
-                            dst_ptr[index] = 0;
+                            dst_ptr[index] = 0.f;
                         break;
                     case TO_SQR_NORM:
                         dst_ptr[index] = p * src_ptr[index];
@@ -903,10 +911,17 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                 }
             }
 
-            if (to == TO_NORM)
-                p  = d0[line] / (sqrt(squared_sum) + 0.0001f);
-            else if (to == TO_SQR_NORM)
-                p  = 2.f * d0[line];
+            switch(to){
+                case TO_NORM:
+                    p  = d0[line] / (sqrt(squared_sum) + 0.0001f);
+                    break;
+                case TO_MAX:
+                    p = d0[line];
+                    break;
+                case TO_SQR_NORM:
+                    p = 2.f * d0[line];
+                    break;
+            }
 
             for (unsigned int index = subspace_size*line; index < end; index++){
                 switch(to){
@@ -915,7 +930,7 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         break;
                     case TO_MAX:
                         if (max_index == index)
-                            dst_ptr[index] = 1;
+                            dst_ptr[index] = p;
                         else 
                             dst_ptr[index] = 0;
                         break;
@@ -1097,11 +1112,18 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                     }
                 }
 
-                if(to == TO_NORM)
-                    f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
-                else if(to == TO_SQR_NORM){
-                    f = 2.f * d_ptr[i];
-                }
+                float f;
+                switch(to){
+                    case TO_NORM:
+                        f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
+                        break;
+                    case TO_MAX:
+                        f = d_ptr[i];
+                        break;
+                    case TO_SQR_NORM:
+                        f = 2.f * d_ptr[i];
+                        break;
+                };
                 // updates dst for each feature in subspace 
                 for (unsigned int index = i; index < i + subspace_size * items; index+= items){
                     switch(to){
@@ -1110,7 +1132,7 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                             break;
                         case TO_MAX:
                             if (max_index == index){
-                                dst_ptr[index] = 1;
+                                dst_ptr[index] = f;
                             }
                             else{ 
                                 dst_ptr[index] = 0;
@@ -1148,10 +1170,18 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                     }
                 }
 
-                if(to == TO_NORM)
-                    f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
-                else if(to == TO_SQR_NORM)
-                    f = 2.f * d_ptr[i];
+                float f;
+                switch(to){
+                    case TO_NORM:
+                        f = d_ptr[i] / (sqrt(squared_sum) + .0001f);
+                        break;
+                    case TO_MAX:
+                        f = d_ptr[i];
+                        break;
+                    case TO_SQR_NORM:
+                        f = 2.f * d_ptr[i];
+                        break;
+                };
 
                 for (unsigned int index = subspace_size*i; index < end; index++){
                     switch(to){
@@ -1160,7 +1190,7 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                             break;
                         case TO_MAX:
                             if (max_index == index)
-                                dst_ptr[index] = 1;
+                                dst_ptr[index] = f;
                             else 
                                 dst_ptr[index] = 0;
                             break;
