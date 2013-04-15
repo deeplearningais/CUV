@@ -778,7 +778,7 @@ void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned i
                 T s = src_ptr[index];
                 switch(to){
                     case TO_NORM:
-                    case TO_SQR_NORM:
+                    case TO_ADD_SQUARED:
                         squared_sum += s * s;
                         break;
                     case TO_MAX:
@@ -804,7 +804,7 @@ void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned i
                 T s = src_ptr[index];
                 switch(to){
                     case TO_NORM:
-                    case TO_SQR_NORM:
+                    case TO_ADD_SQUARED:
                         squared_sum += s * s;
                         break;
                     case TO_MAX:
@@ -840,7 +840,7 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                 T s = src_ptr[index];
                 switch(to){
                     case TO_NORM:
-                    case TO_SQR_NORM:
+                    case TO_ADD_SQUARED:
                         squared_sum += s*s;
                         break;
                     case TO_MAX:
@@ -859,7 +859,7 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                 case TO_MAX:
                     p  = d0[item];
                     break;
-                case TO_SQR_NORM:
+                case TO_ADD_SQUARED:
                     p  = 2.f * d0[item];
                     break;
             };
@@ -877,7 +877,7 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         else 
                             dst_ptr[index] = 0.f;
                         break;
-                    case TO_SQR_NORM:
+                    case TO_ADD_SQUARED:
                         dst_ptr[index] = p * src_ptr[index];
                         break;
                 }
@@ -918,7 +918,7 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                 case TO_MAX:
                     p = d0[line];
                     break;
-                case TO_SQR_NORM:
+                case TO_ADD_SQUARED:
                     p = 2.f * d0[line];
                     break;
             }
@@ -934,7 +934,7 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         else 
                             dst_ptr[index] = 0;
                         break;
-                    case TO_SQR_NORM:
+                    case TO_ADD_SQUARED:
                         dst_ptr[index] = p * src_ptr[index];
                         break;
                 }
@@ -959,7 +959,7 @@ template<bool FirstDim, tuplewise_op_functor to, class T>
                     for (unsigned int index = i; index < i + subspace_size * items; index += items){
                         switch(to){
                             case TO_NORM:
-                            case TO_SQR_NORM:
+                            case TO_ADD_SQUARED:
                                 squared_sum += src_ptr[index] * src_ptr[index];
                                 break;
                             case TO_MAX:
@@ -983,7 +983,7 @@ template<bool FirstDim, tuplewise_op_functor to, class T>
                     for (unsigned int index = subspace_size*i; index < subspace_size*(i+1); index++){
                         switch(to){
                             case TO_NORM:
-                            case TO_SQR_NORM:
+                            case TO_ADD_SQUARED:
                                 squared_sum += src_ptr[index] * src_ptr[index];
                                 break;
                             case TO_MAX:
@@ -1032,12 +1032,12 @@ template<class V,class M, class T>
                         tuplewise_op_host<false, TO_MAX>(dst.ptr(), src.ptr(), lines, items, subspace_size);
                     }
                     break;
-                case TO_SQR_NORM:
+                case TO_ADD_SQUARED:
                     if(dim == 0){
-                        tuplewise_op_host<true, TO_SQR_NORM>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+                        tuplewise_op_host<true, TO_ADD_SQUARED>(dst.ptr(), src.ptr(), lines, items, subspace_size);
 
                     }else{
-                        tuplewise_op_host<false, TO_SQR_NORM>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+                        tuplewise_op_host<false, TO_ADD_SQUARED>(dst.ptr(), src.ptr(), lines, items, subspace_size);
                     }
                     break;
             }
@@ -1072,11 +1072,11 @@ template<class V,class M, class T>
 
                     }
                     break;
-                case TO_SQR_NORM:
+                case TO_ADD_SQUARED:
                     if(dim == 0){
-                        tuplewise_op_kernel<true, TO_SQR_NORM><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+                        tuplewise_op_kernel<true, TO_ADD_SQUARED><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
                     }else{
-                        tuplewise_op_kernel<false, TO_SQR_NORM><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
+                        tuplewise_op_kernel<false, TO_ADD_SQUARED><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size);
 
                     }
                     break;
@@ -1093,7 +1093,6 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
             const T* d_ptr  = delta + line * items;
             const T* src_ptr = src + (subspace_size * line) * items;
             T* dst_ptr = dst + (subspace_size * line) * items;
-            float f;
             for(unsigned int i=0; i < items; i++){
                 float squared_sum = 0;
                 unsigned int max_index = 0;
@@ -1120,7 +1119,7 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                     case TO_MAX:
                         f = d_ptr[i];
                         break;
-                    case TO_SQR_NORM:
+                    case TO_ADD_SQUARED:
                         f = 2.f * d_ptr[i];
                         break;
                 };
@@ -1138,7 +1137,7 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                                 dst_ptr[index] = 0;
                             }
                             break;
-                        case TO_SQR_NORM:
+                        case TO_ADD_SQUARED:
                             dst_ptr[index] = f *  src_ptr[index];
                             break;
                     }
@@ -1151,7 +1150,6 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
 
             T* dst_ptr = dst + (item * subspace_size * lines);
             const T* d_ptr  = delta + item * lines;
-            float f;
             for(unsigned int i=0; i < lines; i++){
                 float squared_sum = 0.f;
                 unsigned int max_index = 0;
@@ -1178,7 +1176,7 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                     case TO_MAX:
                         f = d_ptr[i];
                         break;
-                    case TO_SQR_NORM:
+                    case TO_ADD_SQUARED:
                         f = 2.f * d_ptr[i];
                         break;
                 };
@@ -1194,7 +1192,7 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                             else 
                                 dst_ptr[index] = 0;
                             break;
-                        case TO_SQR_NORM:
+                        case TO_ADD_SQUARED:
                             dst_ptr[index] = f * src_ptr[index];
                             break;
                     }
@@ -1230,12 +1228,12 @@ template<class V,class M, class T>
                         tuplewise_op_grad_host<false, TO_MAX>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
                     }
                     break;
-                case TO_SQR_NORM:
+                case TO_ADD_SQUARED:
                     if(dim == 0){
-                        tuplewise_op_grad_host<true, TO_SQR_NORM>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
+                        tuplewise_op_grad_host<true, TO_ADD_SQUARED>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
 
                     }else{
-                        tuplewise_op_grad_host<false, TO_SQR_NORM>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
+                        tuplewise_op_grad_host<false, TO_ADD_SQUARED>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
                     }
                     break;
             }
@@ -1269,12 +1267,12 @@ template<class V,class M, class T>
                         tuplewise_op_grad_kernel<false, TO_MAX><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
                     }
                     break;
-                case TO_SQR_NORM:
+                case TO_ADD_SQUARED:
                     if(dim == 0){
-                        tuplewise_op_grad_kernel<true, TO_SQR_NORM><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
+                        tuplewise_op_grad_kernel<true, TO_ADD_SQUARED><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
 
                     }else{
-                        tuplewise_op_grad_kernel<false, TO_SQR_NORM><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
+                        tuplewise_op_grad_kernel<false, TO_ADD_SQUARED><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size);
                     }
                     break;
             }
@@ -1285,15 +1283,16 @@ template<class V,class M, class T>
 
 
 template<class V, class M, class T>
-void tuplewise_spatial_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int subspace_size = 2, unsigned int spatial_size){
+void tuplewise_spatial_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int subspace_size, unsigned int spatial_size){
         cuvAssert(dst.shape(0)==src.shape(0)/subspace_size);
 
         unsigned int items = dst.size() / dst.shape(0);
         unsigned int lines = dst.shape(0);
-        tuplewise_op(dst, src, 0, subsace_size, TO_SQR_NORM);
+        tuplewise_op(dst, src, 0, subspace_size, TO_ADD_SQUARED);
 }
 
 
+/*template void tuplewise_spatial_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int); \*/
 
 // instantiate
 #define  TENS(V,M,T)       tensor<V,M,T>
@@ -1302,7 +1301,6 @@ void tuplewise_spatial_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned
 template void tuplewise_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor); \
 template void tuplewise_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor); \
 template void tuplewise_spatial_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int); \
-template void tuplewise_spatial_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int); \
 template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void crop<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int); \
