@@ -1297,14 +1297,13 @@ template<class V,class M, class T>
 
 
 
-
-
 // instantiate
 #define  TENS(V,M,T)       tensor<V,M,T>
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
 template void tuplewise_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor); \
 template void tuplewise_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor); \
+template void tuplewise_spatial_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int); \
 template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void crop<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int); \
