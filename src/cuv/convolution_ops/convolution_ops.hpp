@@ -274,7 +274,7 @@ void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float sca
 enum tuplewise_op_functor{
     TO_NORM,
     TO_MAX,
-    TO_SQR_NORM
+    TO_ADD_SQUARED
 };
 /**
  * square the input, then add every map pair and take the square root.
@@ -320,7 +320,7 @@ void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<
  * @param spatial_size  the number of features grouped in spatial dimension
  */
 template<class V, class M, class T>
-void tuplewise_spatial_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int subspace_size = 2, unsigned int spatial_size);
+void tuplewise_spatial_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int subspace_size = 2, unsigned int spatial_size = 3);
 
 /**
  * calculates the gradient of tuplewise_spatial_op.
@@ -334,7 +334,7 @@ void tuplewise_spatial_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned
  * 
  */
 template<class V, class M, class T>
-void tuplewise_spatial_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int subspace_size = 2, unsigned int spatial_size);
+void tuplewise_spatial_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int subspace_size = 2, unsigned int spatial_size = 3);
 }
 /** @} */ //end group convolution_ops
 }

@@ -624,8 +624,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
 
      res = 0.f;
      res_h = 0.f;
-     tuplewise_op(res,inp, 0, sub_size, TO_SQR_NORM);
-     tuplewise_op(res_h,inp_h, 0, sub_size, TO_SQR_NORM);
+     tuplewise_op(res,inp, 0, sub_size, TO_ADD_SQUARED);
+     tuplewise_op(res_h,inp_h, 0, sub_size, TO_ADD_SQUARED);
 
      for(unsigned int i=0;i<nChan/sub_size;i++)
          for(unsigned int j=0;j<nPix;j++)
@@ -821,11 +821,11 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
      res_h = 0.f;
      fill_rnd_uniform(delta_h);
      delta = delta_h;
-     tuplewise_op(res,inp, 0, sub_size, TO_SQR_NORM);
-     tuplewise_op(res_h,inp_h, 0, sub_size, TO_SQR_NORM);
+     tuplewise_op(res,inp, 0, sub_size, TO_ADD_SQUARED);
+     tuplewise_op(res_h,inp_h, 0, sub_size, TO_ADD_SQUARED);
 
-     tuplewise_op_grad(inp_grad,inp,delta, 0, sub_size, TO_SQR_NORM);
-     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 0, sub_size, TO_SQR_NORM);
+     tuplewise_op_grad(inp_grad,inp,delta, 0, sub_size, TO_ADD_SQUARED);
+     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 0, sub_size, TO_ADD_SQUARED);
 
      for(unsigned int i=0;i<nChan/sub_size;i++)
          for(unsigned int j=0;j<nPix;j++)
