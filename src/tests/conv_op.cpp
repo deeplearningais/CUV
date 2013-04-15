@@ -495,7 +495,7 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
        }
 
    }
-   // max out test
+   // max out test dim = 0
    {
      unsigned int sub_size = 4;
      unsigned int nImg = 4;
@@ -531,6 +531,80 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
                      BOOST_CHECK_CLOSE(1.f, 1.f + res_h(i,j,k,l)- max_act, 0.001f);
                  }
              }
+   }
+   // max out test dim = last
+   {
+       unsigned int sub_size = 4;
+       unsigned int nImg = 4;
+       unsigned int nPix = 16;
+       unsigned int nChan = 8*sub_size;
+       tensor<float,dev_memory_space,row_major> inp(cuv::extents[nImg][nPix][nPix][nChan]);
+       tensor<float,dev_memory_space,row_major> res(cuv::extents[nImg][nPix][nPix][nChan/sub_size]);
+
+       tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nImg][nPix][nPix][nChan]);
+       tensor<float,host_memory_space,row_major> res_h(cuv::extents[nImg][nPix][nPix][nChan/sub_size]);
+
+       fill_rnd_uniform(inp_h);
+       inp = inp_h;
+
+       res = 0.f;
+       res_h = 0.f;
+       tuplewise_op(res,inp, 3, sub_size, TO_MAX);
+       tuplewise_op(res_h,inp_h, 3, sub_size, TO_MAX);
+
+       for(unsigned int l=0;l<nImg;l++){
+           for(unsigned int j=0;j<nPix;j++)
+               for(unsigned int k=0;k<nPix;k++){
+                   for(unsigned int i=0;i<nChan/sub_size;i++){
+                       BOOST_CHECK_CLOSE(1.f, 1.f + res(l,j,k,i) - res_h(l,j,k,i), 0.001f);
+
+                       float max_act = inp_h(l,j,k,sub_size*i);
+                       for(unsigned int sub_idx = 1; sub_idx < sub_size; sub_idx++){
+                           float s = inp_h(l,j,k,sub_size*i+sub_idx);
+                           if(max_act < s){
+                               max_act = s;
+                           }
+                       }
+                       BOOST_CHECK_CLOSE(1.f, 1.f + res_h(l,j,k,i)- max_act, 0.001f);
+                   }
+               }
+       }
+       std::cout << " test for max out dim last passed" << std::endl;/* cursor */
+   }
+   // max out test dim = last, 2-dim tensor
+   {
+       unsigned int sub_size = 4;
+       unsigned int nImg = 4;
+       unsigned int nChan = 8*sub_size;
+       tensor<float,dev_memory_space,row_major> inp(cuv::extents[nImg][nChan]);
+       tensor<float,dev_memory_space,row_major> res(cuv::extents[nImg][nChan/sub_size]);
+
+       tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nImg][nChan]);
+       tensor<float,host_memory_space,row_major> res_h(cuv::extents[nImg][nChan/sub_size]);
+
+       fill_rnd_uniform(inp_h);
+       inp = inp_h;
+
+       res = 0.f;
+       res_h = 0.f;
+       tuplewise_op(res,inp, 1, sub_size, TO_MAX);
+       tuplewise_op(res_h,inp_h, 1, sub_size, TO_MAX);
+
+       for(unsigned int l=0;l<nImg;l++){
+           for(unsigned int i=0;i<nChan/sub_size;i++){
+               BOOST_CHECK_CLOSE(1.f, 1.f + res(l,i) - res_h(l,i), 0.001f);
+
+               float max_act = inp_h(l,sub_size*i);
+               for(unsigned int sub_idx = 1; sub_idx < sub_size; sub_idx++){
+                   float s = inp_h(l,sub_size*i+sub_idx);
+                   if(max_act < s){
+                       max_act = s;
+                   }
+               }
+               BOOST_CHECK_CLOSE(1.f, 1.f + res_h(l,i)- max_act, 0.001f);
+           }
+       }
+       std::cout << " test for max out dim last, 2-dim tensor passed" << std::endl;/* cursor */
    }
 
    // squared norm test
