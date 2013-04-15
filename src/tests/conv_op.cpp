@@ -643,7 +643,7 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
                      }
                      for (unsigned int sub_idx = 1; sub_idx < sub_size; sub_idx++){
                          if (sub_idx == max_index){
-                             BOOST_CHECK_CLOSE(1.f, inp_grad_h(sub_size*i + sub_idx,j,k,l), 0.01f);
+                             BOOST_CHECK_CLOSE(1.f + (float)delta(i,j,k,l), 1.f + (float)inp_grad_h(sub_size*i + sub_idx,j,k,l), 0.01f);
                          }else{
                              BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(sub_size*i + sub_idx,j,k,l), 0.01f);
                          }
