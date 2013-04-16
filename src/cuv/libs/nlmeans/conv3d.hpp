@@ -35,7 +35,7 @@ namespace cuv{
 			void convolutionRows(
 					cuv::tensor<float,dev_memory_space> &d_Dst,
 					const cuv::tensor<float,dev_memory_space> &d_Src,
-					int kernel_radius
+					const cuv::tensor<float,dev_memory_space> &kernel
 					);
             /**
              * convolve along 2nd axis of a 3D array
@@ -46,7 +46,7 @@ namespace cuv{
 			void convolutionColumns(
 					cuv::tensor<float,dev_memory_space> & d_Dst,
 					const cuv::tensor<float,dev_memory_space> & d_Src,
-					int kernel_radius
+					const cuv::tensor<float,dev_memory_space> &kernel
 					);
             /**
              * convolve along 3rd axis of a 3D array
@@ -57,7 +57,7 @@ namespace cuv{
 			void convolutionDepth(
 					cuv::tensor<float,dev_memory_space>& d_Dst,
 					const cuv::tensor<float,dev_memory_space>& d_Src,
-					int kernel_radius
+					const cuv::tensor<float,dev_memory_space> &kernel
 					);
             /**
              * determine hessian magnitude of 3D array

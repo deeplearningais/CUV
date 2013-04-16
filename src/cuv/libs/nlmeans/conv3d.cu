@@ -66,17 +66,9 @@ namespace cuv{
 			// Convolution kernel storage
 			////////////////////////////////////////////////////////////////////////////////
 			__constant__ float c_Kernel_h[MAX_KERNEL_W];
-			__constant__ float c_Kernel_v[MAX_KERNEL_W];
-			__constant__ float c_Kernel_d[MAX_KERNEL_W];
 
-			void setConvolutionKernel_horizontal(const cuv::tensor<float,host_memory_space>&src){
-				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_h, const_cast<float*>(src.ptr()), src.size() * sizeof(float)));
-			}
-			void setConvolutionKernel_vertical(const cuv::tensor<float,host_memory_space>&src){
-				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_v, const_cast<float*>(src.ptr()), src.size() * sizeof(float)));
-			}
-			void setConvolutionKernel_depth(const cuv::tensor<float,host_memory_space>&src){
-				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_d, const_cast<float*>(src.ptr()), src.size() * sizeof(float)));
+			void setConvolutionKernel_horizontal(const cuv::tensor<float,dev_memory_space>&src){
+				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_h, const_cast<float*>(src.ptr()), src.size() * sizeof(float), cudaMemcpyDeviceToDevice));
 			}
 
 
@@ -140,8 +132,12 @@ namespace cuv{
 			void convolutionRows(
 					cuv::tensor<float,dev_memory_space> &dst,
 					const cuv::tensor<float,dev_memory_space> &src,
-					int kernel_radius
+					const cuv::tensor<float,dev_memory_space> &kernel
 					){
+
+                unsigned int kernel_radius = (kernel.size()-1) / 2;
+                setConvolutionKernel_horizontal(kernel);
+
 				cuvAssert(equal_shape(dst,src));
 				cuvAssert(kernel_radius <= MAX_KERNEL_RADIUS);
 				int dw = src.shape()[2];
@@ -205,7 +201,7 @@ namespace cuv{
 					float sum = 0;
 #pragma unroll
 					for(int j = -kernel_radius; j <= kernel_radius; j++)
-						sum += c_Kernel_v[kernel_radius - j] * s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y + j];
+						sum += c_Kernel_h[kernel_radius - j] * s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y + j];
 
 					if(imageH-baseY > i * COLUMNS_BLOCKDIM_Y)
 						d_Dst[i * COLUMNS_BLOCKDIM_Y * pitch] = sum;
@@ -215,8 +211,11 @@ namespace cuv{
 			void convolutionColumns(
 					cuv::tensor<float,dev_memory_space> & d_Dst,
 					const cuv::tensor<float,dev_memory_space> & d_Src,
-					int kernel_radius
+					const cuv::tensor<float,dev_memory_space> &kernel
 					){
+
+                unsigned int kernel_radius = (kernel.size()-1) / 2;
+                setConvolutionKernel_horizontal(kernel);
 
 				int imageW = d_Src.shape()[2];
 				int imageH = d_Src.shape()[1];
@@ -282,7 +281,7 @@ namespace cuv{
 				float sum = 0;
 /*#pragma unroll*/
 				for(int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++)
-					sum += s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y + j] * c_Kernel_d[KERNEL_RADIUS - j];
+					sum += s_Data[threadIdx.x][threadIdx.y + i * COLUMNS_BLOCKDIM_Y + j] * c_Kernel_h[KERNEL_RADIUS - j];
 				if(imageH - baseY > i * COLUMNS_BLOCKDIM_Y)
 					*PITCH(d_Dst,dpitch,i*COLUMNS_BLOCKDIM_Y,0) = sum;
 					/**PITCH(d_Dst,dpitch,i*COLUMNS_BLOCKDIM_Y,0) = *PITCH(d_Src,spitch,i*COLUMNS_BLOCKDIM_Y,0);*/
@@ -294,8 +293,11 @@ namespace cuv{
 			void convolutionDepth(
 					cuv::tensor<float,dev_memory_space>& dst,
 					const cuv::tensor<float,dev_memory_space>& src,
-					int kernel_radius
+					const cuv::tensor<float,dev_memory_space> &kernel
 					){
+                unsigned int kernel_radius = (kernel.size()-1) / 2;
+                setConvolutionKernel_horizontal(kernel);
+
 				int dw = src.shape(2)*src.shape(1);
 				int dh = src.shape(0);
 				size_t spitch = src.stride(1)*src.shape(1);
