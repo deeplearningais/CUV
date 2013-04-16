@@ -56,7 +56,7 @@ void export_libs_rbm();
 void export_libs_kmeans();
 void export_libs_kernels();
 void export_libs_cimg();
-void export_libs_hog();
+//void export_libs_hog();
 
 BOOST_PYTHON_MODULE(_cuv_python){
         def("initCUDA", initCUDA);
@@ -77,7 +77,7 @@ BOOST_PYTHON_MODULE(_cuv_python){
         export_libs_kmeans();
         export_libs_kernels();
         export_libs_cimg();
-        export_libs_hog();
+        //export_libs_hog();
 }
 
 

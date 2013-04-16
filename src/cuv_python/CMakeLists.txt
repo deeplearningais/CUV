@@ -43,7 +43,7 @@ PYTHON_ADD_MODULE(cuv_python SHARED
         export_libs_kmeans.cpp
         export_libs_kernels.cpp
         export_libs_cimg.cpp
-        export_libs_hog.cpp
+        #export_libs_hog.cpp
     )
 
 CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
