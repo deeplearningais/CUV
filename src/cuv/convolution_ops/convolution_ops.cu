@@ -701,6 +701,20 @@ void crop(tensor<V,M,T>& cropped, const tensor<V,M,T>& images, int startY, int s
 }
 
 template<class V, class M, class T>
+void project_to_ball(tensor<V,M,T>& filters, float ball){
+    if(filters.ndim() == 3){
+        // n_modules = 1
+        NVMatrix nv_filters NVView3D(filters);
+        normalizeLocalWeights(nv_filters, 1, ball);
+    }else if(filters.ndim() == 4){
+        NVMatrix nv_filters NVView4D(filters);
+        normalizeLocalWeights(nv_filters, filters.shape(0), ball);
+    }else{
+        throw std::runtime_error("project_to_ball: don't know how to normalize your supplied filters. dim!=3 and dim!=4");
+    }
+}
+
+template<class V, class M, class T>
 void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float scale){
     NVMatrix nv_dest NVView4D(dest);
     NVMatrix nv_images NVView4D(images);
@@ -1305,6 +1319,7 @@ template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void crop<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int); \
 template void resize_bilinear<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, float); \
+template void project_to_ball<V,M,T>(TENS(V,M,T)&, float); \
 template void contrast_normalization<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, int, float, float); \
 template void contrast_normalization_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, int, float, float, float, float); \
 template void response_normalization<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, int, float, float); \

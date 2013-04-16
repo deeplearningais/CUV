@@ -266,6 +266,15 @@ template<class V, class M, class T>
 void crop(tensor<V,M,T>& cropped, const tensor<V,M,T>& images, int startY, int startX);
 
 /**
+ * project to ball.
+ *
+ * @param filters three-dimensional or four-dimensional filters kk
+ *
+ */
+template<class V, class M, class T>
+void project_to_ball(tensor<V,M,T>& filters, float ball);
+
+/**
  * bilinear resizing
  */
 template<class V, class M, class T>
