@@ -320,30 +320,6 @@ void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<
 
 
 
-/**
- * square the input, then add every map pair and take the square root. Similar to tuplewise_op, but it does it also over spatial dimension
- *
- * @param dst where to write result
- * @param X  the original input 
- * @param subspace_size  the number of features grouped in different channels
- * @param spatial_size  the number of features grouped in spatial dimension
- */
-template<class V, class M, class T>
-void tuplewise_spatial_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int subspace_size = 2, unsigned int spatial_size = 3);
-
-/**
- * calculates the gradient of tuplewise_spatial_op.
- *
- *
- * @param dst where to write result
- * @param X  the original input 
- * @param D  the backpropagated delta
- * @param subspace_size  the number of features grouped in different channels
- * @param spatial_size  the number of features grouped in spatial dimension
- * 
- */
-template<class V, class M, class T>
-void tuplewise_spatial_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int subspace_size = 2, unsigned int spatial_size = 3);
 }
 /** @} */ //end group convolution_ops
 }

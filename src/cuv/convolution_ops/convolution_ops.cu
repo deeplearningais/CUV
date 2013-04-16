@@ -1296,17 +1296,8 @@ template<class V,class M, class T>
     }
 
 
-template<class V, class M, class T>
-void tuplewise_spatial_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int subspace_size, unsigned int spatial_size){
-        cuvAssert(dst.shape(0)==src.shape(0)/subspace_size);
-
-        unsigned int items = dst.size() / dst.shape(0);
-        unsigned int lines = dst.shape(0);
-        tuplewise_op(dst, src, 0, subspace_size, TO_ADD_SQUARED);
-}
 
 
-/*template void tuplewise_spatial_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int); \*/
 
 // instantiate
 #define  TENS(V,M,T)       tensor<V,M,T>
@@ -1314,7 +1305,6 @@ void tuplewise_spatial_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned
 #define INST(V,M,T) \
 template void tuplewise_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor); \
 template void tuplewise_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor); \
-template void tuplewise_spatial_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int); \
 template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void reorder_from_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
 template void crop<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int); \
