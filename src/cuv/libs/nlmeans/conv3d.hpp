@@ -17,15 +17,8 @@ namespace cuv{
 			
             /// fix a kernel for horizontal convolution in constant memory
             /// @param src the kernel to be loaded in constant memory
-			void setConvolutionKernel_horizontal(const cuv::tensor<float,host_memory_space>&src);
+			void setConvolutionKernel_horizontal(const cuv::tensor<float,dev_memory_space>&src);
 
-            /// fix a kernel for vertical convolution in constant memory
-            /// @param src the kernel to be loaded in constant memory
-			void setConvolutionKernel_vertical(const cuv::tensor<float,host_memory_space>&src);
-
-            /// fix a kernel for depth convolution in constant memory
-            /// @param src the kernel to be loaded in constant memory
-			void setConvolutionKernel_depth(const cuv::tensor<float,host_memory_space>&src);
 
             /** convolve along 1st axis of a 3D array
              * @param d_Dst where to write results
@@ -35,7 +28,11 @@ namespace cuv{
 			void convolutionRows(
 					cuv::tensor<float,dev_memory_space> &d_Dst,
 					const cuv::tensor<float,dev_memory_space> &d_Src,
+<<<<<<< HEAD
 					const cuv::tensor<float,dev_memory_space> &kernel
+=======
+					const cuv::tensor<float,host_memory_space> &kernel
+>>>>>>> implemented separable filters with kernel param
 					);
             /**
              * convolve along 2nd axis of a 3D array
