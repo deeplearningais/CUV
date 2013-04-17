@@ -79,86 +79,114 @@ BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
 BOOST_AUTO_TEST_CASE( test_conv3d )
 {
-	static const int filter_radius = 5;
-	cuv::tensor<float,host_memory_space> kernel(2*filter_radius+1);
-	for(int i=-filter_radius; i<=filter_radius;i++)
-		kernel(i+filter_radius) = (float) exp(-i*i);
-	kernel /= (float)cuv::sum(kernel);
-	kernel = 1.f/kernel.size();
 
-	tensor<float,host_memory_space> mh;
-	libs::cimg::load(mh,"src/tests/data/colored_square.jpg");
-	cuv::libs::nlmeans::setConvolutionKernel_horizontal(kernel);
-	cuv::libs::nlmeans::setConvolutionKernel_vertical(kernel);
-	cuv::libs::nlmeans::setConvolutionKernel_depth(kernel);
-	tensor<float,dev_memory_space> md(mh), m(mh.shape());
-	m=0.f;
-	libs::nlmeans::convolutionColumns(m,md,filter_radius);
+    unsigned int nImg = 2;
+    unsigned int nChans = 2;
+    unsigned int nPix = 50;
+	static const int filter_radius = 1;
 
-	libs::cimg::show(mh,"original image");
-	libs::cimg::show(mh=m,"filtered image");
+    const int kernel_w = 2*filter_radius+1;
+    cuv::tensor<float, cuv::host_memory_space> kernel(kernel_w);
+    kernel(0) = 1;
+    kernel((kernel_w-1)) = kernel(0);
+    for (unsigned int i = 1; i <= filter_radius; ++i)
+    {
+        kernel(i) = i * 2;
+        kernel((kernel_w-1) - i) = kernel(i);
+    }
+    kernel /= (float)cuv::sum(kernel);
+    for (unsigned int i = 0; i < kernel_w; ++i)
+    {
+        std::cout << " i = " << i <<  "  " << kernel(i) << std::endl;/* cursor */
+    }
+
+	tensor<float,dev_memory_space> inp(cuv::extents[nImg][nChans][nPix]);
+    inp = 1.f;
+	tensor<float,dev_memory_space> dst(cuv::extents[nImg][nChans][nPix]);
+	tensor<float,dev_memory_space> dst2(cuv::extents[nImg][nChans][nPix]);
+    dst2 = 1.f;
+    
+    for (int j = 0; j < nImg; ++j)
+        for (int c = 0; c < nChans; ++c){
+            dst2(j,c,0) = 0.75;
+            dst2(j,c,nPix-1) = 0.75;
+        }
+
+
+	libs::nlmeans::convolutionRows(dst,inp,kernel);
+    for (int j = 0; j < nImg; ++j)
+    {
+        for (int c = 0; c < nChans; ++c)
+        {
+            for (int i = 0; i < nPix; ++i)
+            {
+                BOOST_CHECK_EQUAL(dst2(j,c,i), dst(j,c,i));            
+            }
+            
+        }
+    }
 }
-BOOST_AUTO_TEST_CASE( test_nlmeans )
-{
-	tensor<float,host_memory_space,row_major> mh(extents[410][192][192]), mhorig;
+//BOOST_AUTO_TEST_CASE( test_nlmeans )
+//{
+//    tensor<float,host_memory_space,row_major> mh(extents[410][192][192]), mhorig;
 
-#define LENA 1
-#if !LENA
-	FILE* pFile = fopen("/home/VI/staff/schulz/checkout/git/wurzel/data/GersteLA_192x192x410_normal-upsampled.dat","r");
-	unsigned int s = fread(mh.ptr(),sizeof(float),mh.size(),pFile);
-	fclose(pFile);
-	mh/=425000.f;
-#else
-	libs::cimg::load(mh,"src/tests/data/lena_color.jpg");
-	//libs::cimg::load(mh,"src/tests/data/colored_square.jpg");
-	for(int i=0;i<mh.shape()[0];i++)
-	for(int j=0;j<mh.shape()[1];j++)
-	for(int k=0;k<mh.shape()[2];k++){
-		float f = 15.f*sqrt(-2*log(drand48()))*cos(2*M_PI*drand48());
-		mh(i,j,k) += f;
-	}
-	//tensor<float,host_memory_space,row_major> mh2(indices[0][index_range(0,300)][index_range(0,400)], mh), mh3;
-	//mh3 = mh2;
-	//mh  = mh3;
+//#define LENA 1
+//#if !LENA
+//    FILE* pFile = fopen("/home/VI/staff/schulz/checkout/git/wurzel/data/GersteLA_192x192x410_normal-upsampled.dat","r");
+//    unsigned int s = fread(mh.ptr(),sizeof(float),mh.size(),pFile);
+//    fclose(pFile);
+//    mh/=425000.f;
+//#else
+//    libs::cimg::load(mh,"src/tests/data/lena_color.jpg");
+//    //libs::cimg::load(mh,"src/tests/data/colored_square.jpg");
+//    for(int i=0;i<mh.shape()[0];i++)
+//    for(int j=0;j<mh.shape()[1];j++)
+//    for(int k=0;k<mh.shape()[2];k++){
+//        float f = 15.f*sqrt(-2*log(drand48()))*cos(2*M_PI*drand48());
+//        mh(i,j,k) += f;
+//    }
+//    //tensor<float,host_memory_space,row_major> mh2(indices[0][index_range(0,300)][index_range(0,400)], mh), mh3;
+//    //mh3 = mh2;
+//    //mh  = mh3;
 
-	libs::cimg::show(mh,"filtered image");
-	//mh.reshape(extents[300][1][400]);
-	mhorig = mh;
-#endif
+//    libs::cimg::show(mh,"filtered image");
+//    //mh.reshape(extents[300][1][400]);
+//    mhorig = mh;
+//#endif
 
-	//cuvAssert(s==mh.memsize());
-	typedef tensor<float,dev_memory_space,row_major> dev_t;
-	typedef tensor<float,dev_memory_space,row_major> dev1d_t;
-	dev_t    md;
-	md  = mh;
-	dev1d_t dst(mh.shape());
-#if LENA
-	cuv::apply_scalar_functor(mh,cuv::SF_MAX,0.f);
-	cuv::apply_scalar_functor(mh,cuv::SF_MIN,255.f);
-	libs::cimg::save(mh,"noisedlena.png");
-	//libs::nlmeans::filter_nlmean(dst,md, 20, 5, 15.f, 0.25f, false, true);
-	//filter_nlmean(tensor dst, const tensor src, search_radius, filter_radius, sigma, dist_sigma, step_size, bool threeDim, bool verbose){
-	MEASURE_TIME(dev, libs::nlmeans::filter_nlmean(dst,md, 50, 6,  15.00f, -1.f,  1.0f, false, false), 1);
-	//dst.reshape(extents[300][400]);
+//    //cuvAssert(s==mh.memsize());
+//    typedef tensor<float,dev_memory_space,row_major> dev_t;
+//    typedef tensor<float,dev_memory_space,row_major> dev1d_t;
+//    dev_t    md;
+//    md  = mh;
+//    dev1d_t dst(mh.shape());
+//#if LENA
+//    cuv::apply_scalar_functor(mh,cuv::SF_MAX,0.f);
+//    cuv::apply_scalar_functor(mh,cuv::SF_MIN,255.f);
+//    libs::cimg::save(mh,"noisedlena.png");
+//    //libs::nlmeans::filter_nlmean(dst,md, 20, 5, 15.f, 0.25f, false, true);
+//    //filter_nlmean(tensor dst, const tensor src, search_radius, filter_radius, sigma, dist_sigma, step_size, bool threeDim, bool verbose){
+//    MEASURE_TIME(dev, libs::nlmeans::filter_nlmean(dst,md, 50, 6,  15.00f, -1.f,  1.0f, false, false), 1);
+//    //dst.reshape(extents[300][400]);
 	
-#else
-	libs::nlmeans::filter_nlmean(dst, md,  50, 2, 0.02f, -1.f,  1.0f,  true, true);
-#endif
-	mh = dst;
-#if !LENA
-	pFile = fopen("nlmeanresult.dat","w");
-	fwrite(mh.ptr(), sizeof(float), mh.size(), pFile);
-#else
-	//libs::cimg::show(tensor<float,host_memory_space,row_major>(indices[0][index_range(0,400)][index_range(0,400)], mh), "channel0");
-	//libs::cimg::show(tensor<float,host_memory_space,row_major>(indices[1][index_range(0,400)][index_range(0,400)], mh), "channel1");
-	//libs::cimg::show(tensor<float,host_memory_space,row_major>(indices[2][index_range(0,400)][index_range(0,400)], mh), "channel2");
-	libs::cimg::show(mh,"filtered image");
-	libs::cimg::show(mh-mhorig,"difference");
-	cuv::apply_scalar_functor(mh,cuv::SF_MAX,0.f);
-	cuv::apply_scalar_functor(mh,cuv::SF_MIN,255.f);
-	libs::cimg::save(mh,"filteredlena2.png");
-#endif
-}
+//#else
+//    libs::nlmeans::filter_nlmean(dst, md,  50, 2, 0.02f, -1.f,  1.0f,  true, true);
+//#endif
+//    mh = dst;
+//#if !LENA
+//    pFile = fopen("nlmeanresult.dat","w");
+//    fwrite(mh.ptr(), sizeof(float), mh.size(), pFile);
+//#else
+//    //libs::cimg::show(tensor<float,host_memory_space,row_major>(indices[0][index_range(0,400)][index_range(0,400)], mh), "channel0");
+//    //libs::cimg::show(tensor<float,host_memory_space,row_major>(indices[1][index_range(0,400)][index_range(0,400)], mh), "channel1");
+//    //libs::cimg::show(tensor<float,host_memory_space,row_major>(indices[2][index_range(0,400)][index_range(0,400)], mh), "channel2");
+//    libs::cimg::show(mh,"filtered image");
+//    libs::cimg::show(mh-mhorig,"difference");
+//    cuv::apply_scalar_functor(mh,cuv::SF_MAX,0.f);
+//    cuv::apply_scalar_functor(mh,cuv::SF_MIN,255.f);
+//    libs::cimg::save(mh,"filteredlena2.png");
+//#endif
+//}
 
 BOOST_AUTO_TEST_SUITE_END()
 
