@@ -178,86 +178,6 @@ void cpuFilterActs(const float* images, const float* filters, float* targets,
 }
 
 
-/*template<class T>*/
-/*__global__*/
-/*void convolve1d_kernel(tensor<V,M, T>& dst,  const tensor<V,M, T>& img, const tensor<V,M, T>& filter){*/
-
-
-/*    unsigned int flt = threadIdx.x;*/
-/*    [>unsigned int flt = blockIdx.x;<]*/
-
-
-
-/*    if(FirstDim){*/
-
-/*        unsigned int line = blockIdx.x;*/
-/*        unsigned int item = threadIdx.x;*/
-/*        const T* src0 = src + (2 * line + 0) * dst_cols;*/
-/*        const T* src1 = src + (2 * line + 1) * dst_cols;*/
-/*        T* dst0 = dst + line * dst_cols;*/
-
-/*        for(; item < dst_cols; item += blockDim.x){*/
-/*            T s0 = src0[item];*/
-/*            T s1 = src1[item];*/
-
-/*            dst0[item] = sqrt(s0*s0 + s1*s1);*/
-/*        }*/
-/*    }else{*/
-/*        unsigned int item = blockIdx.x;*/
-/*        unsigned int line = threadIdx.x;*/
-/*        const T* src0 = src + (2*dst_rows * item + 0);*/
-/*        const T* src1 = src + (2*dst_rows * item + 1);*/
-/*        T* dst0 = dst + item * dst_rows;*/
-
-/*        for(; line < dst_rows; line += blockDim.x){*/
-/*            T s0 = src0[2*line];*/
-/*            T s1 = src1[2*line];*/
-
-/*            dst0[line] = sqrt(s0*s0 + s1*s1);*/
-/*        }*/
-/*    }*/
-/*}*/
-
-
-/*template<class V, class M, class T>*/
-/*    void */
-/*    convolve1d(tensor<V,M, T>& dst, const tensor<V,M, T>& img, const tensor<V,M, T>& filter){*/
-
-/*        unsigned int nImg     = img.shape(0);*/
-/*        unsigned int nImgPix  = img.shape(1);*/
-/*        cuvAssert(filter.ndim()==2);*/
-/*        unsigned int nFiltPix  = filter.shape(0);*/
-/*        unsigned int nFilt     = filter.shape(1);*/
-        
-/*        cuvAssert(dst.shape(1)==nFilt);*/
-/*        unsigned int nModules = dst.shape(2);*/
-/*        cuvAssert(dst.shape(0)==nImg);*/
-
-/*        if(IsSame<M,host_memory_space>::Result::value){*/
-/*            for(unsigned int img_id = 0; img_id < nImg; img_id++){*/
-/*                for(unsigned int flt_id = 0; flt_id < n_Filt; flt_id++){*/
-/*                    for(unsigned int mod_id = 0; mod_id < nModules; mod_id++){*/
-/*                        float sum = 0;*/
-/*                        for(unsigned int fltpix_id = 0; fltpix_id < nFiltPix; fltpix_id++){*/
-/*                            int index = mod_id + fltpix_id;*/
-/*                            // wrap around*/
-/*                            if (index > nImgPix){*/
-/*                                index = nImgPix - index;*/
-/*                            }*/
-
-/*                            sum += src(img_id, index) * filter(fltpix_id, flt_id);*/
-/*                        }*/
-/*                        dst(img_id, flt_id, mod_id) = sum;*/
-/*                    }*/
-/*                }*/
-/*            }*/
-/*        }*/
-/*        else{  // run on device*/
-            
-/*        }*/
-/*    }*/
-
-
 
 
 template<class V, class M, class T>
@@ -801,7 +721,7 @@ void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned i
                 }
             }
             if(to == TO_NORM)
-                dst0[item] = sqrt(squared_sum);
+                dst0[item] = sqrt(squared_sum + 0.0001f);
             else
                 dst0[item] = squared_sum;
         }
@@ -827,7 +747,7 @@ void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned i
                 }
             }
             if(to == TO_NORM)
-                dst0[line] = sqrt(squared_sum);
+                dst0[line] = sqrt(squared_sum + 0.0001f);
             else
                 dst0[line] = squared_sum;
         }
@@ -983,7 +903,7 @@ template<bool FirstDim, tuplewise_op_functor to, class T>
                     }
 
                     if(to == TO_NORM)
-                        dst_ptr[i] = sqrt(squared_sum);
+                        dst_ptr[i] = sqrt(squared_sum + 0.0001f);
                     else
                         dst_ptr[i] = squared_sum;
                 }
@@ -1006,7 +926,7 @@ template<bool FirstDim, tuplewise_op_functor to, class T>
                         }
                     }
                     if(to == TO_NORM)
-                        dst_ptr[i] = sqrt(squared_sum);
+                        dst_ptr[i] = sqrt(squared_sum + 0.0001f);
                     else
                         dst_ptr[i] = squared_sum;
                 }
