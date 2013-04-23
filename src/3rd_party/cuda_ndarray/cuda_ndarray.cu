@@ -596,6 +596,88 @@ __global__ void k_copy_reshape_rowmajor(unsigned int numEls,
     }
 }
 
+
+
+
+
+
+
+// Reshape self to the new shape gived by the tuple shape.
+//
+// If self is c contiguous, it return a view. Otherwise it always do a copy.
+// TODO: make it return a view when the strides allow it event if it is not 
+//       c contiguous
+int  CudaNdarray_reshape_2(CudaNdarray * self, CudaNdarray * rval,  int * rval_dims, unsigned int rval_nd)
+{
+    std::cout << " in 1 cuda " << std::endl;/* cursor */
+    // check the size 
+    unsigned int rval_size = 1;
+    for (unsigned int i = 0; i < rval_nd; ++i)
+    {
+        rval_size = rval_size * rval_dims[i];
+    }
+
+    std::cout << " in 2 cuda rval " << rval_size  << std::endl;/* cursor */
+    // calculate new size, assert same as old size
+    if (rval_size != CudaNdarray_SIZE(self))
+    {
+        PyErr_Format(PyExc_ValueError, "size must remain unchanged, changed from %i to %i", CudaNdarray_SIZE(self), rval_size);
+        return -1;
+    }
+
+    std::cout << " in 3 cuda "   << std::endl;/* cursor */
+    if(CudaNdarray_is_c_contiguous(self))
+    {
+        if (!rval || 0 != rval->data_allocated
+            ||CudaNdarray_set_device_data(rval, CudaNdarray_DEV_DATA(self), self))
+        {
+            Py_XDECREF(rval);
+            free(rval_dims);
+            return -1;
+        }
+        //set dim and stride
+        int size = 1;
+        for (int i = rval_nd-1; i >= 0; --i)
+        {
+            std::cout << " setting strides" << std::endl;
+            CudaNdarray_set_stride(rval, i, (rval_dims[i] == 1) ? 0 : size);
+            CudaNdarray_set_dim(rval, i, rval_dims[i]);
+            size = size * rval_dims[i];
+        }
+        return 1;
+    }
+
+
+    // call worker routine
+    unsigned int threads_per_block = std::min(rval_size, (unsigned int)NUM_VECTOR_OP_THREADS_PER_BLOCK);
+    unsigned int n_blocks = std::min(ceil_intdiv(rval_size,threads_per_block), (unsigned int)NUM_VECTOR_OP_BLOCKS);
+    k_copy_reshape_rowmajor<<<n_blocks,threads_per_block>>>(
+            rval_size,
+            self->nd,
+            CudaNdarray_DEV_DATA(self), CudaNdarray_DEV_DIMS(self), CudaNdarray_DEV_STRIDES(self),
+            rval->nd,
+            CudaNdarray_DEV_DATA(rval), CudaNdarray_DEV_DIMS(rval), CudaNdarray_DEV_STRIDES(rval));
+
+    CNDA_THREAD_SYNC;
+    cudaError_t err = cudaGetLastError();
+    if( cudaSuccess != err)
+    {
+        PyErr_Format(PyExc_RuntimeError, "Cuda error: %s: %s.\n", "k_copy_reshape_rowmajor", cudaGetErrorString(err));
+        std::cout << " in 9 cuda " <<  cudaGetErrorString(err)  << std::endl;/* cursor */
+        return -1;
+    }
+    std::cout << " last return" << std::endl;/* cursor */
+    return 1;
+}
+
+
+
+
+
+
+
+
+
 // Reshape self to the new shape gived by the tuple shape.
 //
 // If self is c contiguous, it return a view. Otherwise it always do a copy.
@@ -3756,6 +3838,7 @@ CudaNdarray* cnda_flip_dims2and3(CudaNdarray* self){
     Py_DECREF(s0);
     return (CudaNdarray*)res;
 }
+
 
 /*
   Local Variables:
