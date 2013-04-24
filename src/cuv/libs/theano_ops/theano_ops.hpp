@@ -67,10 +67,13 @@ void finalize_cuda();
  *  @param size     The number of dimensions of the tensor
  *
  */
-void dim_shuffle2(cuv::tensor<float,cuv::dev_memory_space>& dst, cuv::tensor<float,cuv::dev_memory_space>& src, int new_dims[], unsigned int nd);
+void dim_shuffle2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, int new_dims[], unsigned int nd);
+
+void dim_shuffle_vec(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, std::vector<int> pattern);
+    
 
 template<std::size_t D>
-void dim_shuffle(cuv::tensor<float,cuv::dev_memory_space>& dst, cuv::tensor<float,cuv::dev_memory_space>& src, const cuv::extent_gen<D>& eg){
+void dim_shuffle(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, const cuv::extent_gen<D>& eg){
     int new_dims[D];
     for (int i = 0; i < D; ++i)
     {
@@ -86,7 +89,7 @@ void dim_shuffle(cuv::tensor<float,cuv::dev_memory_space>& dst, cuv::tensor<floa
  *  @param src      The input tensor on which the operation is performed
  *
  */
-void flip_dim2and3(cuv::tensor<float,cuv::dev_memory_space>& dst, cuv::tensor<float,cuv::dev_memory_space>& src);
+void flip_dim2and3(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src);
 
 
 /** @} */ //end group convolution_ops_theano

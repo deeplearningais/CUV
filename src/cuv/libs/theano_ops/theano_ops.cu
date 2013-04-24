@@ -37,12 +37,21 @@ void view(CudaNdarray*& nda, cuv::tensor<float,cuv::dev_memory_space>& ct){
 }
 
 
+void dim_shuffle_vec(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, std::vector<int> pattern){
+    unsigned int size = pattern.size();
+    int new_dims[size];
+    for (unsigned int i = 0; i < size; ++i)
+    {
+        new_dims[i] = pattern[i];
+    }
+    dim_shuffle2(dst,src, new_dims, size);
+}
 
 
 
-void dim_shuffle2(cuv::tensor<float,cuv::dev_memory_space>& dst, cuv::tensor<float,cuv::dev_memory_space>& src, int new_dims[], unsigned int size){
+void dim_shuffle2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src_, int new_dims[], unsigned int size){
+    cuv::tensor<float,cuv::dev_memory_space> src = src_;
     assert(src.ndim() == size);
-
     CudaNdarray *csrc;
     CudaNdarray *cdst;
     view(csrc, src);
@@ -75,7 +84,8 @@ void dim_shuffle2(cuv::tensor<float,cuv::dev_memory_space>& dst, cuv::tensor<flo
     Py_DECREF(cdst);
 }
 
-void flip_dim2and3(cuv::tensor<float,cuv::dev_memory_space>& dst, cuv::tensor<float,cuv::dev_memory_space>& src){
+void flip_dim2and3(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src_){
+    cuv::tensor<float,cuv::dev_memory_space> src = src_;
     CudaNdarray *cout;
     CudaNdarray *cflipped;
     CudaNdarray *cdst;
@@ -93,19 +103,17 @@ void flip_dim2and3(cuv::tensor<float,cuv::dev_memory_space>& dst, cuv::tensor<fl
     }
 
     if(1 !=CudaNdarray_reshape_2(cflipped,cdst, shape, size)){
-       std::cout << " in error " << std::endl;/* cursor */
-       throw std::runtime_error("could not reshape tensor");
-       Py_DECREF(cout);
-       Py_DECREF(cflipped);
-       Py_DECREF(cdst);
+      std::cout << " in error " << std::endl;/* cursor */
+      Py_DECREF(cout);
+      Py_DECREF(cflipped);
+      Py_DECREF(cdst);
+      throw std::runtime_error("could not reshape tensor");
     }
 
 
     Py_DECREF(cout);
-    std::cout << " in 5a " << std::endl;/* cursor */
     Py_DECREF(cflipped);
     Py_DECREF(cdst);
-    std::cout << " in 6a " << std::endl;/* cursor */
 }
 
 

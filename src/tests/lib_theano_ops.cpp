@@ -282,8 +282,8 @@ BOOST_AUTO_TEST_CASE( test_flip_dim2and3 )
 {
   unsigned int nImg = 2;
   unsigned int nChan = 2;
-  unsigned int npix_x = 1;
-  unsigned int npix_y = 3;
+  unsigned int npix_x = 4;
+  unsigned int npix_y = 4;
 
   initcuda();
   cuv::tensor<float,cuv::dev_memory_space> src(cuv::extents[nImg][nChan][npix_x][npix_y]);
@@ -327,7 +327,7 @@ BOOST_AUTO_TEST_CASE( test_flip_dim2and3 )
               {
                   //BOOST_CHECK_EQUAL(dst(i,c, npix_x -1 - x, npix_y-1 - y), src(i,c,x,y));
                   std::cout << " src " <<  src(i,c,x,y)<< std::endl;/* cursor */
-                  std::cout << " dst " <<  dst(i,c,0,npix_y - 1 - y)<< std::endl;/* cursor */
+                  std::cout << " dst " <<  dst(i,c,npix_x -1 -x,npix_y - 1 - y)<< std::endl;/* cursor */
                   std::cout << std::endl;
                   //BOOST_CHECK_EQUAL(dst(i,c, npix_x - 1 - x, 0 ), src(i,c,x,y));
               }
