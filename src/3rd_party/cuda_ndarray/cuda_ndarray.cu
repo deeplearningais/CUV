@@ -3839,6 +3839,37 @@ CudaNdarray* cnda_flip_dims2and3(CudaNdarray* self){
     return (CudaNdarray*)res;
 }
 
+CudaNdarray* cnda_flip_dims(CudaNdarray* self, bool * dims){
+    // filters = filters[::1,::1,::-1,::-1] 
+    PyObject* s1, *s2, *s3, *s0;
+    if (dims[0]) 
+        s0 = PySlice_New(NULL,NULL,PyInt_FromLong(-1));
+    else
+        s0 = PySlice_New(NULL,NULL,NULL);
+
+    if (dims[1]) 
+        s1 = PySlice_New(NULL,NULL,PyInt_FromLong(-1));
+    else
+        s1 = PySlice_New(NULL,NULL,NULL);
+    if (dims[2]) 
+        s2 = PySlice_New(NULL,NULL,PyInt_FromLong(-1));
+    else
+        s2 = PySlice_New(NULL,NULL,NULL);
+
+    if (dims[3]) 
+        s3 = PySlice_New(NULL,NULL,PyInt_FromLong(-1));
+    else
+        s3 = PySlice_New(NULL,NULL,NULL);
+
+    PyObject* tup = PyTuple_Pack(4,s0,s1,s2,s3);
+    PyObject* res = CudaNdarray_Subscript((PyObject*)self, tup);
+    Py_DECREF(tup);
+    Py_DECREF(s3);
+    Py_DECREF(s2);
+    Py_DECREF(s1);
+    Py_DECREF(s0);
+    return (CudaNdarray*)res;
+}
 
 /*
   Local Variables:

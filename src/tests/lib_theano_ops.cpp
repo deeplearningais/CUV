@@ -276,7 +276,7 @@ BOOST_AUTO_TEST_CASE( test_dim_shuffle )
 
 
 
-BOOST_AUTO_TEST_CASE( test_flip_dim2and3 )
+BOOST_AUTO_TEST_CASE( test_flip_dims )
 {
    using namespace cuv::theano_ops;
 {
@@ -304,35 +304,77 @@ BOOST_AUTO_TEST_CASE( test_flip_dim2and3 )
   }
   dst = 1.f;
 
-    
-  flip_dim2and3(dst, src);
-  BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
-  BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
-  BOOST_CHECK_EQUAL(dst.shape(2), src.shape(2));
-  BOOST_CHECK_EQUAL(dst.shape(3), src.shape(3));
+  {   
+      bool flip[] = {false, false, true, true};
+      flip_dims(dst, src, flip);
 
-    
-  for(unsigned int i = 0; i < 4; i++){
-      std::cout <<  dst.shape(i) << "   " << dst.stride(i) << std::endl;
-  }
+      BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
+      BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
+      BOOST_CHECK_EQUAL(dst.shape(2), src.shape(2));
+      BOOST_CHECK_EQUAL(dst.shape(3), src.shape(3));
 
-  std::cout << " in c " << std::endl;/* cursor */
-  for (int i = 0; i < nImg; ++i)
-  {
-      for (int c = 0; c < nChan; ++c)
+      for (int i = 0; i < nImg; ++i)
       {
-          for (int x = 0; x < npix_x; ++x)
+          for (int c = 0; c < nChan; ++c)
           {
-              for (int y = 0; y < npix_y; ++y)
+              for (int x = 0; x < npix_x; ++x)
               {
-                  //BOOST_CHECK_EQUAL(dst(i,c, npix_x -1 - x, npix_y-1 - y), src(i,c,x,y));
-                  std::cout << " src " <<  src(i,c,x,y)<< std::endl;/* cursor */
-                  std::cout << " dst " <<  dst(i,c,npix_x -1 -x,npix_y - 1 - y)<< std::endl;/* cursor */
-                  std::cout << std::endl;
-                  //BOOST_CHECK_EQUAL(dst(i,c, npix_x - 1 - x, 0 ), src(i,c,x,y));
+                  for (int y = 0; y < npix_y; ++y)
+                  {
+                      BOOST_CHECK_EQUAL(dst(i,c, npix_x - 1 - x, npix_y - 1 - y ), src(i,c,x,y));
+                  }
               }
           }
       }
+
+  }
+  {   
+      bool flip[] = {true, true, false, false};
+      flip_dims(dst, src, flip);
+
+      BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
+      BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
+      BOOST_CHECK_EQUAL(dst.shape(2), src.shape(2));
+      BOOST_CHECK_EQUAL(dst.shape(3), src.shape(3));
+
+      for (int i = 0; i < nImg; ++i)
+      {
+          for (int c = 0; c < nChan; ++c)
+          {
+              for (int x = 0; x < npix_x; ++x)
+              {
+                  for (int y = 0; y < npix_y; ++y)
+                  {
+                      BOOST_CHECK_EQUAL(dst(nImg-1-i,nChan-1-c, x, y ), src(i,c,x,y));
+                  }
+              }
+          }
+      }
+
+  }
+  {   
+      bool flip[] = {true, true, true, true};
+      flip_dims(dst, src, flip);
+
+      BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
+      BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
+      BOOST_CHECK_EQUAL(dst.shape(2), src.shape(2));
+      BOOST_CHECK_EQUAL(dst.shape(3), src.shape(3));
+
+      for (int i = 0; i < nImg; ++i)
+      {
+          for (int c = 0; c < nChan; ++c)
+          {
+              for (int x = 0; x < npix_x; ++x)
+              {
+                  for (int y = 0; y < npix_y; ++y)
+                  {
+                      BOOST_CHECK_EQUAL(dst(nImg-1-i,nChan-1-c, npix_x - 1 - x, npix_y - 1 - y ), src(i,c,x,y));
+                  }
+              }
+          }
+      }
+
   }
     
 }

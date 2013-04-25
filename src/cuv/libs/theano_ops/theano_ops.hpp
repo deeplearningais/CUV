@@ -88,7 +88,7 @@ void dim_shuffle(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tenso
  *  @param src      The input tensor on which the operation is performed
  *
  */
-void flip_dim2and3(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src);
+void flip_dims(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, bool * flip_dims);
 
 
 /** @} */ //end group convolution_ops_theano

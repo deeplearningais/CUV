@@ -2,7 +2,8 @@
 #include "../../../3rd_party/cuda_ndarray/conv.cu"
 #include "../../../3rd_party/cuda_ndarray/cuda_ndarray.cuh"
 #include <vector>
-CudaNdarray* cnda_flip_dims2and3(CudaNdarray* self);
+CudaNdarray* cnda_flip_dims(CudaNdarray* self, bool * flip_dims);
+
 int  CudaNdarray_reshape_2(CudaNdarray * self, CudaNdarray * rval, int * rval_dims, unsigned int rval_nd);
 namespace cuv{
 
@@ -79,7 +80,7 @@ void dim_shuffle2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tens
     Py_DECREF(cdst);
 }
 
-void flip_dim2and3(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src_){
+void flip_dims(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src_, bool * flip_dims){
     cuv::tensor<float,cuv::dev_memory_space> src = src_;
     CudaNdarray *cout;
     CudaNdarray *cflipped;
@@ -87,7 +88,8 @@ void flip_dim2and3(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::ten
     view(cout, src);
     view(cdst, dst);
 
-    cflipped = cnda_flip_dims2and3(cout);
+    /*cflipped = cnda_flip_dims2and3(cout);*/
+    cflipped = cnda_flip_dims(cout, flip_dims);
 
 
     unsigned int size = dst.ndim();
