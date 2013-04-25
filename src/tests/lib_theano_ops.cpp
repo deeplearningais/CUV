@@ -60,7 +60,7 @@ struct Fix{
 
 BOOST_FIXTURE_TEST_SUITE( s, Fix )
 
-BOOST_AUTO_TEST_CASE( test_dim_schuffle )
+BOOST_AUTO_TEST_CASE( test_dim_shuffle )
 {
     using namespace cuv::theano_ops;
     initcuda();
@@ -130,10 +130,10 @@ BOOST_AUTO_TEST_CASE( test_dim_schuffle )
       }
     }
 {
-   unsigned int nImg = 3;
-   unsigned int nChan = 4;
-   unsigned int npix_x = 2;
-   unsigned int npix_y = 4;
+   unsigned int nImg = 10;
+   unsigned int nChan = 1;
+   unsigned int npix_x = 1;
+   unsigned int npix_y = 10;
 
    cuv::tensor<float,cuv::dev_memory_space> src(cuv::extents[nImg][nChan][npix_x][npix_y]);
    cuv::tensor<float,cuv::dev_memory_space> dst(cuv::extents[nImg][nChan][npix_x][npix_y]);
@@ -173,7 +173,7 @@ BOOST_AUTO_TEST_CASE( test_dim_schuffle )
            }
        }
    }
-    
+   std::cout << " 1 dim tensor finished " << std::endl;/* cursor */ 
 }
 {
    unsigned int nImg = 3;
@@ -282,7 +282,7 @@ BOOST_AUTO_TEST_CASE( test_flip_dim2and3 )
 {
   unsigned int nImg = 2;
   unsigned int nChan = 2;
-  unsigned int npix_x = 4;
+  unsigned int npix_x = 1;
   unsigned int npix_y = 4;
 
   initcuda();

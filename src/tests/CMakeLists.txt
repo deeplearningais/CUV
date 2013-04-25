@@ -28,6 +28,9 @@ TARGET_LINK_LIBRARIES( test_convert ${TEST_LINK_LIBS})
 ADD_EXECUTABLE( test_tensor_op tensor_op.cpp )
 TARGET_LINK_LIBRARIES( test_tensor_op ${TEST_LINK_LIBS})
 
+ADD_EXECUTABLE( test_theano_ops lib_theano_ops.cpp )
+TARGET_LINK_LIBRARIES( test_theano_ops ${TEST_LINK_LIBS})
+
 ADD_EXECUTABLE( test_tensor_op_speed tensor_op_speed.cpp )
 TARGET_LINK_LIBRARIES( test_tensor_op_speed ${TEST_LINK_LIBS})
 
@@ -100,6 +103,11 @@ IF(CUV_CIMG_BINDINGS)
 
 ENDIF(CUV_CIMG_BINDINGS)
 
+
+if (PYTHONLIBS_FOUND )
+TARGET_LINK_LIBRARIES(test_theano_ops ${CUV_LIBRARIES})
+endif(PYTHONLIBS_FOUND )
+
 ADD_TEST( tensor_serialization  "${CMAKE_BINARY_DIR}/src/tests/test_tensor_serialization" )
 ADD_TEST( basics  "${CMAKE_BINARY_DIR}/src/tests/test_basic" )
 ADD_TEST( convert "${CMAKE_BINARY_DIR}/src/tests/test_convert" )
@@ -113,6 +121,7 @@ ADD_TEST( random "${CMAKE_BINARY_DIR}/src/tests/test_random" )
 ADD_TEST( lib_rbm "${CMAKE_BINARY_DIR}/src/tests/test_lib_rbm" )
 ADD_TEST( lib_kmeans "${CMAKE_BINARY_DIR}/src/tests/test_lib_kmeans" )
 ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/src/tests/test_conv_op" )
+ADD_TEST( theano_ops "${CMAKE_BINARY_DIR}/src/tests/test_theano_ops" )
 
 # test for memory leak. takes to long and bug was fixed
 #ADD_TEST( memory  "${CMAKE_BINARY_DIR}/src/tests/test_memory" )
