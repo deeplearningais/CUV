@@ -58,38 +58,61 @@ void initcuda();
 void finalize_cuda();
 
 
+void dim_shuffle2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, int new_dims[], unsigned int nd);
+
 /**
  *  shuffles the dimensions of the tensor in a specific order
  *
  *  @param dst      The result of the dimension shuffle is written here
  *  @param src      The input tensor
- *  @param new_dims The order, specifing how which dimensions to shuffle
- *  @param size     The number of dimensions of the tensor
+ *  @param pattern       The pattern, specifing which dimensions to shuffle
  *
  */
-void dim_shuffle2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, int new_dims[], unsigned int nd);
-
 void dim_shuffle_vec(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, std::vector<int> pattern);
     
 
+/**
+ *  shuffles the dimensions of the tensor in a specific order
+ *
+ *  @param dst      The result of the dimension shuffle is written here
+ *  @param src      The input tensor
+ *  @param pattern       The pattern, specifing which dimensions to shuffle
+ *
+ */
 template<std::size_t D>
-void dim_shuffle(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, const cuv::extent_gen<D>& eg){
+void dim_shuffle(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, const cuv::extent_gen<D>& pattern){
     int new_dims[D];
     for (int i = 0; i < D; ++i)
     {
-        new_dims[i] = eg.ranges_[i].finish();
+        new_dims[i] = pattern.ranges_[i].finish();
     }
     dim_shuffle2(dst,src, new_dims, D);
 }
+
 /**
  *  flips the 2nd and 3rd dimension of the tensor
  *
  *  @param dst      The result of the flipping is written here
  *  @param src      The input tensor on which the operation is performed
+ *  @param eg       The pattern, specifing which dimensions to flip 
  *
  */
-void flip_dims(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, bool * flip_dims);
+template<std::size_t D>
+void flip_dims(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, const cuv::extent_gen<D>& pattern){
+    assert(D == dst.ndim());
+    bool p[D];
+    for (int i = 0; i < D; ++i)
+    {
+        p[i] = pattern.ranges_[i].finish();
+    }
+    flip_dims2(dst,src, p);
+}
 
+
+
+void flip_dims2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, bool *pattern);
+void flip_dims_vec(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, std::vector<bool> pattern);
+    
 
 /** @} */ //end group convolution_ops_theano
 }

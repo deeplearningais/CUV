@@ -80,7 +80,17 @@ void dim_shuffle2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tens
     Py_DECREF(cdst);
 }
 
-void flip_dims(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src_, bool * flip_dims){
+void flip_dims_vec(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, std::vector<bool> pattern){
+    unsigned int size = pattern.size();
+    bool new_dims[size];
+    for (unsigned int i = 0; i < size; ++i)
+    {
+        new_dims[i] = pattern[i];
+    }
+    flip_dims2(dst,src, new_dims);
+}
+
+void flip_dims2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src_, bool * flip_dims){
     cuv::tensor<float,cuv::dev_memory_space> src = src_;
     CudaNdarray *cout;
     CudaNdarray *cflipped;

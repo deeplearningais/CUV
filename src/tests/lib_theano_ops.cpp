@@ -305,8 +305,7 @@ BOOST_AUTO_TEST_CASE( test_flip_dims )
   dst = 1.f;
 
   {   
-      bool flip[] = {false, false, true, true};
-      flip_dims(dst, src, flip);
+      flip_dims(dst, src, cuv::extents[0][0][1][1]);
 
       BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
       BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
@@ -329,8 +328,7 @@ BOOST_AUTO_TEST_CASE( test_flip_dims )
 
   }
   {   
-      bool flip[] = {true, true, false, false};
-      flip_dims(dst, src, flip);
+      flip_dims(dst, src, cuv::extents[1][1][0][0]);
 
       BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
       BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
@@ -353,8 +351,12 @@ BOOST_AUTO_TEST_CASE( test_flip_dims )
 
   }
   {   
-      bool flip[] = {true, true, true, true};
-      flip_dims(dst, src, flip);
+      std::vector<bool> v(4);
+      v[0] = true;
+      v[1] = true;
+      v[2] = true;
+      v[3] = true;
+      flip_dims_vec(dst, src, v);
 
       BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
       BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
