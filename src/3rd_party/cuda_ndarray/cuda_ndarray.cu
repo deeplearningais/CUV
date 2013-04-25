@@ -564,6 +564,10 @@ PyObject * CudaNdarray_ReduceSum(CudaNdarray * self, PyObject * py_reduce_mask)
     return (PyObject*)self_sum;
 }
 
+
+
+
+
 __global__ void k_copy_reshape_rowmajor(unsigned int numEls,
         unsigned int a_nd, const float * a_data, const int * a_dim, const int * a_str,
         unsigned int z_nd, float * z_data, const int * z_dim, const int * z_str)
@@ -574,21 +578,21 @@ __global__ void k_copy_reshape_rowmajor(unsigned int numEls,
     for (unsigned int i = idx; i < numEls; i += numThreads)
     {
         const float * a_i = a_data;
-        unsigned int a_ii = i;
+        int a_ii = i;
         for (unsigned int _d = 0; _d < a_nd; ++_d) //make the rightmost coords change fastest
         {
             unsigned int d = a_nd - _d-1;
-            unsigned int a_i_d = a_ii % a_dim[d];
+            int a_i_d = a_ii % a_dim[d];
             a_ii = a_ii / a_dim[d];
             a_i += a_i_d * a_str[d];
         }
-        unsigned int z_ii = i;
+        int z_ii = i;
         float * z_i = z_data;
         for (unsigned int _d = 0; _d < z_nd; ++_d) //make the rightmost coords change fastest
         {
             unsigned int d = z_nd - _d-1;
             //i tried to make the for loop count down, but it didn't work!?
-            unsigned int z_i_d = z_ii % z_dim[d];
+            int z_i_d = z_ii % z_dim[d];
             z_i += z_i_d * z_str[d];
             z_ii = z_ii / z_dim[d];
         }
@@ -609,7 +613,6 @@ __global__ void k_copy_reshape_rowmajor(unsigned int numEls,
 //       c contiguous
 int  CudaNdarray_reshape_2(CudaNdarray * self, CudaNdarray * rval,  int * rval_dims, unsigned int rval_nd)
 {
-    std::cout << " in 1 cuda " << std::endl;/* cursor */
     // check the size 
     unsigned int rval_size = 1;
     for (unsigned int i = 0; i < rval_nd; ++i)
@@ -617,7 +620,6 @@ int  CudaNdarray_reshape_2(CudaNdarray * self, CudaNdarray * rval,  int * rval_d
         rval_size = rval_size * rval_dims[i];
     }
 
-    std::cout << " in 2 cuda rval " << rval_size  << std::endl;/* cursor */
     // calculate new size, assert same as old size
     if (rval_size != CudaNdarray_SIZE(self))
     {
@@ -625,7 +627,6 @@ int  CudaNdarray_reshape_2(CudaNdarray * self, CudaNdarray * rval,  int * rval_d
         return -1;
     }
 
-    std::cout << " in 3 cuda "   << std::endl;/* cursor */
     if(CudaNdarray_is_c_contiguous(self))
     {
         if (!rval || 0 != rval->data_allocated
@@ -639,7 +640,6 @@ int  CudaNdarray_reshape_2(CudaNdarray * self, CudaNdarray * rval,  int * rval_d
         int size = 1;
         for (int i = rval_nd-1; i >= 0; --i)
         {
-            std::cout << " setting strides" << std::endl;
             CudaNdarray_set_stride(rval, i, (rval_dims[i] == 1) ? 0 : size);
             CudaNdarray_set_dim(rval, i, rval_dims[i]);
             size = size * rval_dims[i];
@@ -651,6 +651,8 @@ int  CudaNdarray_reshape_2(CudaNdarray * self, CudaNdarray * rval,  int * rval_d
     // call worker routine
     unsigned int threads_per_block = std::min(rval_size, (unsigned int)NUM_VECTOR_OP_THREADS_PER_BLOCK);
     unsigned int n_blocks = std::min(ceil_intdiv(rval_size,threads_per_block), (unsigned int)NUM_VECTOR_OP_BLOCKS);
+
+    cnda_copy_structure_to_device(self);
     k_copy_reshape_rowmajor<<<n_blocks,threads_per_block>>>(
             rval_size,
             self->nd,
@@ -663,10 +665,8 @@ int  CudaNdarray_reshape_2(CudaNdarray * self, CudaNdarray * rval,  int * rval_d
     if( cudaSuccess != err)
     {
         PyErr_Format(PyExc_RuntimeError, "Cuda error: %s: %s.\n", "k_copy_reshape_rowmajor", cudaGetErrorString(err));
-        std::cout << " in 9 cuda " <<  cudaGetErrorString(err)  << std::endl;/* cursor */
         return -1;
     }
-    std::cout << " last return" << std::endl;/* cursor */
     return 1;
 }
 
@@ -3824,7 +3824,7 @@ void fprint_CudaNdarray(FILE * fd, const CudaNdarray *self)
 }
 
 CudaNdarray* cnda_flip_dims2and3(CudaNdarray* self){
-    // filters = filters[:,:,::-1,::-1]  
+    // filters = filters[::1,::1,::-1,::-1]  
     PyObject* s0 = PySlice_New(NULL,NULL,NULL);
     PyObject* s1 = PySlice_New(NULL,NULL,NULL);
     PyObject* s2 = PySlice_New(NULL,NULL,PyInt_FromLong(-1));
