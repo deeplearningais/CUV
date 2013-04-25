@@ -78,7 +78,6 @@ void dim_shuffle(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tenso
     for (int i = 0; i < D; ++i)
     {
         new_dims[i] = eg.ranges_[i].finish();
-        std::cout << "new_dim " << new_dims[i] << std::endl;/* cursor */
     }
     dim_shuffle2(dst,src, new_dims, D);
 }

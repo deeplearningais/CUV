@@ -56,7 +56,6 @@ void dim_shuffle2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tens
     CudaNdarray *cdst;
     view(csrc, src);
 
-   std::cout << std::endl;
     // shuffles the dims
     if(0 != CudaNdarray_dimshuffle(csrc, size,new_dims))
         throw std::runtime_error("could not dimshuffle tensor");
@@ -75,10 +74,6 @@ void dim_shuffle2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tens
     if(1 !=CudaNdarray_reshape_2(csrc,cdst, shape, size))
        throw std::runtime_error("could not reshape tensor");
 
-    for(int i = 0; i < size; i++){
-        std::cout << " dim " << dst.shape(i) << "    " << CudaNdarray_HOST_DIMS(cdst)[i] << std::endl;
-        std::cout << " stride " << dst.stride(i) << "    " << CudaNdarray_HOST_STRIDES(cdst)[i] << std::endl;
-    }
 
     Py_DECREF(csrc);
     Py_DECREF(cdst);
@@ -99,11 +94,9 @@ void flip_dim2and3(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::ten
     int shape[size];
     for(unsigned int i = 0; i < size; i++){
         shape[i] = dst.shape(i);
-        std::cout << shape[i]  <<  "   " << CudaNdarray_HOST_DIMS(cflipped)[i] << "   " << CudaNdarray_HOST_STRIDES(cflipped)[i]<< std::endl;
     }
 
     if(1 !=CudaNdarray_reshape_2(cflipped,cdst, shape, size)){
-      std::cout << " in error " << std::endl;/* cursor */
       Py_DECREF(cout);
       Py_DECREF(cflipped);
       Py_DECREF(cdst);
