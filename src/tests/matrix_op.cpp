@@ -315,6 +315,93 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row )
 
 }
 
+
+BOOST_AUTO_TEST_CASE( mat_op_middle )
+{
+    unsigned int nImg = 100;
+    unsigned int nChan = 20;
+    unsigned int npix_x = 10;
+    // 2nd dim
+    {
+        cuv::tensor<float,cuv::dev_memory_space, row_major> src(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> dst(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> v(cuv::extents[nChan]);
+
+        cuv::tensor<float,cuv::host_memory_space, row_major> src_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> dst_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> temp_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> v_h(cuv::extents[nChan]);
+
+        fill_rnd_uniform(src_h);
+        fill_rnd_uniform(v_h);
+        v = v_h;
+        src = src_h;
+
+        dst = 0.f;
+        dst_h = 0.f;
+
+        matrix_op_vec(dst, src,v,1,BF_ADD);
+        matrix_op_vec(dst_h, src_h,v_h,1,BF_ADD);
+
+        temp_h = dst;
+        BOOST_CHECK_CLOSE(1.f,1.f + cuv::norm1(temp_h - dst_h), 0.01);
+        
+    }
+    // 3rd dim
+    {
+        cuv::tensor<float,cuv::dev_memory_space, row_major> src(cuv::extents[nImg][npix_x][nChan][npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> dst(cuv::extents[nImg][npix_x][nChan][npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> v(cuv::extents[nChan]);
+
+        cuv::tensor<float,cuv::host_memory_space, row_major> src_h(cuv::extents[nImg][npix_x][nChan][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> dst_h(cuv::extents[nImg][npix_x][nChan][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> temp_h(cuv::extents[nImg][npix_x][nChan][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> v_h(cuv::extents[nChan]);
+
+        fill_rnd_uniform(src_h);
+        fill_rnd_uniform(v_h);
+        v = v_h;
+        src = src_h;
+
+        dst = 0.f;
+        dst_h = 0.f;
+
+        matrix_op_vec(dst, src,v,2,BF_ADD);
+        matrix_op_vec(dst_h, src_h,v_h,2,BF_ADD);
+
+        temp_h = dst;
+        BOOST_CHECK_CLOSE(1.f,1.f + cuv::norm1(temp_h - dst_h), 0.01);
+        
+    }
+    // column major
+    {
+        cuv::tensor<float,cuv::dev_memory_space, column_major> src(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, column_major> dst(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> v(cuv::extents[nChan]);
+
+        cuv::tensor<float,cuv::host_memory_space, column_major> src_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, column_major> dst_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, column_major> temp_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> v_h(cuv::extents[nChan]);
+
+        fill_rnd_uniform(src_h);
+        fill_rnd_uniform(v_h);
+        v = v_h;
+        src = src_h;
+
+        dst = 0.f;
+        dst_h = 0.f;
+
+        matrix_op_vec(dst, src,v,1,BF_ADD);
+        matrix_op_vec(dst_h, src_h,v_h,1,BF_ADD);
+
+        temp_h = dst;
+        BOOST_CHECK_CLOSE(1.f,1.f + cuv::norm1(temp_h - dst_h), 0.01);
+        
+    }
+
+}
+
 BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row_fact )
 {
 	{   // both factors
@@ -322,8 +409,8 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row_fact )
         sequence(x); sequence(z);
         tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
         tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
-        matrix_op_vec(v, v,v_vec,0,BF_ADD, 1.5f, 2.f);
-        matrix_op_vec(x, x,x_vec,0,BF_ADD, 1.5f, 2.f);
+        matrix_op_vec(v, v,v_vec,1,BF_ADD, 1.5f, 2.f);
+        matrix_op_vec(x, x,x_vec,1,BF_ADD, 1.5f, 2.f);
 
 
         // v = 2 v + 1.5 (v + v_vec)
@@ -342,8 +429,8 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row_fact )
         sequence(x); sequence(z);
         tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
         tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
-        matrix_op_vec(v, v,v_vec,0,BF_ADD, 1.5f);
-        matrix_op_vec(x, x,x_vec,0,BF_ADD, 1.5f);
+        matrix_op_vec(v, v,v_vec,1,BF_ADD, 1.5f);
+        matrix_op_vec(x, x,x_vec,1,BF_ADD, 1.5f);
 
 
         // v = 1.5 (v + v_vec)
@@ -362,8 +449,8 @@ BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row_fact )
         sequence(x); sequence(z);
         tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
         tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
-        matrix_op_vec(v, v,v_vec,0,BF_ADD, 1.0f, 2.f);
-        matrix_op_vec(x, x,x_vec,0,BF_ADD, 1.0f, 2.f);
+        matrix_op_vec(v, v,v_vec,1,BF_ADD, 1.0f, 2.f);
+        matrix_op_vec(x, x,x_vec,1,BF_ADD, 1.0f, 2.f);
 
 
         // v = 2 v + (v + v_vec)

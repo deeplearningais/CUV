@@ -473,11 +473,152 @@ namespace matrix_op_col_impl {
 		cuvAssert(Src.shape(Src.ndim()-1) == v.size());
 		matrix_op_col(*(transposed_view(Dst)), *(transposed_view(Src)),v,op, factNew, factOld);
 	}
+
+	// ====================  middle ======================
+    template<bool UseFactNew, bool UseFactOld,class T, class OP>
+       __global__
+       void matrix_op_middle_kernel(T* dst, const T* src, const T* v, OP op, unsigned int dim0, unsigned int dim1, unsigned int dim2, float factNew, float factOld){
+           unsigned int line = blockIdx.x;
+           unsigned int item = threadIdx.x;
+           unsigned int init_offset = line * dim2 * dim1;
+           T* dst0;
+           const T* src0;
+           unsigned int offset_dim0 = gridDim.x * dim2 * dim1;
+
+           for(unsigned int f = 0; f < dim1; f++){
+              dst0 = dst + init_offset;
+              src0 = src + init_offset;
+              line = blockIdx.x;
+              item = threadIdx.x;
+
+              T el = v[f];
+              unsigned int offset_dim1 = f*dim2;
+              for(; line < dim0; line += gridDim.x){
+                  for(; item < dim2; item += blockDim.x){
+                      unsigned int index = offset_dim1 + item;
+
+                      if(!UseFactOld && !UseFactNew)
+                          dst0[index] = op(src0[index], el);
+                      else if(!UseFactOld && UseFactNew)
+                          dst0[index] = op(src0[index],el)*factNew;
+                      else if(UseFactOld && !UseFactNew)
+                          dst0[index] = factOld * dst0[index] + op(src0[index],el);
+                      else if(UseFactOld && UseFactNew)
+                          dst0[index] = factOld * dst0[index] + op(src0[index],el)*factNew;
+                  }
+                  dst0 += offset_dim0;
+                  src0 += offset_dim0;
+              }
+           }
+       }
+
+    template<bool UseFactNew, bool UseFactOld,class T, class OP>
+        void matrix_op_middle_host(T* dst, const T* src, const T* v, OP op,  unsigned int dim0, unsigned int dim1, unsigned int dim2, float factNew, float factOld){
+            T* dst0;
+            const T* src0;
+            dst0 = dst;
+            src0 = src;
+            for(unsigned int f = 0; f < dim1; f++){
+                unsigned int offset_dim1 = f * dim2;
+                for(unsigned int d0 = 0; d0 < dim0; d0++){
+                    unsigned int offset = d0 * dim1 * dim2 + offset_dim1;
+                    for(unsigned int d2 = 0; d2 < dim2; ++d2){
+                        T el = v[f];
+                        unsigned int index = offset + d2;
+                        if(!UseFactOld && !UseFactNew)
+                            dst0[index] = op(src0[index], el);
+                        else if(!UseFactOld && UseFactNew)
+                            dst0[index] = op(src0[index],el)*factNew;
+                        else if(UseFactOld && !UseFactNew)
+                            dst0[index] = factOld * dst0[index] + op(src0[index],el);
+                        else if(UseFactOld && UseFactNew)
+                            dst0[index] = factOld * dst0[index] + op(src0[index],el)*factNew;
+                    }
+                }
+            }
+        }
+
+    template<class V,class M, class T, class OP>
+        void matrix_op_middle(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,row_major>& v, unsigned int dim, const OP& op, float factNew, float factOld){
+            assert(dst.ndim() == src.ndim());
+            assert(v.ndim() == 1);
+            assert(v.shape(0) == src.shape(dim));
+
+            unsigned int dim0 = 1;
+            unsigned int dim1 = src.shape(dim);
+            unsigned int dim2 = 1;
+            for(unsigned int i = 0; i < src.ndim(); i++){
+                if(i < dim)
+                    dim0 *= src.shape(i);
+                else if(i > dim)
+                    dim2 *= src.shape(i);
+            }
+
+            if(IsSame<M,host_memory_space>::Result::value){
+                if(IsSame<T,row_major>::Result::value){
+                    if(factNew == 1.f && factOld == 0.f)
+                        matrix_op_middle_host<false,false>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else if(                  factOld == 0.f)
+                        matrix_op_middle_host<true,false>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else if(factNew == 1.f                  )
+                        matrix_op_middle_host<false,true>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else // if(factNew == 1.f && factOld == 0.f)
+                        matrix_op_middle_host<true,true>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                }else{
+                    // in the case of column mayor, only dim0 and dim2 are swiched
+                    unsigned int temp = dim2;
+                    dim2 = dim0;
+                    dim0 = temp;
+
+                    if(factNew == 1.f && factOld == 0.f)
+                        matrix_op_middle_host<false,false>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else if(                  factOld == 0.f)
+                        matrix_op_middle_host<true,false>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else if(factNew == 1.f                  )
+                        matrix_op_middle_host<false,true>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else // if(factNew == 1.f && factOld == 0.f)
+                        matrix_op_middle_host<true,true>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                }
+            }else{
+                // device: run kernel
+                unsigned int num_threads = min(512, int(32 * ceil(dim2 / 32. )));
+
+                unsigned int num_blocks  = min(1024,dim0);
+
+                if(IsSame<T,row_major>::Result::value){
+                    if(factNew == 1.f && factOld == 0.f)
+                        matrix_op_middle_kernel<false,false><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else if(                  factOld == 0.f)
+                        matrix_op_middle_kernel<true,false><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else if(factNew == 1.f                  )
+                        matrix_op_middle_kernel<false,true><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else // if(factNew == 1.f && factOld == 0.f)
+                        matrix_op_middle_kernel<true,true><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                }else{
+                    // in the case of column mayor, only dim0 and dim2 are swiched
+                    unsigned int temp = dim2;
+                    dim2 = dim0;
+                    dim0 = temp;
+
+                    if(factNew == 1.f && factOld == 0.f)
+                        matrix_op_middle_kernel<false,false><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else if(                  factOld == 0.f)
+                        matrix_op_middle_kernel<true,false><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else if(factNew == 1.f                  )
+                        matrix_op_middle_kernel<false,true><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                    else // if(factNew == 1.f && factOld == 0.f)
+                        matrix_op_middle_kernel<true,true><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), v.ptr(), op, dim0, dim1, dim2, factNew, factOld);
+                }
+
+                cuvSafeCall(cudaThreadSynchronize());
+            }
+        }
+
 }
 
 template<class V, class V2, class M, class L>
     void matrix_op_vec(tensor<V,M,L>& Dst, const tensor<V,M,L>& Src, const tensor<V2,M>& v, int axis, BinaryFunctor bf, float factNew, float factOld, int n_params, float param0, float param1){
-        if(axis == 0)
+        if(axis == Src.ndim()-1)
             switch(bf){
                 case BF_1ST:
                     matrix_op_col_impl::matrix_op_row(Dst, Src,v, bf_1st<V,V,V2>(), factNew, factOld);
@@ -495,7 +636,7 @@ template<class V, class V2, class M, class L>
                     matrix_op_col_impl::matrix_op_row(Dst, Src,v, thrust::divides<V>(), factNew, factOld);
                     break;
             }
-        else if(axis == Src.ndim()-1)
+        else if(axis == 0)
             switch(bf){
                 case BF_1ST:
                     matrix_op_col_impl::matrix_op_col(Dst, Src,v, bf_1st<V,V,V2>(), factNew, factOld);
@@ -514,41 +655,57 @@ template<class V, class V2, class M, class L>
                     break;
             }
         else {
-            std::runtime_error("The axis parameter supplied to matrix_op_vec should be 0 or n-1, where n is the dimension of the first parameter");
+            switch(bf){
+                case BF_1ST:
+                    matrix_op_col_impl::matrix_op_middle(Dst, Src,v, axis,  bf_1st<V,V,V2>(), factNew, factOld);
+                    break;
+                case BF_2ND:
+                    matrix_op_col_impl::matrix_op_middle(Dst, Src,v, axis,  bf_2nd<V,V,V2>(), factNew, factOld);
+                    break;
+                case BF_ADD:
+                    matrix_op_col_impl::matrix_op_middle(Dst, Src,v,axis, thrust::plus<V>(), factNew, factOld);
+                    break;
+                case BF_MULT:
+                    matrix_op_col_impl::matrix_op_middle(Dst, Src,v, axis,thrust::multiplies<V>(), factNew, factOld);
+                    break;
+                case BF_DIV:
+                    matrix_op_col_impl::matrix_op_middle(Dst, Src,v,axis, thrust::divides<V>(), factNew, factOld);
+                    break;
+            }
         }
     }
 
 // ====================  col ======================
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_plus_col(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	/*matrix_op_col_impl::matrix_op_col(A,A,v, thrust::plus<__value_type>());*/
-    matrix_op_vec(A, A, v, A.ndim()-1, BF_ADD);
+   /*matrix_op_col_impl::matrix_op_col(A,A,v, thrust::plus<__value_type>());*/
+   matrix_op_vec(A, A, v, 0, BF_ADD);
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_times_col(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
 	/*matrix_op_col_impl::matrix_op_col(A,A,v, thrust::multiplies<__value_type>());*/
-    matrix_op_vec(A, A, v, A.ndim()-1, BF_MULT);
+    matrix_op_vec(A, A, v, 0, BF_MULT);
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_divide_col(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
 	/*matrix_op_col_impl::matrix_op_col(A,A,v, thrust::divides<__value_type>());*/
-    matrix_op_vec(A, A, v, A.ndim()-1, BF_DIV);
+    matrix_op_vec(A, A, v, 0, BF_DIV);
 }
 // ====================  row ======================
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_plus_row(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
-	/*matrix_op_col_impl::matrix_op_row(A,A,v, thrust::plus<__value_type>());*/
-    matrix_op_vec(A, A, v, 0, BF_ADD);
+   /*matrix_op_col_impl::matrix_op_row(A,A,v, thrust::plus<__value_type>());*/
+   matrix_op_vec(A, A, v, A.ndim()-1, BF_ADD);
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_times_row(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
 	/*matrix_op_col_impl::matrix_op_row(A,A,v, thrust::multiplies<__value_type>());*/
-    matrix_op_vec(A, A, v, 0, BF_MULT);
+    matrix_op_vec(A, A, v, A.ndim()-1, BF_MULT);
 }
 template<class __value_type, class __memory_space_type, class __memory_layout_type>
 void matrix_divide_row(tensor<__value_type,__memory_space_type,__memory_layout_type>& A, const tensor<__value_type,__memory_space_type>& v) {
 	/*matrix_op_col_impl::matrix_op_row(A,A,v, thrust::divides<__value_type>());*/
-    matrix_op_vec(A, A, v, 0, BF_DIV);
+    matrix_op_vec(A, A, v, A.ndim()-1, BF_DIV);
 }
 
 namespace transpose_impl{
