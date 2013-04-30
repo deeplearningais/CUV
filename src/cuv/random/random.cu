@@ -159,7 +159,8 @@ namespace cuv{
 	void fill_rnd_uniform(tensor<float,host_memory_space>& v){
 	   cuvAssert(v.ptr());
 	   tensor<float,host_memory_space>::value_type* ptr = v.ptr();
-	   for(int i=0;i<v.size();i++)
+       unsigned int size = v.size();
+	   for(unsigned int i=0;i<size;i++)
 		   *ptr++ = ((float)rand()/RAND_MAX);
 	}
 	template<>
@@ -204,7 +205,8 @@ namespace cuv{
 	void add_rnd_normal(tensor<float,host_memory_space>& v, const float& std){
 	   cuvAssert(v.ptr());
 	   tensor<float,host_memory_space>::value_type* ptr = v.ptr();
-	   for(int i=0;i<v.size();i++)
+       unsigned int size = v.size();
+	   for(unsigned int i=0;i<size;i++)
 		   *ptr++ += std*norminv(drand48());
 	}
 	template<>
