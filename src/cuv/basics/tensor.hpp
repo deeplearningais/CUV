@@ -465,7 +465,7 @@ namespace cuv
         inline bool is_2dcopyable(row_major, const linear_memory<unsigned int,host_memory_space>& shape, const linear_memory<int,host_memory_space>& stride){
             bool c_contiguous = shape.size()>1;
             int pitched_dim = shape.size()-1; // last dim
-            while(shape[pitched_dim]==1)
+            while(shape[pitched_dim]==1 && stride[pitched_dim] == 1) // do not move past the second dimension!
                 pitched_dim --;
             int size = 1;
             for (int i = shape.size()-1; (i >= 0) && c_contiguous; --i)
@@ -487,7 +487,7 @@ namespace cuv
         inline bool is_2dcopyable(column_major, const linear_memory<unsigned int,host_memory_space>& shape, const linear_memory<int,host_memory_space>& stride){
             bool c_contiguous = shape.size()>1;
             unsigned int pitched_dim = 0; 
-            while(shape[pitched_dim]==1)
+            while(shape[pitched_dim]==1 && stride[pitched_dim] == 1)
                 pitched_dim ++;
             int size = 1;
             for (unsigned int i = 0; (i <  shape.size()) && c_contiguous; ++i)

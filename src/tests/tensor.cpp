@@ -152,6 +152,46 @@ BOOST_AUTO_TEST_CASE( tensor_zero_copy_assignment )
     }
 }
 
+BOOST_AUTO_TEST_CASE( cuv_slice1col ) {
+    tensor<float, host_memory_space> y;
+    tensor<float, host_memory_space> x(extents[4][6]);
+
+    for (int i = 0; i < 4; ++i) {
+        for (int k = 0; k < 6; ++k) {
+            x(i, k) = i + k;
+        }
+    }
+
+    // accessing strided memory
+    y = x[indices[index_range(0,1)][index_range()]];
+    for (int i = 0; i < 1; ++i) {
+        for (int k = 0; k < 6; ++k) {
+            BOOST_CHECK_EQUAL(y(i,k), i+k);
+        }
+    }
+    x[indices[index_range(0,1)][index_range()]] = y; // reassign
+}
+
+BOOST_AUTO_TEST_CASE( cuv_slice1row ) {
+    tensor<float, host_memory_space> y;
+    tensor<float, host_memory_space> x(extents[4][6]);
+
+    for (int i = 0; i < 4; ++i) {
+        for (int k = 0; k < 6; ++k) {
+            x(i, k) = i + k;
+        }
+    }
+
+    // accessing strided memory
+    y = x[indices[index_range()][index_range(0,1)]];
+    for (int i = 0; i < 4; ++i) {
+        for (int k = 0; k < 1; ++k) {
+            BOOST_CHECK_EQUAL(y(i,k), i+k);
+        }
+    }
+    x[indices[index_range()][index_range(0,1)]] = y; // reassign
+}
+
 BOOST_AUTO_TEST_CASE( tensor_out_of_scope_view )
 {
     // subtensor views should persist when original tensor falls out of scope
