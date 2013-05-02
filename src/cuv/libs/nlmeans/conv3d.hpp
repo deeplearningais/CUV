@@ -28,11 +28,7 @@ namespace cuv{
 			void convolutionRows(
 					cuv::tensor<float,dev_memory_space> &d_Dst,
 					const cuv::tensor<float,dev_memory_space> &d_Src,
-<<<<<<< HEAD
 					const cuv::tensor<float,dev_memory_space> &kernel
-=======
-					const cuv::tensor<float,host_memory_space> &kernel
->>>>>>> implemented separable filters with kernel param
 					);
             /**
              * convolve along 2nd axis of a 3D array
