@@ -648,6 +648,7 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
 
 BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
 {
+   float eps = 0.0001f;
    {
      using namespace cuv::alex_conv;
      unsigned int sub_size = 2;
@@ -671,11 +672,11 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
      res_h = 0.f;
      fill_rnd_uniform(delta_h);
      delta = delta_h;
-     tuplewise_op(res,inp, 0, sub_size);
-     tuplewise_op(res_h,inp_h, 0, sub_size);
+     tuplewise_op(res,inp, 0, sub_size, TO_NORM, eps);
+     tuplewise_op(res_h,inp_h, 0, sub_size,TO_NORM,eps);
 
-     tuplewise_op_grad(inp_grad,inp,delta, 0, sub_size);
-     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 0, sub_size);
+     tuplewise_op_grad(inp_grad,inp,delta, 0, sub_size,TO_NORM, eps);
+     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 0, sub_size,TO_NORM, eps);
 
      for(unsigned int i=0;i<nChan/sub_size;i++)
          for(unsigned int j=0;j<nPix;j++)
@@ -687,7 +688,7 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
                          float s0 = inp_h(sub_size*i+sub_idx,j,k,l);
                          float r  = res_h(  i  ,j,k,l);
                          float d  = delta(  i  ,j,k,l);
-                         float f0 = d / (r+0.0001f) * s0;
+                         float f0 = d / (r) * s0;
                          BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(sub_size*i + sub_idx,j,k,l) - f0, 0.01f);
                      }
 
@@ -718,11 +719,11 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
     res_h = 0.f;
     fill_rnd_uniform(delta_h);
     delta = delta_h;
-    tuplewise_op(res,inp, 3, sub_size);
-    tuplewise_op(res_h,inp_h, 3, sub_size);
+    tuplewise_op(res,inp, 3, sub_size,TO_NORM,eps);
+    tuplewise_op(res_h,inp_h, 3, sub_size,TO_NORM,eps);
 
-    tuplewise_op_grad(inp_grad,inp,delta, 3, sub_size);
-    tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 3, sub_size);
+    tuplewise_op_grad(inp_grad,inp,delta, 3, sub_size,TO_NORM, eps);
+    tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 3, sub_size,TO_NORM, eps);
 
     for(unsigned int i=0;i<nPix;i++)
         for(unsigned int j=0;j<nPix;j++)
@@ -734,7 +735,7 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
                         float s0 = inp_h(i,j,k,sub_size*l+sub_idx);
                         float r  = res_h(  i  ,j,k,l);
                         float d  = delta(  i  ,j,k,l);
-                        float f0 = d / (r+0.0001f) * s0;
+                        float f0 = d / (r) * s0;
                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(i,j,k,sub_size*l + sub_idx) - f0, 0.01f);
                     }
 
@@ -821,11 +822,11 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
      res_h = 0.f;
      fill_rnd_uniform(delta_h);
      delta = delta_h;
-     tuplewise_op(res,inp, 0, sub_size, TO_ADD_SQUARED);
-     tuplewise_op(res_h,inp_h, 0, sub_size, TO_ADD_SQUARED);
+     tuplewise_op(res,inp, 0, sub_size, TO_ADD_SQUARED, eps);
+     tuplewise_op(res_h,inp_h, 0, sub_size, TO_ADD_SQUARED, eps);
 
-     tuplewise_op_grad(inp_grad,inp,delta, 0, sub_size, TO_ADD_SQUARED);
-     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 0, sub_size, TO_ADD_SQUARED);
+     tuplewise_op_grad(inp_grad,inp,delta, 0, sub_size, TO_ADD_SQUARED, eps);
+     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 0, sub_size, TO_ADD_SQUARED, eps);
 
      for(unsigned int i=0;i<nChan/sub_size;i++)
          for(unsigned int j=0;j<nPix;j++)
@@ -838,7 +839,6 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
                          float r  = res_h(  i  ,j,k,l);
                          float d  = delta(  i  ,j,k,l);
                          float f0 = d * s0;
-                         //std::cout << "delta host = " << d << " f0 = " << f0 << " src = " << s0 << std::endl;[> cursor <]
                          BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(sub_size*i + sub_idx,j,k,l) - f0, 0.01f);
                      }
 
