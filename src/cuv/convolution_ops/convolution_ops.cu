@@ -1163,7 +1163,6 @@ template<class V,class M, class T>
                     break;
                 case TO_ADD_SQUARED:
                     if(dim == 0){
-<<<<<<< HEAD
                         tuplewise_op_grad_host<true, TO_ADD_SQUARED>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
 
                     }else{
