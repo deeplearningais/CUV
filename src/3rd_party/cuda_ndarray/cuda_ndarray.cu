@@ -652,7 +652,6 @@ int  CudaNdarray_reshape_2(CudaNdarray * self, CudaNdarray * rval,  int * rval_d
     unsigned int threads_per_block = std::min(rval_size, (unsigned int)NUM_VECTOR_OP_THREADS_PER_BLOCK);
     unsigned int n_blocks = std::min(ceil_intdiv(rval_size,threads_per_block), (unsigned int)NUM_VECTOR_OP_BLOCKS);
 
-    cnda_copy_structure_to_device(self);
     k_copy_reshape_rowmajor<<<n_blocks,threads_per_block>>>(
             rval_size,
             self->nd,
@@ -933,6 +932,9 @@ __global__ void kAdd_contiguous(float* a, float* b, float* dest, unsigned int nu
     }
 }
 
+
+
+
 // Will be called by __add__ in Python
 static PyObject *
 CudaNdarray_add(PyObject* py_self, PyObject * py_other)
@@ -948,9 +950,11 @@ CudaNdarray_add(PyObject* py_self, PyObject * py_other)
     CudaNdarray * self = (CudaNdarray *)py_self;
     CudaNdarray * other = (CudaNdarray *)py_other;
     if(!CudaNdarray_is_c_contiguous(self) || !CudaNdarray_is_c_contiguous(other)){
+        std::cout << " in not c contig" << std::endl;/* cursor */
         PyErr_SetString(PyExc_TypeError, "We have implementet only the c_contiguous version for now.");
         return NULL;
     }
+    std::cout << "it is c contig" << std::endl;/* cursor */
 
     //standard elemwise size checks
     if (self->nd != other->nd)
