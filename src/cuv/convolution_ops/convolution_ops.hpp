@@ -280,6 +280,13 @@ void project_to_ball(tensor<V,M,T>& filters, float ball);
 template<class V, class M, class T>
 void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float scale);
 
+/** 
+ * @brief Determines which tuplewise operator to use.
+ * @li TO_NORM calculates the norm of the tensor  
+ * @li TO_MAX calculates the max out
+ * @li TO_ADD_SQUARED calculates the sum of the squares
+ *
+ */
 enum tuplewise_op_functor{
     TO_NORM,
     TO_MAX,
