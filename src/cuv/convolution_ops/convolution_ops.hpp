@@ -288,37 +288,31 @@ enum tuplewise_op_functor{
 /**
  * square the input, then add every map pair and take the square root.
  *
- * In NumPy notation, this implements:
- *
- *   dst = sqrt((src ** 2)[::2] + (src ** 2)[1::2])
- * 
- * I.e., if pairs of src represent the result of convolution with orthogonal
- * filters, then this calculates the norm.
+ * @param dst where to write result
+ * @param src  the original input to the tuplewise_op
+ * @param dim the dimension accross which we apply the tuplewise_op
+ * @param subspace_size  the number of elements for which we calculate the norm
+ * @param tuplewise_op_functor to the parameter determining wheater to calculate squared norm, norm or max out
+ * @param eps small constant value which is added to the expression of the squared root
  */
 template<class V, class M, class T>
-void tuplewise_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim, unsigned int subspace_size = 2, tuplewise_op_functor = TO_NORM);
+void tuplewise_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim, unsigned int subspace_size = 2, tuplewise_op_functor = TO_NORM, float eps = 0.f);
 
 /**
  * calculates the gradient of tuplewise_op.
  *
- * In NumPy notation, this implements:
- *
- *   dst[::2] = 2.0 / PN * X[::2]
- *   dst[1::2] = 2.0 / PN * X[1::2]
- *
- * where
- *   
- *   PN = pairwise_norm(X)
  *
  * @param dst where to write result
- * @param X  the original input to the pairwise norm
+ * @param X  the original input to the tuplewise_op
  * @param D  the backpropagated delta
+ * @param dim the dimension accross which we apply the tuplewise_op
+ * @param subspace_size  the number of elements for which we calculate the norm
+ * @param tuplewise_op_functor to the parameter determining wheater to calculate squared norm, norm or max out
+ * @param eps small constant value which is added to the expression of the squared root
  * 
  */
 template<class V, class M, class T>
-void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int subspace_size = 2, tuplewise_op_functor to = TO_NORM);
-
-
+void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int subspace_size = 2, tuplewise_op_functor to = TO_NORM, float eps = 0.f);
 
 }
 /** @} */ //end group convolution_ops
