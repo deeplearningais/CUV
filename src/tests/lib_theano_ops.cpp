@@ -36,6 +36,18 @@
 #include <cuv/basics/tensor.hpp>
 #include <cuv/libs/theano_ops/theano_ops.hpp>
 
+#define MEASURE_TIME(MSG, OPERATION, ITERS)     \
+	float MSG;                                  \
+	if(1){                                      \
+		Timing tim;                             \
+		for(int i=0;i<ITERS;i++){               \
+			OPERATION ;                         \
+		}                                       \
+        safeThreadSync();                       \
+		tim.update(ITERS);                      \
+		printf("%s [%s] took %4.4f us/pass\n", #MSG, #OPERATION, 1000000.0f*tim.perf()); \
+		MSG = 1000000.0f*tim.perf();            \
+	}
 
 using namespace cuv;
 
@@ -131,7 +143,7 @@ BOOST_AUTO_TEST_CASE( test_dim_shuffle )
     }
 {
    unsigned int nImg = 10;
-   unsigned int nChan = 1;
+   unsigned int nChan = 5;
    unsigned int npix_x = 1;
    unsigned int npix_y = 10;
 
@@ -271,116 +283,111 @@ BOOST_AUTO_TEST_CASE( test_dim_shuffle )
     finalize_cuda();
 }
 
-
-
-
-
-
 BOOST_AUTO_TEST_CASE( test_flip_dims )
 {
-   using namespace cuv::theano_ops;
-{
-  unsigned int nImg = 2;
-  unsigned int nChan = 2;
-  unsigned int npix_x = 1;
-  unsigned int npix_y = 4;
+    using namespace cuv::theano_ops;
+    {
+        unsigned int nImg = 2;
+        unsigned int nChan = 2;
+        unsigned int npix_x = 1;
+        unsigned int npix_y = 4;
 
-  initcuda();
-  cuv::tensor<float,cuv::dev_memory_space> src(cuv::extents[nImg][nChan][npix_x][npix_y]);
-  cuv::tensor<float,cuv::dev_memory_space> dst(cuv::extents[nImg][nChan][npix_x][npix_y]);
+        initcuda();
+        cuv::tensor<float,cuv::dev_memory_space> src(cuv::extents[nImg][nChan][npix_x][npix_y]);
+        cuv::tensor<float,cuv::dev_memory_space> dst(cuv::extents[nImg][nChan][npix_x][npix_y]);
 
-  for (int i = 0; i < nImg; ++i)
-  {
-      for (int c = 0; c < nChan; ++c)
-      {
-          for (int x = 0; x < npix_x; ++x)
-          {
-              for (int y = 0; y < npix_y; ++y)
-              {
-                      src(i,c,x,y) = i* nChan * npix_x * npix_y + c* npix_x * npix_y + x*npix_y + y;
-              }
-          }
-      }
-  }
-  dst = 1.f;
+        for (int i = 0; i < nImg; ++i)
+        {
+            for (int c = 0; c < nChan; ++c)
+            {
+                for (int x = 0; x < npix_x; ++x)
+                {
+                    for (int y = 0; y < npix_y; ++y)
+                    {
+                        src(i,c,x,y) = i* nChan * npix_x * npix_y + c* npix_x * npix_y + x*npix_y + y;
+                    }
+                }
+            }
+        }
+        dst = 1.f;
 
-  {   
-      flip_dims(dst, src, cuv::extents[0][0][1][1]);
+        {   
+            flip_dims(dst, src, cuv::extents[0][0][1][1]);
 
-      BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
-      BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
-      BOOST_CHECK_EQUAL(dst.shape(2), src.shape(2));
-      BOOST_CHECK_EQUAL(dst.shape(3), src.shape(3));
+            BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
+            BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
+            BOOST_CHECK_EQUAL(dst.shape(2), src.shape(2));
+            BOOST_CHECK_EQUAL(dst.shape(3), src.shape(3));
 
-      for (int i = 0; i < nImg; ++i)
-      {
-          for (int c = 0; c < nChan; ++c)
-          {
-              for (int x = 0; x < npix_x; ++x)
-              {
-                  for (int y = 0; y < npix_y; ++y)
-                  {
-                      BOOST_CHECK_EQUAL(dst(i,c, npix_x - 1 - x, npix_y - 1 - y ), src(i,c,x,y));
-                  }
-              }
-          }
-      }
+            for (int i = 0; i < nImg; ++i)
+            {
+                for (int c = 0; c < nChan; ++c)
+                {
+                    for (int x = 0; x < npix_x; ++x)
+                    {
+                        for (int y = 0; y < npix_y; ++y)
+                        {
+                            BOOST_CHECK_EQUAL(dst(i,c, npix_x - 1 - x, npix_y - 1 - y ), src(i,c,x,y));
+                        }
+                    }
+                }
+            }
 
-  }
-  {   
-      flip_dims(dst, src, cuv::extents[1][1][0][0]);
+        }
+        {   
+            flip_dims(dst, src, cuv::extents[1][1][0][0]);
 
-      BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
-      BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
-      BOOST_CHECK_EQUAL(dst.shape(2), src.shape(2));
-      BOOST_CHECK_EQUAL(dst.shape(3), src.shape(3));
+            BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
+            BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
+            BOOST_CHECK_EQUAL(dst.shape(2), src.shape(2));
+            BOOST_CHECK_EQUAL(dst.shape(3), src.shape(3));
 
-      for (int i = 0; i < nImg; ++i)
-      {
-          for (int c = 0; c < nChan; ++c)
-          {
-              for (int x = 0; x < npix_x; ++x)
-              {
-                  for (int y = 0; y < npix_y; ++y)
-                  {
-                      BOOST_CHECK_EQUAL(dst(nImg-1-i,nChan-1-c, x, y ), src(i,c,x,y));
-                  }
-              }
-          }
-      }
+            for (int i = 0; i < nImg; ++i)
+            {
+                for (int c = 0; c < nChan; ++c)
+                {
+                    for (int x = 0; x < npix_x; ++x)
+                    {
+                        for (int y = 0; y < npix_y; ++y)
+                        {
+                            BOOST_CHECK_EQUAL(dst(nImg-1-i,nChan-1-c, x, y ), src(i,c,x,y));
+                        }
+                    }
+                }
+            }
 
-  }
-  {   
-      std::vector<bool> v(4);
-      v[0] = true;
-      v[1] = true;
-      v[2] = true;
-      v[3] = true;
-      flip_dims_vec(dst, src, v);
+        }
+        {   
+            std::vector<bool> v(4);
+            v[0] = true;
+            v[1] = true;
+            v[2] = true;
+            v[3] = true;
+            flip_dims_vec(dst, src, v);
 
-      BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
-      BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
-      BOOST_CHECK_EQUAL(dst.shape(2), src.shape(2));
-      BOOST_CHECK_EQUAL(dst.shape(3), src.shape(3));
+            BOOST_CHECK_EQUAL(dst.shape(0), src.shape(0));
+            BOOST_CHECK_EQUAL(dst.shape(1), src.shape(1));
+            BOOST_CHECK_EQUAL(dst.shape(2), src.shape(2));
+            BOOST_CHECK_EQUAL(dst.shape(3), src.shape(3));
 
-      for (int i = 0; i < nImg; ++i)
-      {
-          for (int c = 0; c < nChan; ++c)
-          {
-              for (int x = 0; x < npix_x; ++x)
-              {
-                  for (int y = 0; y < npix_y; ++y)
-                  {
-                      BOOST_CHECK_EQUAL(dst(nImg-1-i,nChan-1-c, npix_x - 1 - x, npix_y - 1 - y ), src(i,c,x,y));
-                  }
-              }
-          }
-      }
+            for (int i = 0; i < nImg; ++i)
+            {
+                for (int c = 0; c < nChan; ++c)
+                {
+                    for (int x = 0; x < npix_x; ++x)
+                    {
+                        for (int y = 0; y < npix_y; ++y)
+                        {
+                            BOOST_CHECK_EQUAL(dst(nImg-1-i,nChan-1-c, npix_x - 1 - x, npix_y - 1 - y ), src(i,c,x,y));
+                        }
+                    }
+                }
+            }
 
-  }
-    
-}
-   finalize_cuda();
+        }
+
+    }
+    finalize_cuda();
 }
 
 
