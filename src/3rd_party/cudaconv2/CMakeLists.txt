@@ -1,3 +1,4 @@
+FIND_PACKAGE( BLAS REQUIRED)
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/include/nvmatrix )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/include/common )
 CUDA_INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/include/cudaconv2 )
@@ -10,6 +11,11 @@ CUDA_ADD_LIBRARY("tp_cudaconv2${LIB_SUFFIX}" SHARED
 	src/cudaconv2/img_acts.cu
 	src/cudaconv2/weight_acts.cu
   )
+
+TARGET_LINK_LIBRARIES("tp_cudaconv2${LIB_SUFFIX}"
+        ${BLAS_LIBRARIES}
+        cblas
+)
 
 install(TARGETS "tp_cudaconv2${LIB_SUFFIX}"
 	RUNTIME DESTINATION bin
