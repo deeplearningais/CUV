@@ -68,7 +68,7 @@ namespace cuv{
 			__constant__ float c_Kernel_h[MAX_KERNEL_W];
 
 			void setConvolutionKernel_horizontal(const cuv::tensor<float,dev_memory_space>&src){
-				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_h, const_cast<float*>(src.ptr()), src.size() * sizeof(float), cudaMemcpyDeviceToDevice));
+				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_h, const_cast<float*>(src.ptr()), src.size() * sizeof(float), 0,  cudaMemcpyDeviceToDevice));
 			}
 
 
