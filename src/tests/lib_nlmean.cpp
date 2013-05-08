@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE( test_conv3d )
 	static const int filter_radius = 1;
 
     const int kernel_w = 2*filter_radius+1;
-    cuv::tensor<float, cuv::host_memory_space> kernel(kernel_w);
+    cuv::tensor<float, cuv::dev_memory_space> kernel(kernel_w);
     kernel(0) = 1;
     kernel((kernel_w-1)) = kernel(0);
     for (unsigned int i = 1; i <= filter_radius; ++i)
