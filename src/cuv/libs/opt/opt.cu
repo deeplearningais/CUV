@@ -59,7 +59,7 @@ namespace impl{
                 float lr = learnrate / (sqrt(sWptr[i]) + delta);
                 /*Wptr[i] = Wptr[i] - lr * (dWptr[i]);*/
                 float f = Wptr[i] - lr * dWptr[i];
-                Wptr[i] = sgn(f) * max(0.f, fabs(f) - learnrate * sparsedecay/lr);
+                Wptr[i] = sgn(f) * max(0.f, fabs(f) - lr * sparsedecay);
             }
         }
 
