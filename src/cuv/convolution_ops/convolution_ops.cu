@@ -718,6 +718,10 @@ void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned i
                     case TO_MAX:
                         squared_sum = max(s, squared_sum);
                         break;
+                    case TO_SUBSAMPLE:
+                        if(index == item)
+                            squared_sum = src_ptr[index];
+                        break;
                 }
             }
             if(to == TO_NORM)
@@ -743,6 +747,10 @@ void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned i
                         break;
                     case TO_MAX:
                         squared_sum = max(s, squared_sum);
+                        break;
+                    case TO_SUBSAMPLE:
+                        if(index == subspace_size*line)
+                            squared_sum = src_ptr[index];
                         break;
                 }
             }
@@ -796,6 +804,9 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                 case TO_ADD_SQUARED:
                     p  = 2.f * d0[item];
                     break;
+                case TO_SUBSAMPLE:
+                    p  = d0[item];
+                    break;
             };
             
 
@@ -813,6 +824,9 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         break;
                     case TO_ADD_SQUARED:
                         dst_ptr[index] = p * src_ptr[index];
+                        break;
+                    case TO_SUBSAMPLE:
+                        dst_ptr[index] = p;
                         break;
                 }
             }
@@ -855,6 +869,9 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                 case TO_ADD_SQUARED:
                     p = 2.f * d0[line];
                     break;
+                case TO_SUBSAMPLE:
+                    p  = d0[item];
+                    break;
             }
 
             for (unsigned int index = subspace_size*line; index < end; index++){
@@ -870,6 +887,9 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         break;
                     case TO_ADD_SQUARED:
                         dst_ptr[index] = p * src_ptr[index];
+                        break;
+                    case TO_SUBSAMPLE:
+                        dst_ptr[index] = p;
                         break;
                 }
             }
@@ -899,6 +919,11 @@ template<bool FirstDim, tuplewise_op_functor to, class T>
                             case TO_MAX:
                                 squared_sum = max(src_ptr[index], squared_sum);
                                 break;
+                            case TO_SUBSAMPLE:
+                                if(index == i)
+                                    squared_sum = src_ptr[index];
+                                break;
+
                         }
                     }
 
@@ -922,6 +947,10 @@ template<bool FirstDim, tuplewise_op_functor to, class T>
                                 break;
                             case TO_MAX:
                                 squared_sum = max(src_ptr[index], squared_sum);
+                                break;
+                            case TO_SUBSAMPLE:
+                                if(index == subspace_size*i)
+                                    squared_sum = src_ptr[index];
                                 break;
                         }
                     }
@@ -973,6 +1002,13 @@ template<class V,class M, class T>
                         tuplewise_op_host<false, TO_ADD_SQUARED>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
                     }
                     break;
+                case TO_SUBSAMPLE:
+                    if(dim == 0){
+                        tuplewise_op_host<true, TO_SUBSAMPLE>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
+                    }else{
+                        tuplewise_op_host<false, TO_SUBSAMPLE>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
+                    }
+                    break;
             }
         }else{
             // device: run kernel
@@ -1010,6 +1046,14 @@ template<class V,class M, class T>
                         tuplewise_op_kernel<true, TO_ADD_SQUARED><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
                     }else{
                         tuplewise_op_kernel<false, TO_ADD_SQUARED><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
+
+                    }
+                    break;
+                case TO_SUBSAMPLE:
+                    if(dim == 0){
+                        tuplewise_op_kernel<true, TO_SUBSAMPLE><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
+                    }else{
+                        tuplewise_op_kernel<false, TO_SUBSAMPLE><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
 
                     }
                     break;
@@ -1055,6 +1099,9 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                     case TO_ADD_SQUARED:
                         f = 2.f * d_ptr[i];
                         break;
+                    case TO_SUBSAMPLE:
+                        f = d_ptr[i];
+                        break;
                 };
                 // updates dst for each feature in subspace 
                 for (unsigned int index = i; index < i + subspace_size * items; index+= items){
@@ -1072,6 +1119,9 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                             break;
                         case TO_ADD_SQUARED:
                             dst_ptr[index] = f *  src_ptr[index];
+                            break;
+                        case TO_SUBSAMPLE:
+                            dst_ptr[index] = f;
                             break;
                     }
                 }
@@ -1112,6 +1162,9 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                     case TO_ADD_SQUARED:
                         f = 2.f * d_ptr[i];
                         break;
+                    case TO_SUBSAMPLE:
+                        f = d_ptr[i];
+                        break;
                 };
 
                 for (unsigned int index = subspace_size*i; index < end; index++){
@@ -1127,6 +1180,9 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                             break;
                         case TO_ADD_SQUARED:
                             dst_ptr[index] = f * src_ptr[index];
+                            break;
+                        case TO_SUBSAMPLE:
+                            dst_ptr[index] = f;
                             break;
                     }
                 }
@@ -1169,6 +1225,14 @@ template<class V,class M, class T>
                         tuplewise_op_grad_host<false, TO_ADD_SQUARED>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
                     }
                     break;
+                case TO_SUBSAMPLE:
+                    if(dim == 0){
+                        tuplewise_op_grad_host<true, TO_SUBSAMPLE>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
+
+                    }else{
+                        tuplewise_op_grad_host<false, TO_SUBSAMPLE>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
+                    }
+                    break;
             }
         }else{
             // device: run kernel
@@ -1206,6 +1270,14 @@ template<class V,class M, class T>
 
                     }else{
                         tuplewise_op_grad_kernel<false, TO_ADD_SQUARED><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
+                    }
+                    break;
+                case TO_SUBSAMPLE:
+                    if(dim == 0){
+                        tuplewise_op_grad_kernel<true, TO_SUBSAMPLE><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
+
+                    }else{
+                        tuplewise_op_grad_kernel<false, TO_SUBSAMPLE><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
                     }
                     break;
             }

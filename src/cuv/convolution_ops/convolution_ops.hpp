@@ -285,12 +285,14 @@ void resize_bilinear(tensor<V,M,T>& dest, const tensor<V,M,T>& images, float sca
  * @li TO_NORM calculates the norm 2  
  * @li TO_MAX calculates the maximum 
  * @li TO_ADD_SQUARED calculates the sum of the squares
+ * @li TO_SUBSAMPLE subsamples the input over desired dimension
  *
  */
 enum tuplewise_op_functor{
     TO_NORM,
     TO_MAX,
-    TO_ADD_SQUARED
+    TO_ADD_SQUARED,
+    TO_SUBSAMPLE
 };
 /**
  * square the input, then add every map pair and take the square root.
