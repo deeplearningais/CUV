@@ -68,6 +68,7 @@ void finalize_cuda();
  *
  */
 void convolve_2d(cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& kern, const std::string& mode, int version=-1);
+void convolve_2d_with_bias(cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& kern, const cuv::tensor<float,cuv::dev_memory_space>& bias, const std::string& mode, int version=-1);
 
 /**
  * determine the gradient of a convolution w.r.t. the inputs
@@ -77,7 +78,8 @@ void convolve_2d(cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tenso
  *  @param filters (nFilters, nFilterColors, filterPixelsY, filterPixelsX)
  *  @param mode  valid or full convolution
  */
-void d_convolve_d_images(cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& kern, const std::string& mode);
+void d_convolve_d_images_with_bias(cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& kern, const cuv::tensor<float,cuv::dev_memory_space>& bias, const std::string& mode);
+void d_convolve_d_images(cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& kern,  const std::string& mode);
 
 /**
  * determine the gradient of a convolution w.r.t. the filters
@@ -88,7 +90,7 @@ void d_convolve_d_images(cuv::tensor<float,cuv::dev_memory_space>& images, const
  *  @param mode  valid or full convolution
  *
  */
-void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const std::string& mode);
+void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out,  const std::string& mode);
 
 }
 /** @} */ //end group convolution_ops_theano

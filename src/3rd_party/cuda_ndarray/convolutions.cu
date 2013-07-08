@@ -46,7 +46,44 @@ void view(CudaNdarray*& nda, cuv::tensor<float,cuv::dev_memory_space>& ct){
     nda->devdata = ct.ptr();
 }
 
-void convolve_2d(cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& kern, const std::string& mode, int version){
+void convolve_2d_with_bias(cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& kern, const cuv::tensor<float,cuv::dev_memory_space>& bias, const std::string& mode, int version){
+    cuvAssert(images.shape(0)==out.shape(0));
+    cuvAssert(kern.shape(0)==out.shape(1));
+    /*cuvAssert(kern.shape(1)==bias.shape(1));*/
+    /*cuvAssert(images.shape(0)==bias.shape(0));*/
+    if(mode=="valid"){
+        cuvAssert(out.shape(2) == images.shape(2)-kern.shape(2)+1);
+        cuvAssert(out.shape(3) == images.shape(3)-kern.shape(3)+1);
+    }else if(mode=="full"){
+        cuvAssert(out.shape(2) == images.shape(2)+kern.shape(2)-1);
+        cuvAssert(out.shape(3) == images.shape(3)+kern.shape(3)-1);
+    }else{
+        throw std::runtime_error("undefined convolution mode `"+mode+"'");
+    }
+
+    cuv::tensor<float,cuv::dev_memory_space> img = images;
+    cuv::tensor<float,cuv::dev_memory_space> krn = kern;
+    cuv::tensor<float,cuv::dev_memory_space> b = bias;
+    CudaNdarray *cimages, *ckern, *cout, *cbias;
+
+    view(cimages, img);
+    view(ckern, krn);
+    view(cout, out);
+    view(cbias, b);
+
+    if(mode=="valid")
+        CudaNdarray_conv_valid(cimages, ckern, cout, 1, 1, version, 0); // ssrows sscols version verbose
+    else
+        CudaNdarray_conv_full(cimages, ckern, cout, 1, 1, version, 0, cbias); // ssrows sscols version verbose
+    cuvAssert(CudaNdarray_is_c_contiguous(cout));
+    Py_DECREF(cimages);
+    Py_DECREF(ckern);
+    Py_DECREF(cout);
+    Py_DECREF(cbias);
+}
+
+
+void convolve_2d(cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& kern,  const std::string& mode, int version){
     cuvAssert(images.shape(0)==out.shape(0));
     cuvAssert(kern.shape(0)==out.shape(1));
     if(mode=="valid"){
@@ -76,8 +113,6 @@ void convolve_2d(cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tenso
     Py_DECREF(ckern);
     Py_DECREF(cout);
 }
-
-
 
 
 void d_convolve_d_images(cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& kern, const std::string& mode){
@@ -119,6 +154,55 @@ void d_convolve_d_images(cuv::tensor<float,cuv::dev_memory_space>& images, const
     Py_DECREF(ckern);
     Py_DECREF(cout);
 }
+
+
+
+void d_convolve_d_images_with_bias(cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const cuv::tensor<float,cuv::dev_memory_space>& kern, const cuv::tensor<float,cuv::dev_memory_space>& bias, const std::string& mode){
+    cuvAssert(images.shape(0)==out.shape(0));
+    cuvAssert(kern.shape(0)==out.shape(1));
+    /*cuvAssert(kern.shape(1)==bias.shape(1));*/
+    /*cuvAssert(images.shape(0)==bias.shape(0));*/
+    if(mode=="valid"){
+        cuvAssert(out.shape(2) == images.shape(2)-kern.shape(2)+1);
+        cuvAssert(out.shape(3) == images.shape(3)-kern.shape(3)+1);
+    }else if(mode=="full"){
+        cuvAssert(out.shape(2) == images.shape(2)+kern.shape(2)-1);
+        cuvAssert(out.shape(3) == images.shape(3)+kern.shape(3)-1);
+    }else{
+        throw std::runtime_error("undefined convolution mode `"+mode+"'");
+    }
+
+    cuv::tensor<float,cuv::dev_memory_space> output = out;
+    cuv::tensor<float,cuv::dev_memory_space> kernel = kern;
+    cuv::tensor<float,cuv::dev_memory_space> b = bias;
+    CudaNdarray *cimages, *ckern, *cout, *cbias;
+
+    view(cimages, images);
+    view(ckern, kernel);
+    view(cout, output);
+    view(cbias, b);
+
+    int kern_dims[] = {1,0,2,3};
+    if(0 != CudaNdarray_dimshuffle(ckern, 4,kern_dims))
+        throw std::runtime_error("could not dimshuffle tensor");
+    CudaNdarray *cflipped_kern = cnda_flip_dims2and3(ckern);
+
+    std::string _mode = mode == "valid" ? "full" : "valid";
+    if(_mode=="valid")
+        CudaNdarray_conv_valid(cout, cflipped_kern, cimages, 1, 1, -1, 0); // ssrows sscols version verbose
+    else
+        CudaNdarray_conv_full(cout, cflipped_kern, cimages, 1, 1, -1, 0, cbias); // ssrows sscols version verbose
+
+    cuvAssert(CudaNdarray_is_c_contiguous(cimages));
+
+    Py_DECREF(cflipped_kern);
+    Py_DECREF(cimages);
+    Py_DECREF(ckern);
+    Py_DECREF(cout);
+    Py_DECREF(cbias);
+}
+
+
 
 void d_convolve_d_kern(cuv::tensor<float,cuv::dev_memory_space>& kern_, const cuv::tensor<float,cuv::dev_memory_space>& images, const cuv::tensor<float,cuv::dev_memory_space>& out, const std::string& mode){
     cuvAssert(images.shape(0)==out.shape(0));

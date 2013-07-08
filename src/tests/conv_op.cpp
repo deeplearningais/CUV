@@ -355,6 +355,7 @@ BOOST_AUTO_TEST_CASE( test_conv1d_theano )
 
 BOOST_AUTO_TEST_CASE( test_tuplewise_op )
 {
+     std::cout << "testing tuplewise op started" << std::endl;/* cursor */
    using namespace cuv::alex_conv;
 
    // norm test
@@ -643,7 +644,37 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
              }
    std::cout << "testing squared norm done" << std::endl;/* cursor */
    }
-   std::cout << "testing norm done" << std::endl;/* cursor */
+   // subsample test
+   {
+     std::cout << "testing subsampling started" << std::endl;/* cursor */
+     unsigned int sub_size = 4;
+     unsigned int nImg = 4;
+     unsigned int nPix = 16;
+     unsigned int nChan = 8*sub_size;
+     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+
+     tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> res_h(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+
+     fill_rnd_uniform(inp_h);
+     inp = inp_h;
+
+     res = 0.f;
+     res_h = 0.f;
+     tuplewise_op(res,inp, 0, sub_size, TO_SUBSAMPLE);
+     tuplewise_op(res_h,inp_h, 0, sub_size, TO_SUBSAMPLE);
+
+     for(unsigned int i=0;i<nChan/sub_size;i++)
+         for(unsigned int j=0;j<nPix;j++)
+             for(unsigned int k=0;k<nPix;k++){
+                 for(unsigned int l=0;l<nImg;l++){
+                     BOOST_CHECK_CLOSE(1.f, 1.f + res(i,j,k,l) - res_h(i,j,k,l), 0.001f);
+                     BOOST_CHECK_CLOSE(1.f, 1.f + res_h(i,j,k,l)-inp_h(sub_size*i,j,k,l), 0.001f);
+                 }
+             }
+     std::cout << "testing subsampling done" << std::endl;/* cursor */
+   }
 }
 
 BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )

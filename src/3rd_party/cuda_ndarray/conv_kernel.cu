@@ -125,6 +125,7 @@ __device__ void load_to_shared(float * dst, const float * src, const int thread_
 
 }
 
+
 __device__ void fill(float * dst, int N, float value, int thread_id, int nb_thread){
   for(int i=thread_id;i<N;i+=nb_thread)
     dst[i]=value;
@@ -155,6 +156,30 @@ __device__ void load_padded_col_to_shared(float * dst, const float * src,
   }
 
 }
+
+
+__device__ void load_padded_zeros_to_shared(float * dst, 
+					  const int thread_id, const int nb_thread,
+					  const int nb_col, const int nb_row, 
+					  const int stride_col, const int stride_row,
+					  const int wid_pad, const bool c_contiguous=true){
+  if(c_contiguous){//flipped==false
+    for(int i=thread_id;i<nb_col*nb_row;i+=nb_thread){
+      int col=i%nb_col;
+      int row=i/nb_col;
+      dst[row*(nb_col+2*wid_pad)+col+wid_pad]= 0.f;
+    }
+    
+  }else{
+    for(int i=thread_id;i<nb_row*nb_col;i+=nb_thread){
+      int col=i%nb_col;
+      int row=i/nb_col;
+      dst[row*(nb_col+2*wid_pad)+col+wid_pad]= 0.f;
+    }
+  }
+
+}
+
 
 template<int i> __device__ float convolutionRowNoFlip(const float *data,
 						      const float *kern){
