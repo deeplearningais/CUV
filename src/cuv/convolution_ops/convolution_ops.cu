@@ -722,10 +722,15 @@ void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned i
                         if(index == item)
                             squared_sum = src_ptr[index];
                         break;
+                    case TO_MEAN:
+                        squared_sum += src_ptr[index];
+                        break;
                 }
             }
             if(to == TO_NORM)
                 dst0[item] = sqrt(squared_sum + eps);
+            else if (to == TO_MEAN)
+                dst0[item] = squared_sum / subspace_size;
             else
                 dst0[item] = squared_sum;
         }
@@ -738,7 +743,8 @@ void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned i
         for(; line < dst_rows; line += blockDim.x){
             T squared_sum =  0.f;
             unsigned int end =  subspace_size*(line+1);
-            for (unsigned int index = subspace_size*line; index < end; index++){
+            unsigned int begin = subspace_size*line;
+            for (unsigned int index = begin; index < end; index++){
                 T s = src_ptr[index];
                 switch(to){
                     case TO_NORM:
@@ -749,13 +755,18 @@ void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned i
                         squared_sum = max(s, squared_sum);
                         break;
                     case TO_SUBSAMPLE:
-                        if(index == subspace_size*line)
+                        if(index == begin)
                             squared_sum = src_ptr[index];
+                        break;
+                    case TO_MEAN:
+                        squared_sum += src_ptr[index];
                         break;
                 }
             }
             if(to == TO_NORM)
                 dst0[line] = sqrt(squared_sum + eps);
+            else if (to == TO_MEAN)
+                dst0[line] = squared_sum / subspace_size;
             else
                 dst0[line] = squared_sum;
         }
@@ -807,6 +818,9 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                 case TO_SUBSAMPLE:
                     p  = d0[item];
                     break;
+                case TO_MEAN:
+                    p  = d0[item] * (1.f / subspace_size);
+                    break;
             };
             
 
@@ -826,6 +840,12 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         dst_ptr[index] = p * src_ptr[index];
                         break;
                     case TO_SUBSAMPLE:
+                        if (index == item)
+                            dst_ptr[index] = p;
+                        else 
+                            dst_ptr[index] = 0.f;
+                        break;
+                    case TO_MEAN:
                         dst_ptr[index] = p;
                         break;
                 }
@@ -848,6 +868,7 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                 T s = src_ptr[index];
                 switch(to){
                     case TO_NORM:
+                    case TO_ADD_SQUARED:
                         squared_sum += s*s;
                         break;
                     case TO_MAX:
@@ -870,11 +891,15 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                     p = 2.f * d0[line];
                     break;
                 case TO_SUBSAMPLE:
-                    p  = d0[item];
+                    p  = d0[line];
+                    break;
+                case TO_MEAN:
+                    p  = d0[line] * (1.f / subspace_size);
                     break;
             }
 
-            for (unsigned int index = subspace_size*line; index < end; index++){
+            unsigned int begin_idx = subspace_size*line;
+            for (unsigned int index = begin_idx; index < end; index++){
                 switch(to){
                     case TO_NORM:
                         dst_ptr[index] = p * src_ptr[index];
@@ -889,6 +914,12 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
                         dst_ptr[index] = p * src_ptr[index];
                         break;
                     case TO_SUBSAMPLE:
+                        if (index == begin_idx)
+                            dst_ptr[index] = p;
+                        else 
+                            dst_ptr[index] = 0.f;
+                        break;
+                    case TO_MEAN:
                         dst_ptr[index] = p;
                         break;
                 }
@@ -923,12 +954,17 @@ template<bool FirstDim, tuplewise_op_functor to, class T>
                                 if(index == i)
                                     squared_sum = src_ptr[index];
                                 break;
+                            case TO_MEAN:
+                                squared_sum += src_ptr[index];
+                                break;
 
                         }
                     }
 
                     if(to == TO_NORM)
                         dst_ptr[i] = sqrt(squared_sum + eps);
+                    else if (to == TO_MEAN)
+                        dst_ptr[i] = squared_sum / subspace_size;
                     else
                         dst_ptr[i] = squared_sum;
                 }
@@ -952,10 +988,15 @@ template<bool FirstDim, tuplewise_op_functor to, class T>
                                 if(index == subspace_size*i)
                                     squared_sum = src_ptr[index];
                                 break;
+                            case TO_MEAN:
+                                squared_sum += src_ptr[index];
+                                break;
                         }
                     }
                     if(to == TO_NORM)
                         dst_ptr[i] = sqrt(squared_sum + eps);
+                    else if (to == TO_MEAN)
+                        dst_ptr[i] = squared_sum / subspace_size;
                     else
                         dst_ptr[i] = squared_sum;
                 }
@@ -1009,6 +1050,13 @@ template<class V,class M, class T>
                         tuplewise_op_host<false, TO_SUBSAMPLE>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
                     }
                     break;
+                case TO_MEAN:
+                    if(dim == 0){
+                        tuplewise_op_host<true, TO_MEAN>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
+                    }else{
+                        tuplewise_op_host<false, TO_MEAN>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
+                    }
+                    break;
             }
         }else{
             // device: run kernel
@@ -1057,6 +1105,14 @@ template<class V,class M, class T>
 
                     }
                     break;
+                case TO_MEAN:
+                    if(dim == 0){
+                        tuplewise_op_kernel<true, TO_MEAN><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
+                    }else{
+                        tuplewise_op_kernel<false, TO_MEAN><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), lines, items, subspace_size, eps);
+
+                    }
+                    break;
             }
             cuvSafeCall(cudaThreadSynchronize());
         }
@@ -1102,6 +1158,9 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                     case TO_SUBSAMPLE:
                         f = d_ptr[i];
                         break;
+                    case TO_MEAN:
+                        f = d_ptr[i] * (1.f / subspace_size);
+                        break;
                 };
                 // updates dst for each feature in subspace 
                 for (unsigned int index = i; index < i + subspace_size * items; index+= items){
@@ -1121,6 +1180,12 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                             dst_ptr[index] = f *  src_ptr[index];
                             break;
                         case TO_SUBSAMPLE:
+                            if(index == i)
+                                dst_ptr[index] = f;
+                            else
+                                dst_ptr[index] = 0.f;
+                            break;
+                        case TO_MEAN:
                             dst_ptr[index] = f;
                             break;
                     }
@@ -1165,6 +1230,9 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                     case TO_SUBSAMPLE:
                         f = d_ptr[i];
                         break;
+                    case TO_MEAN:
+                        f = d_ptr[i] * (1.f / subspace_size);
+                        break;
                 };
 
                 for (unsigned int index = subspace_size*i; index < end; index++){
@@ -1182,6 +1250,12 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                             dst_ptr[index] = f * src_ptr[index];
                             break;
                         case TO_SUBSAMPLE:
+                            if(index == subspace_size * i)
+                                dst_ptr[index] = f;
+                            else
+                                dst_ptr[index] = 0.f;
+                            break;
+                        case TO_MEAN:
                             dst_ptr[index] = f;
                             break;
                     }
@@ -1233,6 +1307,14 @@ template<class V,class M, class T>
                         tuplewise_op_grad_host<false, TO_SUBSAMPLE>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
                     }
                     break;
+                case TO_MEAN:
+                    if(dim == 0){
+                        tuplewise_op_grad_host<true, TO_MEAN>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
+
+                    }else{
+                        tuplewise_op_grad_host<false, TO_MEAN>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
+                    }
+                    break;
             }
         }else{
             // device: run kernel
@@ -1278,6 +1360,14 @@ template<class V,class M, class T>
 
                     }else{
                         tuplewise_op_grad_kernel<false, TO_SUBSAMPLE><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
+                    }
+                    break;
+                case TO_MEAN:
+                    if(dim == 0){
+                        tuplewise_op_grad_kernel<true, TO_MEAN><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
+
+                    }else{
+                        tuplewise_op_grad_kernel<false, TO_MEAN><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, eps);
                     }
                     break;
             }

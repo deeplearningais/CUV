@@ -292,7 +292,8 @@ enum tuplewise_op_functor{
     TO_NORM,
     TO_MAX,
     TO_ADD_SQUARED,
-    TO_SUBSAMPLE
+    TO_SUBSAMPLE,
+    TO_MEAN
 };
 /**
  * square the input, then add every map pair and take the square root.

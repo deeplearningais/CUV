@@ -675,6 +675,43 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
              }
      std::cout << "testing subsampling done" << std::endl;/* cursor */
    }
+   // mean test
+   {
+     unsigned int sub_size = 4;
+     unsigned int nImg = 4;
+     unsigned int nPix = 16;
+     unsigned int nChan = 8*sub_size;
+     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+
+     tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> res_h(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+
+     fill_rnd_uniform(inp_h);
+     inp = inp_h;
+
+     res = 0.f;
+     res_h = 0.f;
+     tuplewise_op(res,inp, 0, sub_size, TO_MEAN);
+     tuplewise_op(res_h,inp_h, 0, sub_size, TO_MEAN);
+
+     for(unsigned int i=0;i<nChan/sub_size;i++)
+         for(unsigned int j=0;j<nPix;j++)
+             for(unsigned int k=0;k<nPix;k++){
+                 for(unsigned int l=0;l<nImg;l++){
+                     BOOST_CHECK_CLOSE(1.f, 1.f + res(i,j,k,l) - res_h(i,j,k,l), 0.001f);
+
+                     float squared_sum = 0.f;
+                     for(unsigned int sub_idx = 0; sub_idx < sub_size; sub_idx++){
+                         float s = inp_h(sub_size*i+sub_idx,j,k,l);
+                         squared_sum += s;
+                     }
+
+                     BOOST_CHECK_CLOSE(1.f, 1.f + res_h(i,j,k,l)- squared_sum/sub_size, 0.001f);
+                 }
+             }
+     std::cout << "testing mean done" << std::endl;/* cursor */
+   }
 }
 
 BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
@@ -876,6 +913,159 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
                  }
              }
      std::cout << "test sqr norm grad finished" << std::endl;/* cursor */
+   }
+   // test for subsample 
+   {
+     std::cout << "in gradient subsample" << std::endl;/* cursor */
+     using namespace cuv::alex_conv;
+     unsigned int sub_size = 3;
+     unsigned int nImg = 5;
+     unsigned int nPix = 4;
+     unsigned int nChan = 4 * sub_size;
+     tensor<float,dev_memory_space,row_major> inp_grad(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> delta(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+
+     tensor<float,host_memory_space,row_major> inp_grad_h(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> res_h(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> delta_h(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+
+     fill_rnd_uniform(inp_h);
+     inp = inp_h;
+
+     res = 0.f;
+     res_h = 0.f;
+     fill_rnd_uniform(delta_h);
+     delta = delta_h;
+     tuplewise_op(res,inp, 0, sub_size, TO_SUBSAMPLE, eps);
+     tuplewise_op(res_h,inp_h, 0, sub_size, TO_SUBSAMPLE, eps);
+
+     tuplewise_op_grad(inp_grad,inp,delta, 0, sub_size, TO_SUBSAMPLE, eps);
+     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 0, sub_size, TO_SUBSAMPLE, eps);
+
+     for(unsigned int i=0;i<nChan/sub_size;i++)
+         for(unsigned int j=0;j<nPix;j++)
+             for(unsigned int k=0;k<nPix;k++){
+                 for(unsigned int l=0;l<nImg;l++){
+                     for (unsigned int sub_idx = 0; sub_idx < sub_size; sub_idx++){
+                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(sub_size*i+sub_idx,j,k,l) - inp_grad_h(sub_size*i+sub_idx,j,k,l), 0.001);
+
+                         float r  = res_h(  i  ,j,k,l);
+                         float d  = delta(  i  ,j,k,l);
+                         float f0;
+                         if(sub_idx == 0){
+                             f0 = d;
+                         }
+                         else
+                             f0 = 0.f;
+                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(sub_size*i + sub_idx,j,k,l) - f0, 0.01f);
+                     }
+
+                 }
+             }
+     std::cout << "test subsample grad finished" << std::endl;/* cursor */
+   }
+   // test for mean 
+   {
+     std::cout << "in gradient mean" << std::endl;/* cursor */
+     using namespace cuv::alex_conv;
+     unsigned int sub_size = 3;
+     unsigned int nImg = 5;
+     unsigned int nPix = 4;
+     unsigned int nChan = 4 * sub_size;
+     tensor<float,dev_memory_space,row_major> inp_grad(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> delta(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+
+     tensor<float,host_memory_space,row_major> inp_grad_h(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> res_h(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> delta_h(cuv::extents[nChan/sub_size][nPix][nPix][nImg]);
+
+     fill_rnd_uniform(inp_h);
+     inp = inp_h;
+
+     res = 0.f;
+     res_h = 0.f;
+     fill_rnd_uniform(delta_h);
+     delta = delta_h;
+     tuplewise_op(res,inp, 0, sub_size, TO_MEAN, eps);
+     tuplewise_op(res_h,inp_h, 0, sub_size, TO_MEAN, eps);
+
+     tuplewise_op_grad(inp_grad,inp,delta, 0, sub_size, TO_MEAN, eps);
+     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 0, sub_size, TO_MEAN, eps);
+
+     for(unsigned int i=0;i<nChan/sub_size;i++)
+         for(unsigned int j=0;j<nPix;j++)
+             for(unsigned int k=0;k<nPix;k++){
+                 for(unsigned int l=0;l<nImg;l++){
+                     for (unsigned int sub_idx = 0; sub_idx < sub_size; sub_idx++){
+                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(sub_size*i+sub_idx,j,k,l) - inp_grad_h(sub_size*i+sub_idx,j,k,l), 0.001);
+
+                         float s0 = inp_h(sub_size*i+sub_idx,j,k,l);
+                         float r  = res_h(  i  ,j,k,l);
+                         float d  = delta(  i  ,j,k,l);
+                         float f0;
+                         f0 = d * (1.f / sub_size);
+                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(sub_size*i + sub_idx,j,k,l) - f0, 0.01f);
+                     }
+
+                 }
+             }
+     std::cout << "test mean grad finished" << std::endl;/* cursor */
+   }
+   // test for mean 2 
+   {
+     std::cout << "in gradient mean 2" << std::endl;/* cursor */
+     using namespace cuv::alex_conv;
+     unsigned int sub_size = 3;
+     unsigned int nImg = 5;
+     unsigned int nPix = 4;
+     unsigned int nChan = 4 * sub_size;
+     tensor<float,dev_memory_space,row_major> inp_grad(cuv::extents[nImg][nPix][nPix][nChan]);
+     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nImg][nPix][nPix][nChan]);
+     tensor<float,dev_memory_space,row_major> res(cuv::extents[nImg][nPix][nPix][nChan/sub_size]);
+     tensor<float,dev_memory_space,row_major> delta(cuv::extents[nImg][nPix][nPix][nChan/sub_size]);
+
+     tensor<float,host_memory_space,row_major> inp_grad_h(cuv::extents[nImg][nPix][nPix][nChan]);
+     tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nImg][nPix][nPix][nChan]);
+     tensor<float,host_memory_space,row_major> res_h(cuv::extents[nImg][nPix][nPix][nChan/sub_size]);
+     tensor<float,host_memory_space,row_major> delta_h(cuv::extents[nImg][nPix][nPix][nChan/sub_size]);
+
+     fill_rnd_uniform(inp_h);
+     inp = inp_h;
+
+     res = 0.f;
+     res_h = 0.f;
+     fill_rnd_uniform(delta_h);
+     delta = delta_h;
+     tuplewise_op(res,inp, 3, sub_size, TO_MEAN, eps);
+     tuplewise_op(res_h,inp_h, 3, sub_size, TO_MEAN, eps);
+
+     tuplewise_op_grad(inp_grad,inp,delta, 3, sub_size, TO_MEAN, eps);
+     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 3, sub_size, TO_MEAN, eps);
+
+     for(unsigned int i=0;i<nImg;i++)
+         for(unsigned int j=0;j<nPix;j++)
+             for(unsigned int k=0;k<nPix;k++){
+                 for(unsigned int l=0;l<nChan/sub_size;l++){
+                     for (unsigned int sub_idx = 0; sub_idx < sub_size; sub_idx++){
+                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(i,j,k,sub_size*l+sub_idx) - inp_grad_h(i,j,k,sub_size*l+sub_idx), 0.001);
+
+                         float s0 = inp_h(i,j,k,sub_size*l+sub_idx);
+                         float r  = res_h(  i  ,j,k,l);
+                         float d  = delta(  i  ,j,k,l);
+                         float f0;
+                         f0 = d * (1.f / sub_size);
+                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(i,j,k,sub_size*l+sub_idx) - f0, 0.01f);
+                     }
+
+                 }
+             }
+     std::cout << "test mean grad finished" << std::endl;/* cursor */
    }
 }
 
