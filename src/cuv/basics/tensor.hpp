@@ -1561,6 +1561,9 @@ namespace cuv
                     t.m_memory = o.mem();
                     t.m_ptr    = const_cast<pointer_type>(o.ptr());
 
+#ifndef NDEBUG
+                    cuvAssert(D <= o.ndim());
+#endif
                     std::vector<int> shapes;
                     std::vector<int> strides;
                     shapes.reserve(o.ndim());
@@ -1573,6 +1576,7 @@ namespace cuv
                         if (finish<0) finish += o.shape(i);
 #ifndef NDEBUG
                         cuvAssert(finish>start);
+                        cuvAssert(finish <= o.shape(i));
 #endif
                         t.m_ptr += start*o.stride(i);
                         if(idx.ranges_[i].is_degenerate()){
