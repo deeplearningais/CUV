@@ -48,7 +48,7 @@ IF(CUV_CIMG_BINDINGS)
     SET(CUV_SRC ${CUV_SRC} libs/cimg/cuv_cimg.cu)
 ENDIF(CUV_CIMG_BINDINGS)
 
-find_package (PythonLibs REQUIRED)
+find_package (PythonLibs 2.7 REQUIRED)
 if (PYTHONLIBS_FOUND )
     SET(CUV_SRC ${CUV_SRC} libs/theano_ops/theano_ops.cu)
     include_directories(${PYTHON_INCLUDE_DIRS} )

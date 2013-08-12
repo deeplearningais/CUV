@@ -1,8 +1,8 @@
 set(Boost_USE_STATIC_LIBS FALSE)
 FIND_PACKAGE( Boost 1.37 COMPONENTS date_time python REQUIRED )
-FIND_PACKAGE( PythonLibs )
 FIND_PACKAGE( PythonInterp )
 FIND_PACKAGE( BLAS REQUIRED)
+FIND_PACKAGE( PythonLibs 2.7 REQUIRED )
 if(PYTHON_VERSION_STRING)
     set(PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
     string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" PYTHON_VERSION_FULL "${PYTHON_VERSION_STRING}")
@@ -28,7 +28,6 @@ include_directories(
         ${PYUBLAS_INCLUDE_DIR}
         )
 
-    FIND_PACKAGE(PythonLibs REQUIRED)
 PYTHON_ADD_MODULE(cuv_python SHARED 
         python_bindings.cpp
         export_tensor.cpp
