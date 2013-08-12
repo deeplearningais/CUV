@@ -4,7 +4,7 @@
 #include <cuv/tools/meta_programming.hpp>
 #include <cuv/libs/kmeans/kmeans.hpp>
 
-/*#include <thrust/count.h>*/
+#include <thrust/device_ptr.h>
 #include<thrust/functional.h>
 /*#include<thrust/scan.h>*/
 /*#include<thrust/copy.h>*/
