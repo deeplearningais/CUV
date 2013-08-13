@@ -18,9 +18,9 @@ EXECUTE_PROCESS(COMMAND "date" "+%Y%m%d%H%M" OUTPUT_VARIABLE DATESTR)
 string(REGEX REPLACE "^(....)(..)(..)(..)(..).*" "\\1\\2\\3\\4\\5" DATESTR ${DATESTR}) 
 
 SET(LIB_SUFFIX "")
-IF("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    SET(LIB_SUFFIX _dbg)
-ENDIF("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+#IF("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+#SET(LIB_SUFFIX _dbg)
+#ENDIF("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 
 
 INCLUDE(InstallRequiredSystemLibraries)

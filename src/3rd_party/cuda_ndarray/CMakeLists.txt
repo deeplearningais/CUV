@@ -11,6 +11,7 @@ CUDA_ADD_LIBRARY("tp_theano${LIB_SUFFIX}" SHARED
    convolutions.cu
    cuda_ndarray.cu
  )
+set_target_properties( "tp_theano${LIB_SUFFIX}" PROPERTIES VERSION ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR} SOVERSION 0 )
 
 
 if (PYTHONLIBS_FOUND )

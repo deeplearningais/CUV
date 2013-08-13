@@ -11,6 +11,7 @@ CUDA_ADD_LIBRARY("tp_cudaconv2${LIB_SUFFIX}" SHARED
 	src/cudaconv2/img_acts.cu
 	src/cudaconv2/weight_acts.cu
   )
+set_target_properties( "tp_cudaconv2${LIB_SUFFIX}" PROPERTIES VERSION ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR} SOVERSION 0 )
 
 TARGET_LINK_LIBRARIES("tp_cudaconv2${LIB_SUFFIX}"
         ${BLAS_LIBRARIES}
