@@ -253,7 +253,7 @@ CudaNdarray_conv_valid(const CudaNdarray *img, const CudaNdarray * kern,
 	      fprintf(stderr,
                      "threads.x=%i, threads.y=%i, grid.x=%i, grid.y=%i, shared_size=%i, nb_threads=%i,"
 		     " kern_flipped=true, accumulate=false, kern_width=%i, img_c_contiguous_2d=%i,"
-		     " kern_c_contiguous_2d=%i, nb_split=%i, preload_full_kernel=%i,",
+		     " kern_c_contiguous_2d=%i, nb_split=%i, preload_full_kernel=%i,"
 		     " subsample_rows=%i, subsample_cols=%i\n",
 		     threads.x, threads.y, grid.x, grid.y, shared_size, threads.x * threads.y,
 		     THEANO_KERN_WID, img_contiguous_2d, kern_contiguous_2d,
@@ -269,7 +269,7 @@ CudaNdarray_conv_valid(const CudaNdarray *img, const CudaNdarray * kern,
             if (verbose)
 	      fprintf(stderr, "threads.x=%i, threads.y=%i, grid.x=%i, grid.y=%i, shared_size=%i, nb_threads=%i,"
 		     " kern_flipped=true, accumulate=false, kern_width=%i, img_c_contiguous_2d=%i,"
-		     " kern_c_contiguous_2d=%i, nb_split=%i, preload_full_kernel=%i,",
+		     " kern_c_contiguous_2d=%i, nb_split=%i, preload_full_kernel=%i,"
 		     " subsample_rows=%i, subsample_cols=%i\n",
 		     threads.x, threads.y, grid.x, grid.y, shared_size, threads.x * threads.y,
 		     THEANO_KERN_WID, img_contiguous_2d, kern_contiguous_2d,
