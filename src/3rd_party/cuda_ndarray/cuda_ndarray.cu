@@ -1,12 +1,8 @@
 #define _CUDA_NDARRAY_C
 
-#include <Python.h>
-#include <structmember.h>
-
-#include <numpy/arrayobject.h>
-#include <iostream>
-
 #include "cuda_ndarray.cuh"
+#include <iostream>
+#include <structmember.h>
 
 //If true, when there is a gpu malloc or free error, we print the size of allocated memory on the device.
 #define COMPUTE_GPU_MEM_USED 0
@@ -1887,7 +1883,9 @@ CudaNdarray_setitem(PyObject *o, PyObject  *key, PyObject  *value)
         return -1;
     }
 
+#ifndef NDEBUG
     PyObject *baseSavedForComparison = rval->base;
+#endif
 
     if(CudaNdarray_CopyFromCudaNdarray(rval, (CudaNdarray*)value, true))
     {
@@ -1896,7 +1894,9 @@ CudaNdarray_setitem(PyObject *o, PyObject  *key, PyObject  *value)
         return -1;
     }
 
+#ifndef NDEBUG
     assert (rval->base == baseSavedForComparison);
+#endif
     assert (rval->dev_structure_fresh);
 
     // Clean up locally-created references
@@ -2129,7 +2129,7 @@ CudaNdarray_ptr_int_size(PyObject* _unused, PyObject* args)
                             "CudaNdarray_ptr_int_size: Can't allocate memory on the gpu.");
     }
     get_gpu_ptr_size<<<1,1>>>(gpu_data);
-    if (cudaSuccess != cublasGetError()){
+    if (CUBLAS_STATUS_SUCCESS != cublasGetError()){
 
         device_free(gpu_data);
         return PyErr_Format(PyExc_RuntimeError,
@@ -2970,7 +2970,7 @@ int CudaNdarray_gemm(float alpha, const CudaNdarray * A, const CudaNdarray * B, 
     };
     CNDA_THREAD_SYNC;
     cudaError_t err = cudaGetLastError();
-    if (CUBLAS_STATUS_SUCCESS != err)
+    if (cudaSuccess != err)
     {
         PyErr_Format(PyExc_RuntimeError, "cublassGemm failed (%s)",cudaGetErrorString(err));
         return -1;
@@ -3012,7 +3012,7 @@ int CudaNdarray_sger(float alpha, CudaNdarray * x, CudaNdarray * y, CudaNdarray 
     CNDA_THREAD_SYNC;
 
     cudaError_t err = cudaGetLastError();
-    if (CUBLAS_STATUS_SUCCESS != err)
+    if (cudaSuccess != err)
     {
         PyErr_Format(PyExc_RuntimeError, "cublasSger failed (%s)",cudaGetErrorString(err));
         return -1;

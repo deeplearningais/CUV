@@ -1,7 +1,6 @@
 // vim:ts=8:sw=8
-#include <algorithm>
-#include <Python.h>
 #include "cuda_ndarray.cuh"
+#include <algorithm>
 #include "conv_kernel.cu"
 #include "conv_full_kernel.cu"
 // REMEMBER TO RAISE c_code_cache_version when changing this file

@@ -3,9 +3,9 @@
 /*#include <sys/time.h>*/
 
 /*#include <cuv.hpp>*/
+#include"cuda_ndarray.cuh"
 #include <cuv/convolution_ops/convolution_ops_theano.hpp>
 #include"conv.cu"
-#include"cuda_ndarray.cuh"
 
 CudaNdarray* cnda_flip_dims2and3(CudaNdarray* self);
 namespace cuv{
