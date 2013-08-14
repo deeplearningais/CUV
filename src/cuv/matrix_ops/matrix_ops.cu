@@ -477,9 +477,8 @@ namespace matrix_op_col_impl {
 	// ====================  middle ======================
     template<bool UseFactNew, bool UseFactOld,class T, class OP>
        __global__
-       void matrix_op_middle_kernel(T* dst, const T* src, const T* v, OP op, unsigned int dim0, unsigned int dim1, unsigned int dim2, float factNew, float factOld){
+       void matrix_op_middle_kernel(T* dst, const T* src, const T* v, OP op, const unsigned int dim0, const unsigned int dim1, const unsigned int dim2, float factNew, float factOld){
            unsigned int line = blockIdx.x;
-           unsigned int item = threadIdx.x;
            unsigned int init_offset = line * dim2 * dim1;
            T* dst0;
            const T* src0;
@@ -489,13 +488,16 @@ namespace matrix_op_col_impl {
               dst0 = dst + init_offset;
               src0 = src + init_offset;
               line = blockIdx.x;
-              item = threadIdx.x;
 
               T el = v[f];
               unsigned int offset_dim1 = f*dim2;
               for(; line < dim0; line += gridDim.x){
-                  for(; item < dim2; item += blockDim.x){
-                      unsigned int index = offset_dim1 + item;
+                  /*unsigned int item = threadIdx.x;*/
+                  /*for(; item < dim2; item += blockDim.x){*/
+                      /*unsigned int index = offset_dim1 + item;*/
+                  for(unsigned int index = offset_dim1 + threadIdx.x;
+                          index < dim2 + offset_dim1;
+                          index += blockDim.x){
 
                       if(!UseFactOld && !UseFactNew)
                           dst0[index] = op(src0[index], el);
