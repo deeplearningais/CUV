@@ -1,0 +1,6 @@
+./usr/include/*
+./usr/lib/lib*.so
+./usr/lib/lib*.so.*
+./usr/lib/python2.7
+./usr/lib/python2.7/dist-packages/cuv_python/__init__.py
+./usr/lib/python2.7/dist-packages/cuv_python/_cuv_python.so

@@ -1,0 +1,2 @@
+libcudart 5.5 cuda-core-libs-5-5 (>= 5.5-0)
+libcublas 5.5 cuda-extra-libs-5-5 (>= 5.5-0)

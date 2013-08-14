@@ -1,0 +1,43 @@
+#!/bin/sh
+
+#set -e
+
+# Jenkins should supply this environment variable to this script.
+if [ -n "$BUILD_NUMBER" ] ; then
+    echo "This is build number $BUILD_NUMBER."
+else
+    echo "No BUILD_NUMBER specified!"
+    exit 1
+fi
+
+# Read the version and construct the new version using the current jenkins build number
+VERSION=`dpkg-parsechangelog | awk "/^Version:/{ print \\\$2; }"` 
+NEWVERSION=`echo $VERSION | perl -ne '/(\d+)\.(\d+)(?:\.\d+)?(.*)/; $x=$ENV{"BUILD_NUMBER"}; print "$1.$2.$x$4"'`-1
+
+# Tell debsign how to sign this release
+export DEBFULLNAME="Jenkins CI"
+export DEBEMAIL="jenkins@ais.uni-bonn.de"
+
+# we need to tag the debian release with the new version string, or git-dch
+# will be confused what to do 
+git tag -f debian/$NEWVERSION
+EDITOR=echo VISUAL=echo git-dch --new-version $NEWVERSION --debian-branch debian master
+
+# tell dch which distribution this is for. 
+# -r '' tells it not to open an editor (why, oh why?)
+EDITOR=echo VISUAL=echo dch -r '' --distribution `lsb_release -cs`
+
+# ensure that it worked
+DIST=`dpkg-parsechangelog | awk "/^Distribution:/{ print \\\$2; }"`
+
+
+echo $DIST, $VERSION
+if [ -n "$VERSION" -a "$DIST" != "UNRELEASED" ] ; then
+    echo "Document changes and release $NEWVERSION" debian/changelog 
+    git commit -m "Document changes and release $NEWVERSION" debian/changelog 
+else
+    echo "Error commiting changelog of $NEWVERSION in $DIST"
+fi
+
+#DEB_BUILD_OPTIONS=parallel=12 git-buildpackage --git-force-create --git-debian-branch=debian --git-upstream-branch=master --git-dist=$DIST --git-upstream-tree=HEAD --git-cleaner=true --git-ignore-new
+DEB_BUILD_OPTIONS=parallel=12 git-buildpackage --git-debian-branch=debian --git-upstream-branch=master --git-dist=$DIST --git-upstream-tree=HEAD --git-cleaner=true --git-ignore-new
