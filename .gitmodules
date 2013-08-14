@@ -1,0 +1,3 @@
+[submodule "src/3rd_party/thrust"]
+	path = src/3rd_party/thrust
+	url = git@github.com:thrust/thrust.git

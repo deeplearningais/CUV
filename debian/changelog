@@ -1,4 +1,32 @@
-cuv (0.97.3) quantal; urgency=low
+cuv (0.97.50ubuntu1~2.gbpea0d18) trusty; urgency=medium
+
+  ** SNAPSHOT build @f8cb571bf7ac5d6dd01d9d3575000e6cda65b1d0 **
+
+    cuda 6.5
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Thu, 21 Aug 2014 15:24:00 +0200
+
+cuv (0.97.49) trusty; urgency=medium
+
+  *  bump
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Wed, 23 Jul 2014 17:27:44 +0200
+
+cuv (0.97.48) trusty; urgency=low
+
+  [ Hannes Schulz ]
+  * UNRELEASED
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Wed, 23 July 2014 11:51:38 +0200
+
+cuv (0.97.45) raring; urgency=low
+
+  [ Hannes Schulz ]
+  * UNRELEASED
+
+ -- Jenkins CI <jenkins@ais.uni-bonn.de>  Tue, 06 May 2014 11:51:38 +0200
+
+cuv (0.97.44) raring; urgency=low
 
   ** SNAPSHOT build @533dc72b3ad138aa217bb4c96c5d86f5cc56869c **
 
@@ -14,7 +42,7 @@ cuv (0.97.3) quantal; urgency=low
   * RelWithDebInfo did not include NDEBUG. *ugh*.
   * UNRELEASED
 
- -- Hannes Schulz <schulz@ais.uni-bonn.de>  Mon, 25 Nov 2013 17:05:41 +0100
+ -- Jenkins CI <jenkins@ais.uni-bonn.de>  Wed, 23 Apr 2014 22:56:03 +0200
 
 cuv (0.97.2-1ubuntu1~quantal2ubuntu1~5.gbpde2935) quantal; urgency=low
 

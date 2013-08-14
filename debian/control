@@ -3,10 +3,9 @@ Section: libs
 Priority: extra
 Maintainer: Hannes Schulz <schulz@ais.uni-bonn.de>
 Build-Depends: debhelper (>= 9), cmake (>= 2.8), libboost-python-dev, libboost-serialization-dev, 
-    libboost-date-time-dev, libboost-test-dev, libblas-dev, gfortran, libjpeg-dev, libpng12-dev, python-pyublas, 
-    python-numpy, python-numpy-abi9, cimg-dev, 
-    nvidia-settings, nvidia-340-dev, nvidia-modprobe,
-    cuda
+    libboost-date-time-dev, libboost-test-dev, libblas-dev, gfortran, libjpeg-dev, libpng12-dev,
+    python-numpy, python-numpy-abi9, cimg-dev
+    nvidia-settings, nvidia-modprobe, cuda
 Standards-Version: 3.9.3
 Homepage: https://github.com/deeplearningais/CUV
 Vcs-Git: http://github.com/deeplearningais/CUV.git
@@ -16,8 +15,8 @@ Package: libcuv0
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends},
     cmake, libboost-python-dev, libboost-serialization-dev, 
-    libboost-date-time-dev, libboost-test-dev, libblas-dev, gfortran, libjpeg-dev, libpng12-dev, python-pyublas, cimg-dev, 
-    nvidia-settings, nvidia-340-dev, nvidia-modprobe,
+    libboost-date-time-dev, libboost-test-dev, libblas-dev, gfortran, libjpeg-dev, libpng12-dev, cimg-dev, 
+    nvidia-settings, nvidia-modprobe,
     cuda
 Conflicts: cuv
 Description: N-dimensional arrays for CPU and GPU computing

@@ -11,8 +11,8 @@
 
 #tmpdir:= $(shell pwd)/debian/tmp
 
-export CC=/usr/bin/gcc-4.6
-export CXX=/usr/bin/g++-4.6
+export CC=/usr/bin/gcc-4.8
+export CXX=/usr/bin/g++-4.8
 export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed                                                                                            
 DPKG_EXPORT_BUILDFLAGS = 1  
 -include /usr/share/dpkg/buildflags.mk
@@ -26,7 +26,7 @@ DPKG_EXPORT_BUILDFLAGS = 1
 # libcudart and libcublas, since there aren't any ubuntu packages for those
 # (yet).
 override_dh_shlibdeps:
-	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):/usr/local/cuda/lib:/usr/local/cuda-5.5/lib64 dh_shlibdeps
+	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):/usr/local/cuda-6.5/targets/x86_64-linux/lib dh_shlibdeps -- --ignore-missing-info
 
 # http://maemo.org/development/documentation/manuals/4-0-x/how_to_make_a_debian_debug_package/
 # http://lists.debian.org/debian-devel/2013/06/msg00279.html
