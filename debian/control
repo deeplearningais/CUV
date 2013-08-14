@@ -1,0 +1,53 @@
+Source: cuv
+Section: libs
+Priority: extra
+Maintainer: Hannes Schulz <schulz@ais.uni-bonn.de>
+Build-Depends: debhelper (>= 9), cmake (>= 2.8), libboost-python-dev, libboost-serialization-dev, 
+    libboost-date-time-dev, libboost-test-dev, libblas-dev, gfortran, libjpeg-dev, libpng12-dev, python-pyublas, 
+    python-numpy, python-numpy-abi9, cimg-dev, 
+    cuda-repo-ubuntu1210, nvidia-settings, nvidia-current-dev, nvidia-modprobe,
+    cuda
+Standards-Version: 3.9.3
+Homepage: https://github.com/deeplearningais/CUV
+Vcs-Git: http://github.com/deeplearningais/CUV.git
+Vcs-Browser: http://github.com/deeplearningais/CUV.git
+
+Package: libcuv0
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends},
+    cmake, libboost-python-dev, libboost-serialization-dev, 
+    libboost-date-time-dev, libboost-test-dev, libblas-dev, gfortran, libjpeg-dev, libpng12-dev, python-pyublas, cimg-dev, 
+    cuda-repo-ubuntu1210, nvidia-settings, nvidia-current-dev, nvidia-modprobe,
+    cuda
+Conflicts: cuv
+Description: N-dimensional arrays for CPU and GPU computing
+ Aims at providing a high-level datastructure on GPU,
+ can be used to write CUDA applications without writing
+ kernels.
+ .
+ This package contains the headers and binaries for libcuv.
+
+Package: libcuv-dbg
+Architecture: any
+Section: debug
+Priority: extra
+Depends: libcuv0 (= ${binary:Version}), ${misc:Depends}
+Conflicts: cuv
+Description: N-dimensional arrays for CPU and GPU computing
+ Aims at providing a high-level datastructure on GPU,
+ can be used to write CUDA applications without writing
+ kernels.
+ .
+ This package contains the debugging symbols for libcuv.
+
+Package: libcuv-doc
+Architecture: all
+Section: doc
+Priority: extra
+Depends: ${misc:Depends}, doc-base
+Description: N-dimensional arrays for CPU and GPU computing
+ Aims at providing a high-level datastructure on GPU,
+ can be used to write CUDA applications without writing
+ kernels.
+ .
+ This package contains the API docs for libcuv.

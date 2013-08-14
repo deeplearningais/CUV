@@ -1,0 +1,246 @@
+cuv (0.97.3-1ubuntu1~quantal2ubuntu1~6.gbp70a110) quantal; urgency=low
+
+  ** SNAPSHOT build @70a110cfe4d35851f8391aa505b4c56993f11791 **
+
+  [ Nenad Biresev ]
+  * FIX matrix_op_vec middle dim
+  * FIX removed cout msg
+
+  [ yi huang ]
+  * FIX SF_COPY with mask
+
+  [ Hannes Schulz ]
+  * added debian files
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Fri, 30 Aug 2013 15:03:36 +0200
+
+cuv (0.97.2-1ubuntu1~quantal2ubuntu1~5.gbpde2935) quantal; urgency=low
+
+  ** SNAPSHOT build @de2935c59745df3c56f4e68dc7e66f188845516f **
+
+  [ Nenad Biresev ]
+  * FIX matrix_op_vec middle dim
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Mon, 26 Aug 2013 17:47:03 +0200
+
+cuv (0.97.2-1ubuntu1~quantal2ubuntu1~4.gbpceeb2e) quantal; urgency=low
+
+  ** SNAPSHOT build @ceeb2e1a5f84c2aac80d3f9972cc815adeb3c84c **
+
+  [ Nenad Biresev ]
+  * fixed function call for cuda mem copy
+  * test for conv3d fixed
+  * ENH bias added to border after theano convolution works
+  * ENH subsampling in tuplewise op works
+  * ENH tuplewise op mean added, and subsample
+  * FIX assertions added for tensor_view
+  * FIX warnings in cuda_ndarray
+  * Fix warning in tensor.hpp
+  * FIX warning about fprintf in cudandarray
+
+  [ Hannes Schulz ]
+  * force linking against cblas (weird ubuntu error)
+  * FIX compatibility with cuda 5.5
+
+  [ lukas koliogiannis ]
+  * FIX bug fixed weightupdate in adagrad-kernel
+
+  [ Hannes Schulz ]
+  * FIX linking against python 3.2 if it is installed not desired
+  * FIX library versioning
+  * PKG add docs to all-target; install them
+  * FIX make docs compilation optional again, fix install dir
+
+  [ Nenad Biresev ]
+  * FIX matrix_op_vec middle dim
+
+  [ Hannes Schulz ]
+  * added debian files
+
+  [ Nenad Biresev ]
+  * FIX matrix_op_vec middle dim
+
+  [ Hannes Schulz ]
+  * added debian files
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Wed, 14 Aug 2013 17:55:31 +0200
+
+cuv (0.97.1-1ubuntu1~quantal2ubuntu1~2.gbp40eea5) quantal; urgency=low
+
+  ** SNAPSHOT build @40eea55f621fc8bd0354cd35697ab489964495bc **
+
+  [ Nenad Biresev ]
+  * fixed function call for cuda mem copy
+  * test for conv3d fixed
+  * ENH bias added to border after theano convolution works
+  * ENH subsampling in tuplewise op works
+  * ENH tuplewise op mean added, and subsample
+  * FIX assertions added for tensor_view
+  * FIX warnings in cuda_ndarray
+  * Fix warning in tensor.hpp
+
+  [ Hannes Schulz ]
+  * force linking against cblas (weird ubuntu error)
+  * FIX compatibility with cuda 5.5
+
+  [ lukas koliogiannis ]
+  * FIX bug fixed weightupdate in adagrad-kernel
+
+  [ Hannes Schulz ]
+  * FIX linking against python 3.2 if it is installed not desired
+  * FIX library versioning
+  * PKG add docs to all-target; install them
+  * FIX make docs compilation optional again, fix install dir
+  * added debian files
+  * bump to quantal
+  * bump source version
+  * packaging: compatibility with cuda 5.5
+  * use cuda search path
+  * added a shlibs.local file which explains where to find libcudart
+  * debug package, api docs, shlibs.local
+  * FIX debian package name
+  * fix doc
+  * fix changelog package name
+  * docs again
+  * extended description
+  * specify fields in copyright template
+  * ensure we have debug symbols
+  * FIX warning that shlibs:depends is not defined for dbg package
+  * more phonies
+  * Build with debug info
+  * docs again
+  * update helper script
+  * docs again
+  * patch update
+  * docs again
+  * HACK fix CUDA_ARCH to "" for debugging build process
+  * added copyright
+  * control file: shorter extended description, versioning
+  * turn off verbose makefiles
+  * turn off testing using debian/rules (shouldn't need patch anymore now)
+  * dependency cleanup
+  * copyright again
+  * description again
+  * naming scheme again
+  * dpkg build params makefile included
+  * naming scheme again
+  * dependencies
+  * install file for libcuv0
+  * docs package
+  * docs package
+  * docs package
+  * patch update
+  * FIX lintian error about numpy abi dependency
+  * naming deps
+  * added python-numpy dependency
+  * FIX docs path
+  * FIX docs path
+  * FIX docs path
+  * FIX numpy abi dep
+  * FIX numpy abi dep
+  * FIX numpy abi again
+  * compile for all arch again
+  * conflict with old cuv pkg
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Wed, 14 Aug 2013 13:54:23 +0200
+
+cuv (0.97-1ubuntu1~quantal2ubuntu1~1.gbp17eb92) quantal; urgency=low
+
+  ** SNAPSHOT build @17eb9245b54291f57c823c933d739b4a0afe4162 **
+
+  [ Hannes Schulz ]
+  * FIX 2d-copying of vectors
+  * remove signed/unsigned warnings
+
+  [ Nenad Biresev ]
+  * modified separable filter
+  * normalized box filter (hannes changed)
+  * export hog commented out
+  * removed tuplewise_spatial_op
+  * added op for spatial norm
+  * implemented separable filters with kernel param
+  * test for separable filter
+  * added theano ops flip_dim2and3 and shuffle_dim
+  * deleted spatial op and implemented in cuvnet
+  * flipping dimensions works
+  * bug fixed in flipdim2and3
+  * added test for theano ops
+  * fixed the bug in reshape unsigned int
+  * flipping is done for any dimension
+  * parameter for flipping changed to cuv::extents
+  * matrix_op_vec works for all axis
+  * removed tuplewise_spatial_op
+  * added eps param for the test tuplewise_op
+  * modified documentation for tuplewise op, and deleted spatial_op
+  * added eps param for tuplewise op, gradient fixed
+  * removed copy to device in reshape
+  * test for flip dimensions implemented shorter
+  * head msg removed
+  * added documentation for tuplewise_op_functor
+  * resolved conflict, which was not resolved in last conflict
+  * documentation for tuplewise_op_functor fixed
+
+  [ Hannes Schulz ]
+  * force linking against cblas (weird ubuntu error)
+  * added debian files
+  * bump to quantal
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Mon, 06 May 2013 11:42:13 +0200
+
+cuv (0.96-1ubuntu1~quantal2) quantal; urgency=low
+
+  ** SNAPSHOT build @9cbc9bfbaeeeec9aca9c3e3885f7462ded7fbcf4 **
+
+  * added debian files
+  * add build script that cleans up a bit and then calls git-buildpackage
+  * move build_package.sh out of sourcetree into debian directory
+  * remove the tests, since pbuilder does not have cuda driver installed
+  * add cimg dependency to debian control
+  * use ubuntu series name
+  * do not request a dependency resolving for cuda libs
+  * Revert "remove the tests, since pbuilder does not have cuda driver installed"
+  * add patches
+  * updated changelog
+  * do not build tests in the make-all target
+  * commit instantiation files for easier building w/o additional dependencies
+  * update changelog
+  * Default to release build (mainly for debian packaging)
+  * update changelog
+  * allow parallel builds
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Tue, 19 Mar 2013 12:25:35 +0100
+
+cuv (0.93-1ubuntu1) precise; urgency=low
+
+  * Default to release build (mainly for debian packaging)
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Wed, 13 Mar 2013 11:06:01 +0100
+
+cuv (0.92-1ubuntu1) precise; urgency=low
+
+  * commit instantiation files for easier building w/o additional dependencies
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Tue, 12 Mar 2013 20:41:39 +0100
+
+cuv (0.91-1ubuntu1) precise; urgency=low
+
+  [ Nenad Biresev ]
+  * added subdirectory for cuda_ndarray
+  * deleted main.cu of cuda_ndarray
+  * python is searched in CMakeList.txt
+  * added wrappers for cuda_ndarray convolutions from theano
+  * added test for theano convolution
+  * lib_suffix added in CMakeList.txt
+
+  [ Hannes Schulz ]
+  * leave packaging to debian branch (cpack is not doing its job well...)
+  * Revert "remove the tests, since pbuilder does not have cuda driver installed"
+  * add patches
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Tue, 12 Mar 2013 14:22:36 +0100
+
+cuv (0.9-1) precise; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Wed, 06 Mar 2013 11:20:07 +0100

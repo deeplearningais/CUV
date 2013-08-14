@@ -1,0 +1,22 @@
+From: Hannes Schulz <schulz@ais.uni-bonn.de>
+Date: Tue, 12 Mar 2013 14:16:05 +0100
+Subject: no CUDA testing in build environment
+
+build env typically does not have cuda driver installed
+---
+ CMakeLists.txt |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 59cac2c..1f07a22 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -63,7 +63,7 @@ IF(DOXYGEN_FOUND)
+     INSTALL(DIRECTORY ${CMAKE_BINARY_DIR}/docs/html DESTINATION share/doc/libcuv-doc)
+ ENDIF(DOXYGEN_FOUND)
+ 
+-ENABLE_TESTING()
++#ENABLE_TESTING()
+ add_subdirectory(src)
+ 
+ 
