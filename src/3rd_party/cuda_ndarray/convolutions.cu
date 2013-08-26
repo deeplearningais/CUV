@@ -17,7 +17,6 @@ PyMODINIT_FUNC initcuda_ndarray(void);
 PyObject * CudaNdarray_Dimshuffle(PyObject* _unused, PyObject* args);
 
 void initcuda(){
-    std::cout << "init cuda and py" << std::endl;
     Py_Initialize();
     initcuda_ndarray();
 }
