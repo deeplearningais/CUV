@@ -355,7 +355,7 @@ namespace detail{
 				case SF_NEGATE:     launch_unary_kernel(dst,src, thrust::negate<V1>(),mask); break;
 				case SF_ABS:        launch_unary_kernel(dst,src, uf_abs<V1,V2>(),mask); break;
 				case SF_POSLIN:     launch_unary_kernel(dst,src, uf_poslin<V1,V2>(),mask); break;
-				case SF_COPY:       thrust::copy(s_ptr, s_ptr+src.size(), d_ptr); break;
+				case SF_COPY:       launch_unary_kernel(dst,src, uf_identity<V1,V2>(),mask); break; //thrust::copy(s_ptr, s_ptr+src.size(), d_ptr); break;
 				case SF_LOG1P:      launch_unary_kernel(dst,src, uf_log1p<V1,V2>(),mask); break;
 				default:
 						    cout << "No suitable no-parameter scalar functor was found." << endl;

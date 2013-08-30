@@ -80,6 +80,9 @@ struct uf_signum:unary_functor<R,T>{
     }
 };
 
+/// calculates x
+template<class R, class T>
+struct uf_identity:unary_functor<R,T>{  inline __host__ __device__         R operator()(const T& t)const{ return t;    } };
 /// calculates exp(x)
 template<class R, class T>
 struct uf_exp:unary_functor<R,T>{  inline __host__ __device__         R operator()(const T& t)const{ return expf(t);    } };
