@@ -32,7 +32,7 @@ override_dh_shlibdeps:
 # http://lists.debian.org/debian-devel/2013/06/msg00279.html
 override_dh_auto_configure:
 	#dh_auto_configure -- -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_VERBOSE_MAKEFILE=OFF -DCUDA_ARCH="-g"
-	dh_auto_configure -- -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_VERBOSE_MAKEFILE=OFF
+	dh_auto_configure -- -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_VERBOSE_MAKEFILE=OFF -DCMAKE_CXX_FLAGS="-g"
 
 override_dh_strip:
 	dh_strip --dbg-package=libcuv-dbg
