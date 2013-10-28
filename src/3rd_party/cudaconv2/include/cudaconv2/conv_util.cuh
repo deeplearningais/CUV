@@ -37,6 +37,15 @@ void convLocalAvgUndo(NVMatrix& avgGrads, NVMatrix& target,
 void convLocalAvgUndo(NVMatrix& avgGrads, NVMatrix& target,
                       int subsX, int startX, int strideX, int outputsX, int imgSize,
                       float scaleTargets, float scaleOutput);
+void convLocalSumUndo(NVMatrix& avgGrads, NVMatrix& target,
+                      int subsX, int startX, int strideX, int outputsX, int imgSize);
+
+void convLocalSumUndo(NVMatrix& avgGrads, NVMatrix& target,
+                      int subsX, int startX, int strideX, int outputsX, int imgSize,
+                      float scaleTargets, float scaleOutput);
+
+
+
 void convLocalMaxUndo(NVMatrix& images, NVMatrix& maxGrads, NVMatrix& maxActs, NVMatrix& target,
                       int subsX, int startX, int strideX, int outputsX, float scaleTargets, float scaleOutput);
 
@@ -67,6 +76,20 @@ void convResponseNormCrossMapUndo(NVMatrix& outGrads, NVMatrix& denoms, NVMatrix
                          int sizeF, float addScale, float powScale, bool blocked, float scaleTargets, float scaleOutput);
 void convResponseNormCrossMap(NVMatrix& images, NVMatrix& denoms, NVMatrix& target, int numFilters, int sizeF, float addScale,
                               float powScale, bool blocked);
+
+class SumPooler {
+private:
+    float _num;
+public:
+    AvgPooler(float num) : _num(num) {
+    }
+    __device__ inline float operator()(const float a, const float b) const {
+        return a + b;
+    }
+    __device__ inline float getBaseValue() const {
+        return 0;
+    }
+};
 
 class AvgPooler {
 private:

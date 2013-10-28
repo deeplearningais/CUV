@@ -155,7 +155,8 @@ template<class V, class M, class T>
  */
 enum pool_type {
     PT_MAX, ///< local max-pooling
-    PT_AVG  ///< local average pooling
+    PT_AVG, ///< local average pooling
+    PT_SUM  ///< local sum pooling
 };
 
 /**

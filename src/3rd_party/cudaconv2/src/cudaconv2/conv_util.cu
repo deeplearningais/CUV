@@ -1372,6 +1372,109 @@ __global__ void kTICAGrad_manyfilter(float* imgs, float* ticas, float* target, c
         }
     }
 }
+/*
+ * Insert
+ * */
+
+
+/*
+ * Block size B_YxB_X
+ * blockIdx.x determines pixel.x, image idx in batches of B_X*imgsPerThread
+ * blockIdx.y determines pixel.y, filter idx in batches of B_Y*filtersPerThread
+ *
+ * So each block does one output pixel for some number of images/filters.
+ *
+ * threadIdx.x determines img idx
+ * threadIdx.y determines filter idx
+ *
+ * imgs:        (numFilters, imgPixels, numImages)
+ * maxGrads:    (numFilters, numOutputs, numImages)
+ * rMaxActs:    (numFilters, numOutputs, numImages)
+ * target:      (numFilters, imgPixels, numImages)
+ *
+ * numImages must be divisible by B_X*imgsPerThread
+ * numFilters must be divisible by B_Y*filtersPerThread
+ */
+
+template<int B_Y, int B_X, int imgsPerThread, int filtersPerThread, bool add, bool checkCaseBounds>
+__global__ void kLocalSumUndo(float* avgGrads, float* target, const int imgSize, const int numFilters,
+                              const int numImages, const int subsX, const int startX, const int strideX, const int outputsX,
+                              const float scaleTargets, const float scaleOutputs) {
+    const int numImgBlocks = DIVUP(numImages,B_X*imgsPerThread);
+    const int blockPxX = blockIdx.x / numImgBlocks;
+    const int blockPxY = blockIdx.y / (numFilters/(B_Y*filtersPerThread));
+
+    const int blockImgIdx = (blockIdx.x % numImgBlocks) * B_X * imgsPerThread;
+    const int blockFilterIdx = (blockIdx.y % (numFilters/(B_Y*filtersPerThread))) * B_Y * filtersPerThread;
+
+    const int blockPx = blockPxY * imgSize + blockPxX;
+    const int numOutputs = outputsX * outputsX;
+    const int imgPixels = imgSize * imgSize;
+
+    const int startOutputY = blockPxY - startX < subsX ? 0 : 1 + (blockPxY - startX - subsX) / strideX;
+    const int endOutputY = MIN(outputsX, 1 + (blockPxY - startX) / strideX);
+    const int startOutputX = blockPxX - startX < subsX ? 0 : 1 + (blockPxX - startX - subsX) / strideX;
+    const int endOutputX = MIN(outputsX, 1 + (blockPxX - startX) / strideX);
+
+    const int imgIdx = blockImgIdx + threadIdx.x;
+
+    avgGrads += ((blockFilterIdx + threadIdx.y) * numOutputs) * numImages + imgIdx;
+    target += ((blockFilterIdx + threadIdx.y) * imgPixels + blockPx) * numImages + imgIdx;
+
+    float prod[filtersPerThread][imgsPerThread];
+    #pragma unroll
+    for (int f = 0; f < filtersPerThread; f++) {
+        #pragma unroll
+        for (int i = 0; i < imgsPerThread; i++) {
+            prod[f][i] = 0;
+        }
+    }
+
+    if  (blockPxX >= startX && blockPxX < startX + strideX * (outputsX-1) + subsX
+            && blockPxY >= startX && blockPxY < startX + strideX * (outputsX-1) + subsX) {
+
+        for (int my = startOutputY; my < endOutputY; my++) {
+            for (int mx = startOutputX; mx < endOutputX; mx++) {
+                const int outputIdx = my * outputsX + mx;
+                #pragma unroll
+                for (int i = 0; i < imgsPerThread; i++) {
+                    if (!checkCaseBounds || imgIdx + i * B_X < numImages) {
+                        #pragma unroll
+                        for (int f = 0; f < filtersPerThread; f++) {
+                            prod[f][i] += avgGrads[(f * B_Y * numOutputs + outputIdx) * numImages + i * B_X];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (!add) {
+        #pragma unroll
+        for (int i = 0; i < imgsPerThread; i++) {
+            if (!checkCaseBounds || imgIdx + i * B_X < numImages) {
+                #pragma unroll
+                for (int f = 0; f < filtersPerThread; f++) {
+                    target[f * B_Y * imgPixels * numImages + i * B_X] = prod[f][i];
+                }
+            }
+        }
+    } else {
+        #pragma unroll
+        for (int i = 0; i < imgsPerThread; i++) {
+            if (!checkCaseBounds || imgIdx + i * B_X < numImages) {
+                #pragma unroll
+                for (int f = 0; f < filtersPerThread; f++) {
+                    target[f * B_Y * imgPixels * numImages + i * B_X] = scaleTargets * target[f * B_Y * imgPixels * numImages + i * B_X] + scaleOutputs * prod[f][i];
+                }
+            }
+        }
+    }
+}
+
+/*
+ * Insert end
+ * */
 
 /*
  * Block size B_YxB_X
@@ -2054,6 +2157,118 @@ void convLocalAvgUndo(NVMatrix& avgGrads, NVMatrix& target,
 
     cuvSafeCall(cudaThreadSynchronize());
 }
+
+/*
+ * Inserted
+ * */
+
+
+void convLocalSumUndo(NVMatrix& avgGrads, NVMatrix& target, int subsX, int startX, int strideX, int outputsX, int imgSize) {
+    convLocalSumUndo(avgGrads, target, subsX, startX, strideX, outputsX, imgSize, 0, 1);
+}
+
+/*
+ * avgGrads:    (numFilters, numOutputs, numImages)
+ * target:      (numFilters, imgPixels, numImages)
+ */
+void convLocalSumUndo(NVMatrix& avgGrads, NVMatrix& target,
+                      int subsX, int startX, int strideX, int outputsX, int imgSize,
+                      float scaleTargets, float scaleOutput) {
+    int numImages = avgGrads.getNumCols();
+
+    int outputs = outputsX * outputsX;
+    int imgPixels = imgSize * imgSize;
+    int numFilters = avgGrads.getNumRows() / outputs;
+    assert(avgGrads.getNumRows() == numFilters * outputs);
+
+    assert(!target.isTrans());
+    assert(!avgGrads.isTrans());
+    assert(avgGrads.isContiguous());
+    assert(numFilters % 16 == 0);
+//    assert(numImages % 128 == 0);
+
+    assert(strideX <= subsX);
+
+    target.resize(numFilters * imgPixels, numImages);
+    assert(target.isContiguous());
+    int imgsPerThread = numImages % 128 == 0 ? 4 : numImages % 64 == 0 ? 2 : 1;
+    int checkCaseBounds = numImages % (32*imgsPerThread) != 0;
+    dim3 threads(32, 4);
+    dim3 blocks(DIVUP(numImages,32*imgsPerThread) * imgSize, (numFilters / (4 * 4)) * imgSize);
+
+    if (imgsPerThread == 4) {
+        if (checkCaseBounds) {
+            if (scaleTargets == 0 && scaleOutput == 1) {
+                kLocalSumUndo<4, 32, 4, 4, false, true><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                       imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                       outputsX, scaleTargets, scaleOutput);
+            } else {
+                kLocalSumUndo<4, 32, 4, 4, true, true><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                      imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                      outputsX, scaleTargets, scaleOutput);
+            }
+        } else {
+            if (scaleTargets == 0 && scaleOutput == 1) {
+                kLocalSumUndo<4, 32, 4, 4, false, false><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                       imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                       outputsX, scaleTargets, scaleOutput);
+            } else {
+                kLocalSumUndo<4, 32, 4, 4, true, false><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                      imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                      outputsX, scaleTargets, scaleOutput);
+            }
+        }
+    } else if (imgsPerThread == 2) {
+        if (checkCaseBounds) {
+            if (scaleTargets == 0 && scaleOutput == 1) {
+                kLocalSumUndo<4, 32, 2, 4, false, true><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                       imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                       outputsX, scaleTargets, scaleOutput);
+            } else {
+                kLocalSumUndo<4, 32, 2, 4, true, true><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                      imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                      outputsX, scaleTargets, scaleOutput);
+            }
+        } else {
+            if (scaleTargets == 0 && scaleOutput == 1) {
+                kLocalSumUndo<4, 32, 2, 4, false, false><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                       imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                       outputsX, scaleTargets, scaleOutput);
+            } else {
+                kLocalSumUndo<4, 32, 2, 4, true, false><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                      imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                      outputsX, scaleTargets, scaleOutput);
+            }
+        }
+    } else {
+        if (checkCaseBounds) {
+            if (scaleTargets == 0 && scaleOutput == 1) {
+                kLocalSumUndo<4, 32, 1, 4, false, true><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                       imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                       outputsX, scaleTargets, scaleOutput);
+            } else {
+                kLocalSumUndo<4, 32, 1, 4, true, true><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                      imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                      outputsX, scaleTargets, scaleOutput);
+            }
+        } else {
+            if (scaleTargets == 0 && scaleOutput == 1) {
+                kLocalSumUndo<4, 32, 1, 4, false, false><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                       imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                       outputsX, scaleTargets, scaleOutput);
+            } else {
+                kLocalSumUndo<4, 32, 1, 4, true, false><<<blocks, threads>>>(avgGrads.getDevData(), target.getDevData(),
+                                                                      imgSize, numFilters, numImages, subsX, startX, strideX,
+                                                                      outputsX, scaleTargets, scaleOutput);
+            }
+        }
+    }
+
+    cuvSafeCall(cudaThreadSynchronize());
+}
+/*
+ * Insertion end
+ * */
 
 void convResponseNorm(NVMatrix& images, NVMatrix& denoms, NVMatrix& target, int numFilters, int sizeX, float addScale, float powScale) {
     convContrastNorm(images, images, denoms, target, numFilters, sizeX, addScale, powScale);

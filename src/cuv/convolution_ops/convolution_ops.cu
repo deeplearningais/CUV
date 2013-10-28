@@ -527,6 +527,10 @@ template<>
                 convLocalPool(nv_images, nv_target, nFilt,
                         subsX, startX, strideX, nOutPixX, AvgPooler(poolSize*poolSize));
                 break;
+            case PT_SUM:
+            convLocalPool(nv_images, nv_target, nFilt,
+                    subsX, startX, strideX, nOutPixX, SumPooler(poolSize*poolSize));
+            	break
         }
     }
 template<>
@@ -605,6 +609,35 @@ template<>
         
         convLocalAvgUndo(nv_avgGrads, nv_target, subsX,startX,strideX,nOutPixX,nImgPixX);
     }
+
+
+template<>
+    void local_sum_pool_grad(tensor<float,host_memory_space>& target, const tensor<float,host_memory_space>& avgGrads,
+            int subsX, int startX, int strideX){
+    }
+template<>
+    void local_sum_pool_grad(tensor<float,dev_memory_space>& target, const tensor<float,dev_memory_space>& avgGrads,
+            int subsX, int startX, int strideX){
+
+
+        cuvAssert(target.ndim()==4);
+        unsigned int nImgChan  = target.shape(0);
+        unsigned int nImgPixY  = target.shape(1);
+        unsigned int nImgPixX  = target.shape(2);
+        unsigned int nImg      = target.shape(3);
+
+        cuvAssert(avgGrads.ndim()==4);
+        cuvAssert(nImgChan == avgGrads.shape(0));
+        unsigned int nOutPixY = avgGrads.shape(1);
+        unsigned int nOutPixX = avgGrads.shape(2);
+        cuvAssert(nImg == avgGrads.shape(3));
+
+        NVMatrix nv_target NVView4D(target);
+        NVMatrix nv_avgGrads NVView4D(avgGrads);
+
+        convLocalSumUndo(nv_avgGrads, nv_target, subsX,startX,strideX,nOutPixX,nImgPixX);
+    }
+
 template<class V, class M, class T>
 void response_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const tensor<V,M,T>& images, int patchSize, float addScale, float powScale){
 #ifndef NDEBUG
