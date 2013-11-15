@@ -183,6 +183,14 @@ template<class V, class M, class T>
 void local_avg_pool_grad(tensor<V,M,T>& target, const tensor<V,M,T>& avgGrads, 
         int subsX, int startX, int strideX);
 
+
+/**
+ * derivative of local avg-pooling
+ */
+template<class V, class M, class T>
+void local_sum_pool_grad(tensor<V,M,T>& target, const tensor<V,M,T>& avgGrads,
+        int subsX, int startX, int strideX);
+
 /**
  * response normalization.
  *
@@ -339,6 +347,7 @@ enum tuplewise_op_functor{
     TO_SUBSAMPLE,
     TO_MEAN
 };
+
 /**
  * square the input, then add every map pair and take the square root.
  *
@@ -363,10 +372,53 @@ void tuplewise_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim
  * @param subspace_size  the number of elements for which we calculate the norm
  * @param tuplewise_op_functor to the parameter determining wheater to calculate squared norm, norm or max out
  * @param eps small constant value which is added to the expression of the squared root
- * 
+ *
  */
 template<class V, class M, class T>
 void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int subspace_size = 2, tuplewise_op_functor to = TO_NORM, float eps = 0.f);
+
+
+/**
+ * @brief Determines which weighted overlapping tuplewise operator to use.
+ * @li TO_LOGWMAXEXP calculates the log (max(exp(wx)))
+ * @li TO_LOGWADDEXP calculates the weighted sum log (sum(exp(wx)))
+ *
+ */
+enum weighted_subTensor_op_functor{
+    TO_WMAX,
+    TO_LOGWADDEXP
+};
+
+
+/**
+ * same as tuplewise op, but the input maps are weighted and the regions may overlap
+ *
+ * @param dst where to write result
+ * @param src  the original input to the tuplewise_op
+ * @param dim the dimension accross which we apply the tuplewise_op
+ * @param subspace_size  the number of elements for which we calculate the norm
+ * @param tuplewise_op_functor to the parameter determining wheater to calculate squared norm, norm or max out
+ * @param size, size of dst tensor
+ */
+template<class V, class M, class T>
+void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int dim, unsigned int size, unsigned int subspace_size = 2, weighted_subTensor_op_functor = TO_LOGWADDEXP);
+
+/**
+ * calculates the gradient of weighted_overlapping_tuplewise_op.
+ *
+ *
+ * @param dst where to write result
+ * @param X  the original input to the tuplewise_op
+ * @param D  the backpropagated delta
+ * @param dim the dimension accross which we apply the tuplewise_op
+ * @param subspace_size  the number of elements for which we calculate the norm
+ * @param tuplewise_op_functor to the parameter determining wheater to calculate squared norm, norm or max out
+ * @param size, size of dst tensor
+ * 
+ */
+template<class V, class M, class T>
+void weighted_subTensor_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int size, unsigned int subspace_size = 2, weighted_subTensor_op_functor to = TO_LOGWADDEXP);
+
 
 }
 /** @} */ //end group convolution_ops
