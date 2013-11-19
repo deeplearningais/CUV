@@ -401,7 +401,7 @@ enum weighted_subTensor_op_functor{
  * @param size, size of dst tensor
  */
 template<class V, class M, class T>
-void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int dim, unsigned int size, unsigned int subspace_size = 2, weighted_subTensor_op_functor = TO_LOGWADDEXP);
+void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subTensor_op_functor = TO_LOGWADDEXP);
 
 /**
  * calculates the gradient of weighted_overlapping_tuplewise_op.
@@ -417,7 +417,7 @@ void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const t
  * 
  */
 template<class V, class M, class T>
-void weighted_subTensor_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int size, unsigned int subspace_size = 2, weighted_subTensor_op_functor to = TO_LOGWADDEXP);
+void weighted_subTensor_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subTensor_op_functor to = TO_LOGWADDEXP);
 
 
 }
