@@ -611,6 +611,13 @@ template<>
     }
 
 
+//‘local_sum_pool_grad(cuv::tensor<float, cuv::dev_memory_space, cuv::row_major>&,
+//const cuv::tensor<float, cuv::dev_memory_space, cuv::row_major>&,
+//const cuv::tensor<float, cuv::dev_memory_space, cuv::row_major>&,
+//const cuv::tensor<float, cuv::dev_memory_space, cuv::row_major>&,
+//unsigned int&, int, unsigned int&)’
+
+
 template<>
     void local_sum_pool_grad(tensor<float,host_memory_space>& target, const tensor<float,host_memory_space>& avgGrads,
             int subsX, int startX, int strideX){
@@ -1565,40 +1572,11 @@ template<class V,class M, class T>
  * overlapping weighted tuplewise op start
  *****************************************************************************************************************/
 
-/*
- *
-struct bf_rect:binary_functor<R,T,A>{  inline __device__  __host__       R operator()(const T& x, const A& a)
- * 	T ax = a*x;
-	if(ax > 87.33f) // exp(ax) > float precision
-		return (T) x;
-    bf_logaddexp<T> lae;
-	return lae(0.f, ax)/a;
- *
- *
- *
- *
- *
- * 	inline __device__  __host__    float    operator()(const T& t, const T& u) const{
-		const float diff = (float)t - (float) u;
-		uf_log1p<float,float> log1p;
-		if(diff > 0)
-			return t + log1p(expf(-diff));
-		else if(diff<=0)
-			return u + log1p(expf(diff)); <=== in boos library
-		else
-			return t+u;
-	}
-
-
-
- */
-
-
 template<bool FirstDim, weighted_subTensor_op_functor to, class T>
 __global__
 void weighted_subTensor_op_kernel(T* dst, const T* src, const T* m_W,
-		unsigned int dst_rows, unsigned int dst_cols, unsigned int subspace_size,
-		unsigned int size, unsigned int stride){
+		unsigned int dst_rows, unsigned int dst_cols,
+		unsigned int size, unsigned int stride, unsigned int subspace_size){
     if(FirstDim){
         unsigned int line = blockIdx.x;
         unsigned int item = threadIdx.x;
@@ -1606,7 +1584,7 @@ void weighted_subTensor_op_kernel(T* dst, const T* src, const T* m_W,
         const T* src_ptr = src + (stride * line) * dst_cols;
         const T* m_W_ptr = m_W + line * subspace_size;
 
-        for(; item < dst_cols; item += blockDim.x){
+        for(; item < dst_cols; item += blockDim.x, m_W_ptr+=subspace_size){
             T squared_sum = 0.f;
             bf_logaddexp<T> lae;
 
@@ -1632,7 +1610,7 @@ void weighted_subTensor_op_kernel(T* dst, const T* src, const T* m_W,
         const T* src_ptr = src + (stride*dst_rows * item);
         const T* m_W_ptr = m_W + item * subspace_size;
 
-        for(; line < dst_rows; line += blockDim.x){
+        for(; line < dst_rows; line += blockDim.x, m_W_ptr+=subspace_size){
             T squared_sum =  0.f;
             bf_logaddexp<T> lae;
 
@@ -1659,14 +1637,14 @@ void weighted_subTensor_op_kernel(T* dst, const T* src, const T* m_W,
 
 
 template<bool FirstDim, weighted_subTensor_op_functor to, class T>
-    void weighted_subTensor_op_host(T* dst, const T* src, const T* m_W, unsigned int lines, unsigned int items, unsigned int subspace_size, unsigned int size, unsigned int stride){
+    void weighted_subTensor_op_host(T* dst, const T* src, const T* m_W, unsigned int lines, unsigned int items, unsigned int size, unsigned int stride, unsigned int subspace_size){
         if(FirstDim){
             for(unsigned int line = 0; line < lines; line++){
                 T* dst_ptr = dst + line * items;
                 const T* src_ptr = src + (stride * line) * items;
                 const T* m_W_ptr = m_W + subspace_size * items;
 
-                for(unsigned int i=0; i < items; i++){
+                for(unsigned int i=0; i < items; i++, m_W_ptr+=subspace_size){
                     float squared_sum = 0.f;
                     bf_logaddexp<T> lae;
 
@@ -1691,7 +1669,7 @@ template<bool FirstDim, weighted_subTensor_op_functor to, class T>
                 const T* m_W_ptr = m_W + subspace_size * items;
                 const T* src_ptr = src + (item * stride * lines);
 
-                for(unsigned int i = 0; i < lines; i++){
+                for(unsigned int i = 0; i < lines; i++, m_W_ptr+=subspace_size){
                     float squared_sum = 0.f;
                     bf_logaddexp<T> lae;
 
@@ -1716,16 +1694,15 @@ template<bool FirstDim, weighted_subTensor_op_functor to, class T>
 
 
 template<class V,class M, class T>
-    void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int dim, unsigned int subspace_size, unsigned int size, unsigned int stride, weighted_subTensor_op_functor to){
+    void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size, weighted_subTensor_op_functor to){
         assert(dim == 0 || dim == src.ndim()-1);
         unsigned int items = dst.size() / dst.shape(dim);
         unsigned int lines = dst.shape(dim);
 
-        cuvAssert(dst.shape(dim)==src.shape(dim)/subspace_size);
-        cuvAssert(src.shape(dim) % subspace_size == 0);
+        cuvAssert(dst.shape(dim)==size);
 
-
-
+        //kernel should stop early if array out of bounds
+        //cuvAssert(dst.shape(dim)%subspace_size == 0);
 
         if(IsSame<M,host_memory_space>::Result::value){
             switch(to){
@@ -1782,34 +1759,39 @@ template<class V,class M, class T>
     }
 
 
+
 // TODO implement weighted_subTensor_op_op_grad_kernel (not yet changed / implemented)
 template<bool FirstDim, weighted_subTensor_op_functor to, class T>
 __global__
-void weighted_subTensor_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int dst_rows, unsigned int dst_cols, unsigned int subspace_size, unsigned int stride){
- /*  if(FirstDim){
+void weighted_subTensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const T* delta, const T* m_W,
+		unsigned int dst_rows, unsigned int dst_cols, unsigned int size, unsigned int stride, unsigned int subspace_size){
+   if(FirstDim){
         unsigned int line = blockIdx.x;
         unsigned int item = threadIdx.x;
         const T* src_ptr = src + (stride * line) * dst_cols;
         T* dst_ptr = dst + (stride * line) * dst_cols;
+        T* d_W_ptr = w_delta + (stride * line) * dst_cols;
         const T* d0  = delta + line * dst_cols;
-        const T* m_W_ptr = 0; //m_W + (stride * line) * dst_cols; // TODO
+        const T* m_W_ptr = m_W + (stride * line) * dst_cols;
 
         T p;
-        for(; item < dst_cols; item += blockDim.x){
+        T w_p;
+        for(; item < dst_cols; item += blockDim.x, m_W_ptr+=subspace_size){
             // calculates squared sum
             float squared_sum = 0.f;
+            bf_logaddexp<T> lae;
+
             unsigned int max_index = 0;
             unsigned int end = item + subspace_size * dst_cols;
             unsigned int wInd = 0;
             for (unsigned int index = item; index < end; index += dst_cols, wInd++){
                 T s = src_ptr[index];
                 switch(to){
-                    case TO_LOGWADDEXP: // wtf warum wird squarred sum hier berechnet und net verwendet ???
-                       //  TODO squared_sum += s*s;
+                    case TO_LOGWADDEXP:
+                        squared_sum = lae(squared_sum, m_W_ptr[wInd] * s);
                         break;
                     case TO_WMAX:
                      	float temp = m_W_ptr[wInd] * s;
-
                         if (temp > squared_sum){
                             squared_sum  = temp;
                             max_index = index;
@@ -1820,26 +1802,34 @@ void weighted_subTensor_op_grad_kernel(T* dst, const T* src, const T* delta, uns
 
             switch(to){
                 case TO_WMAX:
-               	//TODO (weights) derivation , multiply p with weight?
+                	//calculate derivative
                     p  = d0[item];
+                    //calculate weight derivatives
+                    w_p = d0[item];
                     break;
                 case TO_LOGWADDEXP:
-                    p  = 2.f * d0[item];
+                	//TODO
+                    //p  = (1/(float)( sumExpXW )) * d0[item];
+                	//w_p = (1/(float)( sumExpXW )) * d0[item];
                     break;
             };
 
 
             // updates dst for each feature in subspace
-            for (unsigned int index = item; index < end; index+= dst_cols){
+            wInd = 0;
+            for (unsigned int index = item; index < end; index+= dst_cols, wInd++){
                 switch(to){
                     case TO_WMAX:
                         if (max_index == index)
-                            dst_ptr[index] = p;
-                        else
-                            dst_ptr[index] = 0.f;
+                        {
+                            dst_ptr[index] += p*m_W_ptr[wInd];
+                        	d_W_ptr[wInd] += w_p*src_ptr[index];
+                        }
                         break;
                     case TO_LOGWADDEXP:
-                   //     dst_ptr[index] = p * src_ptr[index];
+                    	//TODO
+                   //     dst_ptr[index] = p * m_W_ptr[wInd];
+                    	//d_W_ptr[wInd] = w_p * src_ptr[index]
                         break;
                 }
             }
@@ -1849,60 +1839,75 @@ void weighted_subTensor_op_grad_kernel(T* dst, const T* src, const T* delta, uns
         unsigned int line = threadIdx.x;
         const T* src_ptr = src + (item * stride*dst_rows);
         T* dst_ptr = dst + (item * stride*dst_rows);
+        T* d_W_ptr = w_delta + (item * stride*dst_rows);
+        const T* m_W_ptr = m_W + (item * stride*dst_rows);
         const T* d0  = delta + item * dst_rows;
 
-        for(; line < dst_rows; line += blockDim.x){
+        T p;
+        T w_p;
+
+        for(; line < dst_rows; line += blockDim.x, m_W_ptr+=subspace_size){
             float squared_sum = 0.f;
+            bf_logaddexp<T> lae;
             unsigned int max_index = 0;
             unsigned int end = subspace_size*(line+1);
+            unsigned int wInd = 0;
 
-            for (unsigned int index = subspace_size*line; index < end; index++){
+            for (unsigned int index = subspace_size*line; index < end; index++, wInd++){
                 T s = src_ptr[index];
                 switch(to){
                     case TO_LOGWADDEXP:
-                    //    squared_sum += s*s;
+                        squared_sum = lae(squared_sum, m_W_ptr[wInd] * s);
                         break;
                     case TO_WMAX:
-                    //    if (s > squared_sum){
-                     //       squared_sum  =  s;
-                     //       max_index = index;
-                      //  }
+                     	float temp = m_W_ptr[wInd] * s;
+                        if (temp > squared_sum){
+                            squared_sum  = temp;
+                            max_index = index;
+                        }
                         break;
                 }
             }
 
             switch(to){
                 case TO_WMAX:
-                //    p = d0[line];
+                	//calculate derivative
+                    p  = d0[line];
+                    //calculate weight derivatives
+                    w_p = d0[line];
                     break;
                 case TO_LOGWADDEXP:
+                	// TODO
                 //    p = 2.f * d0[line];
                     break;
             }
 
             unsigned int begin_idx = subspace_size*line;
-            for (unsigned int index = begin_idx; index < end; index++){
+            wInd = 0;
+            for (unsigned int index = begin_idx; index < end; index++, wInd++){
                 switch(to){
                     case TO_WMAX:
-                    //    if (max_index == index)
-                     //       dst_ptr[index] = p;
-                     //   else
-                     //       dst_ptr[index] = 0;
+                    	if (max_index == index)
+                    	{
+                    		dst_ptr[index] += p*m_W_ptr[wInd];;
+                    		d_W_ptr[wInd] += w_p*src_ptr[index];
+                    	}
                         break;
                     case TO_LOGWADDEXP:
+                    	//TODO
                     //    dst_ptr[index] = p * src_ptr[index];
                         break;
                 }
             }
         }
-    }*/
+    }
 }
 
 
 
 // TODO implement weighted_subTensor_op_grad_host (not yet changed / implemented)
 template<bool FirstDim, weighted_subTensor_op_functor to,class T>
-void weighted_subTensor_op_grad_host(T* dst, const T* src, const T* delta, unsigned int lines, unsigned int items, unsigned int subspace_size, unsigned int stride){
+void weighted_subTensor_op_grad_host(T* dst, T* w_delta, const T* src, const T* delta, const T* m_W, unsigned int lines, unsigned int items, unsigned int size, unsigned int stride, unsigned int subspace_size){
   /*  if(FirstDim){
         for(unsigned int line = 0; line < lines; line++){
             const T* d_ptr  = delta + line * items;
@@ -2002,9 +2007,13 @@ void weighted_subTensor_op_grad_host(T* dst, const T* src, const T* delta, unsig
 
 // TODO implement weighted_subTensor_op_grad (not yet changed / implemented)
 template<class V,class M, class T>
-    void weighted_subTensor_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, unsigned int dim, unsigned int subspace_size, unsigned int stride, weighted_subTensor_op_functor to){
+    void weighted_subTensor_op_grad(tensor<V,M,T>& dst, tensor<V,M,T>& w_delta, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, const tensor<V,M,T>& m_W, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size, weighted_subTensor_op_functor to){
         assert(dim == 0 || dim == src.ndim()-1);
         assert(dst.shape()==src.shape());
+
+        //initialize  w_delta and dst
+        cuv::fill (dst, 0);
+        cuv::fill (w_delta, 0);
 
         unsigned int items = delta.size() / delta.shape(dim);
         unsigned int lines = delta.shape(dim);
@@ -2012,18 +2021,18 @@ template<class V,class M, class T>
             switch(to){
                 case TO_WMAX:
                     if(dim == 0){
-                    	weighted_subTensor_op_grad_host<true, TO_WMAX>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, stride);
+                    	weighted_subTensor_op_grad_host<true, TO_WMAX>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), lines, items, stride, size, subspace_size);
 
                     }else{
-                    	weighted_subTensor_op_grad_host<false, TO_WMAX>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, stride);
+                    	weighted_subTensor_op_grad_host<false, TO_WMAX>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), lines, items, stride, size, subspace_size);
                     }
                     break;
                 case TO_LOGWADDEXP:
                     if(dim == 0){
-                    	weighted_subTensor_op_grad_host<true, TO_LOGWADDEXP>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, stride);
+                    	weighted_subTensor_op_grad_host<true, TO_LOGWADDEXP>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), lines, items, stride, size, subspace_size);
 
                     }else{
-                    	weighted_subTensor_op_grad_host<false, TO_LOGWADDEXP>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, stride);
+                    	weighted_subTensor_op_grad_host<false, TO_LOGWADDEXP>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), lines, items, stride, size, subspace_size);
                     }
                     break;
             }
@@ -2031,31 +2040,29 @@ template<class V,class M, class T>
             // device: run kernel
             unsigned int num_threads = min(512, int(32 * ceil( items / 32. )));
 
-            /*cuvAssert(lines < 1024);*/
-            /*unsigned int num_blocks  = min(1024, lines);*/
+
             unsigned int num_blocks  = lines;
 
             if(dim != 0){
                 num_threads = min(512, int(32 * ceil( lines / 32. )));
-                /*num_blocks  = min(1024, items);*/
                 num_blocks  = items;
             }
 
             switch(to){
                 case TO_WMAX:
                     if(dim == 0){
-                    	weighted_subTensor_op_grad_kernel<true, TO_WMAX><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, stride);
+                    	weighted_subTensor_op_grad_kernel<true, TO_WMAX><<<num_blocks,num_threads>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), lines, items, size, stride, subspace_size);
 
                     }else{
-                    	weighted_subTensor_op_grad_kernel<false, TO_WMAX><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, stride);
+                    	weighted_subTensor_op_grad_kernel<false, TO_WMAX><<<num_blocks,num_threads>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), lines, items, size, stride, subspace_size);
                     }
                     break;
                 case TO_LOGWADDEXP:
                     if(dim == 0){
-                    	weighted_subTensor_op_grad_kernel<true, TO_LOGWADDEXP><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, stride);
+                    	weighted_subTensor_op_grad_kernel<true, TO_LOGWADDEXP><<<num_blocks,num_threads>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), lines, items, size, stride, subspace_size);
 
                     }else{
-                    	weighted_subTensor_op_grad_kernel<false, TO_LOGWADDEXP><<<num_blocks,num_threads>>>(dst.ptr(), src.ptr(), delta.ptr(),  lines, items, subspace_size, stride);
+                    	weighted_subTensor_op_grad_kernel<false, TO_LOGWADDEXP><<<num_blocks,num_threads>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), lines, items, size, stride, subspace_size);
                     }
                     break;
             }
@@ -2073,7 +2080,7 @@ template<class V,class M, class T>
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
 template void weighted_subTensor_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, unsigned int, unsigned int, weighted_subTensor_op_functor); \
-template void weighted_subTensor_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, unsigned int, weighted_subTensor_op_functor); \
+template void weighted_subTensor_op_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, unsigned int, unsigned int, weighted_subTensor_op_functor); \
 template void tuplewise_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor, float); \
 template void tuplewise_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor, float); \
 template void reorder_for_conv<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&); \
@@ -2094,8 +2101,8 @@ template void convolve2d(TENS(V,M,T)& dst,CTENS(V,M,T)& img,CTENS(V,M,T)& filter
 template void convolve2d(TENS(V,M,T)& dst,CTENS(V,M,T)& img,CTENS(V,M,T)& filter, CTENS(int,M,T)&, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew, float factOld); \
 template void d_conv2d_dfilt(TENS(V,M,T)& dst_, CTENS(V,M,T)& delta, CTENS(V,M,T)&   input, CTENS(int,M,T)&, int paddingStart, unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld);\
 template void d_conv2d_dfilt(TENS(V,M,T)& dst_, CTENS(V,M,T)& delta, CTENS(V,M,T)&   input, int paddingStart, unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld); \
-template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld); \
 template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, CTENS(int,M,T)&, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld); \
+template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld); \
 INST(float,host_memory_space,row_major); \
 INST(float,dev_memory_space,row_major);
 }}
