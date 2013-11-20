@@ -278,13 +278,13 @@ void transpose(tensor<V,M, L>& dst, const tensor<V,M, L>& src);
 	  void spmv(tensor<V, M>& dst, const dia_matrix<V, M>& A, const tensor<V, M>& v, char transA='n', const float& factAv=1.f, const float& factC=0.f);
   
   /**
-   * @brief Apply a binary functor on one axis of a tensor and a n-1-dimensional tensor.
+   * @brief Apply a binary functor on one axis of a tensor and a 1-dimensional tensor.
    *
    * @param Dst Destination matrix, same shape as Src
    * @param Src Source matrix
-   * @param v vector, v.size()=Src.size()/Src.shape(axis)
-   * @param axis axis of Src to work on. 0: v is row vector, 1: v is column vector, ...
-   * @param bf a binary functor applied to elements of a column of Src and v
+   * @param v vector, v.size()=Src.shape(axis)
+   * @param axis axis of Src to align v with
+   * @param bf binary functor applied to elements
    * @param n_params number of optional params following
    * @param factNew multiplier of op(Src,v)
    * @param factOld multiplier of Dst
