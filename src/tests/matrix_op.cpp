@@ -402,6 +402,93 @@ BOOST_AUTO_TEST_CASE( mat_op_middle )
 
 }
 
+BOOST_AUTO_TEST_CASE( mat_op_vec )
+{
+    unsigned int nImg = 100;
+    unsigned int nChan = 20;
+    unsigned int npix_x = 10;
+    {
+        cuv::tensor<float,cuv::host_memory_space, row_major> src_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> dst1_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> dst2_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> dst3_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> dst4_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> v1_h(cuv::extents[nImg]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> v2_h(cuv::extents[nChan]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> v3_h(cuv::extents[npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> v4_h(cuv::extents[npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> src(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> dst1(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> dst2(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> dst3(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> dst4(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> v1(cuv::extents[nImg]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> v2(cuv::extents[nChan]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> v3(cuv::extents[npix_x]);
+        cuv::tensor<float,cuv::dev_memory_space, row_major> v4(cuv::extents[npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> temp1_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> temp2_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> temp3_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+        cuv::tensor<float,cuv::host_memory_space, row_major> temp4_h(cuv::extents[nImg][nChan][npix_x][npix_x]);
+
+        sequence(src_h);
+        sequence(v1_h);
+        sequence(v2_h);
+        sequence(v3_h);
+        sequence(v4_h);
+        src = src_h;
+        v1 = v1_h;
+        v2 = v2_h;
+        v3 = v3_h;
+        v4 = v4_h;
+        dst1_h = 0.f;
+        dst2_h = 0.f;
+        dst3_h = 0.f;
+        dst4_h = 0.f;
+        dst1 = 0.f;
+        dst2 = 0.f;
+        dst3 = 0.f;
+        dst4 = 0.f;
+
+        matrix_op_vec(dst1_h, src_h, v1_h, 0, BF_ADD);
+        matrix_op_vec(dst2_h, src_h, v2_h, 1, BF_ADD);
+        matrix_op_vec(dst3_h, src_h, v3_h, 2, BF_ADD);
+        matrix_op_vec(dst4_h, src_h, v4_h, 3, BF_ADD);
+        matrix_op_vec(dst1, src, v1, 0, BF_ADD);
+        matrix_op_vec(dst2, src, v2, 1, BF_ADD);
+        matrix_op_vec(dst3, src, v3, 2, BF_ADD);
+        matrix_op_vec(dst4, src, v4, 3, BF_ADD);
+
+        for (int q=0; q < nImg; q++){
+            for (int w=0; w < nChan; w++){
+                for (int e=0; e < npix_x; e++){
+                    for (int r=0; r < npix_x; r++){
+                        float src_part = q*nChan*npix_x*npix_x + w*npix_x*npix_x + e*npix_x + r;
+                        BOOST_CHECK_CLOSE((float) src_part
+                                + q , (float) dst1_h(q,w,e,r), 0.01);
+                        BOOST_CHECK_CLOSE((float) src_part
+                                + w , (float) dst2_h(q,w,e,r), 0.01);
+                        BOOST_CHECK_CLOSE((float) src_part
+                                + e , (float) dst3_h(q,w,e,r), 0.01);
+                        BOOST_CHECK_CLOSE((float) src_part
+                                + r , (float) dst4_h(q,w,e,r), 0.01);
+                    }
+                }
+            }
+        }
+
+        temp1_h = dst1;
+        temp2_h = dst2;
+        temp3_h = dst3;
+        temp4_h = dst4;
+
+        BOOST_CHECK_CLOSE(1.f,1.f + cuv::norm1(temp1_h - dst1_h), 0.01);
+        BOOST_CHECK_CLOSE(1.f,1.f + cuv::norm1(temp2_h - dst2_h), 0.01);
+        BOOST_CHECK_CLOSE(1.f,1.f + cuv::norm1(temp3_h - dst3_h), 0.01);
+        BOOST_CHECK_CLOSE(1.f,1.f + cuv::norm1(temp4_h - dst4_h), 0.01);
+    }
+}
+
 BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row_fact )
 {
 	{   // both factors
