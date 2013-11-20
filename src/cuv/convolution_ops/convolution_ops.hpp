@@ -399,9 +399,10 @@ enum weighted_subTensor_op_functor{
  * @param subspace_size  the number of elements for which we calculate the norm
  * @param tuplewise_op_functor to the parameter determining wheater to calculate squared norm, norm or max out
  * @param size, size of dst tensor
+ * @param eps small constant value which is added to fprop for consistency
  */
 template<class V, class M, class T>
-void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subTensor_op_functor = TO_LOGWADDEXP);
+void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subTensor_op_functor = TO_LOGWADDEXP, float eps = 0.f);
 
 /**
  * calculates the gradient of weighted_overlapping_tuplewise_op.
@@ -413,11 +414,12 @@ void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const t
  * @param dim the dimension accross which we apply the tuplewise_op
  * @param subspace_size  the number of elements for which we calculate the norm
  * @param tuplewise_op_functor to the parameter determining wheater to calculate squared norm, norm or max out
- * @param size, size of dst tensor
+ * @param size, size of dst tensor* 
+ * @param eps small constant value which is added to division 1/(sum exp(xw) + eps) for numerical stability
  * 
  */
 template<class V, class M, class T>
-void weighted_subTensor_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subTensor_op_functor to = TO_LOGWADDEXP);
+void weighted_subTensor_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subTensor_op_functor to = TO_LOGWADDEXP, float eps = 0.f);
 
 
 }
