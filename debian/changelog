@@ -1,6 +1,6 @@
-cuv (0.97.3-1ubuntu1~quantal2ubuntu1~7.gbp03ef22) quantal; urgency=low
+cuv (0.97.3) quantal; urgency=low
 
-  ** SNAPSHOT build @03ef22ec945d7ad8691044d50bfdd15bb031df84 **
+  ** SNAPSHOT build @533dc72b3ad138aa217bb4c96c5d86f5cc56869c **
 
   [ Nenad Biresev ]
   * FIX matrix_op_vec middle dim
@@ -12,8 +12,9 @@ cuv (0.97.3-1ubuntu1~quantal2ubuntu1~7.gbp03ef22) quantal; urgency=low
   [ Hannes Schulz ]
   * added debian files
   * RelWithDebInfo did not include NDEBUG. *ugh*.
+  * UNRELEASED
 
- -- Hannes Schulz <schulz@ais.uni-bonn.de>  Fri, 30 Aug 2013 15:03:36 +0200
+ -- Hannes Schulz <schulz@ais.uni-bonn.de>  Mon, 25 Nov 2013 17:05:41 +0100
 
 cuv (0.97.2-1ubuntu1~quantal2ubuntu1~5.gbpde2935) quantal; urgency=low
 
