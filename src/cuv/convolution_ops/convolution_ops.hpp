@@ -380,13 +380,16 @@ void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<
 
 /**
  * @brief Determines which weighted overlapping tuplewise operator to use.
- * @li TO_LOGWMAXEXP calculates the log (max(exp(wx)))
- * @li TO_LOGWADDEXP calculates the weighted sum log (sum(exp(wx)))
+ * @li TO_LOGWMAXEXP calculates the max(x * w)
+ * @li TO_LOGWADDEXP calculates the  log (sum(exp(w * x)))
+ * @li TO_LOGWADDEXP_logspace calculates the log (sum(exp(w+x))) (thus it weights x with w in logspace)
  *
  */
 enum weighted_subTensor_op_functor{
     TO_WMAX,
-    TO_LOGWADDEXP
+    TO_WMAX_logspace,
+    TO_LOGWADDEXP,
+    TO_LOGWADDEXP_logspace
 };
 
 
@@ -419,7 +422,7 @@ void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const t
  * 
  */
 template<class V, class M, class T>
-void weighted_subTensor_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subTensor_op_functor to = TO_LOGWADDEXP, float eps = 0.f);
+void weighted_subTensor_op_grad(tensor<V,M,T>& dst, tensor<V,M,T>& w_delta, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, const tensor<V,M,T>& m_W, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subTensor_op_functor to = TO_LOGWADDEXP, float eps = 0.f);
 
 
 }
