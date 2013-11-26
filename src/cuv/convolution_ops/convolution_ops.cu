@@ -1791,7 +1791,7 @@ template<class V,class M, class T>
 	//check dimensions of dst
         cuvAssert(dst.shape(dim)*stride == src.shape(dim));
 
-	  unsigned int src_size = src.shape(dim);
+	unsigned int src_size = src.shape(dim);
 	
         if(IsSame<M,host_memory_space>::Result::value){
             switch(to){
@@ -1878,31 +1878,29 @@ template<class V,class M, class T>
         }
     }
 
-
+/***************************************************************
+*  weighted_subTensor_op grad implementation
+* 
+ ****************************************************************/
 
 template<bool FirstDim, weighted_subTensor_op_functor to, class T>
 __global__
 void weighted_subTensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const T* delta, const T* m_W,
-		unsigned int dst_rows, unsigned int dst_cols, unsigned int src_size, unsigned int size, unsigned int stride, unsigned int subspace_size, float eps){
+		unsigned int dst_rows, unsigned int dst_cols, unsigned int src_size, 
+		unsigned int size, unsigned int stride, unsigned int subspace_size, float eps){
    if(FirstDim){
         unsigned int line = blockIdx.x;
         unsigned int item = threadIdx.x;
         const T* src_ptr = src + (stride * line) * dst_cols;
         T* dst_ptr = dst + (stride * line) * dst_cols;
-        T* d_W_ptr = w_delta + (stride * line) * dst_cols;
         const T* d0  = delta + line * dst_cols;
-        const T* m_W_ptr = m_W + (stride * line) * subspace_size;
 	
-	/*
-        const T* src_ptr = src + (subspace_size * line) * dst_cols;
-        T* dst_ptr = dst + (subspace_size * line) * dst_cols;
-        const T* d0  = delta + line * dst_cols;
-	 
-	 */
-	
+        T* d_W_ptr = w_delta + line * subspace_size;
+	const T* m_W_ptr = m_W + line * subspace_size;
+		
         T p;
         T w_p;
-        for(; item < dst_cols; item += blockDim.x, m_W_ptr+=subspace_size * blockDim.x){
+        for(; item < dst_cols; item += blockDim.x, m_W_ptr+=subspace_size * blockDim.x, d_W_ptr += subspace_size * blockDim.x){
             // calculates squared sum
             float squared_sum = 0.f;
 
@@ -1912,9 +1910,8 @@ void weighted_subTensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const T
 	    
     	   int tx1 = (subspace_size + stride * line );
 	   if ( tx1 > src_size) end = item + (subspace_size - (tx1-src_size)) *dst_cols;
-
 	    
-	   float temp = 0;
+	   float temp;
             for (unsigned int index = item; index < end; index += dst_cols, wInd++){
                 T s = src_ptr[index];
                 switch(to){
@@ -1974,14 +1971,14 @@ void weighted_subTensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const T
                     case TO_WMAX:
                         if (max_index == index)
                         {
-                            dst_ptr[index] += p*m_W_ptr[wInd];
-                        	d_W_ptr[wInd] += w_p*src_ptr[index];
+                          dst_ptr[index] += p*m_W_ptr[wInd];
+                          d_W_ptr[wInd] += w_p*src_ptr[index];
                         }
                         break;
                     case TO_WMAX_logspace:
                         if (max_index == index)
                         {
-                            dst_ptr[index] += p;
+                          dst_ptr[index] += p;
                         	d_W_ptr[wInd] += w_p;
                         }
                         break;
@@ -2003,13 +2000,15 @@ void weighted_subTensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const T
         unsigned int line = threadIdx.x;
         const T* src_ptr = src + (item * stride*dst_rows);
         T* dst_ptr = dst + (item * stride*dst_rows);
-        T* d_W_ptr = w_delta + (item * stride*dst_rows);
-        const T* m_W_ptr = m_W + (item * stride*subspace_size) ;
         const T* d0  = delta + item * dst_rows;
-        T p;
+
+        T* d_W_ptr = w_delta + item * subspace_size;
+        const T* m_W_ptr = m_W + item * subspace_size ;
+	
+	T p;
         T w_p;
 
-        for(; line < dst_rows; line += blockDim.x, m_W_ptr+=subspace_size * blockDim.x){
+        for(; line < dst_rows; line += blockDim.x, m_W_ptr+=subspace_size * blockDim.x, d_W_ptr += subspace_size * blockDim.x){
             float squared_sum = 0.f;
             unsigned int max_index = 0;
             unsigned int end = subspace_size*(line+1);
@@ -2115,10 +2114,10 @@ void weighted_subTensor_op_grad_host(T* dst, T* w_delta, const T* src, const T* 
             const T* src_ptr = src + (stride * line) * items;
             T* dst_ptr = dst + (stride * line) * items;
 	    
-	    T* d_W_ptr   = w_delta + line * items;
+	    T* d_W_ptr   = w_delta + line * subspace_size;
 	    const T* m_W_ptr = m_W + line * subspace_size;
 	    
-            for(unsigned int i=0; i < items; i++, m_W_ptr+=subspace_size){
+            for(unsigned int i=0; i < items; i++, m_W_ptr+=subspace_size, d_W_ptr += subspace_size){
                 float squared_sum = 0;
                 unsigned int max_index = 0;
 	       unsigned int wInd = 0;
@@ -2215,10 +2214,10 @@ void weighted_subTensor_op_grad_host(T* dst, T* w_delta, const T* src, const T* 
             T* dst_ptr = dst + (item * stride * lines);
             const T* d_ptr  = delta + item * lines;
 	    
-    	    T* d_W_ptr   = w_delta + item * stride * lines;
+    	    T* d_W_ptr   = w_delta + item * subspace_size;
 	    const T* m_W_ptr = m_W + item * subspace_size;
 	    
-            for(unsigned int i=0; i < lines; i++, m_W_ptr+=subspace_size){
+            for(unsigned int i=0; i < lines; i++, m_W_ptr+=subspace_size, d_W_ptr += subspace_size){
                 float squared_sum = 0.f;
                 unsigned int max_index = 0;
                 unsigned int end = subspace_size*(i+1);
@@ -2324,13 +2323,9 @@ template<class V,class M, class T>
 
         unsigned int items = delta.size() / delta.shape(dim);
         unsigned int lines = delta.shape(dim);
-	
 	unsigned int src_size = src.shape(dim);
-	/*
-	         unsigned int items = delta.size() / delta.shape(dim);
-        unsigned int lines = delta.shape(dim);
-	 */
-        if(IsSame<M,host_memory_space>::Result::value){
+
+	if(IsSame<M,host_memory_space>::Result::value){
             switch(to){
                 case TO_WMAX:
                     if(dim == 0){
