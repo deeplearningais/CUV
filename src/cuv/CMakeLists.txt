@@ -22,6 +22,7 @@ set(CUV_SRC
     image_ops/move.cu
     image_ops/image_pyramid.cu
     tensor_ops/rprop.cu
+    tensor_ops/spn_gd.cu
     #libs/hog/hog.cu
     libs/kernels/kernels.cu
     libs/separable_conv/separable_convolution.cu

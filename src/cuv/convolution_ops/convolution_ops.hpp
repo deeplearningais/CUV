@@ -380,16 +380,18 @@ void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<
 
 /**
  * @brief Determines which weighted overlapping tuplewise operator to use.
- * @li TO_LOGWMAXEXP calculates the max(x * w)
- * @li TO_LOGWADDEXP calculates the  log (sum(exp(w * x)))
- * @li TO_LOGWADDEXP_logspace calculates the log (sum(exp(w+x))) (thus it weights x with w in logspace)
- *
+ * @ TO_WADD calculates sum(wx)
+ * @li TO_WMAX calculates the log (max(wx)),  if (spn==true) the derivative calculates just the number of times w_i was max (needed for grad of SPN)
+ * @li TO_WMAX_LOGSPACE calculates the log (max(w + x), if (spn==true) the derivative calculates just the number of times w_i was max (needed for grad of SPN)
+ * @li TO_LOGWADDEXP calculates the  log (sum(exp(w * x))), if (spn==true) the derivative is weighted with 1/(S[1,y|X]+eps)
+ * @li TO_LOGWADDEXP_LOGSPACE calculates the log (sum(exp(w+x))) (thus it weights x with w in logspace), if (spn==true) the derivative is weighted with 1/(S[1,y|X]+eps)
  */
-enum weighted_subTensor_op_functor{
+enum weighted_sub_tensor_op_functor{
+    TO_WADD,
     TO_WMAX,
-    TO_WMAX_logspace,
+    TO_WMAX_LOGSPACE,
     TO_LOGWADDEXP,
-    TO_LOGWADDEXP_logspace
+    TO_LOGWADDEXP_LOGSPACE
 };
 
 
@@ -397,24 +399,30 @@ enum weighted_subTensor_op_functor{
  * same as tuplewise op, but the input maps are weighted and the regions may overlap
  *
  * @param dst where to write result
- * @param src  the original input to the tuplewise_op
- * @param dim the dimension accross which we apply the tuplewise_op
+ * @param dst_max_idx destintion to store max indices to
+ * @param src  the original input to the weighted_sub_tensor_op
+ * @param m_W weights (param 2) for weighted_sub_tensor_op
  * @param subspace_size  the number of elements for which we calculate the norm
  * @param tuplewise_op_functor to the parameter determining wheater to calculate squared norm, norm or max out
  * @param size, size of dst tensor
  * @param eps small constant value which is added to fprop for consistency
  */
 template<class V, class M, class T>
-void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subTensor_op_functor = TO_LOGWADDEXP, float eps = 0.f);
+void weighted_sub_tensor_op(tensor<V,M,T>& dst, tensor<unsigned char,M,T>& dst_max_idx, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_sub_tensor_op_functor = TO_LOGWADDEXP, float eps = 0.00001f);
 
 /**
- * calculates the gradient of weighted_overlapping_tuplewise_op.
+ * calculates the gradient of weighted_sub_tensor_op.
  *
  *
  * @param dst where to write result
- * @param X  the original input to the tuplewise_op
+ * @param w_delta dst to write delta for weights (param[1])
+ * @param X  the original input to the weighted_sub_tensor_op
  * @param D  the backpropagated delta
- * @param dim the dimension accross which we apply the tuplewise_op
+ * @param m_W the original weights given to weighted_sub_tensor_op
+ * @param r0 result of weighted_sub_tensor_op fprop
+ * @param S result of SPN ( only used in case bool spn=true
+ * @param max_idx tensor where the max indices from fprop are stored
+ * @param spn boolean which determines wheater normal op, or spn version is used
  * @param subspace_size  the number of elements for which we calculate the norm
  * @param tuplewise_op_functor to the parameter determining wheater to calculate squared norm, norm or max out
  * @param size, size of dst tensor* 
@@ -422,8 +430,7 @@ void weighted_subTensor_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const t
  * 
  */
 template<class V, class M, class T>
-void weighted_subTensor_op_grad(tensor<V,M,T>& dst, tensor<V,M,T>& w_delta, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, const tensor<V,M,T>& m_W, unsigned int dim, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subTensor_op_functor to = TO_LOGWADDEXP, float eps = 0.f);
-
+void weighted_sub_tensor_op_grad(tensor<V,M,T>& dst, tensor<V,M,T>& w_delta, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, const tensor<V,M,T>& m_W, const tensor<V,M,T>& r0, const tensor<V,M,T>& S, const tensor<unsigned char,M,T>& max_idx, const bool spn, const bool d_der, const bool w_der, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_sub_tensor_op_functor to = TO_LOGWADDEXP, float eps = 0.00001f);
 
 }
 /** @} */ //end group convolution_ops
