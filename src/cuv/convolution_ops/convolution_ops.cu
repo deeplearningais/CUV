@@ -42,13 +42,13 @@
 #include <cuv/convert/convert.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include <cuv/tensor_ops/tensor_ops.hpp>
-#include <cuv/tensor_ops/functors.hpp>
 #include <cuv/random/random.hpp>
 #include <3rd_party/cudaconv2/include/cudaconv2/conv_util.cuh>
 #include <3rd_party/cudaconv2/include/cudaconv2/cudaconv2.cuh>
 #include <3rd_party/cudaconv2/include/nvmatrix/nvmatrix.cuh>
 /*#include <3rd_party/cudaconv2/include/convCPU.h>*/
 #include <cuv/convolution_ops/convolution_ops.hpp>
+#include <cuv/tensor_ops/functors.hpp>
 
 #define NVView1D(X)  \
         (const_cast<float*>(X.ptr()), 1, X.shape(0), X.shape(0), false)
@@ -56,6 +56,11 @@
         (const_cast<float*>(X.ptr()), X.shape(0)*X.shape(1), X.shape(2), X.shape(2),false)
 #define NVView4D(X)  \
         (const_cast<float*>(X.ptr()), X.shape(0)*X.shape(1)*X.shape(2), X.shape(3), X.shape(3),false)
+
+// choose maximal thread count depending on cuda arch ( currently the maximum is 1024 for gtx 700 cards )
+    
+#define MAX_THREADS 512
+
 
 namespace cuv{ namespace alex_conv{
 
@@ -1560,16 +1565,33 @@ template<class V,class M, class T>
 /********************************************************************************************************
  * overlapping weighted sub tensor op start
  *****************************************************************************************************************/
+/// logarithm of the sum of exponentiations of the inputs in a numerically stable way. log(exp(x)+exp(y))
 
-/*
 template<weighted_sub_tensor_op_functor to, class T>
 __global__
 void weighted_sub_tensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* src, const T* m_W,
         unsigned int dst_rows, unsigned int dst_cols,  unsigned int dst_colsx, unsigned int dst_colsy, unsigned int src_size,
         unsigned int stride, unsigned int subspace_size, float eps){
-        unsigned int line = blockIdx.x;
+        unsigned int line =  blockIdx.x;
         T* dst0 = dst  + line * dst_cols;
         unsigned char * dst_max_idx0;
+
+        unsigned int shift = stride * line;
+        unsigned int last_idx = shift + subspace_size;
+        unsigned int diff;     
+        //check boundaries
+        extern __shared__ float w[] ;
+
+        const T* m_W_ptr = m_W + line * subspace_size; 
+        for (unsigned int i = threadIdx.x; i < subspace_size; i += blockDim.x)
+              w[i] = m_W_ptr[i];
+        
+        if (last_idx > src_size){
+             diff = (subspace_size - (last_idx - src_size))* dst_cols;
+        } else {
+            diff = subspace_size * dst_cols;
+        }
+        __syncthreads();
 
         switch(to){
             case TO_WMAX:
@@ -1578,126 +1600,42 @@ void weighted_sub_tensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* 
                 break;
         }
 
-        const T* src_ptr = src + (stride * line) * dst_cols; 
-        const T* m_W_ptr = m_W + line * subspace_size;
-    
-        for(unsigned int itemy = threadIdx.y; itemy < dst_colsy; itemy += blockDim.y){
-              for(unsigned int itemx = threadIdx.x; itemx < dst_colsx; itemx += blockDim.x){
-                unsigned int item = itemx * dst_colsy + itemy;
-                T squared_sum = 0.f;
-                bf_logaddexp<T> lae;
+        const T* src_ptr = src + shift * dst_cols; 
 
-                unsigned int end = item + subspace_size * dst_cols;
-                unsigned int wInd = 0;
-                unsigned char max_idx;
-                T temp;
-
-                int tx1 = (subspace_size + stride * line );
-                if ( tx1 > src_size) end = item + (subspace_size - (tx1-src_size)) *dst_cols;
-            
-                for (unsigned int index = item; index < end; index+=dst_cols, wInd++){            
-                    T s = src_ptr[index];
-                    T w = m_W_ptr[wInd];
-                    switch(to){
-                        case TO_LOGWADDEXP:
-                            squared_sum = lae(squared_sum, w * s);
-                            break;
-                        case TO_LOGWADDEXP_LOGSPACE:
-                            squared_sum = lae(squared_sum, w + s);
-                            break;
-                        case TO_WADD:
-                            squared_sum += w * s;
-                            break;
-                        case TO_WMAX:
-                            temp = w * s;
-                            if (temp > squared_sum){
-                                squared_sum = temp;
-                                max_idx = wInd;
-                                }
-                            break;
-                        case TO_WMAX_LOGSPACE:
-                            temp = w + s;
-                            if (temp > squared_sum){
-                                    squared_sum = temp;
-                                    max_idx = wInd;
-                               }
-                            break;
-                        }
-            }
-            switch(to){
-          case TO_WMAX:
-          case TO_WMAX_LOGSPACE:
-              dst0[item] = squared_sum;
-              dst_max_idx0[item] = max_idx;
-              break;
-          case TO_LOGWADDEXP:
-          case TO_LOGWADDEXP_LOGSPACE:
-              dst0[item] = squared_sum + eps;
-              break;
-          case TO_WADD:
-              dst0[item] = squared_sum;
-              break;
-            }
-        }
-    }
-}
-*/
-
-
-
-template<weighted_sub_tensor_op_functor to, class T>
-__global__
-void weighted_sub_tensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* src, const T* m_W,
-        unsigned int dst_rows, unsigned int dst_cols,  unsigned int dst_colsx, unsigned int dst_colsy, unsigned int src_size,
-        unsigned int stride, unsigned int subspace_size, float eps){
-        unsigned int line = blockIdx.x;
-        T* dst0 = dst  + line * dst_cols;
-        unsigned char * dst_max_idx0;
-
-        switch(to){
-            case TO_WMAX:
-            case TO_WMAX_LOGSPACE:
-                dst_max_idx0 = dst_max_idx   + line * dst_cols;
-                break;
-        }
-
-        const T* src_ptr = src + (stride * line) * dst_cols; 
-        const T* m_W_ptr = m_W + line * subspace_size;
-    
+        T squared_sum;
+        T temp;
+        unsigned int end ;
+        unsigned int wInd ;
+        unsigned char max_idx;
+        bf_logaddexp<float> lae;
         for(unsigned int item = threadIdx.x; item < dst_cols; item += blockDim.x){
-                T squared_sum = 0.f;
-                bf_logaddexp<T> lae;
-
-                unsigned int end = item + subspace_size * dst_cols;
-                unsigned int wInd = 0;
-                unsigned char max_idx;
-                T temp;
-
-                int tx1 = (subspace_size + stride * line );
-                if ( tx1 > src_size) end = item + (subspace_size - (tx1-src_size)) *dst_cols;
-            
+                squared_sum = 0.f;
+                end = item + diff;
+                wInd = 0;
+                
                 for (unsigned int index = item; index < end; index+=dst_cols, wInd++){            
                     T s = src_ptr[index];
-                    T w = m_W_ptr[wInd];
                     switch(to){
                         case TO_LOGWADDEXP:
-                            squared_sum = lae(squared_sum, w * s);
+                            squared_sum = lae(squared_sum, w[wInd]*s);
+                            __syncthreads();
                             break;
                         case TO_LOGWADDEXP_LOGSPACE:
-                            squared_sum = lae(squared_sum, w + s);
+                            lae(squared_sum, w[wInd] + s); 
+                            __syncthreads();
                             break;
                         case TO_WADD:
-                            squared_sum += w * s;
+                            squared_sum +=  w[wInd] * s;
                             break;
                         case TO_WMAX:
-                            temp = w * s;
+                            temp =  w[wInd] * s;
                             if (temp > squared_sum){
                                 squared_sum = temp;
                                 max_idx = wInd;
                                 }
                             break;
                         case TO_WMAX_LOGSPACE:
-                            temp = w + s;
+                            temp =  w[wInd] + s;
                             if (temp > squared_sum){
                                     squared_sum = temp;
                                     max_idx = wInd;
@@ -1705,6 +1643,7 @@ void weighted_sub_tensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* 
                             break;
                         }
             }
+           __syncthreads();
             switch(to){
           case TO_WMAX:
           case TO_WMAX_LOGSPACE:
@@ -1720,7 +1659,6 @@ void weighted_sub_tensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* 
               break;
             }
         }
-   
 }
 
 
@@ -1741,11 +1679,11 @@ template<weighted_sub_tensor_op_functor to, class T>
                 const T* src_ptr = src + (stride * line) * items;
                 const T* m_W_ptr = m_W + subspace_size * line;
 
+                bf_logaddexp<float> lae;
                 for(unsigned int i=0; i < items; i++){
                     float squared_sum = 0.f;
                     unsigned char max_idx;
                     T temp;
-                    bf_logaddexp<T> lae;
 
                     unsigned int wInd = 0;
                     for (unsigned int index = i; index < (i + subspace_size * items); index += items, wInd++){
@@ -1754,11 +1692,11 @@ template<weighted_sub_tensor_op_functor to, class T>
                         T w = m_W_ptr[wInd];
                         switch(to){
                             case TO_LOGWADDEXP:
-                                squared_sum = lae(squared_sum, w * s);
-                                break;
+                            squared_sum = lae(squared_sum, w * s);
+                            break;
                             case TO_LOGWADDEXP_LOGSPACE:
-                                squared_sum = lae(squared_sum, w + s);
-                                break;
+                            squared_sum = lae(squared_sum, w + s);
+                            break;
                             case TO_WADD:
                                 squared_sum += w * s;
                                 break;
@@ -1833,23 +1771,25 @@ template<class V,class M, class T>
         }else{
             // device: run kernel
             unsigned int num_blocks  = lines;
-            unsigned int num_threads = min(512, int(32 * ceil( items / 32. )));
-            
+            // in order to stay sync, each block must calculate at least one batch
+            unsigned int num_threads = min(MAX_THREADS, int(32 * ceil( items / 32. )));
+            unsigned int sharedMemory  = (subspace_size)*sizeof(V);
+
             switch(to){
                 case TO_WMAX:
-                        weighted_sub_tensor_op_kernel<TO_WMAX><<<num_blocks,num_threads>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, itemx, itemy, src_size,  stride, subspace_size, eps);
+                        weighted_sub_tensor_op_kernel<TO_WMAX><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, itemx, itemy, src_size,  stride, subspace_size, eps);
                     break;
                 case TO_WMAX_LOGSPACE:
-                        weighted_sub_tensor_op_kernel<TO_WMAX_LOGSPACE><<<num_blocks,num_threads>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items,  itemx, itemy, src_size,  stride, subspace_size, eps);
+                        weighted_sub_tensor_op_kernel<TO_WMAX_LOGSPACE><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items,  itemx, itemy, src_size,  stride, subspace_size, eps);
                     break;
                 case TO_LOGWADDEXP:
-                        weighted_sub_tensor_op_kernel<TO_LOGWADDEXP><<<num_blocks,num_threads>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items,  itemx, itemy, src_size, stride, subspace_size, eps);
+                        weighted_sub_tensor_op_kernel<TO_LOGWADDEXP><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items,  itemx, itemy, src_size, stride, subspace_size, eps);
                     break;
                 case TO_LOGWADDEXP_LOGSPACE:
-                        weighted_sub_tensor_op_kernel<TO_LOGWADDEXP_LOGSPACE><<<num_blocks,num_threads>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, itemx, itemy, src_size, stride, subspace_size, eps);
+                        weighted_sub_tensor_op_kernel<TO_LOGWADDEXP_LOGSPACE><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, itemx, itemy, src_size, stride, subspace_size, eps);
                     break;          
                 case TO_WADD:
-                        weighted_sub_tensor_op_kernel<TO_WADD><<<num_blocks,num_threads>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, itemx, itemy, src_size, stride, subspace_size, eps);
+                        weighted_sub_tensor_op_kernel<TO_WADD><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, itemx, itemy, src_size, stride, subspace_size, eps);
                     break;
 
             }
@@ -1879,27 +1819,27 @@ template<class V,class M, class T>
  * http://www.geforce.com/Active/en_US/en_US/pdf/GeForce-GTX-680-Whitepaper-FINAL.pdf
  * http://www.nvidia.de/content/PDF/kepler/NVIDIA-Kepler-GK110-Architecture-Whitepaper.pdf
  *******************************/
- #if __CUDA_ARCH__ >= 200
-    __device__ inline void atomic_Add(float* address, float value)
+ __device__ inline void atomic_Add(float* address, float value)
     {
+
+   #if __CUDA_ARCH__ >= 200
       atomicAdd(address,value);
-    }
-    
- #else   
- __device__ inline void atomic_Add (float *address, float value)
- {
+   #else
    int oldval, newval, readback;
- 
+
    oldval = __float_as_int(*address);
    newval = __float_as_int(__int_as_float(oldval) + value);
-   while ((readback=atomicCAS((int *)address, oldval, newval)) != oldval) 
+   while ((readback=atomicCAS((int *)address, oldval, newval)) != oldval)
      {
       oldval = readback;
       newval = __float_as_int(__int_as_float(oldval) + value);
      }
- }
-#endif    
-  
+   #endif
+   }
+   
+
+
+ 
 template<bool spn, weighted_sub_tensor_op_functor to, class T>
 __global__
 void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const T* delta, const T* m_W, const T* r0, const T* S, const unsigned char* max_idx, const bool d_dx, const bool d_dw,
@@ -1910,37 +1850,57 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
         unsigned int shift = stride * line;
         
         // shared array to store intermediate results for weight derivative
-        __shared__ T res_w[16][16];
+        extern __shared__ T rw[];
+        T* res_w = &rw[0] + threadIdx.y * blockDim.x + subspace_size;
 
         //init shared memory of this thead
-        res_w[threadIdx.y][threadIdx.x] = 0;
+        res_w[threadIdx.x] = 0;
+
+        extern __shared__ float w[];
+        const T* m_W_ptr = m_W + line * subspace_size;
+        float* w_ptr = &w[0] + subspace_size + blockDim.x * blockDim.y;
+ 
+        for (unsigned int i = threadIdx.x; i < subspace_size; i += blockDim.x)
+              w_ptr[i] = m_W_ptr[i];
 
         extern __shared__ T sum[];
-
+ 	    for (unsigned int s = threadIdx.y * blockDim.x + threadIdx.x; s < subspace_size; s += blockDim.x * blockDim.y) sum[s] = 0;	
+        __syncthreads();
+    
         unsigned int dst_cols = dst_colsx *dst_colsy;
-        const T* src_ptr = src + shift * dst_cols;
-        T* dst_ptr       = dst + shift * dst_cols;
+        unsigned int shift_t_d = shift * dst_cols;
+        unsigned int line_t_sub = line * subspace_size;
+        unsigned int line_t_d = line * dst_cols;
+        unsigned int last_idx = shift + subspace_size;
+
+        unsigned int diff;     
+        //check boundaries
+        if (last_idx > src_size){
+             diff = (subspace_size - (last_idx - src_size))* dst_cols;
+        } else {
+            diff = subspace_size * dst_cols;
+        }
+
+        const T* src_ptr = src + shift_t_d;
+        T* dst_ptr       = dst + shift_t_d;
 
         const T* r0_ptr;
-        const T* d0  =     delta     + line * dst_cols; // für alle elemente
+        const T* d0  =     delta     + line_t_d; // für alle elemente
         const unsigned char* max_idx_ptr;
 
         switch(to){
            case TO_WMAX:
            case TO_WMAX_LOGSPACE:
-                max_idx_ptr =     max_idx    + line * dst_cols;
+                max_idx_ptr =     max_idx    + line_t_d;
                 break;
            case TO_LOGWADDEXP:
            case TO_LOGWADDEXP_LOGSPACE:
-               r0_ptr = r0 + line * dst_cols;
+               r0_ptr = r0 + line_t_d;
                break;
         }
 
-        T* dw_ptr     = w_delta +  line * subspace_size;
-        const T* mw_ptr = m_W   + line * subspace_size;
+        T* dw_ptr     = w_delta +  line_t_sub;
         T p;
-
-        for ( unsigned int s = 0; s < subspace_size; s++)sum[s] = 0;
 
         T S_val;
         for(unsigned int itemy = threadIdx.y; itemy < dst_colsy; itemy += blockDim.y){
@@ -1972,121 +1932,134 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
                    break;
             }
 
-            unsigned int end = item + subspace_size * dst_cols;
+            unsigned int end = item + diff;
             unsigned int wInd = 0;
-            //check boundaries
-            unsigned int last_idx = shift + subspace_size;
-            if (last_idx > src_size){
-                unsigned int diff = subspace_size - (last_idx - src_size);
-                end = item + diff * dst_cols;
-            }
+
             // updates dst for each feature in subspace
+            __syncthreads();
             for (unsigned int index = item; index < end; index+= dst_cols, wInd++){
                 float temp = 0;
                 T src_val = src_ptr[index];
-                T w  = mw_ptr[wInd];
                 switch(to){
                     case TO_WMAX:
                         if (maxIdx == wInd){
-                            if(d_dx) atomic_Add (&dst_ptr[index], p * w);
-                            if(d_dw) res_w[threadIdx.y][threadIdx.x]  = 1;
+                            if(d_dx) atomic_Add (&dst_ptr[index], p * w_ptr[wInd]);
+                            if(d_dw) res_w[threadIdx.x]  = 1;
                         }break;
                     case TO_WMAX_LOGSPACE:
                         if (maxIdx == wInd){
                             if(d_dx) atomic_Add(&dst_ptr[index], p);
-                            if(d_dw) res_w[threadIdx.y][threadIdx.x]  = 1;
+                            if(d_dw) res_w[threadIdx.x]  = 1;
                         }break;
                     case TO_LOGWADDEXP:
-                        temp = expf(w * src_val) * p;
-                        if(d_dx) atomic_Add(&dst_ptr[index],  w * temp);
-                        if(d_dw) res_w[threadIdx.y][threadIdx.x] =  S_val * src_val * temp;
+                        temp = expf(w_ptr[wInd] * src_val) * p;
+                        if(d_dx) atomic_Add(&dst_ptr[index],  w_ptr[wInd] * temp);
+                        if(d_dw) res_w[threadIdx.x] =  S_val * src_val * temp;
                         break;
                     case TO_LOGWADDEXP_LOGSPACE:
-                        temp = expf(w + src_val) * p;
+                        temp = expf(w_ptr[wInd] + src_val) * p;
                         if(d_dx) atomic_Add(&dst_ptr[index],temp);
-                        if(d_dw) res_w[threadIdx.y][threadIdx.x]  = S_val * temp;
+                        if(d_dw) res_w[threadIdx.x]  = S_val * temp;
                         break;
                     case TO_WADD:
-                        if(d_dx) atomic_Add(&dst_ptr[index], p*w);
-                        if(d_dw) res_w[threadIdx.y][threadIdx.x]  = p*src_val;
+                        if(d_dx) atomic_Add(&dst_ptr[index], p*w_ptr[wInd]);
+                        if(d_dw) res_w[threadIdx.x]  = p*src_val;
                         break;
                 }
 
                 if (d_dw){
-                    for ( unsigned int i = 8; i > 0; i/=2){
+                    //reduction for threadIdx.x
+                    for ( unsigned int i = blockDim.x/2; i > 0; i/=2){
                             __syncthreads();
-                            if( blockDim.x > i){
-                                    unsigned int tidx = threadIdx.x + i;
-                                            if ((threadIdx.x < i) && (tidx < blockDim.x) ){
-                                            res_w[threadIdx.y][threadIdx.x] += res_w[threadIdx.y][tidx];
-                                    }
-                                }
+                            if (threadIdx.x < i ){
+                                res_w[threadIdx.x] += res_w[threadIdx.x + i];
+                            }
                         }
 
                     //now there it should be reduced to a line
                     if (threadIdx.x == 0)
-                        for ( unsigned int j = 8; j > 1; j/=2){
+                        for ( unsigned int j = blockDim.y/2; j > 0; j/=2){
                             __syncthreads();
-                                if( blockDim.y > j ){
-                                    unsigned int tidy = threadIdx.y + j;
-                                    if ((threadIdx.y < j) && (tidy < blockDim.y)){
-                                            res_w[threadIdx.y][0] += res_w[tidy][0];
+                                    if (threadIdx.y < j){
+                                            res_w[threadIdx.x] += rw [subspace_size + (threadIdx.y + j) * blockDim.x];
                                     }
-                            }
                         }
 
                        __syncthreads();
                             if ((threadIdx.x == 0) && (threadIdx.y == 0)){
-                                	    sum[wInd]  += res_w[0][0] + res_w[1][0];
+                                	    sum[wInd]  += res_w[threadIdx.x];
                             }
 		        	//init shared memory of this thead
-      				res_w[threadIdx.y][threadIdx.x] = 0;
+      				res_w[threadIdx.x] = 0;
                 }
             }
             }
         }
             //write result to global memory
-            if (d_dw)
-                for (unsigned int update_idx = threadIdx.y * blockDim.x + threadIdx.x; update_idx < subspace_size; update_idx += blockDim.x*blockDim.y){
+            if (d_dw){
                 __syncthreads();
+                for (unsigned int update_idx = threadIdx.y * blockDim.x + threadIdx.x; update_idx < subspace_size; update_idx += blockDim.x*blockDim.y){
                  dw_ptr[update_idx] += sum[update_idx];
+                }
             }
     }else{
         unsigned int line = blockIdx.x;
         unsigned int shift = stride * line;
         
-        // shared array to store intermediate results for weight derivative
-        __shared__ T res_w[16][16];
+        extern __shared__ T rw[];
+        T* res_w = &rw[0] + threadIdx.y * blockDim.x + subspace_size;
 
         //init shared memory of this thead
-        res_w[threadIdx.y][threadIdx.x] = 0;
+        res_w[threadIdx.x] = 0;
+
+        extern __shared__ float w[];
+        const T* m_W_ptr = m_W + line * subspace_size;
+        float* w_ptr = &w[0] + subspace_size + blockDim.x * blockDim.y;
+ 
+        for (unsigned int i = threadIdx.x; i < subspace_size; i += blockDim.x)
+              w_ptr[i] = m_W_ptr[i];
 
         extern __shared__ T sum[];
+            for (unsigned int s = threadIdx.y * blockDim.x + threadIdx.x; s < subspace_size; s += blockDim.x * blockDim.y) sum[s] = 0;
+        __syncthreads();
+
 
         unsigned int dst_cols = dst_colsx *dst_colsy;
-        const T* src_ptr = src + shift * dst_cols;
-        T* dst_ptr       = dst + shift * dst_cols;
+        unsigned int shift_t_d = shift * dst_cols;
+        unsigned int line_t_sub = line * subspace_size;
+        unsigned int line_t_d = line * dst_cols;
+        unsigned int last_idx = shift + subspace_size;
+
+        unsigned int diff;
+        
+        //check boundaries
+        if (last_idx > src_size){
+             diff = (subspace_size - (last_idx - src_size))* dst_cols;
+        } else {
+            diff = subspace_size * dst_cols;
+        }
+
+        const T* src_ptr = src + shift_t_d;
+        T* dst_ptr       = dst + shift_t_d;
 
         const T* r0_ptr;
-        const T* d0  =     delta     + line * dst_cols; // für alle elemente
+        const T* d0  =     delta     + line_t_d; // für alle elemente
         const unsigned char* max_idx_ptr;
 
         switch(to){
            case TO_WMAX:
            case TO_WMAX_LOGSPACE:
-                max_idx_ptr =     max_idx    + line * dst_cols;
+                max_idx_ptr =     max_idx    + line_t_d;
                 break;
            case TO_LOGWADDEXP:
            case TO_LOGWADDEXP_LOGSPACE:
-               r0_ptr = r0 + line * dst_cols;
+               r0_ptr = r0 + line_t_d;
                break;
         }
 
-        T* dw_ptr     = w_delta +  line * subspace_size;
-        const T* mw_ptr = m_W   + line * subspace_size;
+        T* dw_ptr     = w_delta +  line_t_sub;
         T p;
 
-        for ( unsigned int s = 0; s < subspace_size; s++)sum[s] = 0;
 
         for(unsigned int itemy = threadIdx.y; itemy < dst_colsy; itemy += blockDim.y){
             for(unsigned int itemx = threadIdx.x; itemx < dst_colsx; itemx += blockDim.x){
@@ -2112,84 +2085,78 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
                    break;
             }
 
-            unsigned int end = item + subspace_size * dst_cols;
+            unsigned int end = item + diff;
             unsigned int wInd = 0;
+
             //check boundaries
-            unsigned int last_idx = shift + subspace_size;
-            if (last_idx > src_size){
-                unsigned int diff = subspace_size - (last_idx - src_size);
-                end = item + diff * dst_cols;
-            }
+            __syncthreads();
             // updates dst for each feature in subspace
             for (unsigned int index = item; index < end; index+= dst_cols, wInd++){
                 float temp = 0;
                 T s = src_ptr[index];
-                T w  = mw_ptr[wInd];
                 switch(to){
                     case TO_WMAX:
                         if (maxIdx == wInd){
-                            if(d_dx) atomic_Add (&dst_ptr[index], p * w);
-                            if(d_dw) res_w[threadIdx.y][threadIdx.x]  = p * s;
+                            if(d_dx) atomic_Add (&dst_ptr[index], p * w_ptr[wInd]);
+                            if(d_dw) res_w[threadIdx.x]  = p * s;
                         }break;
                     case TO_WMAX_LOGSPACE:
                         if (maxIdx == wInd){
                             if(d_dx) atomic_Add(&dst_ptr[index], p);
-                            if(d_dw) res_w[threadIdx.y][threadIdx.x]  = p;
+                            if(d_dw) res_w[threadIdx.x]  = p;
                         }break;
                     case TO_LOGWADDEXP:
-                        temp = expf(w * s) * p;
-                        if(d_dx) atomic_Add(&dst_ptr[index],  w * temp);
-                        if(d_dw) res_w[threadIdx.y][threadIdx.x] =  s * temp;
+                        temp = expf( w_ptr[wInd] * s) * p;
+                        if(d_dx) atomic_Add(&dst_ptr[index],  w_ptr[wInd] * temp);
+                        if(d_dw) res_w[threadIdx.x] =  s * temp;
                         break;
                     case TO_LOGWADDEXP_LOGSPACE:
-                        temp = expf(w + s) * p;
+                        temp = expf(w_ptr[wInd] + s) * p;
                         if(d_dx) atomic_Add(&dst_ptr[index],temp);
-                        if(d_dw) res_w[threadIdx.y][threadIdx.x]  = temp;
+                        if(d_dw) res_w[threadIdx.x]  = temp;
                         break;
                     case TO_WADD:
-                        if(d_dx) atomic_Add(&dst_ptr[index], p*w);
-                        if(d_dw) res_w[threadIdx.y][threadIdx.x]  = p*s;
+                        if(d_dx) atomic_Add(&dst_ptr[index], p*w_ptr[wInd]);
+                        if(d_dw) res_w[threadIdx.x]  = p*s;
                         break;
                 }
 
                 if (d_dw){
-                    for ( unsigned int i = 8; i > 0; i/=2){
+                    //reduction for threadIdx.x
+                    for ( unsigned int i = blockDim.x/2; i > 0; i/=2){
                             __syncthreads();
-                            if( blockDim.x > i){
-                                    unsigned int tidx = threadIdx.x + i;
-                                            if ((threadIdx.x < i) && (tidx < blockDim.x) ){
-                                            res_w[threadIdx.y][threadIdx.x] += res_w[threadIdx.y][tidx];
-                                    }
-                                }
+                            if (threadIdx.x < i ){
+                                res_w[threadIdx.x] += res_w[threadIdx.x + i];
+                            }
                         }
 
                     //now there it should be reduced to a line
                     if (threadIdx.x == 0)
-                        for ( unsigned int j = 8; j > 1; j/=2){
+                        for ( unsigned int j = blockDim.y/2; j > 0; j/=2){
                             __syncthreads();
-                                if( blockDim.y > j ){
-                                    unsigned int tidy = threadIdx.y + j;
-                                    if ((threadIdx.y < j) && (tidy < blockDim.y)){
-                                            res_w[threadIdx.y][0] += res_w[tidy][0];
+                                    if (threadIdx.y < j){
+                                            res_w[threadIdx.x] += rw [subspace_size + (threadIdx.y + j) * blockDim.x];
                                     }
-                            }
                         }
 
-                       __syncthreads();
                             if ((threadIdx.x == 0) && (threadIdx.y == 0)){
-                                sum[wInd]  += res_w[0][0] + res_w[1][0];
-                                }
-			        //init shared memory of this thead
-			        res_w[threadIdx.y][threadIdx.x] = 0;
+                                            sum[wInd]  += res_w[threadIdx.x];
+                            }
+
+                       __syncthreads();
+                       //init shared memory of this thead
+                        res_w[threadIdx.x] = 0;
                 }
             }
             }
         }
+
             //write result to global memory
-            if (d_dw)
-                for (unsigned int update_idx = threadIdx.y * blockDim.x + threadIdx.x; update_idx < subspace_size; update_idx += blockDim.x*blockDim.y){
+            if (d_dw){
                 __syncthreads();
+                for (unsigned int update_idx = threadIdx.y * blockDim.x + threadIdx.x; update_idx < subspace_size; update_idx += blockDim.x*blockDim.y){
                  dw_ptr[update_idx] += sum[update_idx];
+                }
             }
     }
 }
@@ -2399,7 +2366,6 @@ template<class V,class M, class T>
         unsigned int itemx = delta.shape(1);
         unsigned int itemy = delta.shape(2);
         unsigned int src_size = src.shape(0);
-
     if(IsSame<M,host_memory_space>::Result::value){
             switch(to){
                 case TO_WMAX:
@@ -2426,20 +2392,15 @@ template<class V,class M, class T>
     }else{
             // device: run kernel        
             //define size of the block
-            unsigned int n_element = 1;
-            unsigned int n_elem = min((itemx/n_element), itemy/n_element);
-  	
-            unsigned int block_size;
-            //choose block size
-            if (n_elem <=4 ) block_size = 4;
-            else if(n_elem <= 8 ) block_size=8;
-            else  block_size =16;
+            unsigned int block_size = 16;
             dim3 num_threads;
+
             num_threads.x = block_size;
             num_threads.y = block_size;
     
             unsigned int num_blocks  = lines;
-            unsigned int sharedMemory  = subspace_size*sizeof(V);
+            unsigned int sharedMemory  = (2*subspace_size + (block_size * block_size))*sizeof(V);
+
             switch(to){
                 case TO_WMAX:
                         if(spn) weighted_sub_tensor_op_grad_kernel<true , TO_WMAX><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
@@ -2473,11 +2434,259 @@ template<class V,class M, class T>
  * overlapping tuplewise op end
  *****************************************************************************************************************/
 
+/*****************************************************************************************************************
+ * spn_output_op
+ *****************************************************************************************************************/
+
+
+
+
+template<class T>
+__global__
+void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsigned int lines, unsigned int items, unsigned int batch){       
+        //load weights into shared memory
+        float result = 0;
+        unsigned int itb = (items * batch);
+        extern __shared__ float w[];
+        const T* Y_ptr = Y + threadIdx.x * lines;
+         int y;
+        
+        for (unsigned int i = threadIdx.x; i < lines; i += blockDim.x) {
+           w[i] = m_W[i];
+        }
+        __syncthreads();
+        
+        for ( unsigned int b = threadIdx.x; b < batch; b += blockDim.x, Y_ptr += blockDim.x*lines){
+            y = int( Y_ptr[0] );
+            
+            for ( unsigned int x = 0; x < items; x++){
+                unsigned int  xtb = x * batch;
+                T* dst_ptr = dst + xtb;
+                // marginalization step? then we have to calculate all values
+                if (y < 0){
+                    for ( unsigned int c = 0; c < lines; c++){
+                        const T* src_ptr = src + c * itb + xtb;
+                        result += expf( w[c] +  src_ptr[b]);
+                    }
+                } else {
+                    // no marginalization step => all labels =! y were 0
+                    const T* src_ptr = src + y * itb + xtb;
+                    result += expf( w[y] +  src_ptr[b]);
+                }
+                dst_ptr[b] = result;
+                result = 0;
+            }
+        }
+}
+
+
+template<class T>
+    void spn_output_op_host(T* dst, const T* src, const T* m_W, const T* Y, unsigned int lines, unsigned int items, unsigned int batch){
+        unsigned int itb = (items * batch);
+
+        for ( unsigned int b = 0; b < batch; b ++){
+            const T* Y_ptr = Y + b*lines;
+            for ( unsigned int x = 0; x <items; x++){
+                unsigned int  xtb = x * batch;                
+                T* dst_ptr = dst +  xtb;
+                int y = int( Y_ptr[0] );
+                if ( y < 0){
+                    for ( unsigned int c = 0; c < lines; c++){
+                        const T* src_ptr = src + c * itb + xtb;
+                        dst_ptr[x] += exp(m_W[c] + src_ptr[b]);       
+                    }
+                } else {
+                    const T* src_ptr = src + y * itb + xtb;
+                    dst_ptr[x] += exp(m_W[y] + src_ptr[b]);       
+                }
+            }
+        }     
+}
+
+
+template<class V, class M, class T>
+void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, const tensor<V,M,T>& Y){
+        unsigned int lines = src.shape(0);
+        unsigned int items = src.shape(1);
+        unsigned int batch = src.shape(2);
+        cuvAssert(m_W.ndim() == 1);
+        cuvAssert(src.ndim() == 3);
+        cuvAssert(Y.ndim() == 2);
+        cuvAssert(dst.ndim() == 3);
+        
+        cuvAssert(lines > 1);
+        cuvAssert(items > 0);
+        cuvAssert(batch > 0);        
+        cuvAssert(src.shape(0) ==  Y.shape(1));
+        cuvAssert(src.shape(2) == Y.shape(0));
+        cuvAssert(dst.shape(0) == 1);
+        cuvAssert(dst.shape(1) ==  src.shape(1));
+        cuvAssert(dst.shape(2) ==  src.shape(2));
+        cuvAssert(m_W.shape(0) ==  src.shape(0));
+        
+        if(IsSame<M,host_memory_space>::Result::value){
+                spn_output_op_host(dst.ptr(), src.ptr(), m_W.ptr(), Y.ptr(), lines, items, batch);
+        }else{
+            // device: run kernel
+            unsigned int num_blocks  = 1;
+            unsigned int num_threads = min(MAX_THREADS, int(32 * ceil( batch / 32. )));
+            unsigned int sharedMemory  = (lines)*sizeof(float);
+                       
+            spn_output_op_kernel<<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), src.ptr(), m_W.ptr(), Y.ptr(), lines, items, batch);
+           
+            cuvSafeCall(cudaThreadSynchronize());
+        }
+   }
+    
+    
+    /*****************************************************************************************************************************
+     * spn_output_op grad
+     *******************************************************************************************************************************/
+// currently d_dy just works for case x = 1, TODO: change tensor...
+template<class T>
+__global__
+void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, const T* m_W,  const T* Y, const T* S, const T* delta,
+                          unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, const bool d_dy, const bool d_dw, float eps){       
+        extern __shared__ float temp_w_delta[];
+        unsigned int itb = (items * batch);
+        float s = 0;
+        int y;
+        temp_w_delta[threadIdx.x] = 0;       
+
+        //each block calculates derivatives for one class        
+        int c = blockIdx.x;
+
+        //load weight into shared memory
+        float w = m_W[c];
+        
+        for ( unsigned int b = threadIdx.x; b < batch; b += blockDim.x){
+            unsigned int btl = b * lines;
+            const T* Y_ptr = Y + btl;
+            T* Y_delta_ptr = Y_delta + btl;
+            //get correct label (or marginalization flag)
+            y = int( Y_ptr[0] );
+            T s_val = 1.0/(S[b] + eps);
+
+            for ( unsigned int x = 0; x < items; x++){
+                unsigned int xtb = x * batch;
+                const T* delta_ptr = delta + xtb;
+                    //set derivative for d_dx, d_dw only if label != 0 (marginalization step, or correct label)   
+                        unsigned int off = c * itb + xtb;
+                        const T* src_ptr = src + off;
+                        T d_dy_val = exp(w + src_ptr[b]) * delta_ptr[b];
+                    if ( (y < 0) || (c == y) ){
+                        T* dst_ptr = dst + off;
+                        if (d_dx) dst_ptr[b] = d_dy_val;
+                        if (d_dw) temp_w_delta[threadIdx.x] += s_val * d_dy_val;
+                    }
+                    //except for d_dy, since it does not depend on the label
+                    if (d_dy) Y_delta_ptr[c] +=  d_dy_val;                 
+
+            }
+            //logarithmic add of partial d_dw
+            if (d_dw){
+                    for ( unsigned int j = blockDim.x/2; j > 0; j/=2){
+                        __syncthreads();
+                                if (threadIdx.x < j){
+                                    temp_w_delta[threadIdx.x] += temp_w_delta[threadIdx.x + j];
+                                }
+                    }
+                    __syncthreads();
+                        if (threadIdx.x == 0 ){
+                                s += temp_w_delta[0];
+                            }
+                    //reset shared memory of this thead
+                        temp_w_delta[threadIdx.x] = 0;
+            }
+        }
+
+        //write result to global memory
+        if (d_dw){
+            if (threadIdx.x == 0) w_delta[c] = s;
+        }       
+}
+
+
+template<class T>
+void spn_output_op_grad_host(T* dst, const T* src, T* w_delta, T* Y_delta, const T* m_W, const T* Y, const T* S, const T* delta,
+unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, const bool d_dy, const bool d_dw, float eps){
+        unsigned int itb = (items * batch);
+        int y;
+        for ( unsigned int b = 0; b < batch; b ++){
+            unsigned int btl = b * lines;
+            const T* Y_ptr = Y + btl;
+            y = int( Y_ptr[0] );
+            T* Y_delta_ptr = Y_delta + b * btl;
+            T s_val = 1/(S[b] + eps);
+
+            for ( unsigned int x = 0; x <items; x++){
+                for ( unsigned int c = 0; c < lines; c++){
+                    unsigned int xtb = x * batch;
+                    unsigned int off = c* itb + xtb;
+                    const T* src_ptr = src + off;
+                    T* dst_ptr = dst + off;
+                    const T* delta_ptr = delta + xtb;
+                    T d_dy_val = exp(m_W[c] + src_ptr[b]) * delta_ptr[b];
+                    if ( (y < 0) || (c == y)){
+                        if (d_dx) dst_ptr[b] = d_dy_val;
+                        if (d_dw) w_delta[c] += s_val * d_dy_val;
+                    }
+                    if (d_dy) Y_delta_ptr[c] +=  d_dy_val;
+
+                }
+            }
+        }
+}    
+    
+template<class V, class M, class T>
+void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M,T>& w_delta, tensor<V,M,T>& Y_delta, const tensor<V,M,T>& m_W, 
+                        const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& delta, const bool d_dx, const bool d_dw, const bool d_dy, float eps){
+        unsigned int lines = src.shape(0);
+        unsigned int items = src.shape(1);
+        unsigned int batch = src.shape(2);
+ 
+        cuv::fill (dst, 0);
+        cuv::fill (Y_delta, 0);
+        cuv::fill (w_delta, 0);
+
+        //check dimensions of dst
+        cuvAssert(lines > 1);
+        cuvAssert(items > 0);
+        cuvAssert(batch > 0);   
+        cuvAssert(src.shape(0) ==  Y.shape(1));
+        cuvAssert(src.shape(2) == Y.shape(0));
+        cuvAssert(delta.shape(0) == 1);
+        cuvAssert(delta.shape(1) ==  src.shape(1));
+        cuvAssert(delta.shape(2) ==  src.shape(2));
+        cuvAssert(m_W.shape(0) ==  src.shape(0));
+        cuvAssert(Y.shape() ==  Y_delta.shape());
+        cuvAssert(Y_delta.shape(1) > 1);
+        cuvAssert(m_W.shape() ==  w_delta.shape());
+        cuvAssert(S.shape(0) ==  src.shape(2));
+        cuvAssert(src.shape() == dst.shape());
+        
+        if(IsSame<M,host_memory_space>::Result::value){
+               spn_output_op_grad_host(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), delta.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps);
+                
+        }else{
+            // device: run kernel
+            unsigned int num_blocks  = lines;
+            unsigned int num_threads = min(MAX_THREADS, int(32 * ceil( batch / 32. )));
+            unsigned int sharedMemory  =  num_threads * sizeof(float);
+            spn_output_op_grad_kernel<<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), delta.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps);
+
+            cuvSafeCall(cudaThreadSynchronize());
+        }
+    }
+    
+    
 
 // instantiate
 #define  TENS(V,M,T)       tensor<V,M,T>
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
+template void spn_output_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&); \
+template void spn_output_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, bool, bool, bool, float); \
 template void weighted_sub_tensor_op<V,M,T>(TENS(V,M,T)&, TENS(unsigned char,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, unsigned int, weighted_sub_tensor_op_functor, float); \
 template void weighted_sub_tensor_op_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(unsigned char,M,T)&, bool, bool,  bool, unsigned int, unsigned int, unsigned int, weighted_sub_tensor_op_functor, float); \
 template void tuplewise_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor, float); \
