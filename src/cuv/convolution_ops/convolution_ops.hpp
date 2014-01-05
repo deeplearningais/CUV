@@ -432,6 +432,37 @@ void weighted_sub_tensor_op(tensor<V,M,T>& dst, tensor<unsigned char,M,T>& dst_m
 template<class V, class M, class T>
 void weighted_sub_tensor_op_grad(tensor<V,M,T>& dst, tensor<V,M,T>& w_delta, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, const tensor<V,M,T>& m_W, const tensor<V,M,T>& r0, const tensor<V,M,T>& S, const tensor<unsigned char,M,T>& max_idx, const bool spn, const bool d_der, const bool w_der, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_sub_tensor_op_functor to = TO_LOGWADDEXP, float eps = 0.00001f);
 
+
+/**
+*calculates the output layer of an spn
+* @param dst result tensor of this op
+* @param src tensor
+* @param m_W weights of the root sum node
+* @param Y Labels ( of shape batch x n_classes), class label is assumed in Y[i][0], shape needed for backprop
+*/
+template<class V, class M, class T>
+void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, const tensor<V,M,T>& Y);
+
+
+
+
+/**
+*calculates the output layer of an spn
+* @param dst result tensor of this op (d_dx is stored here)
+* @param src src tensor given to  spn_output_op in first place
+* @param w_delta result tensor to store d_dw
+* @param Y_delta result tensor to store d_dY
+* @param m_W weights of the root sum node
+* @param Y Labels ( of shape batch x n_classes), class label is assumed in Y[i][0], shape needed for backprop
+* @param d_dx flag that determines whether d_dx is calculated
+* @param d_dy flag that determines whether d_dy is calculated
+* @param d_dw flag that determines whether d_dw is calculated
+* @param eps small numerical constant for numerical stability (for weighting term  1/(S[1,x|y]+eps))
+*/
+template<class V, class M, class T>
+void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M,T>& w_delta, tensor<V,M,T>& Y_delta, const tensor<V,M,T>& m_W, const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& delta, bool d_dx, bool d_dw, bool d_dy, float eps=0.00001f);
+
+
 }
 /** @} */ //end group convolution_ops
 }
