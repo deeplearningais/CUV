@@ -2,8 +2,8 @@
 
 #include <thrust/device_ptr.h>
 
-#include "cuda_general.hpp"
-#include "meta_programming.hpp"
+#include <cuv/tools/cuv_general.hpp>
+#include <cuv/tools/meta_programming.hpp>
 
 namespace cuv {
 

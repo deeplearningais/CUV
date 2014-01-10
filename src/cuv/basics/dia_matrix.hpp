@@ -67,7 +67,7 @@ namespace cuv{
 		  typedef tensor<value_type,memory_space_type>  		   vec_type; 			///< Basic vector type used
 		  typedef tensor<int,memory_space_type> 				   intvec_type; 		///< Type of offsets for diagonals
 		  typedef dia_matrix<value_type,memory_space_type,index_type> 	   my_type;				///< Type of this matix
-		  typedef typename vec_type::pointer_type ptr_type;
+		  typedef typename vec_type::value_type* ptr_type;
 		public:
 		  int m_num_dia;                        ///< number of diagonals stored
 		  unsigned int m_stride;                ///< how long the stored diagonals are
@@ -136,7 +136,7 @@ namespace cuv{
 			inline const vec_type* vec_ptr()const{ return m_vec; } ///< Return reference to vector storing entries
 			inline       vec_type* vec_ptr()     { return m_vec; } ///< Return reference to vector storing entries
 			inline       ptr_type ptr()     { return m_vec->ptr(); } ///< Return reference to vector storing entries
-			inline const ptr_type ptr()const{ return m_vec->ptr(); } ///< Return reference to vector storing entries
+			inline       ptr_type ptr()const{ return m_vec->ptr(); } ///< Return reference to vector storing entries
 			inline int num_dia()const{ return m_num_dia; } ///< Return number of diagonals
 			inline unsigned int stride()const { return m_stride;  }///< Return stride of matrix
 			inline int row_fact()const{ return m_row_fact; } ///< Return steepness of diagonals

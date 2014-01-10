@@ -33,7 +33,9 @@ set(CUV_SRC
     libs/kmeans/kmeans.cu
     convert/convert.cu
     basics/cuda_array.cu
-    basics/accessors.cu
+    basics/reference.cu
+    basics/allocators.cu
+    basics/memory.cu
     basics/io.cpp
     convolution_ops/convolution_ops.cu
     tools/progressbar.cpp

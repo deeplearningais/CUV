@@ -88,10 +88,10 @@ namespace boost
                     V* tmp = new V[size];
                     ar >> make_array(tmp,size);
                     // copy to dev
-                    cuv::allocator<V,unsigned int,M> a;
-                    V* tmpo;
-                    a.alloc(&tmpo, sizeof(V)*size);
-                    a.copy(tmpo,tmp,size, cuv::host_memory_space());
+                    V* tmpo = NULL;
+                    cuv::default_allocator a;
+                    a.alloc(&tmpo, size, sizeof(V), M());
+                    cuv::detail::copy(tmpo, tmp, size, M(), cuv::host_memory_space(), 0);
                     m.reset(tmpo, size);
                     delete[] tmp;
                 }
@@ -106,8 +106,7 @@ namespace boost
                 ar << size;
                 if(m.size()){
                     V* tmp = new V[size];
-                    cuv::allocator<V,unsigned int,cuv::host_memory_space> a;
-                    a.copy(tmp,m.ptr(),size,M());
+                    cuv::detail::copy(tmp, m.ptr(), size, cuv::host_memory_space(), M(), 0);
                     ar << make_array(tmp, size);
                     delete[] tmp;
                 }

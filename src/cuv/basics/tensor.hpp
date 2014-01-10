@@ -13,26 +13,10 @@
 #include "allocators.hpp"
 #include "memory.hpp"
 #include <cuv/tools/meta_programming.hpp>
+#include <cuv/tools/cuv_general.hpp>
 
 namespace cuv {
 
-/** fail with an error message, a stack trace and a runtime_exception (the nicest failures you've seen ^^!)
- * @ingroup tools
- */
-static inline void cuvAssertFailed(const char *msg) {
-    throw std::runtime_error(std::string(msg));
-}
-
-/**
- * @def cuvAssert
- * @ingroup tools
- * use this macro to ensure that a condition is true.
- * in contrast to assert(), this will throw a runtime_exception,
- * which can be translated to python.
- * Additionally, when using Linux, you get a full stack trace printed
- */
-#define cuvAssert(X)  \
-  if(__builtin_expect(!(X), 0)){ cuv::cuvAssertFailed(#X); }
 
 using boost::detail::multi_array::extent_gen;
 using boost::detail::multi_array::index_gen;

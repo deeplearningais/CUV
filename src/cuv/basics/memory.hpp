@@ -34,6 +34,20 @@ struct column_major {
 struct row_major {
 };
 
+/// converts from column to row-major and vice versa
+template<class T>
+struct other_memory_layout{};
+/// specialisation: converts from column to row-major 
+template<>
+struct other_memory_layout<column_major>{ 
+    typedef row_major type;  ///< new memory layout type after switch
+};
+/// specialisation: converts from row to column-major 
+template<>
+struct other_memory_layout<row_major>{ 
+    typedef column_major type;   ///< new memory layout type after switch
+};
+
 /// tag for linear memory
 struct linear_memory_tag {
 };

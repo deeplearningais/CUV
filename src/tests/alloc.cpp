@@ -5,8 +5,8 @@
 #include <boost/thread/mutex.hpp>
 #include <tbb/parallel_for_each.h>
 
-#include "allocators.hpp"
-#include "reference.hpp"
+#include <cuv/basics/allocators.hpp>
+#include <cuv/basics/reference.hpp>
 
 using namespace cuv;
 
