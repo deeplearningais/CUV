@@ -101,9 +101,7 @@ struct uf_log:unary_functor<R,T>{  inline __device__ __host__         R operator
 /// calculates log(1+x) using a stable numeric variant
 template<class R, class T>
 struct uf_log1p:unary_functor<R,T>{  inline __device__ __host__       R operator()(const T& t)      const{
-	volatile float y;
-	y = 1.f + t;
-	return logf(y) - ((y-1.f)-t)/y;
+	return log1pf(t);
 } };
 /// calculates signum(x)
 template<class R, class T>
