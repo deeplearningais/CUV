@@ -16,6 +16,9 @@ add_definitions(-DCUDA_TEST_DEVICE=${CUDA_TEST_DEVICE})
 ADD_EXECUTABLE( test_tensor tensor.cpp )
 TARGET_LINK_LIBRARIES( test_tensor ${TEST_LINK_LIBS})
 
+ADD_EXECUTABLE( test_alloc alloc.cpp )
+TARGET_LINK_LIBRARIES( test_alloc ${TEST_LINK_LIBS})
+
 ADD_EXECUTABLE( test_tensor_serialization tensor_serialization.cpp )
 TARGET_LINK_LIBRARIES( test_tensor_serialization ${TEST_LINK_LIBS})
 
