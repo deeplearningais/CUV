@@ -34,7 +34,7 @@ SET (Boost_FIND_QUIETLY TRUE)
 SET (Boost_USE_MULTITHREADED TRUE)
 SET (Boost_USE_STATIC_LIBS FALSE)
 SET (Boost_ADDITIONAL_VERSIONS "1.39" "1.39.0" "1.40" "1.42" "1.43" "1.44" "1.45" "1.46" "1.47" "1.48")
-FIND_PACKAGE( Boost 1.37 COMPONENTS date_time unit_test_framework serialization REQUIRED )
+FIND_PACKAGE( Boost 1.37 COMPONENTS date_time unit_test_framework serialization thread system REQUIRED )
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 

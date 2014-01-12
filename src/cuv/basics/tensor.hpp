@@ -77,8 +77,8 @@ template<class V, class M, class L> class tensor;
 template<class V, class M, class L> class tensor_view;
 
 /// used in implementation of tensor.operator= for value_type argument
-template<class V, class M, class L>
-void fill(tensor<V, M, L>& v, const V& p);
+template<class V, class M, class L, class S>
+void fill(tensor<V, M, L>& v, const S& p);
 
 namespace detail {
 

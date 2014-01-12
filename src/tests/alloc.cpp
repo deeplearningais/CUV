@@ -3,7 +3,9 @@
 #include <boost/format.hpp>
 #include <boost/test/included/unit_test.hpp>
 #include <boost/thread/mutex.hpp>
-#include <tbb/parallel_for_each.h>
+#include <boost/asio.hpp>
+#include <boost/bind.hpp>
+#include <boost/thread.hpp>
 
 #include <cuv/basics/allocators.hpp>
 #include <cuv/basics/reference.hpp>
@@ -54,6 +56,63 @@ static void test_pooled_allocator() {
     BOOST_CHECK_EQUAL(allocator.pool_free_count(), allocator.pool_count());
 }
 
+template<class M>
+struct pool_destroy_tester{
+    pooled_cuda_allocator* allocator;
+    boost::mutex* boost_mutex;
+    size_t ALLOC_SIZE;
+    pool_destroy_tester(pooled_cuda_allocator& alloc, boost::mutex& mutex, size_t alloc_size)
+        :allocator(&alloc),boost_mutex(&mutex), ALLOC_SIZE(alloc_size){}
+    void operator()(void** _ptr)const{
+        allocator->dealloc(_ptr, M());
+
+        {
+            boost::mutex::scoped_lock lock(*boost_mutex);
+            BOOST_CHECK(!*_ptr);
+        }
+    }
+};
+
+template<class M>
+struct pool_alloc_tester{
+    pooled_cuda_allocator* allocator;
+    boost::mutex* boost_mutex;
+    size_t ALLOC_SIZE;
+    pool_alloc_tester(pooled_cuda_allocator& alloc, boost::mutex& mutex, size_t alloc_size)
+        :allocator(&alloc),boost_mutex(&mutex), ALLOC_SIZE(alloc_size){}
+    void operator()(void** _ptr, int i)const{
+        void*& ptr = *_ptr;
+        size_t pool_size = allocator->pool_size(M());
+        void* ptr1 = NULL;
+        void* ptr2 = NULL;
+        allocator->alloc(&ptr1, ALLOC_SIZE, 1, M());
+        allocator->alloc(&ptr2, 1, 1, M());
+        allocator->alloc(_ptr, ALLOC_SIZE, 1, M());
+
+        {
+            boost::mutex::scoped_lock lock(*boost_mutex);
+            BOOST_REQUIRE(ptr1);
+            BOOST_REQUIRE(ptr2);
+            BOOST_REQUIRE(*_ptr);
+
+            BOOST_REQUIRE_NE(ptr1, ptr2);
+            BOOST_REQUIRE_NE(ptr2, *_ptr);
+            BOOST_REQUIRE_NE(ptr1, *_ptr);
+
+            BOOST_REQUIRE_GE(allocator->pool_count(M()), 2lu);
+        }
+
+        allocator->dealloc(&ptr1, M());
+        allocator->dealloc(&ptr2, M());
+
+        {
+            boost::mutex::scoped_lock lock(*boost_mutex);
+            BOOST_REQUIRE_GE(allocator->pool_size(M()), pool_size);
+            BOOST_REQUIRE_GE(allocator->pool_free_count(M()), 0lu);
+        }
+    }
+};
+
 template<class memory_space>
 static void test_pooled_allocator_multi_threaded() {
     memory_space m;
@@ -65,40 +124,25 @@ static void test_pooled_allocator_multi_threaded() {
     boost::mutex boost_mutex;
 
     std::vector<void*> pointers(1000, NULL);
-    tbb::parallel_for_each(pointers.begin(), pointers.end(),
-            [&](void*& ptr) {
-                size_t pool_size = allocator.pool_size(m);
-                void* ptr1 = NULL;
-                void* ptr2 = NULL;
-                allocator.alloc(&ptr1, ALLOC_SIZE, 1, m);
-                allocator.alloc(&ptr2, 1, 1, m);
-                allocator.alloc(&ptr, ALLOC_SIZE, 1, m);
+    pool_alloc_tester<memory_space> tester(allocator, boost_mutex, ALLOC_SIZE);
 
-                {
-                    boost::mutex::scoped_lock lock(boost_mutex);
-                    BOOST_REQUIRE(ptr1);
-                    BOOST_REQUIRE(ptr2);
-                    BOOST_REQUIRE(ptr);
-
-                    BOOST_REQUIRE_NE(ptr1, ptr2);
-                    BOOST_REQUIRE_NE(ptr2, ptr);
-                    BOOST_REQUIRE_NE(ptr1, ptr);
-
-                    BOOST_REQUIRE_GE(allocator.pool_count(m), 2lu);
-                }
-
-                allocator.dealloc(&ptr1, m);
-                allocator.dealloc(&ptr2, m);
-
-                {
-                    boost::mutex::scoped_lock lock(boost_mutex);
-                    BOOST_REQUIRE_GE(allocator.pool_size(m), pool_size);
-                    BOOST_REQUIRE_GE(allocator.pool_free_count(m), 0lu);
-                }
-            });
+    boost::asio::io_service io_service;
+    boost::thread_group threadpool;
+    
+    //tbb::parallel_for_each(pointers.begin(), pointers.end(), tester);
+    for (size_t i = 0; i < 5; i++) {
+        threadpool.create_thread( boost::bind(&boost::asio::io_service::run, &io_service));
+    }
+    //boost::asio::io_service::work work(boost::ref(io_service));
+    for (size_t i = 0; i < pointers.size(); i++) {
+        io_service.post(boost::bind(&pool_alloc_tester<memory_space>::operator(), &tester, &pointers[i], i));
+    }
+    io_service.run();
+    io_service.reset();
 
     for (size_t i = 0; i < pointers.size(); i++) {
-        BOOST_REQUIRE(pointers[i]);
+        std::cout << "i:" << i << " pointers[i]:" << pointers[i] << std::endl;
+        BOOST_REQUIRE(pointers[i] != NULL);
     }
 
     BOOST_CHECK_GE(allocator.pool_size(m), pointers.size() * ALLOC_SIZE);
@@ -107,14 +151,14 @@ static void test_pooled_allocator_multi_threaded() {
     size_t count = allocator.pool_count(m);
     BOOST_CHECK_GE(count, pointers.size());
 
-    tbb::parallel_for_each(pointers.begin(), pointers.end(), [&](void*& ptr) {
-        allocator.dealloc(&ptr, m);
-
-        {
-            boost::mutex::scoped_lock lock(boost_mutex);
-            BOOST_CHECK(!ptr);
-        }
-    });
+    pool_destroy_tester<memory_space> tester2(allocator, boost_mutex, ALLOC_SIZE);
+    //tbb::parallel_for_each(pointers.begin(), pointers.end(), tester2);
+    for (size_t i = 0; i < pointers.size(); i++) {
+        io_service.post(boost::bind( &pool_destroy_tester<memory_space>::operator(), &tester2, &pointers[i]));
+    }
+    io_service.run();
+    io_service.stop();
+    threadpool.join_all();
 
     BOOST_CHECK_EQUAL(allocator.pool_free_count(), allocator.pool_count());
 }
