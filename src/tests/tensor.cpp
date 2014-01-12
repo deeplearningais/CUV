@@ -138,6 +138,36 @@ BOOST_AUTO_TEST_CASE( tensor_assignment )
 
 }
 
+BOOST_AUTO_TEST_CASE( tensor_copy ) {
+    boost::shared_ptr<allocator> allocator(new pooled_cuda_allocator("tensor_copy"));
+    tensor<float, host_memory_space> x(extents[4][5][6], allocator);
+    for (int i = 0; i < 4 * 5 * 6; i++) {
+        x[i] = i;
+    }
+
+    tensor<float, host_memory_space> y = x.copy();
+    BOOST_CHECK_NE(x.ptr(), y.ptr());
+
+    for (int i = 0; i < 4; i++) {
+        BOOST_CHECK_NE(x[indices[i][index_range()][index_range()]].ptr(),
+                y[indices[i][index_range()][index_range()]].ptr());
+    }
+
+    tensor<float, host_memory_space> y2(x.copy());
+    BOOST_CHECK_NE(x.ptr(), y2.ptr());
+
+    for (int i = 0; i < 4; i++) {
+        BOOST_CHECK_NE(x[indices[i][index_range()][index_range()]].ptr(),
+                y2[indices[i][index_range()][index_range()]].ptr());
+    }
+
+    for (int i = 0; i < 4 * 5 * 6; i++) {
+        BOOST_CHECK_EQUAL(x[i], y[i]);
+        y[i]++; // change must not change original!
+        BOOST_CHECK_NE(x[i], y[i]);
+    }
+}
+
 BOOST_AUTO_TEST_CASE( tensor_zero_copy_assignment )
 {
     tensor<float,host_memory_space> x(extents[4][5][6]);
@@ -532,5 +562,46 @@ BOOST_AUTO_TEST_CASE( pushpull_nd )
 //        }
 //    }
 //}
+
+template<class V, class M>
+void test_resize() {
+
+    // resize with default allocator
+    tensor<V, M, row_major> a(100, 100);
+    V* p0 = a.ptr();
+    a.resize(100, 100);
+    BOOST_CHECK_EQUAL(p0, a.ptr());
+    // no size change. pointer must not change
+
+    boost::shared_ptr<pooled_cuda_allocator> allocator(new pooled_cuda_allocator("test_resize"));
+    {
+        tensor<V, M, row_major> a(200, 300, allocator);
+
+        BOOST_CHECK_EQUAL(a.shape(0), 200);
+        BOOST_CHECK_EQUAL(a.shape(1), 300);
+
+        BOOST_CHECK_EQUAL(allocator->pool_count(M()), 1);
+        BOOST_CHECK_EQUAL(allocator->pool_free_count(M()), 0);
+        BOOST_CHECK_EQUAL(allocator->pool_size(M()), 200 * 300 * sizeof(V));
+
+        a.resize(100, 100);
+
+        // make sure the memory is freed before new memory is allocated
+
+        BOOST_CHECK_EQUAL(allocator->pool_count(M()), 1);
+        BOOST_CHECK_EQUAL(allocator->pool_free_count(M()), 0);
+        BOOST_CHECK_EQUAL(allocator->pool_size(M()), 200 * 300 * sizeof(V));
+
+        BOOST_CHECK_EQUAL(a.shape(0), 100);
+        BOOST_CHECK_EQUAL(a.shape(1), 100);
+    }
+
+    BOOST_CHECK_EQUAL(allocator->pool_count(M()), 1);
+    BOOST_CHECK_EQUAL(allocator->pool_free_count(M()), 1);
+}
+BOOST_AUTO_TEST_CASE( tensor_resize ) {
+    test_resize<float, host_memory_space>();
+    test_resize<float, dev_memory_space>();
+}
 
 BOOST_AUTO_TEST_SUITE_END()
