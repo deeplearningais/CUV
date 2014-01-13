@@ -5,6 +5,7 @@
 #include <boost/shared_ptr.hpp>
 #include <cuda_runtime_api.h>
 #include <limits>
+#include <numeric>
 #include <stdexcept>
 
 #include "allocators.hpp"
@@ -692,16 +693,10 @@ namespace detail {
  */
 inline bool is_c_contiguous(row_major, const linear_memory<unsigned int, cuv::host_memory_space>& shape,
         const linear_memory<int, cuv::host_memory_space>& stride) {
-    bool c_contiguous = true;
-    int size = 1;
-    for (int i = shape.size() - 1; (i >= 0) && c_contiguous; --i) {
-        if (shape[i] == 1)
-            continue;
-        if (stride[i] != size)
-            c_contiguous = false;
-        size = size * shape[i];
-    }
-    return c_contiguous;
+    int shape_size = std::accumulate(shape.ptr(), 
+            shape.ptr() + shape.size(), 1, std::multiplies<int>());
+    int mem_size = stride[0] * shape[0];
+    return shape_size == mem_size;
 }
 
 /**
@@ -709,60 +704,62 @@ inline bool is_c_contiguous(row_major, const linear_memory<unsigned int, cuv::ho
  */
 inline bool is_c_contiguous(column_major, const linear_memory<unsigned int, cuv::host_memory_space>& shape,
         const linear_memory<int, cuv::host_memory_space>& stride) {
-    bool c_contiguous = true;
-    int size = 1;
-    for (unsigned int i = 0; i < shape.size() && c_contiguous; ++i) {
-        if (shape[i] == 1)
-            continue;
-        if (stride[i] != size)
-            c_contiguous = false;
-        size = size * shape[i];
-    }
-    return c_contiguous;
+    int shape_size = std::accumulate(shape.ptr(), shape.ptr() + shape.size(), 1, 
+            std::multiplies<int>());
+    int mem_size = stride[stride.size()-1] * shape[shape.size()-1];
+    return shape_size == mem_size;
 }
 
 /// returns true iff memory can be copied using copy2d
 inline bool is_2dcopyable(row_major, const linear_memory<unsigned int, cuv::host_memory_space>& shape,
         const linear_memory<int, cuv::host_memory_space>& stride) {
-    bool c_contiguous = shape.size() > 1;
-    int pitched_dim = shape.size() - 1; // last dim
-    while (shape[pitched_dim] == 1 && stride[pitched_dim] == 1)
-        pitched_dim--;
+    bool copyable2d = shape.size()>1;
+    int pitched_dim = shape.size()-1; // last dim
+    while(shape[pitched_dim]==1 && stride[pitched_dim] == 1) // do not move past the second dimension!
+        pitched_dim --;
+
+    if (pitched_dim == 0) 
+        return true;
+
     int size = 1;
-    for (int i = shape.size() - 1; (i >= 0) && c_contiguous; --i) {
-        if (shape[i] == 1) {
+    for (int i = shape.size()-1; (i >= 0) && copyable2d; --i)
+    {
+        if(shape[i] == 1){
             continue;
-        } else if (i == pitched_dim) {
-            size *= stride[i - 1];
-        } else if (stride[i] != size) {
-            c_contiguous = false;
-        } else {
-            size *= shape[i];
+        }else if(i == pitched_dim){
+            size *= stride[i];
+        }else if(stride[i] != size) {
+            copyable2d = false;
         }
+        size *= shape[i];
     }
-    return c_contiguous;
+    return copyable2d;
 }
 
 /// @overload
 inline bool is_2dcopyable(column_major, const linear_memory<unsigned int, cuv::host_memory_space>& shape,
         const linear_memory<int, cuv::host_memory_space>& stride) {
-    bool c_contiguous = shape.size() > 1;
-    unsigned int pitched_dim = 0;
-    while (shape[pitched_dim] == 1 && stride[pitched_dim] == 1)
-        pitched_dim++;
+    bool copyable2d = shape.size()>1;
+    int pitched_dim = 0; 
+    while(shape[pitched_dim]==1 && stride[pitched_dim] == 1)
+        pitched_dim ++;
+
+    if (pitched_dim == shape.size() - 1) 
+        return true;
+
     int size = 1;
-    for (unsigned int i = 0; (i < shape.size()) && c_contiguous; ++i) {
-        if (shape[i] == 1) {
+    for (unsigned int i = 0; (i <  shape.size()) && copyable2d; ++i)
+    {
+        if(shape[i] == 1){
             continue;
-        } else if (i == pitched_dim) {
+        }else if(i == pitched_dim){
             size *= stride[i];
-        } else if (stride[i] != size) {
-            c_contiguous = false;
-        } else {
-            size *= shape[i];
+        }else if(stride[i] != size) {
+            copyable2d = false;
         }
+        size *= shape[i];
     }
-    return c_contiguous;
+    return copyable2d;
 }
 
 }

@@ -1147,13 +1147,13 @@ public:
             size_type row, col, pitch;
             detail::get_pitched_params(row, col, pitch, info().host_shape, info().host_stride, L());
             m_memory->copy2d_from(src.ptr(), pitch, col, row, col, OM(), stream);
-        } else if (!force_dst_contiguous && is_2dcopyable() && src.is_c_contiguous()) {
+        } else if (!force_dst_contiguous && is_2dcopyable() && src.is_2dcopyable()) {
             size_type srow, scol, spitch;
             size_type drow, dcol, dpitch;
             detail::get_pitched_params(drow, dcol, dpitch, info().host_shape, info().host_stride, L());
             detail::get_pitched_params(srow, scol, spitch, src.info().host_shape, src.info().host_stride, OL());
-            cuvAssert(scol==srow);
-            cuvAssert(dcol==drow);
+            cuvAssert(scol==dcol);
+            cuvAssert(srow==drow);
             m_memory->copy2d_from(src.ptr(), dpitch, spitch, srow, scol, OM(), stream);
         } else {
             throw std::runtime_error("copying of generic strides not implemented yet");
