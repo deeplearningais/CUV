@@ -1132,7 +1132,7 @@ public:
         }
 
         assert(m_memory.get());
-        assert(m_ptr == m_memory->ptr());
+        //assert(m_ptr == m_memory->ptr());
 
         // TODO: this could be probably implemented in the memory classes as well
 
