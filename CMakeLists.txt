@@ -11,7 +11,7 @@ ELSE()
     SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
 ENDIF()
 
-PROJECT(CUV Fortran CXX C)
+PROJECT(CUV CXX C)
 SET(CMAKE_MODULE_PATH  ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeModules )
 
 EXECUTE_PROCESS(COMMAND "date" "+%Y%m%d%H%M" OUTPUT_VARIABLE DATESTR)
