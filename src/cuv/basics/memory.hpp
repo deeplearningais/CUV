@@ -134,6 +134,8 @@ private:
     /// prohibit copying
     memory(const memory&);
 
+    memory(){}
+
     /// prohibit copying
     memory& operator=(const memory& o);
 

@@ -90,7 +90,7 @@ namespace boost
                     // copy to dev
                     V* tmpo = NULL;
                     cuv::default_allocator a;
-                    a.alloc(&tmpo, size, sizeof(V), M());
+                    a.alloc((void**)&tmpo, size, sizeof(V), M());
                     cuv::detail::copy(tmpo, tmp, size, M(), cuv::host_memory_space(), 0);
                     m.reset(tmpo, size);
                     delete[] tmp;
