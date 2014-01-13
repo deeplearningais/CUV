@@ -35,6 +35,7 @@
 #include <cstdio>
 #include <boost/test/included/unit_test.hpp>
 #include <float.h>
+#include <cmath>
 
 #include <cuv/tools/cuv_test.hpp>
 #include <cuv/tools/cuv_general.hpp>
@@ -233,6 +234,167 @@ BOOST_AUTO_TEST_CASE( test_conv2d )
    MEASURE_TIME(conv_dev,         convolve2d(dst,src,flt, 0, 1, nGroups), 10);
    MEASURE_TIME(d_conv_dimg_dev,  d_conv2d_dimg(src,dst,flt, 0, 1, nGroups), 10);
    MEASURE_TIME(d_conv_dfilt_dev, d_conv2d_dfilt(flt,dst,src, 0, 1, nGroups,4), 10);
+
+}
+
+BOOST_AUTO_TEST_CASE( test_conv2d_sparse )
+{
+
+    // the idea here is that if we set the connections right, the sparse
+    // operation should do exactly the same as the dense operation.
+
+    using namespace cuv::alex_conv;
+	unsigned int nImgChan = 32;      // must be divisible by nGroups
+	unsigned int nImgPix  = 16;
+	unsigned int nImg     = 16;
+    unsigned int nGroups  = 2;      // must be divisible by 2 ??
+   
+   unsigned int nFiltChan = nImgChan/nGroups;
+   unsigned int nFiltPix  = 7;
+   unsigned int nFilt     = 32; 
+
+   unsigned int nResPix   = nImgPix-nFiltPix+1;
+
+   // in sparse filters, the destination layer is grouped into equal-sized blocks
+   // of consecutive filters.
+   //
+   // each of these blocks is then connected to a random subset of nodes in the
+   // source layer.
+   //
+   // here, we choose two groups arbitrarily and require that each group is
+   // connects to all input maps, in order. The result should be equivalent to
+   // a "dense" connection of maps.
+   unsigned int nSparseGroups = nGroups;
+   unsigned int oversample = nGroups * nFiltChan / nImgChan;
+   tensor<int, dev_memory_space, row_major> indices(cuv::extents[nSparseGroups][oversample * nImgChan]);
+   for(unsigned int i=0; i < nSparseGroups; i++){
+       std::vector<unsigned int> v(nImgChan);
+       for (unsigned int k = 0; k < v.size(); ++k)
+           v[k] = k;
+       // we shouldn't shuffle in this test to get same result as dens connection
+       //std::random_shuffle(v.begin(), v.end());
+       for (unsigned int o = 0; o < oversample; ++o)
+       {
+           for (unsigned int k = 0; k < nImgChan; ++k)
+           {
+               indices(i, o*nImgChan + k) = v[k];
+           }
+       }
+   }
+
+   tensor<float,dev_memory_space,row_major> src(cuv::extents[nImgChan][nImgPix][nImgPix][nImg]);
+   tensor<float,dev_memory_space,row_major> src_sparse(cuv::extents[nImgChan][nImgPix][nImgPix][nImg]);
+
+   tensor<float,dev_memory_space,row_major> dst(cuv::extents[nFilt][nResPix][nResPix][nImg]);
+   tensor<float,dev_memory_space,row_major> dst_sparse(cuv::extents[nFilt][nResPix][nResPix][nImg]);
+
+   tensor<float,dev_memory_space,row_major> flt(cuv::extents[nFiltChan][nFiltPix*nFiltPix][nFilt]);
+   tensor<float,dev_memory_space,row_major> flt_sparse(cuv::extents[nFiltChan][nFiltPix*nFiltPix][nFilt]);
+
+   sequence(src);
+   sequence(flt);
+   //fill_rnd_uniform(src);
+   //fill_rnd_uniform(flt);
+
+   //convolve2d(tensor<float,dev_memory_space>& dst, 
+   //        const tensor<float,dev_memory_space>& img, 
+   //        const tensor<float,dev_memory_space>& filter,
+   //        unsigned int nModulesX,
+   //        unsigned int paddingStart, 
+   //        unsigned int moduleStride,
+   //        unsigned int nGroups){
+
+   if(1){
+       convolve2d(dst_sparse,src,flt,indices, 0, 1, nSparseGroups);
+       safeThreadSync();
+       convolve2d(dst,src,flt, 0, 1, nGroups);
+       safeThreadSync();
+       BOOST_CHECK_LT(norm2(dst-dst_sparse), 0.001f);
+   }
+
+    //d_conv2d_dimg( dst,  delta,  filter,
+    //        int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0, float factNew=1.f, float factOld=0.f);
+   if(1){
+       d_conv2d_dimg(src,dst,flt, 0, 1, nGroups);
+       safeThreadSync();
+       d_conv2d_dimg(src_sparse, dst, flt, indices, 0, 1, nSparseGroups);
+       safeThreadSync();
+       BOOST_CHECK_LT(norm2(src-src_sparse), 0.001f);
+   }
+
+   if(1){
+       d_conv2d_dfilt(flt,dst,src, 0, 1, nGroups, 4);
+       safeThreadSync();
+       flt_sparse = 0.f;
+       d_conv2d_dfilt(flt_sparse,dst,src, indices, 0, 1, nSparseGroups, 4);
+       safeThreadSync();
+       BOOST_CHECK_LT(norm2(flt-flt_sparse), 0.001f);
+   }
+}
+
+BOOST_AUTO_TEST_CASE( test_conv2d_fail )
+{
+    // regression test for a cuvnet problem that appears to be
+    // non-determininstic -- it only occurs if other processes are running on
+    // the same device.
+   
+    using namespace cuv::alex_conv;
+	unsigned int nImgChan = 3;      // must be divisible by nGroups
+	unsigned int nImgPix  = 16;
+	unsigned int nImg     = 4;
+    unsigned int nGroups  = 1;      // must be divisible by 2 ??
+   
+   unsigned int nFiltChan = nImgChan/nGroups;
+   unsigned int nFiltPix  = 3;
+   unsigned int nFilt     = 16; 
+
+   unsigned int nResPix   = nImgPix-nFiltPix+1;
+
+   tensor<float,dev_memory_space,row_major> inp(cuv::extents[nImg][nImgChan][nImgPix][nImgPix]);
+
+   tensor<float,dev_memory_space,row_major> src(cuv::extents[nImgChan][nImgPix][nImgPix][nImg]);
+   tensor<float,dev_memory_space,row_major> dst(cuv::extents[nFilt][nResPix][nResPix][nImg]);
+
+   tensor<float,dev_memory_space,row_major> flt(cuv::extents[nFiltChan][nFiltPix*nFiltPix][nFilt]);
+
+
+   //convolve2d(tensor<float,dev_memory_space>& dst, 
+   //        const tensor<float,dev_memory_space>& img, 
+   //        const tensor<float,dev_memory_space>& filter,
+   //        unsigned int nModulesX,
+   //        unsigned int paddingStart, 
+   //        unsigned int moduleStride,
+   //        unsigned int nGroups){
+
+   //for(unsigned int i=0; i<100; i++)
+       //fill_rnd_uniform(inp);
+   for(int i=0; i<1000; i++){
+       fill_rnd_uniform(inp);
+       fill_rnd_uniform(flt);
+       std::cout << "cuv::sum(inp):" << cuv::sum(inp) << std::endl;
+       cuv::alex_conv::reorder_for_conv(src,inp);
+       cuvAssert(!cuv::has_nan(src));
+       cuvAssert(!cuv::has_inf(src));
+       cuvAssert(!cuv::has_nan(flt));
+       cuvAssert(!cuv::has_inf(flt));
+       dst = NAN;
+       convolve2d(dst,src,flt, 0, 1, nGroups);
+       cuvAssert(!cuv::has_nan(dst));
+       cuvAssert(!cuv::has_inf(dst));
+       std::cout << "cuv::sum(dst):" << cuv::sum(dst) << std::endl;
+       src = NAN;
+       d_conv2d_dimg(src,dst,flt, 0, 1, nGroups);
+       std::cout << "cuv::sum(src):" << cuv::sum(src) << std::endl;
+       cuvAssert(!cuv::has_nan(src));
+       cuvAssert(!cuv::has_inf(src));
+       flt = NAN;
+       fill_rnd_uniform(dst);
+       fill_rnd_uniform(src);
+       d_conv2d_dfilt(flt,dst,src, 0, 1, nGroups, 0);
+       std::cout << "cuv::sum(flt):" << cuv::sum(flt) << std::endl;
+       cuvAssert(!cuv::has_nan(flt));
+       cuvAssert(!cuv::has_inf(flt));
+   }
 
 }
 
