@@ -290,6 +290,10 @@ BOOST_AUTO_TEST_CASE( tensor_resize )
     float* p0 = v.ptr();
     v.resize(s2);
     float* p1 = v.ptr();
+
+    // this copy will prevent memory of v to be deallocated
+    // and therefore it cannot be reallocated in the same spot
+	tensor<float,host_memory_space> v2 = v;
     s2[0]+=1;
     v.resize(s2);
     float* p2 = v.ptr();
