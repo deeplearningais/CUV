@@ -82,6 +82,21 @@ template<class V, class M, class T>
     convolve2d(tensor<V,M,T>& dst, const tensor<V,M,T>& img, const tensor<V,M,T>& filter, int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0, float factNew=1.f,float factOld=0.f);
 
 /**
+ * convolve a set of images with a set of filters, with arbitrary connectivity
+ *
+ * @param dst       (nFilt, nModulesY, nModulesX, nImg)
+ * @param img       (nImgChan, nImgPixY, nImgPixX, nImg)
+ * @param filter    (nFiltChan, nFiltPix, nFilt)
+ * @param indices   (nGroups, nFiltChan) 
+ *
+ */
+template<class V, class M, class T>
+    void
+    convolve2d(tensor<V,M,T>& dst, const tensor<V,M,T>& img, const tensor<V,M,T>& filter, 
+            const tensor<int,M,T>& indices,
+            int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0, float factNew=1.f,float factOld=0.f);
+
+/**
  * determine the gradient of a convolution w.r.t. the inputs
  *
  *  @param dst (nImageColors, nImgPixY, nImgPixX, nImages)
@@ -92,9 +107,22 @@ template<class V, class M, class T>
     void
     d_conv2d_dimg(tensor<V,M,T>& dst, const tensor<V,M,T>& delta, const tensor<V,M,T>& filter,
             int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0, float factNew=1.f, float factOld=0.f);
+/**
+ * determine the gradient of a convolution wrt the inputs, with arbitrary connectivity
+ *
+ *  @param dst (nImageColors, nImgPixY, nImgPixX, nImages)
+ *  @param delta (nFilt, nModulesY, nModulesX, nImg)
+ *  @param filters (nFilterColors, filterPixels, nFilters)
+ *  @param indices   (nGroups, nFiltChan) 
+ */
+template<class V, class M, class T>
+    void
+    d_conv2d_dimg(tensor<V,M,T>& dst, const tensor<V,M,T>& delta, const tensor<V,M,T>& filter,
+            const tensor<int,M,T>& indices,
+            int paddingStart=0, unsigned int moduleStride=0, unsigned int nGroups=0, float factNew=1.f, float factOld=0.f);
 
 /**
- * determine the gradient of a convolution w.r.t. the filters
+ * determine the gradient of a convolution wrt the filters
  *
  *  @param dst  (nModules/partialSum, nFilterColors, filterPixels, nFilters)
  *  @param input   (nImgColors, nImgPixY, nImgPixX, nImages), with stride given
@@ -104,6 +132,21 @@ template<class V, class M, class T>
 template<class V, class M, class T>
     void
     d_conv2d_dfilt(tensor<V,M,T>& dst, const tensor<V,M,T>& delta, const tensor<V,M,T>& input,
+            int paddingStart=0,
+            unsigned int moduleStride=0, unsigned int nGroups=0, unsigned int partialSum=1, float factNew=1.f,float factOld=0.f);
+/**
+ * determine the gradient of a convolution wrt the filters, with arbitrary connectivity
+ *
+ *  @param dst  (nModules/partialSum, nFilterColors, filterPixels, nFilters)
+ *  @param input   (nImgColors, nImgPixY, nImgPixX, nImages), with stride given
+ *  @param hidActs  (nFilters, nModulesY, nModulesX, nImages)
+ *  @param indices   (nGroups, nFiltChan) 
+ *
+ */
+template<class V, class M, class T>
+    void
+    d_conv2d_dfilt(tensor<V,M,T>& dst, const tensor<V,M,T>& delta, const tensor<V,M,T>& input,
+            const tensor<int,M,T>& indices,
             int paddingStart=0,
             unsigned int moduleStride=0, unsigned int nGroups=0, unsigned int partialSum=1, float factNew=1.f,float factOld=0.f);
 

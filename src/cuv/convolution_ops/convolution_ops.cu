@@ -38,6 +38,7 @@
  * @date 2010-03-21
  */
 
+#include <boost/scoped_ptr.hpp>
 #include <cuv/basics/tensor.hpp>
 #include <cuv/convert/convert.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
@@ -217,9 +218,9 @@ template<class V, class M, class T>
             // we can use this for output maps, which still must be divisible by four(!)
             // this is still fully connected, however we must resort to "sparse" conv
             // since the non-sparse conv only allows 
-            int* colorIndices = new int[nGroups*nFiltChan]; 
-            for(unsigned int i=0;i<nGroups*nFiltChan;i++) colorIndices[i]=i;
-            convFilterActsSparse(nv_img, nv_filter, nv_dst, colorIndices, nImgPixY, nModulesY, nModulesX, paddingStart, moduleStride, nImgChan, nFiltChan, nGroups,factOld,factNew);
+            tensor<int, M, T> colorIndices(extents[nGroups*nFiltChan]);
+            sequence(colorIndices);
+            convFilterActsSparse(nv_img, nv_filter, nv_dst, colorIndices.ptr(), nImgPixY, nModulesY, nModulesX, paddingStart, moduleStride, nImgChan, nFiltChan, nGroups,factOld,factNew);
         }{
             if(IsSame<M,dev_memory_space>::Result::value){
                 convFilterActs(nv_img, nv_filter, nv_dst, nImgPixY, nModulesY, nModulesX, paddingStart, moduleStride, nImgChan, nGroups, factOld,factNew);
@@ -235,6 +236,52 @@ template<class V, class M, class T>
             }
         }
     }
+template<class V, class M, class T>
+    void 
+    convolve2d(tensor<V,M, T>& dst, 
+            const tensor<V,M, T>& img, 
+            const tensor<V,M, T>& filter,
+            const tensor<int, M, T>& indices,
+            int paddingStart, 
+            unsigned int moduleStride,
+            unsigned int nGroups,
+            float factNew,
+            float factOld){
+        // check compatibility before converting to NVMatrix format
+        /*cuvAssert(dst.ndim()==3);*/
+        cuvAssert(img.ndim()==4);
+        unsigned int nImgChan  = img.shape(0);
+        unsigned int nImgPixY  = img.shape(1);
+        unsigned int nImgPixX  = img.shape(2);
+        unsigned int nImg      = img.shape(3);
+
+        cuvAssert(filter.ndim()==3);
+        unsigned int nFiltChan = filter.shape(0);
+        unsigned int nFiltPix  = filter.shape(1);
+        unsigned int nFilt     = filter.shape(2);
+
+        cuvAssert(dst.shape(0)==nFilt);
+        unsigned int nModulesY = dst.shape(1);
+        unsigned int nModulesX = dst.shape(2);
+        cuvAssert(dst.shape(3)==nImg);
+
+        unsigned int overSample = nGroups * nFiltChan / nImgChan;
+        cuvAssert(indices.shape(0) == nGroups);
+        /*cuvAssert(indices.shape(1) == nImgChan * nFiltChan);*/
+        cuvAssert(indices.shape(1) == overSample * nImgChan);
+
+        // make NVMatrices with this data
+        NVMatrix nv_dst    NVView4D(dst);
+        NVMatrix nv_img    NVView4D(img);
+        NVMatrix nv_filter NVView3D(filter);
+
+        if(IsSame<M,dev_memory_space>::Result::value){
+            convFilterActsSparse(nv_img, nv_filter, nv_dst, const_cast<int*>(indices.ptr()),      nImgPixY, nModulesY, nModulesX, paddingStart, moduleStride, nImgChan, nFiltChan, nGroups, factOld,factNew);
+        }else{
+            throw std::runtime_error("CPU version of convFilterActsSparse not implemented!");
+        }
+    }
+
 template<class V, class M, class L>
 	void d_conv2d_dimg(tensor<V,M,L>& dst,
 			  const tensor<V,M,L>&   delta,
@@ -273,13 +320,50 @@ template<class V, class M, class L>
             /*void cpuImgActs(float* hidActs, float* filters, float* targets,*/
                            /*int numModulesX,  int numImages,  int numFilters,*/
                            /*int filterSize,  int imgSize,  int moduleStart,*/
-                           /*int moduleStride, int numImgColors, int numGroups, bool conv) {*/
+                           /*int moduleStride, int numImgColors, int numGroups, bool conv) */
             if(factOld == 0.f)
                 dst = 0.f;
             cpuImgActs(delta.ptr(), filter.ptr(), dst.ptr(),
                     nModulesX, nImg, nFilt, 
                     sqrt(nFiltPix), nImgPixX, paddingStart,
                     moduleStride, nImgChan, nGroups,true);
+        }
+    }
+template<class V, class M, class L>
+	void d_conv2d_dimg(tensor<V,M,L>& dst,
+			  const tensor<V,M,L>&   delta,
+			  const tensor<V,M,L>&   filter,
+              const tensor<int,M,L>& indices,
+              int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld){
+
+
+        cuvAssert(delta.ndim()==4);
+        unsigned int nFilt     = delta.shape(0);
+        unsigned int nModulesY = delta.shape(1); 
+        unsigned int nModulesX = delta.shape(2); 
+        unsigned int nImg      = delta.shape(3);
+
+        cuvAssert(filter.ndim()==3);
+        unsigned int nFiltChan = filter.shape(0);
+        unsigned int nFiltPix  = filter.shape(1);
+        /*unsigned int nFilt     = filter.shape(2);*/
+        cuvAssert(filter.shape(2) == nFilt);
+
+        cuvAssert(dst.ndim()==4);
+        unsigned int nImgChan  = dst.shape(0);
+        unsigned int nImgPixY  = dst.shape(1);
+        unsigned int nImgPixX  = dst.shape(2);
+        cuvAssert(dst.shape(3) == nImg);
+
+        if(IsSame<M,dev_memory_space>::Result::value){
+            NVMatrix nv_dst    NVView4D(dst);
+            NVMatrix nv_delta  NVView4D(delta);
+            NVMatrix nv_filter NVView3D(filter);
+
+            /*void convImgActsSparse(NVMatrix& hidActs, NVMatrix& filters, NVMatrix& targets, int* dColorIndices,*/
+            /*        int imgSizeY, int imgSizeX, int numModulesY, int paddingStart, int moduleStride, int numImgColors, int numFilterColors, int numGroups)*/
+            convImgActsSparse(nv_delta, nv_filter, nv_dst, const_cast<int*>(indices.ptr()),
+                          nImgPixY,     nImgPixX,       nModulesY,     paddingStart,     moduleStride,         nImgChan, nFiltChan, nGroups, factOld, factNew);
         }
     }
 template<class V, class M, class L>
@@ -322,7 +406,7 @@ template<class V, class M, class L>
         /*void convWeightActs(NVMatrix& images, NVMatrix& hidActs, NVMatrix& targets,*/
         /*                    int numModulesX, int filterSize, int paddingStart,*/
         /*                    int moduleStride, int numImgColors, int numGroups, int partialSum);*/
-        NVMatrix nv_dst   NVView3D(dst);
+        NVMatrix nv_dst   NVView3D((partialSum > 0 ? dst : dst_));
         NVMatrix nv_delta NVView4D(delta);
         NVMatrix nv_input NVView4D(input);
         convWeightActs(nv_input, nv_delta, nv_dst,
@@ -330,10 +414,78 @@ template<class V, class M, class L>
                 nModulesX, filtSize, paddingStart,
                 moduleStride, nImgChan, nGroups, partialSum);
 
-        dst.reshape(extents[(nModulesX*nModulesY)/partialSum][nFiltChan*nFiltPix*nFilt]);
-        dst_.reshape(extents[nFiltChan*nFiltPix*nFilt]);
-        cuv::reduce_to_row(dst_,dst, cuv::RF_ADD, factNew, factOld);
-        dst_.reshape(extents[nFiltChan][nFiltPix][nFilt]);
+        if(partialSum > 0){
+            dst.reshape(extents[(nModulesX*nModulesY)/partialSum][nFiltChan*nFiltPix*nFilt]);
+            dst_.reshape(extents[nFiltChan*nFiltPix*nFilt]);
+            cuv::reduce_to_row(dst_,dst, cuv::RF_ADD, factNew, factOld);
+            dst_.reshape(extents[nFiltChan][nFiltPix][nFilt]);
+        }
+    }
+
+template<class V, class M, class L>
+	void d_conv2d_dfilt(tensor<V,M,L>& dst_,
+			  const tensor<V,M,L>&   delta,
+			  const tensor<V,M,L>&   input,
+              const tensor<int,M,L>& indices,
+              int paddingStart,
+            unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld){
+        if(IsSame<M,host_memory_space>::Result::value){
+            std::cout << "warning: host version of d_conv2d_dfilt not implemented"<<std::endl;
+            return;
+        }
+
+        cuvAssert(dst_.ndim()==3);
+        unsigned int nFiltChan = dst_.shape(0);
+        unsigned int nFiltPix  = dst_.shape(1);
+        unsigned int nFilt     = dst_.shape(2);
+
+
+
+        unsigned int filtSize = sqrt(nFiltPix);
+        cuvAssert ( nFiltPix == filtSize*filtSize );
+
+
+        cuvAssert(delta.ndim()==4);
+        cuvAssert(delta.shape(0) == nFilt);
+        unsigned int nModulesY = delta.shape(1);
+        unsigned int nModulesX = delta.shape(2);
+        unsigned int nImg      = delta.shape(3);
+
+        boost::scoped_ptr<cuv::tensor<float, M> > dst;
+        if(partialSum > 0){
+            assert((nModulesX * nModulesY) % partialSum == 0);
+            dst.reset(new cuv::tensor<float,M> (extents[(nModulesX*nModulesY)/partialSum][nFiltChan*nFiltPix][nFilt])); // make 3D for NVView3D
+
+            // it seems the current implementation of convWeightActsSparse cannot overwrite memory (?)
+            *dst = 0.f;
+        }else if(factOld == 0.f){
+            dst_ = 0.f;
+        }
+
+        cuvAssert(input.ndim()==4);
+        unsigned int nImgChan = input.shape(0);
+        unsigned int nImgPixY = input.shape(1);
+        unsigned int nImgPixX = input.shape(2);
+        cuvAssert(input.shape(3) == nImg);
+
+        NVMatrix nv_dst   NVView3D((partialSum > 0 ? *dst : dst_));
+        NVMatrix nv_delta NVView4D(delta);
+        NVMatrix nv_input NVView4D(input);
+/*void convWeightActsSparse(NVMatrix& images, NVMatrix& hidActs, NVMatrix& targets, int* dColorIndices,*/
+/*                        int imgSizeY, int numModulesY, int numModulesX, int filterSize, int paddingStart, int moduleStride, int numImgColors, int numFilterColors,*/
+/*                        int numGroups, int partialSum, float scaleTargets, float scaleOutput) {*/
+        convWeightActsSparse(       nv_input,          nv_delta,            nv_dst, const_cast<int*>(indices.ptr()),
+                              nImgPixY,       nModulesY,       nModulesX,       filtSize,     paddingStart,     moduleStride,         nImgChan, nFiltChan,
+                              nGroups,       partialSum, 
+                              partialSum > 0 ? 0 : factOld,   // if partialSum is >0, just overwrite dst and
+                              partialSum > 0 ? 1 : factNew);  // care about factNew/factOld below
+
+        if(partialSum > 0){
+            dst->reshape(extents[(nModulesX*nModulesY)/partialSum][nFiltChan*nFiltPix*nFilt]);
+            dst_.reshape(extents[nFiltChan*nFiltPix*nFilt]);
+            cuv::reduce_to_row(dst_,*dst, cuv::RF_ADD, factNew, factOld);
+            dst_.reshape(extents[nFiltChan][nFiltPix][nFilt]);
+        }
     }
 
 
@@ -1400,7 +1552,10 @@ template void bed_of_nails_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, int, int, fl
 template void gaussian_blur<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, bool, float, float); \
 template void convolve2d(TENS(V,M,T)& dst,CTENS(V,M,T)& img,CTENS(V,M,T)& filter, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew, float factOld); \
 template void d_conv2d_dfilt(TENS(V,M,T)& dst_, CTENS(V,M,T)& delta, CTENS(V,M,T)&   input, int paddingStart, unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld);\
-template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld);
+template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld); \
+template void convolve2d(TENS(V,M,T)& dst,CTENS(V,M,T)& img,CTENS(V,M,T)& filter, CTENS(int,M,T)&, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew, float factOld); \
+template void d_conv2d_dfilt(TENS(V,M,T)& dst_, CTENS(V,M,T)& delta, CTENS(V,M,T)&   input, CTENS(int,M,T)&, int paddingStart, unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld);\
+template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, CTENS(int,M,T)&, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld);
 INST(float,host_memory_space,row_major);
 INST(float,dev_memory_space,row_major);
 }}
