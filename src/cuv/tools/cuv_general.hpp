@@ -49,6 +49,8 @@
 #  define cuvSafeCall(X) X; cuv::checkCudaError(#X); 
 #endif
 
+#define unlikely(x)     __builtin_expect((x),0)
+
 /**
  * @def cuvAssert
  * @ingroup tools
@@ -58,7 +60,7 @@
  * Additionally, when using Linux, you get a full stack trace printed
  */
 #define cuvAssert(X)  \
-  if(!(X)){ cuv::cuvAssertFailed(#X); } 
+  if(unlikely(!(X))){ cuv::cuvAssertFailed(#X); } 
 
 /**
  * @def DBG
