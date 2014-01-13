@@ -134,8 +134,6 @@ private:
     /// prohibit copying
     memory(const memory&);
 
-    memory(){}
-
     /// prohibit copying
     memory& operator=(const memory& o);
 
@@ -182,6 +180,11 @@ public:
     /// default constructor (just sets ptr to NULL)
     explicit memory(const boost::shared_ptr<allocator>& _allocator) :
             m_ptr(NULL), m_size(0), m_allocator(_allocator), m_owned(true) {
+    }
+
+    /// default constructor (just sets ptr to NULL)
+    explicit memory():
+            m_ptr(NULL), m_size(0), m_allocator(new default_allocator()), m_owned(true) {
     }
 
     /// construct with pointer (takes /ownership/ of this pointer and deletes it when destroyed!)
