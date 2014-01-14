@@ -749,11 +749,11 @@ inline bool is_2dcopyable(column_major, const linear_memory<unsigned int, cuv::h
     while(shape[pitched_dim]==1 && stride[pitched_dim] == 1)
         pitched_dim ++;
 
-    if (pitched_dim == shape.size() - 1) 
+    if (pitched_dim == (int)shape.size() - 1) 
         return true;
 
     int size = 1;
-    for (unsigned int i = 0; (i <  shape.size()) && copyable2d; ++i)
+    for (int i = 0; (i <  (int)shape.size()) && copyable2d; ++i)
     {
         if(shape[i] == 1){
             continue;
