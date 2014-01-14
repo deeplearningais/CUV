@@ -10,6 +10,42 @@
 #include <cuv/basics/allocators.hpp>
 #include <cuv/basics/reference.hpp>
 
+
+template <int NWorkers = 0>
+class work_queue
+{
+public:
+   work_queue()
+   {
+      work_ctrl_ = new boost::asio::io_service::work(io_service_);
+      int workers = boost::thread::hardware_concurrency();
+      if(NWorkers > 0)
+         workers = NWorkers;
+      for (std::size_t i = 0; i < workers; ++i) {
+         threads_.create_thread(boost::bind(&boost::asio::io_service::run, &io_service_));
+      }
+   }
+
+   virtual ~work_queue() {
+      delete work_ctrl_;
+
+      threads_.join_all();
+      io_service_.stop();
+   }
+
+   template <typename TTask>
+   void post(const TTask& task) {
+      // c++11
+      // io_service_.dispatch(std::move(task));
+      io_service_.dispatch(task);
+   }
+
+private:
+   boost::asio::io_service io_service_;
+   boost::thread_group threads_;
+   boost::asio::io_service::work *work_ctrl_;
+};
+
 using namespace cuv;
 
 BOOST_AUTO_TEST_SUITE(allocators_test)
@@ -80,7 +116,7 @@ struct pool_alloc_tester{
     size_t ALLOC_SIZE;
     pool_alloc_tester(pooled_cuda_allocator& alloc, boost::mutex& mutex, size_t alloc_size)
         :allocator(&alloc),boost_mutex(&mutex), ALLOC_SIZE(alloc_size){}
-    void operator()(void** _ptr, int i)const{
+    void operator()(void** _ptr, int i, unsigned char* done)const{
         void*& ptr = *_ptr;
         size_t pool_size = allocator->pool_size(M());
         void* ptr1 = NULL;
@@ -110,6 +146,7 @@ struct pool_alloc_tester{
             BOOST_REQUIRE_GE(allocator->pool_size(M()), pool_size);
             BOOST_REQUIRE_GE(allocator->pool_free_count(M()), 0lu);
         }
+        *done = true;
     }
 };
 
@@ -124,24 +161,20 @@ static void test_pooled_allocator_multi_threaded() {
     boost::mutex boost_mutex;
 
     std::vector<void*> pointers(1000, NULL);
+    std::vector<unsigned char> done(1000, 0u);
     pool_alloc_tester<memory_space> tester(allocator, boost_mutex, ALLOC_SIZE);
 
-    boost::asio::io_service io_service;
-    boost::thread_group threadpool;
-    
     //tbb::parallel_for_each(pointers.begin(), pointers.end(), tester);
-    for (size_t i = 0; i < 5; i++) {
-        threadpool.create_thread( boost::bind(&boost::asio::io_service::run, &io_service));
+    {   work_queue<> q;
+        for (size_t i = 0; i < pointers.size(); i++) {
+            q.post(boost::bind(&pool_alloc_tester<memory_space>::operator(),
+                        &tester, &pointers[i], i, &done[i]));
+        }
     }
-    //boost::asio::io_service::work work(boost::ref(io_service));
-    for (size_t i = 0; i < pointers.size(); i++) {
-        io_service.post(boost::bind(&pool_alloc_tester<memory_space>::operator(), &tester, &pointers[i], i));
-    }
-    io_service.run();
-    io_service.reset();
 
     for (size_t i = 0; i < pointers.size(); i++) {
-        std::cout << "i:" << i << " pointers[i]:" << pointers[i] << std::endl;
+        BOOST_REQUIRE(done[i]);
+        //std::cout << "i:" << i << " pointers[i]:" << pointers[i] << std::endl;
         BOOST_REQUIRE(pointers[i] != NULL);
     }
 
@@ -151,14 +184,13 @@ static void test_pooled_allocator_multi_threaded() {
     size_t count = allocator.pool_count(m);
     BOOST_CHECK_GE(count, pointers.size());
 
-    pool_destroy_tester<memory_space> tester2(allocator, boost_mutex, ALLOC_SIZE);
-    //tbb::parallel_for_each(pointers.begin(), pointers.end(), tester2);
-    for (size_t i = 0; i < pointers.size(); i++) {
-        io_service.post(boost::bind( &pool_destroy_tester<memory_space>::operator(), &tester2, &pointers[i]));
+    {   work_queue<> q;
+        pool_destroy_tester<memory_space> tester2(allocator, boost_mutex, ALLOC_SIZE);
+        //tbb::parallel_for_each(pointers.begin(), pointers.end(), tester2);
+        for (size_t i = 0; i < pointers.size(); i++) {
+            q.post(boost::bind( &pool_destroy_tester<memory_space>::operator(), &tester2, &pointers[i]));
+        }
     }
-    io_service.run();
-    io_service.stop();
-    threadpool.join_all();
 
     BOOST_CHECK_EQUAL(allocator.pool_free_count(), allocator.pool_count());
 }
