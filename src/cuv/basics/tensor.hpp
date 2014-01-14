@@ -1000,7 +1000,7 @@ public:
             }
         }
 
-        // adds missing shapes 
+        // adds missing shapes
         for(int i = D; i < o.ndim();i++){
             shapes.push_back(o.shape(i));
             strides.push_back(o.stride(i));
@@ -1124,7 +1124,11 @@ public:
         m_info.host_shape.set_size(0);
     }
 
-    /// tries to copy memory, succeeds if shapes match AND both ndarrays are c_contiguous or 2d-copyable.
+    /** Tries to copy memory w/o reallocation.
+     *
+     * Succeeds if shapes match AND both ndarrays are c_contiguous or
+     * 2d-copyable.
+     */
     template<class OM, class OL>
     bool copy_memory(const tensor<V, OM, OL>& src, bool force_dst_contiguous, cudaStream_t stream) {
         if (effective_shape() != src.effective_shape() || !ptr()) {
@@ -1138,15 +1142,19 @@ public:
 
         if (is_c_contiguous() && src.is_c_contiguous()) {
             // can copy w/o bothering about m_memory
-            m_memory->copy_from(src.ptr(), src.size(), OM(), stream);
+            //m_memory->copy_from(src.ptr(), src.size(), OM(), stream);
+            detail::copy(m_ptr, src.ptr(), src.size(), memory_space_type(), OM(), stream);
         } else if (is_c_contiguous() && src.is_2dcopyable()) {
             size_type row, col, pitch;
             detail::get_pitched_params(row, col, pitch, src.info().host_shape, src.info().host_stride, OL());
-            m_memory->copy2d_from(src.ptr(), col, pitch, row, col, OM(), stream);
+            //m_memory->copy2d_from(src.ptr(), col, pitch, row, col, OM(), stream);
+            detail::copy2d(m_ptr, src.ptr(), col, pitch,
+                    row, col, memory_space_type(), OM(), stream);
         } else if (!force_dst_contiguous && is_2dcopyable() && src.is_c_contiguous()) {
             size_type row, col, pitch;
             detail::get_pitched_params(row, col, pitch, info().host_shape, info().host_stride, L());
-            m_memory->copy2d_from(src.ptr(), pitch, col, row, col, OM(), stream);
+            //m_memory->copy2d_from(src.ptr(), pitch, col, row, col, OM(), stream);
+            detail::copy2d(m_ptr, src.ptr(), pitch, col, row, col, memory_space_type(), OM(), stream);
         } else if (!force_dst_contiguous && is_2dcopyable() && src.is_2dcopyable()) {
             size_type srow, scol, spitch;
             size_type drow, dcol, dpitch;
@@ -1154,7 +1162,8 @@ public:
             detail::get_pitched_params(srow, scol, spitch, src.info().host_shape, src.info().host_stride, OL());
             cuvAssert(scol==dcol);
             cuvAssert(srow==drow);
-            m_memory->copy2d_from(src.ptr(), dpitch, spitch, srow, scol, OM(), stream);
+            //m_memory->copy2d_from(src.ptr(), dpitch, spitch, srow, scol, OM(), stream);
+            detail::copy2d(m_ptr, src.ptr(), dpitch, spitch, srow, scol, memory_space_type(), OM(), stream);
         } else {
             throw std::runtime_error("copying of generic strides not implemented yet");
         }
@@ -1166,7 +1175,12 @@ public:
         return true;
     }
 
-    /// copies between different memory spaces
+    /**
+     * Copies between different memory spaces, without pitching destination.
+     *
+     * Reallocates the destination if its shape does not match.
+     *
+     */
     template<class OM, class OL>
     void copy_memory(const tensor<V, OM, OL>& src, linear_memory_tag, cudaStream_t stream) {
         if (copy_memory(src, true, stream)) // destination must be contiguous
@@ -1191,13 +1205,18 @@ public:
             throw std::runtime_error("copying arbitrarily strided memory not implemented");
         }
         mem().reset(new memory<V, M>(d.release(), d.size(), m_allocator));
+        m_ptr = mem()->ptr();
         if (!IsSame<L, OL>::Result::value) {
             info().host_stride.reverse();
             info().host_shape.reverse();
         }
     }
 
-    /// copies between different memory spaces
+    /**
+     * Copies between different memory spaces, with pitched destination.
+     *
+     * Reallocates the destination if its shape does not match.
+     */
     template<class OM, class OL>
     void copy_memory(const tensor<V, OM, OL>& src, pitched_memory_tag, cudaStream_t stream) {
         assert(src.ndim()>=2);
@@ -1219,6 +1238,7 @@ public:
         }
         mem().reset(new memory<V, M>(d.release(), d.size(), m_allocator));
 
+        m_ptr = mem()->ptr();
         if (!IsSame<L, OL>::Result::value) {
             info().host_stride.reverse();
             info().host_shape.reverse();
@@ -1395,7 +1415,7 @@ public:
                 strides.push_back(o.stride(i) * stride);
             }
         }
-        // adds missing shapes 
+        // adds missing shapes
         for(int i = D; i < o.ndim();i++){
             shapes.push_back(o.shape(i));
             strides.push_back(o.stride(i));
@@ -1444,7 +1464,7 @@ public:
                 strides.push_back(o.stride(i) * stride);
             }
         }
-        // adds missing shapes 
+        // adds missing shapes
         for(int i = D; i < o.ndim();i++){
             shapes.push_back(o.shape(i));
             strides.push_back(o.stride(i));
