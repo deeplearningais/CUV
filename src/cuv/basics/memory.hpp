@@ -381,7 +381,8 @@ public:
             const linear_memory<size_type, cuv::host_memory_space>& shape, row_major) {
         size_t size = 1;
         for (int i = shape.size() - 1; i >= 0; --i) {
-            strides[i] = (shape[i] == 1) ? 0 : size;
+            //strides[i] = (shape[i] == 1) ? 0 : size;
+            strides[i] = size;
             size *= shape[i];
         }
         this->check_size_limit(size);
@@ -392,7 +393,8 @@ public:
             const linear_memory<size_type, cuv::host_memory_space>& shape, column_major) {
         size_t size = 1;
         for (size_t i = 0; i < shape.size(); ++i) {
-            strides[i] = (shape[i] == 1) ? 0 : size;
+            //strides[i] = (shape[i] == 1) ? 0 : size;
+            strides[i] = size;
             size *= shape[i];
         }
         this->check_size_limit(size);
@@ -732,11 +734,12 @@ inline bool is_2dcopyable(row_major, const linear_memory<unsigned int, cuv::host
         if(shape[i] == 1){
             continue;
         }else if(i == pitched_dim){
-            size *= stride[i];
+            size *= stride[i-1];
         }else if(stride[i] != size) {
             copyable2d = false;
+        }else{
+            size *= shape[i];
         }
-        size *= shape[i];
     }
     return copyable2d;
 }
@@ -758,11 +761,12 @@ inline bool is_2dcopyable(column_major, const linear_memory<unsigned int, cuv::h
         if(shape[i] == 1){
             continue;
         }else if(i == pitched_dim){
-            size *= stride[i];
+            size *= stride[i + 1];
         }else if(stride[i] != size) {
             copyable2d = false;
+        }else{
+            size *= shape[i];
         }
-        size *= shape[i];
     }
     return copyable2d;
 }
