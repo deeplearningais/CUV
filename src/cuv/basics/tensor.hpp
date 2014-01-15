@@ -1273,7 +1273,7 @@ public:
      * /always/ try to copy memory
      */
     tensor_view& assign(const tensor<V, M, L>& o, cudaStream_t stream = 0) {
-        if (!copy_memory(o, false, stream))
+        if (!this->copy_memory(o, false, stream))
             throw std::runtime_error("copying tensor to tensor_view did not succeed. Maybe a shape mismatch?");
         return *this;
     }
@@ -1282,7 +1282,7 @@ public:
      * /always/ try to copy memory
      */
     tensor_view& assign(const tensor_view<V, M, L>& o, cudaStream_t stream = 0) {
-        if (!copy_memory(o, false, stream))
+        if (!this->copy_memory(o, false, stream))
             throw std::runtime_error("copying tensor to tensor_view did not succeed. Maybe a shape mismatch?");
         return *this;
     }
@@ -1294,7 +1294,7 @@ public:
      */
     template<class OM>
     tensor_view& assign(const tensor<V, OM, L>& o, cudaStream_t stream = 0) {
-        if (!copy_memory(o, false, stream))
+        if (!this->copy_memory(o, false, stream))
             throw std::runtime_error("copying tensor to tensor_view did not succeed. Maybe a shape mismatch?");
         return *this;
     }
@@ -1306,7 +1306,7 @@ public:
      */
     template<class OM>
     tensor_view& assign(const tensor_view<V, OM, L>& o, cudaStream_t stream = 0) {
-        if (!copy_memory(o, false, stream))
+        if (!this->copy_memory(o, false, stream))
             throw std::runtime_error("copying tensor to tensor_view did not succeed. Maybe a shape mismatch?");
         return *this;
     }
