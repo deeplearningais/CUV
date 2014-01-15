@@ -15,6 +15,15 @@ template <int NWorkers = 0>
 class work_queue
 {
 public:
+    struct task_t{
+        boost::shared_ptr<boost::shared_lock<boost::shared_mutex> > m_lock;
+        boost::function<void()> m_task;
+        task_t(const boost::function<void()>& task, boost::shared_mutex& m) 
+            : m_lock(new boost::shared_lock<boost::shared_mutex>(m)), m_task(task){}
+        void operator()(){
+            m_task();
+        }
+    };
    work_queue()
    {
       work_ctrl_ = new boost::asio::io_service::work(io_service_);
@@ -24,6 +33,22 @@ public:
       for (std::size_t i = 0; i < workers; ++i) {
          threads_.create_thread(boost::bind(&boost::asio::io_service::run, &io_service_));
       }
+   }
+
+   /**
+    * @warning that this will block the concurrent addition of new tasks.
+    * In this case, you will have a deadlock: the new task won't get its shared
+    * lock, and this function won't get its unique lock. 
+    * It would probably be wiser to have something here that tries to get a
+    * lock for /some/ time, then instead sleeps for a few milliseconds,
+    * enabling other tasks to get into the queue.
+    * On the other hand, this would still waste the time when everyone is
+    * waiting. So currently the use case is the simple one: Put all tasks in
+    * the queue, and /then/ call block_until_tasks_done. Don't generate tasks
+    * asynchronously.
+    */
+   void block_until_tasks_done(){
+       boost::unique_lock<boost::shared_mutex> foo(access_);
    }
 
    virtual ~work_queue() {
@@ -37,10 +62,11 @@ public:
    void post(const TTask& task) {
       // c++11
       // io_service_.dispatch(std::move(task));
-      io_service_.dispatch(task);
+      io_service_.dispatch(task_t(task, access_));
    }
 
 private:
+   boost::shared_mutex access_;
    boost::asio::io_service io_service_;
    boost::thread_group threads_;
    boost::asio::io_service::work *work_ctrl_;
@@ -146,6 +172,7 @@ struct pool_alloc_tester{
             BOOST_REQUIRE_GE(allocator->pool_size(M()), pool_size);
             BOOST_REQUIRE_GE(allocator->pool_free_count(M()), 0lu);
         }
+        std::cout << "i:" << i << " ptr:" << ptr << std::endl;
         *done = true;
     }
 };
@@ -165,30 +192,29 @@ static void test_pooled_allocator_multi_threaded() {
     pool_alloc_tester<memory_space> tester(allocator, boost_mutex, ALLOC_SIZE);
 
     //tbb::parallel_for_each(pointers.begin(), pointers.end(), tester);
-    {   work_queue<> q;
+    {   work_queue<> Q;
         for (size_t i = 0; i < pointers.size(); i++) {
-            q.post(boost::bind(&pool_alloc_tester<memory_space>::operator(),
+            Q.post(boost::bind(&pool_alloc_tester<memory_space>::operator(),
                         &tester, &pointers[i], i, &done[i]));
         }
-    }
+        Q.block_until_tasks_done();
 
-    for (size_t i = 0; i < pointers.size(); i++) {
-        BOOST_REQUIRE(done[i]);
-        //std::cout << "i:" << i << " pointers[i]:" << pointers[i] << std::endl;
-        BOOST_REQUIRE(pointers[i] != NULL);
-    }
+        for (size_t i = 0; i < pointers.size(); i++) {
+            BOOST_REQUIRE(done[i]);
+            //std::cout << "i:" << i << " pointers[i]:" << pointers[i] << std::endl;
+            BOOST_REQUIRE(pointers[i] != NULL);
+        }
 
-    BOOST_CHECK_GE(allocator.pool_size(m), pointers.size() * ALLOC_SIZE);
-    BOOST_CHECK_LE(allocator.pool_count(m), 10 * pointers.size());
+        BOOST_CHECK_GE(allocator.pool_size(m), pointers.size() * ALLOC_SIZE);
+        BOOST_CHECK_LE(allocator.pool_count(m), 10 * pointers.size());
 
-    size_t count = allocator.pool_count(m);
-    BOOST_CHECK_GE(count, pointers.size());
+        size_t count = allocator.pool_count(m);
+        BOOST_CHECK_GE(count, pointers.size());
 
-    {   work_queue<> q;
         pool_destroy_tester<memory_space> tester2(allocator, boost_mutex, ALLOC_SIZE);
         //tbb::parallel_for_each(pointers.begin(), pointers.end(), tester2);
         for (size_t i = 0; i < pointers.size(); i++) {
-            q.post(boost::bind( &pool_destroy_tester<memory_space>::operator(), &tester2, &pointers[i]));
+            Q.post(boost::bind( &pool_destroy_tester<memory_space>::operator(), &tester2, &pointers[i]));
         }
     }
 
