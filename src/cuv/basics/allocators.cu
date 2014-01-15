@@ -10,6 +10,10 @@
 
 #include <cuv/tools/cuv_general.hpp>
 
+/*#include <iostream>*/
+/*#undef CUV_LOG_DEBUG*/
+/*#define CUV_LOG_DEBUG(X) std::cout << X << std::endl;*/
+
 namespace cuv {
 
 void default_allocator::alloc(void** ptr, size_t memsize, size_t valueSize, host_memory_space) {
