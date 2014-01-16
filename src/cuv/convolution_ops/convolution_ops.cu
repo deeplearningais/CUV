@@ -1613,7 +1613,7 @@ void weighted_sub_tensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* 
                 end = item + diff;
                 wInd = 0;
                 
-                for (unsigned int index = item; index < end; index+=dst_cols, wInd++){            
+                for (unsigned int index = item; index < end; index += dst_cols, wInd++){            
                     T s = src_ptr[index];
                     switch(to){
                         case TO_LOGWADDEXP:
@@ -1641,8 +1641,8 @@ void weighted_sub_tensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* 
                             break;
                         }
             }
-           __syncthreads();
-            switch(to){
+            __syncthreads();
+       switch(to){
           case TO_WMAX:
           case TO_WMAX_LOGSPACE:
               dst0[item] = squared_sum;
@@ -1664,72 +1664,89 @@ template<weighted_sub_tensor_op_functor to, class T>
     void weighted_sub_tensor_op_host(T* dst, unsigned char* dst_max_idx, const T* src, const T* m_W,
                     unsigned int lines, unsigned int items, unsigned int src_size,
                     unsigned int stride, unsigned int subspace_size, float eps){
+                    
+            unsigned char * dst_max_idx0;
+            unsigned int diff;
+                    
             for(unsigned int line = 0; line < lines; line++){
-                T* dst_ptr = dst    + line * items;
-                unsigned char* dst_max_idx_ptr;
-                
-                switch(to){
-                    case TO_WMAX:
-                    case TO_WMAX_LOGSPACE:
-                        dst_max_idx_ptr = dst_max_idx  + line * items;
-                        break;
-                }
-                const T* src_ptr = src + (stride * line) * items;
-                const T* m_W_ptr = m_W + subspace_size * line;
+                    T* dst0 = dst  + line * items;
 
-                bf_logaddexp<float> lae;
-                for(unsigned int i=0; i < items; i++){
-                    float squared_sum = 0.f;
-                    unsigned char max_idx;
+
+                    unsigned int shift = stride * line;
+                    unsigned int last_idx = shift + subspace_size;
+     
+                    //check boundaries
+
+                    const T* m_W_ptr = m_W + line * subspace_size;       
+                    if (last_idx > src_size){
+                        diff = (subspace_size - (last_idx - src_size))* items;
+                    } else {
+                        diff = subspace_size * items;
+                    }
+
+                    switch(to){
+                        case TO_WMAX:
+                        case TO_WMAX_LOGSPACE:
+                            dst_max_idx0 = dst_max_idx   + line * items;
+                            break;
+                    }
+
+                    const T* src_ptr = src + shift * items; 
+
+                    T squared_sum;
                     T temp;
-
-                    unsigned int wInd = 0;
-                    for (unsigned int index = i; index < (i + subspace_size * items); index += items, wInd++){
-                        if (index >= src_size) break;
-                        T s = src_ptr[index];
-                        T w = m_W_ptr[wInd];
-                        switch(to){
-                            case TO_LOGWADDEXP:
-                            squared_sum = lae(squared_sum, w * s);
-                            break;
-                            case TO_LOGWADDEXP_LOGSPACE:
-                            squared_sum = lae(squared_sum, w + s);
-                            break;
-                            case TO_WADD:
-                                squared_sum += w * s;
-                                break;
-                            case TO_WMAX:
-                                        temp = w * s;
-                                        if (temp > squared_sum){
-                                squared_sum = temp;
-                                max_idx = wInd;
-                                        }
+                    unsigned int end ;
+                    unsigned int wInd ;
+                    unsigned char max_idx;
+                    bf_logaddexp<float> lae;
+                    for(unsigned int item = 0; item < items; item ++){
+                            squared_sum = 0.f;
+                            end = item + diff;
+                            wInd = 0;
+                            
+                            for (unsigned int index = item; index < end; index += items, wInd++){            
+                                T s = src_ptr[index];
+                                switch(to){
+                                    case TO_LOGWADDEXP:
+                                        squared_sum = lae(squared_sum, m_W_ptr[wInd]*s);
                                         break;
-                            case TO_WMAX_LOGSPACE:
-                                        temp = w + s;
+                                    case TO_LOGWADDEXP_LOGSPACE:
+                                        squared_sum = lae(squared_sum, m_W_ptr[wInd] + s); 
+                                        break;
+                                    case TO_WADD:
+                                        squared_sum +=  m_W_ptr[wInd] * s;
+                                        break;
+                                    case TO_WMAX:
+                                        temp =  m_W_ptr[wInd] * s;
                                         if (temp > squared_sum){
                                             squared_sum = temp;
                                             max_idx = wInd;
+                                            }
+                                        break;
+                                    case TO_WMAX_LOGSPACE:
+                                        temp =  m_W_ptr[wInd] + s;
+                                        if (temp > squared_sum){
+                                                squared_sum = temp;
+                                                max_idx = wInd;
                                         }
                                         break;
-                            }
-                            }
-
-                                switch(to){
-                        case TO_WMAX:
-                        case TO_WMAX_LOGSPACE:
-                            dst_ptr[i] = squared_sum;
-                            dst_max_idx_ptr[i] = max_idx;
-                            break;
-                        case TO_LOGWADDEXP:
-                        case TO_LOGWADDEXP_LOGSPACE:
-                            dst_ptr[i] = squared_sum + eps;
-                            break;
-                        case TO_WADD:
-                            dst_ptr[i] = squared_sum;
-                            break;
-                                }
-                            }
+                                    }
+                        }
+                switch(to){
+                    case TO_WMAX:
+                    case TO_WMAX_LOGSPACE:
+                        dst0[item] = squared_sum;
+                        dst_max_idx0[item] = max_idx;
+                        break;
+                    case TO_LOGWADDEXP:
+                    case TO_LOGWADDEXP_LOGSPACE:
+                        dst0[item] = squared_sum + eps;
+                        break;
+                    case TO_WADD:
+                        dst0[item] = squared_sum;
+                        break;
+                        }
+                    }
             }
 }
 
@@ -1739,7 +1756,7 @@ template<class V,class M, class T>
         unsigned int itemx = dst.shape(1);
         unsigned int itemy = dst.shape(2);
         unsigned int lines = dst.shape(0);
-	unsigned int items = itemx*itemy;
+	unsigned int items = src.size() / src.shape(0);
 
         cuvAssert(subspace_size <= 256);
         cuvAssert(dst.shape(0)==size);
@@ -2163,7 +2180,7 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
 template<bool spn, weighted_sub_tensor_op_functor to, class T>
 void weighted_sub_tensor_op_grad_host(T* dst, T* w_delta, const T* src, const T* delta, const T* m_W, const T* r0, const T* S, const unsigned char* max_idx, const bool d_dx, const bool d_dw,
                      unsigned int lines, unsigned int dst_colsx, unsigned int dst_colsy, unsigned int src_size, unsigned int size, unsigned int stride, unsigned int subspace_size, float eps){
-    if(spn){
+   /* if(spn){
         unsigned int items = dst_colsx * dst_colsy;
         for(unsigned int line = 0; line < lines; line++){
             const T* d_ptr           = delta     + line * items;
@@ -2339,7 +2356,217 @@ void weighted_sub_tensor_op_grad_host(T* dst, T* w_delta, const T* src, const T*
             }
         }
     }
+*/
+       if(spn){
+        unsigned int dst_cols = dst_colsx *dst_colsy;
+        unsigned int diff;     
+ 
+        for ( unsigned int line = 0; line < lines; line ++){
+            unsigned int shift = stride * line;
+
+            const T* m_W_ptr = m_W + line * subspace_size;
+    
+            unsigned int shift_t_d = shift * dst_cols;
+            unsigned int line_t_sub = line * subspace_size;
+            unsigned int line_t_d = line * dst_cols;
+            unsigned int last_idx = shift + subspace_size;
+            //check boundaries
+            if (last_idx > src_size){
+                diff = (subspace_size - (last_idx - src_size))* dst_cols;
+            } else {
+                diff = subspace_size * dst_cols;
+            }
+
+            const T* src_ptr = src + shift_t_d;
+            T* dst_ptr       = dst + shift_t_d;
+
+            const T* r0_ptr;
+            const T* d0  =     delta     + line_t_d; // für alle elemente
+            const unsigned char* max_idx_ptr;
+
+            switch(to){
+            case TO_WMAX:
+            case TO_WMAX_LOGSPACE:
+                    max_idx_ptr =     max_idx    + line_t_d;
+                    break;
+            case TO_LOGWADDEXP:
+            case TO_LOGWADDEXP_LOGSPACE:
+                r0_ptr = r0 + line_t_d;
+                break;
+            }
+
+            T* dw_ptr     = w_delta +  line_t_sub;
+            T p;
+            T S_val;
+            for(unsigned int itemy = 0; itemy < dst_colsy; itemy ++){
+                //weight gradient in case SOFT_INFEERENCE 
+                switch(to){
+                case TO_LOGWADDEXP:
+                case TO_LOGWADDEXP_LOGSPACE:
+                    S_val = 1/(S[itemy] + eps);
+                }
+                for(unsigned int itemx = 0; itemx < dst_colsx; itemx ++){
+                    unsigned int item = itemy * dst_colsx + itemx;
+                    unsigned char maxIdx;
+                    switch(to){
+                        case TO_WMAX:
+                        case TO_WMAX_LOGSPACE:
+                            maxIdx = max_idx_ptr[item];
+                    }
+    
+                switch(to){
+                case TO_WMAX:
+                case TO_WADD:
+                case TO_WMAX_LOGSPACE:
+                        //get derivative from parent node..
+                        p  = d0[item];
+                        break;
+                case TO_LOGWADDEXP:
+                case TO_LOGWADDEXP_LOGSPACE:
+                    p  = d0[item] * 1/expf(r0_ptr[item]);
+                    break;
+                }
+
+                unsigned int end = item + diff;
+                unsigned int wInd = 0;
+
+                // updates dst for each feature in subspace
+                for (unsigned int index = item; index < end; index+= dst_cols, wInd++){
+                    float temp = 0;
+                    T src_val = src_ptr[index];
+                    switch(to){
+                        case TO_WMAX:
+                            if (maxIdx == wInd){
+                                if(d_dx) dst_ptr[index]+= p * m_W_ptr[wInd];
+                                if(d_dw) dw_ptr[wInd]  += 1;
+                            }break;
+                        case TO_WMAX_LOGSPACE:
+                            if (maxIdx == wInd){
+                                if(d_dx) dst_ptr[index]+= p;
+                                if(d_dw) dw_ptr[wInd]  += 1;
+                            }break;
+                        case TO_LOGWADDEXP:
+                            temp = expf(m_W_ptr[wInd] * src_val) * p;
+                            if(d_dx) dst_ptr[index]+=  m_W_ptr[wInd] * temp;
+                            if(d_dw) dw_ptr[wInd] +=  S_val * src_val * temp;
+                            break;
+                        case TO_LOGWADDEXP_LOGSPACE:
+                            temp = expf(m_W_ptr[wInd] + src_val) * p;
+                            if(d_dx) dst_ptr[index] +=temp;
+                            if(d_dw) dw_ptr[wInd]  += S_val * temp;
+                            break;
+                        case TO_WADD:
+                            if(d_dx) dst_ptr[index] += p*m_W_ptr[wInd];
+                            if(d_dw) dw_ptr[wInd]  += p*src_val;
+                            break;
+                    }
+                }
+                }
+            }
+        }
+       }else {
+        unsigned int dst_cols = dst_colsx *dst_colsy;
+        unsigned int diff;     
+ 
+        for ( unsigned int line = 0; line < lines; line ++){
+        unsigned int shift = stride * line;
+
+        const T* m_W_ptr = m_W + line * subspace_size;
+   
+        unsigned int shift_t_d = shift * dst_cols;
+        unsigned int line_t_sub = line * subspace_size;
+        unsigned int line_t_d = line * dst_cols;
+        unsigned int last_idx = shift + subspace_size;
+        //check boundaries
+        if (last_idx > src_size){
+             diff = (subspace_size - (last_idx - src_size))* dst_cols;
+        } else {
+            diff = subspace_size * dst_cols;
+        }
+
+        const T* src_ptr = src + shift_t_d;
+        T* dst_ptr       = dst + shift_t_d;
+
+        const T* r0_ptr;
+        const T* d0  =     delta     + line_t_d; // für alle elemente
+        const unsigned char* max_idx_ptr;
+
+        switch(to){
+           case TO_WMAX:
+           case TO_WMAX_LOGSPACE:
+                max_idx_ptr =     max_idx    + line_t_d;
+                break;
+           case TO_LOGWADDEXP:
+           case TO_LOGWADDEXP_LOGSPACE:
+               r0_ptr = r0 + line_t_d;
+               break;
+        }
+
+        T* dw_ptr     = w_delta +  line_t_sub;
+        T p;
+        for(unsigned int itemy = 0; itemy < dst_colsy; itemy ++){
+            for(unsigned int itemx = 0; itemx < dst_colsx; itemx ++){
+                unsigned int item = itemy * dst_colsx + itemx;
+                unsigned char maxIdx;
+                switch(to){
+                    case TO_WMAX:
+                    case TO_WMAX_LOGSPACE:
+                        maxIdx = max_idx_ptr[item];
+                }
+ 
+            switch(to){
+               case TO_WMAX:
+               case TO_WADD:
+               case TO_WMAX_LOGSPACE:
+                    //get derivative from parent node..
+                    p  = d0[item];
+                    break;
+               case TO_LOGWADDEXP:
+               case TO_LOGWADDEXP_LOGSPACE:
+                   p  = d0[item] * 1/expf(r0_ptr[item]);
+                   break;
+            }
+
+            unsigned int end = item + diff;
+            unsigned int wInd = 0;
+
+            // updates dst for each feature in subspace
+            for (unsigned int index = item; index < end; index+= dst_cols, wInd++){
+                float temp = 0;
+                T src_val = src_ptr[index];
+                switch(to){
+                    case TO_WMAX:
+                        if (maxIdx == wInd){
+                            if(d_dx) dst_ptr[index]+= p * m_W_ptr[wInd];
+                            if(d_dw) dw_ptr[wInd]  += p * src_val;
+                        }break;
+                    case TO_WMAX_LOGSPACE:
+                        if (maxIdx == wInd){
+                            if(d_dx) dst_ptr[index]+= p;
+                            if(d_dw) dw_ptr[wInd]  += p;
+                        }break;
+                    case TO_LOGWADDEXP:
+                        temp = expf(m_W_ptr[wInd] * src_val) * p;
+                        if(d_dx) dst_ptr[index]+=  m_W_ptr[wInd] * temp;
+                        if(d_dw) dw_ptr[wInd] +=   src_val * temp;
+                        break;
+                    case TO_LOGWADDEXP_LOGSPACE:
+                        temp = expf(m_W_ptr[wInd] + src_val) * p;
+                        if(d_dx) dst_ptr[index] +=temp;
+                        if(d_dw) dw_ptr[wInd]  += temp;
+                        break;
+                    case TO_WADD:
+                        if(d_dx) dst_ptr[index] += p*m_W_ptr[wInd];
+                        if(d_dw) dw_ptr[wInd]  += p*src_val;
+                        break;
+                }
+            }
+          }
+        }
+      }
+    }
 }
+
 
 
 
