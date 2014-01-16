@@ -1618,11 +1618,9 @@ void weighted_sub_tensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* 
                     switch(to){
                         case TO_LOGWADDEXP:
                             squared_sum = lae(squared_sum, w[wInd]*s);
-                            __syncthreads();
                             break;
                         case TO_LOGWADDEXP_LOGSPACE:
-                            lae(squared_sum, w[wInd] + s); 
-                            __syncthreads();
+                            squared_sum = lae(squared_sum, w[wInd] + s); 
                             break;
                         case TO_WADD:
                             squared_sum +=  w[wInd] * s;
