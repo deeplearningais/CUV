@@ -1704,8 +1704,8 @@ template<weighted_sub_tensor_op_functor to, class T>
                     unsigned int item;
                     for(item = 0; item < items; item += buffer_size){
                             //reset buffer
-                            // for ( unsigned int i = 0; i < buffer_size; i++) squared_sum[i] = 0.f;
-			    memset(squared_sum, buffer_size * sizeof(float), 0);
+                            //for ( unsigned int i = 0; i < buffer_size; i++) squared_sum[i] = 0.f;
+			    memset(squared_sum, 0, buffer_size * sizeof(float));
                             
                             end = item + diff;
                             wInd = 0;
