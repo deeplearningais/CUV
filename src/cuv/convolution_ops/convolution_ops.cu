@@ -1668,7 +1668,7 @@ template<weighted_sub_tensor_op_functor to, class T>
             unsigned char * dst_max_idx0;
             unsigned int diff;
             
-            unsigned int global_buffer_size = 512;
+            static const unsigned int global_buffer_size = 512;
             float squared_sum[global_buffer_size];
             
             for(unsigned int line = 0; line < lines; line++){
@@ -1704,7 +1704,8 @@ template<weighted_sub_tensor_op_functor to, class T>
                     unsigned int item;
                     for(item = 0; item < items; item += buffer_size){
                             //reset buffer
-                            for ( unsigned int i = 0; i < buffer_size; i++) squared_sum[i] = 0.f;
+                            // for ( unsigned int i = 0; i < buffer_size; i++) squared_sum[i] = 0.f;
+			    memset(squared_sum, buffer_size * sizeof(float), 0);
                             
                             end = item + diff;
                             wInd = 0;
