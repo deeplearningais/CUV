@@ -1768,10 +1768,20 @@ template<weighted_sub_tensor_op_functor to, class T>
 
 template<class V,class M, class T>
     void weighted_sub_tensor_op(tensor<V,M,T>& dst, tensor<unsigned char,M,T>& dst_max_idx, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int size, unsigned int stride, unsigned int subspace_size, weighted_sub_tensor_op_functor to, float eps){
-        unsigned int itemx = dst.shape(1);
-        unsigned int itemy = dst.shape(2);
-        unsigned int lines = dst.shape(0);
-	unsigned int items = src.size() / src.shape(0);
+        
+        unsigned int itemx;
+        unsigned int itemy;
+        cuvAssert(src.shape().size() == 3 || src.shape().size() == 4);
+        //calculate number of items, based on dimension of image
+        if (dst.shape().size() == 4){
+            itemx = dst.shape(1) * dst.shape(2);
+            itemy = dst.shape(3);
+        } else {
+            itemx = dst.shape(1);
+            itemy = dst.shape(2);            
+        }
+            unsigned int lines = dst.shape(0);
+            unsigned int items = src.size() / src.shape(0);
 
         cuvAssert(subspace_size <= 256);
         cuvAssert(dst.shape(0)==size);
@@ -1987,7 +1997,7 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
                         if(d_dw) res_w[threadIdx.x] =  S_val * src_val * temp;
                         break;
                     case TO_LOGWADDEXP_LOGSPACE:
-                        temp = expf(w_ptr[wInd] + src_val) * p;
+                        temp = expf(src_val + w_ptr[wInd]) * p;
                         if(d_dx) atomic_Add(&dst_ptr[index],temp);
                         if(d_dw) res_w[threadIdx.x]  = S_val * temp;
                         break;
@@ -2141,7 +2151,7 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
                         if(d_dw) res_w[threadIdx.x] =  s * temp;
                         break;
                     case TO_LOGWADDEXP_LOGSPACE:
-                        temp = expf(w_ptr[wInd] + s) * p;
+                        temp = expf( s + w_ptr[wInd] ) * p;
                         if(d_dx) atomic_Add(&dst_ptr[index],temp);
                         if(d_dw) res_w[threadIdx.x]  = temp;
                         break;
@@ -2289,7 +2299,7 @@ void weighted_sub_tensor_op_grad_host(T* dst, T* w_delta, const T* src, const T*
                             if(d_dw) dw_ptr[wInd] +=  S_val * src_val * temp;
                             break;
                         case TO_LOGWADDEXP_LOGSPACE:
-                            temp = expf(m_W_ptr[wInd] + src_val) * p;
+                            temp = expf(src_val + m_W_ptr[wInd] ) * p;
                             if(d_dx) dst_ptr[index] +=temp;
                             if(d_dw) dw_ptr[wInd]  += S_val * temp;
                             break;
@@ -2387,9 +2397,9 @@ void weighted_sub_tensor_op_grad_host(T* dst, T* w_delta, const T* src, const T*
                         if(d_dw) dw_ptr[wInd] +=   src_val * temp;
                         break;
                     case TO_LOGWADDEXP_LOGSPACE:
-                        temp = expf(m_W_ptr[wInd] + src_val) * p;
-                        if(d_dx) dst_ptr[index] +=temp;
-                        if(d_dw) dw_ptr[wInd]  += temp;
+                        temp = expf(src_val + m_W_ptr[wInd]) * p;
+                        if(d_dx) dst_ptr[index] += temp;
+                        if(d_dw) dw_ptr[wInd]   += temp;
                         break;
                     case TO_WADD:
                         if(d_dx) dst_ptr[index] += p*m_W_ptr[wInd];
@@ -2409,24 +2419,34 @@ template<class V,class M, class T>
     void weighted_sub_tensor_op_grad(tensor<V,M,T>& dst, tensor<V,M,T>& w_delta, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, const tensor<V,M,T>& m_W, const tensor<V,M,T>& r0, 
                                      const tensor<V,M,T>& S, const tensor< unsigned char,M,T>& max_idx, const bool spn, const bool d_dx, const bool d_dw, unsigned int size, unsigned int stride, 
                                      unsigned int subspace_size, weighted_sub_tensor_op_functor to, float eps){
-    assert(dst.shape()==src.shape());
-    assert(w_delta.shape()==m_W.shape());
-    assert(w_delta.shape(0) == delta.shape(0));
-    assert(m_W.shape(0) == delta.shape(0));
-    assert(m_W.shape(1)==subspace_size);
-    assert(w_delta.shape(1)==subspace_size);    
-    assert(delta.shape(0) == src.shape(0)/stride);
-    assert(subspace_size <= 256); // (data type char is used to store max_idx)
+        assert(dst.shape()==src.shape());
+        assert(w_delta.shape()==m_W.shape());
+        assert(w_delta.shape(0) == delta.shape(0));
+        assert(m_W.shape(0) == delta.shape(0));
+        assert(m_W.shape(1)==subspace_size);
+        assert(w_delta.shape(1)==subspace_size);    
+        assert(delta.shape(0) == src.shape(0)/stride);
+        assert(subspace_size <= 256); // (data type char is used to store max_idx)
+        cuvAssert(delta.shape().size() == 3 || delta.shape().size() == 4);
     
         //initialize  w_delta and dst
         cuv::fill (dst, 0);
         cuv::fill (w_delta, 0);
-        
+
+        unsigned int src_size = src.shape(0);        
         unsigned int lines = delta.shape(0);
-        unsigned int itemx = delta.shape(1);
-        unsigned int itemy = delta.shape(2);
-        unsigned int src_size = src.shape(0);
-    if(IsSame<M,host_memory_space>::Result::value){
+        unsigned int itemx;
+        unsigned int itemy;
+        //calculate number of items, based on dimension of image
+        if (delta.shape().size() == 4){
+            itemx = delta.shape(1) * delta.shape(2);
+            itemy = delta.shape(3);
+        } else {
+            itemx = delta.shape(1);
+            itemy = delta.shape(2);            
+        }
+        
+        if(IsSame<M,host_memory_space>::Result::value){
             switch(to){
                 case TO_WMAX:
                     if (spn) weighted_sub_tensor_op_grad_host<true,  TO_WMAX>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
@@ -2567,21 +2587,30 @@ template<class T>
 template<class V, class M, class T>
 void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, const tensor<V,M,T>& Y){
         unsigned int lines = src.shape(0);
-        unsigned int items = src.shape(1);
-        unsigned int batch = src.shape(2);
+        unsigned int items;
+        unsigned int batch;
+        cuvAssert((dst.shape().size() == 3) || (dst.shape().size() == 4));
+        if ( dst.shape().size() > 3 ){ 
+            items = src.shape(1) * src.shape(2);
+            batch = src.shape(3);
+        } else {
+            items = src.shape(1);
+            batch = src.shape(2);
+        }
+        
         cuvAssert(m_W.ndim() == 1);
-        cuvAssert(src.ndim() == 3);
+        cuvAssert((src.ndim() == 3) || src.ndim() == 4);
         cuvAssert(Y.ndim() == 2);
-        cuvAssert(dst.ndim() == 3);
         
         cuvAssert(lines > 1);
         cuvAssert(items > 0);
         cuvAssert(batch > 0);        
         cuvAssert(src.shape(0) ==  Y.shape(1));
-        cuvAssert(src.shape(2) == Y.shape(0));
+        cuvAssert( (src.shape(2) == Y.shape(0)) || (src.shape(3) == Y.shape(0)));
         cuvAssert(dst.shape(0) == 1);
         cuvAssert(dst.shape(1) ==  src.shape(1));
         cuvAssert(dst.shape(2) ==  src.shape(2));
+        if ( dst.shape().size() > 3 ) cuvAssert(dst.shape(3) ==  src.shape(3));
         cuvAssert(m_W.shape(0) ==  src.shape(0));
         
         if(IsSame<M,host_memory_space>::Result::value){
@@ -2701,9 +2730,18 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
 template<class V, class M, class T>
 void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M,T>& w_delta, tensor<V,M,T>& Y_delta, const tensor<V,M,T>& m_W, 
                         const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& delta, const bool d_dx, const bool d_dw, const bool d_dy, float eps){
+        
+        cuvAssert((src.shape().size() == 3) || (src.shape().size() == 4));
         unsigned int lines = src.shape(0);
-        unsigned int items = src.shape(1);
-        unsigned int batch = src.shape(2);
+        unsigned int items;
+        unsigned int batch;
+        if (src.shape().size() == 3) { 
+            items = src.shape(1);
+            batch = src.shape(2);
+        } else { 
+            items = src.shape(1) * src.shape(2);
+            batch = src.shape(3);
+        }
  
         cuv::fill (dst, 0);
         cuv::fill (Y_delta, 0);
@@ -2714,7 +2752,7 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(items > 0);
         cuvAssert(batch > 0);   
         cuvAssert(src.shape(0) ==  Y.shape(1));
-        cuvAssert(src.shape(2) == Y.shape(0));
+        cuvAssert((src.shape(2) == Y.shape(0)) || (src.shape(3) == Y.shape(0)) );
         cuvAssert(delta.shape(0) == 1);
         cuvAssert(delta.shape(1) ==  src.shape(1));
         cuvAssert(delta.shape(2) ==  src.shape(2));
@@ -2722,7 +2760,7 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(Y.shape() ==  Y_delta.shape());
         cuvAssert(Y_delta.shape(1) > 1);
         cuvAssert(m_W.shape() ==  w_delta.shape());
-        cuvAssert(S.shape(0) ==  src.shape(2));
+        cuvAssert( (S.shape(0) ==  src.shape(2)) || (S.shape(0) ==  src.shape(3)));
         cuvAssert(src.shape() == dst.shape());
         
         if(IsSame<M,host_memory_space>::Result::value){
