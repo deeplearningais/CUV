@@ -307,29 +307,30 @@ namespace detail{
 		}
 		else if(numparams==1){
 			switch(sf){
-				case SF_POW:       launch_unary_kernel(dst,src,make_bind2nd(bf_pow<V1,V2,S1>(),p),mask); break;
-				case SF_DPOW:      launch_unary_kernel(dst,src,make_bind2nd(bf_dpow<V1,V2,S1>(),p),mask); break;
-				case SF_SIGM:      launch_unary_kernel(dst,src,make_bind2nd(bf_sigm_temp<V1,V2>(),p),mask); break;
-				case SF_ADD:       launch_unary_kernel(dst,src,make_bind2nd(thrust::plus<V1>(),p),mask); break;
-				case SF_MULT:      launch_unary_kernel(dst,src,make_bind2nd(thrust::multiplies<V1>(),p),mask); break;
-				case SF_DIV:       launch_unary_kernel(dst,src,make_bind2nd(thrust::divides<V1>(),p),mask); break;
-				case SF_RDIV:      launch_unary_kernel(dst,src,make_bind1st(thrust::divides<V1>(),p),mask); break;
-				case SF_SUBTRACT:  launch_unary_kernel(dst,src,make_bind2nd(thrust::minus<V1>(),p),mask); break;
-				case SF_RSUB:      launch_unary_kernel(dst,src,make_bind1st(thrust::minus<V1>(),p),mask); break;
-				case SF_LOGADDEXP: launch_unary_kernel(dst,src,make_bind1st(bf_logaddexp<V1>(),p),mask); break;
-				case SF_MIN:       launch_unary_kernel(dst,src,make_bind2nd(bf_min<V1,V2,S1>(),p),mask); break;
-				case SF_MAX:       launch_unary_kernel(dst,src,make_bind2nd(bf_max<V1,V2,S1>(),p),mask); break;
-				case SF_ROBUST_ABS:launch_unary_kernel(dst,src,make_bind2nd(bf_robust_abs<V1,V2,S1>(),p),mask); break;
-				case SF_DROBUST_ABS:launch_unary_kernel(dst,src,make_bind2nd(bf_drobust_abs<V1,V2,S1>(),p),mask); break;
-				case SF_RECT:      launch_unary_kernel(dst,src,make_bind2nd(bf_rect<V1,V2,S1>(),p),mask); break;
-				case SF_DRECT:     launch_unary_kernel(dst,src,make_bind2nd(bf_drect<V1,V2,S1>(),p),mask); break;
-				case SF_EQ:        launch_unary_kernel(dst,src,make_bind2nd(thrust::equal_to<V2>(),p),mask); break;
-				case SF_LT:        launch_unary_kernel(dst,src,make_bind2nd(thrust::less<V2>(),p),mask); break;
-				case SF_GT:        launch_unary_kernel(dst,src,make_bind2nd(thrust::greater<V2>(),p),mask); break;
-				case SF_LEQ:       launch_unary_kernel(dst,src,make_bind2nd(thrust::less_equal<V2>(),p),mask); break;
-				case SF_GEQ:       launch_unary_kernel(dst,src,make_bind2nd(thrust::greater_equal<V2>(),p),mask); break;
-				case SF_BERNOULLI_KL:     launch_unary_kernel(dst,src,make_bind1st(bf_bernoulli_kl<V1,V2,S1>(),p),mask); break;
-				case SF_DBERNOULLI_KL:    launch_unary_kernel(dst,src,make_bind1st(bf_dbernoulli_kl<V1,V2,S1>(),p),mask); break;
+				case SF_POW:            launch_unary_kernel(dst,src,make_bind2nd(bf_pow<V1,V2,S1>(),p),mask); break;
+				case SF_DPOW:           launch_unary_kernel(dst,src,make_bind2nd(bf_dpow<V1,V2,S1>(),p),mask); break;
+				case SF_SIGM:           launch_unary_kernel(dst,src,make_bind2nd(bf_sigm_temp<V1,V2>(),p),mask); break;
+				case SF_ADD:            launch_unary_kernel(dst,src,make_bind2nd(thrust::plus<V1>(),p),mask); break;
+				case SF_MULT:           launch_unary_kernel(dst,src,make_bind2nd(thrust::multiplies<V1>(),p),mask); break;
+				case SF_DIV:            launch_unary_kernel(dst,src,make_bind2nd(thrust::divides<V1>(),p),mask); break;
+				case SF_RDIV:           launch_unary_kernel(dst,src,make_bind1st(thrust::divides<V1>(),p),mask); break;
+				case SF_SUBTRACT:       launch_unary_kernel(dst,src,make_bind2nd(thrust::minus<V1>(),p),mask); break;
+				case SF_RSUB:           launch_unary_kernel(dst,src,make_bind1st(thrust::minus<V1>(),p),mask); break;
+				case SF_LOGADDEXP:      launch_unary_kernel(dst,src,make_bind1st(bf_logaddexp<V1>(),p),mask); break;
+                 case SF_LOGADDEXP_GRAD: launch_unary_kernel(dst,src,make_bind1st(bf_logaddexp_grad<V1>(),p),mask); break;                
+				case SF_MIN:            launch_unary_kernel(dst,src,make_bind2nd(bf_min<V1,V2,S1>(),p),mask); break;
+				case SF_MAX:            launch_unary_kernel(dst,src,make_bind2nd(bf_max<V1,V2,S1>(),p),mask); break;
+				case SF_ROBUST_ABS:     launch_unary_kernel(dst,src,make_bind2nd(bf_robust_abs<V1,V2,S1>(),p),mask); break;
+				case SF_DROBUST_ABS:    launch_unary_kernel(dst,src,make_bind2nd(bf_drobust_abs<V1,V2,S1>(),p),mask); break;
+				case SF_RECT:           launch_unary_kernel(dst,src,make_bind2nd(bf_rect<V1,V2,S1>(),p),mask); break;
+				case SF_DRECT:          launch_unary_kernel(dst,src,make_bind2nd(bf_drect<V1,V2,S1>(),p),mask); break;
+				case SF_EQ:             launch_unary_kernel(dst,src,make_bind2nd(thrust::equal_to<V2>(),p),mask); break;
+				case SF_LT:             launch_unary_kernel(dst,src,make_bind2nd(thrust::less<V2>(),p),mask); break;
+				case SF_GT:             launch_unary_kernel(dst,src,make_bind2nd(thrust::greater<V2>(),p),mask); break;
+				case SF_LEQ:            launch_unary_kernel(dst,src,make_bind2nd(thrust::less_equal<V2>(),p),mask); break;
+				case SF_GEQ:            launch_unary_kernel(dst,src,make_bind2nd(thrust::greater_equal<V2>(),p),mask); break;
+				case SF_BERNOULLI_KL:   launch_unary_kernel(dst,src,make_bind1st(bf_bernoulli_kl<V1,V2,S1>(),p),mask); break;
+				case SF_DBERNOULLI_KL:  launch_unary_kernel(dst,src,make_bind1st(bf_dbernoulli_kl<V1,V2,S1>(),p),mask); break;
 				default:
 						   cout << "No suitable one-parameter scalar functor was found." << endl;
 						   cuvAssert(false);
@@ -397,6 +398,7 @@ namespace detail{
                     case BF_MIN:      apply_scalar_functor(dst, src2, SF_MIN,  src1[0]);break;
                     case BF_MAX:      apply_scalar_functor(dst, src2, SF_MAX,  src1[0]);break;
                     case BF_LOGADDEXP:     apply_scalar_functor(dst, src2, SF_LOGADDEXP,  src1[0]); break;
+                    case BF_LOGADDEXP_GRAD:     apply_scalar_functor(dst, src2, SF_LOGADDEXP_GRAD,  src1[0]); break;                    
                     case BF_BERNOULLI_KL:      apply_scalar_functor(dst, src2, SF_BERNOULLI_KL,  src1[0]); break;
                     case BF_DBERNOULLI_KL:     apply_scalar_functor(dst, src2, SF_DBERNOULLI_KL,  src1[0]); break;
                     default: throw std::runtime_error("supplied binary functor broadcast not implemented");
@@ -413,6 +415,7 @@ namespace detail{
                     case BF_MIN:      apply_scalar_functor(dst, src1, SF_MIN,  src2[0]);break;
                     case BF_MAX:      apply_scalar_functor(dst, src1, SF_MAX,  src2[0]);break;
                     case BF_LOGADDEXP:     apply_scalar_functor(dst, src1, SF_LOGADDEXP,  src2[0]); break;
+                    case BF_LOGADDEXP_GRAD:     apply_scalar_functor(dst, src1, SF_LOGADDEXP_GRAD,  src2[0]); break;
                     case BF_BERNOULLI_KL:      apply_scalar_functor(dst, src1, SF_BERNOULLI_KL,  src2[0]); break;
                     case BF_DBERNOULLI_KL:     apply_scalar_functor(dst, src1, SF_DBERNOULLI_KL,  src2[0]); break;
                     default: throw std::runtime_error("supplied binary functor broadcast not implemented");
@@ -437,6 +440,7 @@ namespace detail{
                 case BF_ATAN2:    thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_atan2<V1,V2,V3>()); break;
                 case BF_NORM:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_norm<V1,V2,V3>()); break;
                 case BF_LOGADDEXP:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logaddexp<V1>()); break;
+                case BF_LOGADDEXP_GRAD:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logaddexp_grad<V1>()); break;                
                 case BF_LOGCE_OF_LOGISTIC:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_logce_of_logistic<V1,V2,V3>()); break;
                 case BF_BERNOULLI_KL:      thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_bernoulli_kl<V1,V2,V3>()); break;
                 case BF_DBERNOULLI_KL:     thrust::transform(s1_ptr, s1_ptr+dst.size(), s2_ptr, d_ptr, bf_dbernoulli_kl<V1,V2,V3>()); break;
@@ -459,6 +463,7 @@ namespace detail{
                 case BF_ATAN2:    launch_binary_kernel(v,w,bf_atan2<V1,V2,V3>()); break;
                 case BF_NORM:    launch_binary_kernel(v,w,bf_norm<V1,V2,V3>()); break;
                 case BF_LOGADDEXP:          launch_binary_kernel(v,w,bf_logaddexp<V1>()); break;
+                case BF_LOGADDEXP_GRAD:     launch_binary_kernel(v,w,bf_logaddexp_grad<V1>()); break;                
                 case BF_LOGCE_OF_LOGISTIC:  launch_binary_kernel(v,w,bf_logce_of_logistic<V1,V2,V3>()); break;
                 default: cuvAssert(false);
             }
