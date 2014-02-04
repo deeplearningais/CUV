@@ -103,6 +103,8 @@ template<class R, class T>
 struct uf_log1p:unary_functor<R,T>{  inline __device__ __host__       R operator()(const T& t)      const{
 	return log1pf(t);
 } };
+
+
 /// calculates signum(x)
 template<class R, class T>
 struct uf_sign:unary_functor<R,T>{  inline __device__ __host__        R operator()(const T& t)      const{ return sgn((float)t);    } };
@@ -243,6 +245,8 @@ struct tf_dsqhinge_loss:ternary_functor<R,T,T,T>{  inline __device__  __host__  
 
 template<class T>
 struct bf_logaddexp;
+
+
 
 /// calculates the rectifying transfer function log(1+expf(a*x))/a using a numerically stable variant
 template<class R, class T, class A>
@@ -525,6 +529,22 @@ struct bf_logaddexp : binary_functor<float,T, T> {
 			return t+u;
 	} 
 };
+
+template<class T>
+struct bf_logaddexp_grad;
+
+///calculates the gradient of logaddexp(a,x): exp(x)/(exp(x) +a)
+template<class T>
+struct bf_logaddexp_grad : binary_functor<float,T, T> {  
+    inline __device__  __host__    float    operator()(const T& a, const T& x) const{
+        // if x > float precision return  1
+        if ( float(x) > 87.33f) return 1;
+        float tmp = expf(x);
+        return ( tmp/(tmp + expf(a)) );
+    } 
+};
+
+
 
 /// computes the negative log of cross-entropy \f$-x\log(z)-(1-x)\log(1-z)\f$ of logistic \f$z=1/(1+\exp(-y))\f$
 template<class R, class T, class U>

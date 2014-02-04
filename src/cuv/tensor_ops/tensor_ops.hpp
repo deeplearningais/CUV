@@ -165,6 +165,7 @@ namespace cuv{
 	 *  @li SF_DIV computes x / a
 	 *  @li SF_RDIV computes a / x
 	 *  @li SF_LOGADDEXP computes \f$\log(\exp(a) + \exp(x))\f$
+     *  @li SF_LOGADDEXP_GRAD computes \f$\exp(x)/(exp(a) + \exp(x))\f$  
 	 *  @li SF_MIN computes min(x,a)
 	 *  @li SF_MAX computes max(x,a)
 	 *  @li SF_ROBUST_ABS computes \f$\sqrt{x^2+a}\f$
@@ -223,6 +224,7 @@ namespace cuv{
 		SF_DIV,
 		SF_RDIV,
         SF_LOGADDEXP,
+        SF_LOGADDEXP_GRAD,
 		SF_MIN,
 		SF_MAX,
         SF_ROBUST_ABS,
@@ -436,6 +438,7 @@ namespace cuv{
 	 * 	@li BF_MIN computes x = min(x,y)
 	 * 	@li BF_MAX computes x = max(x,y)
 	 * 	@li BF_LOGADDEXP computes x = log(exp(x)+exp(y))
+     *  @li BF_LOGADDEXP_GRAD computes x = exp(x)/(exp(x)+exp(y))      
      * 	@li BF_LOGCE_OF_LOGISTIC computes the negative log of cross-entropy \f$-x\log(y)-(1-x)\log(1-z)\f$ of logistic \f$z=1/(1+\exp(-y))\f$
      * 	@li BF_BERNOULLI_KL  computes Kullback-Leibler divergence of two bernoulli variables \f$x\log(x/y)+(1-x)\log\frac{1-x}{1-y}\f$
      * 	@li BF_DBERNOULLI_KL computes derivative of Kullback-Leibler divergence of two bernoulli variables w.r.t. y: \f$\frac{x-y}{y(y-1)}\f$
@@ -471,6 +474,7 @@ namespace cuv{
 	  BF_ATAN2,
 	  BF_NORM,
       BF_LOGADDEXP,
+      BF_LOGADDEXP_GRAD,
       BF_LOGCE_OF_LOGISTIC,
       BF_BERNOULLI_KL,
       BF_DBERNOULLI_KL,
