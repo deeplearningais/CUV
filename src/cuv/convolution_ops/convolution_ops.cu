@@ -2535,7 +2535,6 @@ void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsign
            w[i] = m_W[i];
         }
         __syncthreads();
-        
         for ( unsigned int b = threadIdx.x; b < batch; b += blockDim.x, Y_ptr += blockDim.x*lines){
             y = int( Y_ptr[0] );
             
@@ -2546,12 +2545,14 @@ void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsign
                 if (y < 0){
                     for ( unsigned int c = 0; c < lines; c++){
                         const T* src_ptr = src + c * itb + xtb;
-                        result += expf( w[c] +  src_ptr[b]);
+                        result += expf(w[c] + src_ptr[b]);
+//                        result =  lae(result, w[c]  + src_ptr[b]);
                     }
                 } else {
                     // no marginalization step => all labels =! y were 0
                     const T* src_ptr = src + y * itb + xtb;
-                    result += expf( w[y] +  src_ptr[b]);
+                    result += expf( w[y] + src_ptr[b]);
+//                        result = lae(result,  w[y]  + src_ptr[b]);                    
                 }
                 dst_ptr[b] = result;
                 result = 0;
@@ -2559,11 +2560,11 @@ void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsign
         }
 }
 
+//TODO
 
 template<class T>
     void spn_output_op_host(T* dst, const T* src, const T* m_W, const T* Y, unsigned int lines, unsigned int items, unsigned int batch){
         unsigned int itb = (items * batch);
-
         for ( unsigned int b = 0; b < batch; b ++){
             const T* Y_ptr = Y + b*lines;
             for ( unsigned int x = 0; x <items; x++){
@@ -2573,11 +2574,13 @@ template<class T>
                 if ( y < 0){
                     for ( unsigned int c = 0; c < lines; c++){
                         const T* src_ptr = src + c * itb + xtb;
-                        dst_ptr[x] += exp(m_W[c] + src_ptr[b]);       
+                        dst_ptr[x] += expf(m_W[c] + src_ptr[b]);       
+//                          dst_ptr[x] += expf(m_W[c]  + src_ptr[b]);                        
                     }
                 } else {
                     const T* src_ptr = src + y * itb + xtb;
-                    dst_ptr[x] += exp(m_W[y] + src_ptr[b]);       
+                    dst_ptr[x] += expf(m_W[y] + src_ptr[b]);       
+//                    dst_ptr[x] += m_W[y] +src_ptr[b];                    
                 }
             }
         }     
@@ -2597,6 +2600,11 @@ void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,
             items = src.shape(1);
             batch = src.shape(2);
         }
+        
+        //check every param for nans
+        cuvAssert(!cuv::has_nan(src));
+        cuvAssert(!cuv::has_nan(m_W));
+        cuvAssert(!cuv::has_nan(Y));
         
         cuvAssert(m_W.ndim() == 1);
         cuvAssert((src.ndim() == 3) || src.ndim() == 4);
@@ -2631,7 +2639,7 @@ void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,
     /*****************************************************************************************************************************
      * spn_output_op grad
      *******************************************************************************************************************************/
-// currently d_dy just works for case x = 1, TODO: change tensor...
+// currently d_dy just works for case x = 1, TODO:  calculate correct derivation of lae
 template<class T>
 __global__
 void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, const T* m_W,  const T* Y, const T* S, const T* delta,
@@ -2647,7 +2655,6 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
 
         //load weight into shared memory
         float w = m_W[c];
-        
         for ( unsigned int b = threadIdx.x; b < batch; b += blockDim.x){
             unsigned int btl = b * lines;
             const T* Y_ptr = Y + btl;
@@ -2655,14 +2662,16 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
             //get correct label (or marginalization flag)
             y = int( Y_ptr[0] );
             T s_val = 1.0/(S[b] + eps);
-
+            
             for ( unsigned int x = 0; x < items; x++){
                 unsigned int xtb = x * batch;
                 const T* delta_ptr = delta + xtb;
                     //set derivative for d_dx, d_dw only if label != 0 (marginalization step, or correct label)   
                         unsigned int off = c * itb + xtb;
                         const T* src_ptr = src + off;
-                        T d_dy_val = exp(w + src_ptr[b]) * delta_ptr[b];
+//                        T d_dy_val = expf(w) * expf(src_ptr[b]) * delta_ptr[b];
+                        T s = src_ptr[b];
+                        T d_dy_val = expf( w + s); //res
                     if ( (y < 0) || (c == y) ){
                         T* dst_ptr = dst + off;
                         if (d_dx) dst_ptr[b] = d_dy_val;
@@ -2715,12 +2724,15 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
                     const T* src_ptr = src + off;
                     T* dst_ptr = dst + off;
                     const T* delta_ptr = delta + xtb;
-                    T d_dy_val = exp(m_W[c] + src_ptr[b]) * delta_ptr[b];
+                   // T d_dy_val = expf(m_W[c]) * expf(src_ptr[b]) * delta_ptr[b];
+                    T s = src_ptr[b];
+                    T w = m_W[c];
+                    T d_dy_val = expf(w+s); //* delta_ptr[b];                    
                     if ( (y < 0) || (c == y)){
                         if (d_dx) dst_ptr[b] = d_dy_val;
                         if (d_dw) w_delta[c] += s_val * d_dy_val;
                     }
-                    if (d_dy) Y_delta_ptr[c] +=  d_dy_val;
+                    if (d_dy) Y_delta_ptr[c] +=  w+s;
 
                 }
             }
@@ -2746,7 +2758,7 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuv::fill (dst, 0);
         cuv::fill (Y_delta, 0);
         cuv::fill (w_delta, 0);
-
+        
         //check dimensions of dst
         cuvAssert(lines > 1);
         cuvAssert(items > 0);
