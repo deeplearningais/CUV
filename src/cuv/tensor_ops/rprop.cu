@@ -30,7 +30,6 @@
 
 
 
-
 #include <cuv/tensor_ops/rprop.hpp>
 
 //#define sgn(a) (copysign(1.f,a))
@@ -129,7 +128,7 @@ namespace cuv{
 		cuvAssert(sparsedecay >= 0);
 		int num_threads = 512;
 		int num_blocks  = min(512,(int)ceil((float)dW.size() / num_threads));
-		rprop_kernel<<< num_threads, num_blocks>>>(W.ptr(), dW.ptr(), dW_old.ptr(), rate.ptr(), dW.size(), decay, sparsedecay);
+		rprop_kernel<<< num_blocks, num_threads>>>(W.ptr(), dW.ptr(), dW_old.ptr(), rate.ptr(), dW.size(), decay, sparsedecay);
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 
@@ -196,7 +195,7 @@ namespace cuv{
 	void learn_step_weight_decay_impl(tensor<V,dev_memory_space>& W, const tensor<V,dev_memory_space>& dW, const float& alpha, const float& beta, const float& sparsedecay){
 		int num_threads = 512;
 		int num_blocks  = min(512,(int)ceil((float)dW.size() / num_threads));
-		learn_step_weight_decay_kernel<<< num_threads, num_blocks>>>(W.ptr(), dW.ptr(), alpha, beta, sparsedecay, W.size());
+		learn_step_weight_decay_kernel<<< num_blocks, num_threads>>>(W.ptr(), dW.ptr(), alpha, beta, sparsedecay, W.size());
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V>
@@ -221,7 +220,7 @@ namespace cuv{
 	void learn_step_weight_decay_momentum_impl(tensor<V,dev_memory_space>& W, tensor<V,dev_memory_space>& momentum, const tensor<V,dev_memory_space>& dW, const float& lr, const float& momentum_weight, const float& l2decay, const float& sparsedecay){
 		int num_threads = 512;
 		int num_blocks  = min(512,(int)ceil((float)dW.size() / num_threads));
-		learn_step_weight_decay_momentum_kernel<<< num_threads, num_blocks>>>(W.ptr(), momentum.ptr(), dW.ptr(), lr, momentum_weight, l2decay, sparsedecay, W.size());
+		learn_step_weight_decay_momentum_kernel<<< num_blocks, num_threads >>>(W.ptr(), momentum.ptr(), dW.ptr(), lr, momentum_weight, l2decay, sparsedecay, W.size());
 		cuvSafeCall(cudaThreadSynchronize());
 	}
 	template<class V>
