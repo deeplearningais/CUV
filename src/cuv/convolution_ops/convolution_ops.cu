@@ -1945,7 +1945,6 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
 
         T* dw_ptr     = w_delta +  line_t_sub;
         T p;
-        bf_logaddexp<float> lae;
         T S_val;
         
         for(unsigned int itemy = threadIdx.y; itemy < dst_colsy; itemy += blockDim.y){
@@ -2254,7 +2253,6 @@ void weighted_sub_tensor_op_grad_host(T* dst, T* w_delta, const T* src, const T*
             T* dw_ptr     = w_delta +  line_t_sub;
             T p;
             T S_val;
-            bf_logaddexp<float> lae;
             for(unsigned int itemy = 0; itemy < dst_colsy; itemy ++){
                 //weight gradient in case SOFT_INFEERENCE 
                 switch(to){
@@ -2660,12 +2658,10 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
         //each block calculates derivatives for one class        
         int c = blockIdx.x;
         
-        bf_logaddexp<float> lae;
         //load weight into shared memory
         float w = m_W[c];
         for ( unsigned int b = threadIdx.x; b < batch; b += blockDim.x){
             unsigned int btl = b * lines;
-            const T lae_ptr = 1 / exp(lae_res[b]);                       // HIER
             const T* Y_ptr = Y + btl;
             T* Y_delta_ptr = Y_delta + btl;
             //get correct label (or marginalization flag)
@@ -2675,18 +2671,20 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
             for ( unsigned int x = 0; x < items; x++){
                 unsigned int xtb = x * batch;
                 const T* delta_ptr = delta + xtb;
+                const T* lae_ptr = lae_res + xtb; //1 / exp(lae_res[b]);  
+                const T exp_res = 1 / expf(lae_ptr[b]);
                     //set derivative for d_dx, d_dw only if label != 0 (marginalization step, or correct label)   
                         unsigned int off = c * itb + xtb;
                         const T* src_ptr = src + off;
                         T s = src_ptr[b];
-                        T d_dy_val = expf(w + s) *lae_ptr * delta_ptr[b]; //res              // UND HIER
+                        T d_dy_val = expf(w + s) *exp_res * delta_ptr[b]; //res              // UND HIER
                     if ( (y < 0) || (c == y) ){
                         T* dst_ptr = dst + off;
                         if (d_dx) dst_ptr[b] = d_dy_val;
                         if (d_dw) temp_w_delta[threadIdx.x] += s_val * d_dy_val;
                     }
                     //except for d_dy, since it does not depend on the label
-                    if (d_dy) Y_delta_ptr[c] +=  d_dy_val;                 
+                    if (d_dy) Y_delta_ptr[c] += d_dy_val;                 
 
             }
             //logarithmic add of partial d_dw
@@ -2719,13 +2717,11 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
         unsigned int itb = (items * batch);
         int y;
         for ( unsigned int b = 0; b < batch; b ++){
-            T lae_ptr = 1/expf(lae_res[b]);
             unsigned int btl = b * lines;
             const T* Y_ptr = Y + btl;
             y = int( Y_ptr[0] );
-            T* Y_delta_ptr = Y_delta + b * btl;
-            bf_logaddexp<float> lae;            
-            T s_val = -lae(S[b], eps);
+            T* Y_delta_ptr = Y_delta + b * btl;      
+            T s_val = 1/(S[b] + eps);
             for ( unsigned int x = 0; x <items; x++){
                 for ( unsigned int c = 0; c < lines; c++){
                     unsigned int xtb = x * batch;
@@ -2733,9 +2729,10 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
                     const T* src_ptr = src + off;
                     T* dst_ptr = dst + off;
                     const T* delta_ptr = delta + xtb;
+                    const T* lae_ptr = lae_res + xtb;
                     T s = src_ptr[b];
                     T w = m_W[c];
-                    T d_dy_val = expf(w+s)*lae_ptr * delta_ptr[b];                    
+                    T d_dy_val = ( expf(w+s)/expf(lae_ptr[b]) ) * delta_ptr[b];                    
                     if ( (y < 0) || (c == y)){
                         if (d_dx) dst_ptr[b] = d_dy_val;
                         if (d_dw) w_delta[c] += s_val * d_dy_val;
