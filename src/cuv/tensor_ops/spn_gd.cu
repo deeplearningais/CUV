@@ -129,13 +129,13 @@ void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate
                     //sparse decay
                     W[i] += delta;
                     if (rescale && (n_sub_size > 0))
-                        sum += expf(W[i]);
+                        sum += W[i];
                 }
                 //rescale weights such that they sum up to one
                 if (rescale && (n_sub_size > 0))
                     for (unsigned int sub = 0; sub < n_sub_size; sub++){
                         unsigned int i =  s * n_sub_size + sub; 
-                        W[i] = logf(expf(W[i]) / sum);
+                        W[i] = W[i] / sum;
                     }
             }
     } else {
@@ -170,6 +170,11 @@ void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,
         cuvAssert(decay >= 0);
         cuvAssert(sparsedecay >= 0);
         
+/*        std::cout << "rescaling" << std::endl;
+        for ( unsigned int i = 0;  i < W.shape().size(); i++)
+            std::cout << "[" << W.shape(i) << "]";
+        std::cout << std::endl;
+*/        
          int n_size;
          unsigned int n_sub_size;
          
