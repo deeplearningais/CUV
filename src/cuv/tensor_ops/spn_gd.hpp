@@ -60,7 +60,7 @@ namespace cuv{
      */
         template<class V, class M>
     void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old, 
-                bool hard_inference, bool rescale, float rate, const float& decay = 0.0f, const float& sparsedecay=0.0f);
+                bool hard_inference, bool rescale, float thresh, float rate, const float& decay = 0.0f, const float& sparsedecay=0.0f);
 
         /**
          * @overload

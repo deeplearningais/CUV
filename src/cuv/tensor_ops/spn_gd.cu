@@ -35,13 +35,31 @@
 #define __global__
 #endif
 
+
+
+
+/*
+        cuv::apply_scalar_functor(ax, cuv::SF_SQRT); // ax[over_thresh] = sqrt(ax[over_thresh])
+        cuv::apply_scalar_functor(ax, cuv::SF_MULT, 1.f / thresh);      // ax[over_thresh] *= 1/thresh
+        over_thresh = !over_thresh;    // 
+        cuv::apply_scalar_functor(ax, cuv::SF_MULT, 0.f, &over_thresh); // ax[!over_thresh] = 0
+        cuv::apply_scalar_functor(ax, cuv::SF_ADD , 1.f, &over_thresh); // ax[!over_thresh] += 1
+        if(axis == 1)
+            cuv::matrix_divide_row(C, ax);
+        else if(axis == 0)
+            cuv::matrix_divide_col(C, ax);
+    }
+
+ */
+
 namespace cuv{
 template< class T>
-__global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n, float rate, const float decay, bool rescale, bool hard_bp,  int  n_size, unsigned int n_sub_size) {
+__global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n, float rate, const float decay, bool rescale, bool hard_bp,  int  n_size, unsigned int n_sub_size, float thresh) {
     if ( (n_size > 0) && rescale) {
             extern __shared__ float tmp[];
             tmp[threadIdx.x] = 0;
             unsigned int idx = blockIdx.x * n_sub_size + threadIdx.x;
+            __shared__ bool over_thresh;
 
             if ( threadIdx.x < n_sub_size ){
                 T p_W = W[idx];
@@ -58,10 +76,10 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                 if (decay > 0) delta -= rate*p_W*decay;
                 p_W += delta;
                 
-                //rescale weights ( they shall sum up to one
-                p_W = expf(p_W);
-                tmp[threadIdx.x] = p_W;
-                    
+                //rescale weights ( project to unit ball )
+                tmp[threadIdx.x] = expf(p_W);
+                tmp[threadIdx.x] = tmp[threadIdx.x] * tmp[threadIdx.x];
+                
                 //logarithmic sum 
                 for ( unsigned int j = blockDim.x/2; j > 0; j/=2){
                     __syncthreads();
@@ -69,11 +87,18 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                         tmp[threadIdx.x] += tmp[threadIdx.x + j];
                     }
                 }
+                if (threadIdx.x == 0){
+                    over_thresh = (tmp[0] > thresh); 
+                    if (over_thresh){
+                        tmp[0] = sqrt(tmp[0]);
+                    }
+                }
                 __syncthreads();
-                p_W = logf( p_W / tmp[0]); 
                 
-                // update weight
-                W[idx] =  p_W;
+                if (over_thresh)
+                    W[idx] = logf( expf(p_W) / tmp[0]); 
+                else
+                    W[idx] =  p_W;
                 
                 //reset shared memory of this thread
                 tmp[threadIdx.x] = 0;
@@ -106,7 +131,7 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
     
 
 template< class T>
-void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate, const float& decay, bool & rescale, bool hard_bp, int & n_size, unsigned int & n_sub_size){   
+void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate, const float& decay, bool & rescale, bool hard_bp, int & n_size, unsigned int & n_sub_size, float thresh){   
     if ( (n_size > 0) && rescale) { // rescaling weights is only possible for spn layer..
         for (unsigned int s = 0; s < n_size; s++){
               float sum = 0;
@@ -128,15 +153,22 @@ void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate
                     
                     //sparse decay
                     W[i] += delta;
-                    if (rescale && (n_sub_size > 0))
-                        sum += W[i];
+                    if (rescale && (n_sub_size > 0)){
+                        float tmp = expf(W[i]);
+                        tmp *= tmp;
+                        sum += tmp;
+                    }
                 }
                 //rescale weights such that they sum up to one
-                if (rescale && (n_sub_size > 0))
+                if (rescale && (n_sub_size > 0)){
+                    if (sum > thresh){
                     for (unsigned int sub = 0; sub < n_sub_size; sub++){
                         unsigned int i =  s * n_sub_size + sub; 
-                        W[i] = W[i] / sum;
+                            sum = sqrt(sum);
+                            W[i] = expf(W[i]) / sum;
+                        }
                     }
+                }
             }
     } else {
         for (unsigned int i = 0; i < n; i++){
@@ -163,7 +195,7 @@ void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate
 
 template<class V, class M>
 void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,  
-                  bool hard_inference, bool rescale, float rate,  const float & decay,  const float & sparsedecay){
+                  bool hard_inference, bool rescale, float thresh, float rate,  const float & decay,  const float & sparsedecay){
         cuvAssert(dW.ptr());
         cuvAssert(dW_old.ptr());     
         cuvAssert(dW.size() == dW_old.size());
@@ -187,7 +219,7 @@ void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,
         }
         
         if(IsSame<M, host_memory_space>::Result::value){
-            spn_gd_host (W.ptr(), dW.ptr(), dW_old.ptr(), dW.size(), rate, decay, rescale, hard_inference, n_size, n_sub_size);         
+            spn_gd_host (W.ptr(), dW.ptr(), dW_old.ptr(), dW.size(), rate, decay, rescale, hard_inference, n_size, n_sub_size, thresh);         
         }else{
             int num_threads = 512;
             int num_blocks  = (int)ceil((float)dW.size() / num_threads);
@@ -197,7 +229,7 @@ void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,
             }
             unsigned int shared_mem = num_threads * sizeof(float);
 	   
-            spn_gd_kernel<<< num_blocks, num_threads, shared_mem>>>(W.ptr(), dW.ptr(), dW_old.ptr(), dW.size(), rate, decay, rescale, hard_inference, n_size, n_sub_size);         
+            spn_gd_kernel<<< num_blocks, num_threads, shared_mem>>>(W.ptr(), dW.ptr(), dW_old.ptr(), dW.size(), rate, decay, rescale, hard_inference, n_size, n_sub_size, thresh);         
             cuvSafeCall(cudaThreadSynchronize());
         }    
     }
@@ -296,7 +328,7 @@ __global__ void learn_step_weight_decay_momentum_kernel(T* A, T* M, const T* dA,
 #define  TENS(V,M)       tensor<V,M>
 #define CTENS(V,M) const TENS(V,M)
 #define SPN_GD_INSTANTIATE(V, M) \
-    template void spn_gd <V, M> (TENS(V,M)&, CTENS(V,M)&, CTENS(V,M)&, bool, bool, float, const float&, const float&); 
+    template void spn_gd <V, M> (TENS(V,M)&, CTENS(V,M)&, CTENS(V,M)&, bool, bool, float, float, const float&, const float&); 
 
     SPN_GD_INSTANTIATE(float, host_memory_space);
     SPN_GD_INSTANTIATE(float, dev_memory_space );
