@@ -2533,7 +2533,7 @@ __global__
 void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsigned int lines, unsigned int items, unsigned int batch){       
         //load weights into shared memory
         float result = 0;
-        unsigned int itb = (items * batch);
+        unsigned int itb = items * batch;
         extern __shared__ float w[];
         const T* Y_ptr = Y + threadIdx.x * lines;
         int y;
@@ -2570,7 +2570,7 @@ void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsign
 
 template<class T>
     void spn_output_op_host(T* dst, const T* src, const T* m_W, const T* Y, unsigned int lines, unsigned int items, unsigned int batch){
-        unsigned int itb = (items * batch);
+        unsigned int itb = items * batch;
         bf_logaddexp<float> lae;
         for ( unsigned int b = 0; b < batch; b ++){
             const T* Y_ptr = Y + b*lines;
@@ -2605,13 +2605,13 @@ void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,
             items = src.shape(1);
             batch = src.shape(2);
         }
-        
+                
         //check every param for nans
         cuvAssert(!cuv::has_nan(src));
         cuvAssert(!cuv::has_nan(m_W));
         cuvAssert(!cuv::has_nan(Y));
         
-        cuvAssert(m_W.ndim() == 1);
+        cuvAssert(m_W.ndim() == 2);
         cuvAssert((src.ndim() == 3) || src.ndim() == 4);
         cuvAssert(Y.ndim() == 2);
         
@@ -2624,7 +2624,7 @@ void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,
         cuvAssert(dst.shape(1) ==  src.shape(1));
         cuvAssert(dst.shape(2) ==  src.shape(2));
         if ( dst.shape().size() > 3 ) cuvAssert(dst.shape(3) ==  src.shape(3));
-        cuvAssert(m_W.shape(0) ==  src.shape(0));
+        cuvAssert(m_W.shape(1) ==  src.shape(0));
         
         if(IsSame<M,host_memory_space>::Result::value){
                 spn_output_op_host(dst.ptr(), src.ptr(), m_W.ptr(), Y.ptr(), lines, items, batch);
@@ -2678,12 +2678,15 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
                         const T* src_ptr = src + off;
                         T s = src_ptr[b];
                         T d_dy_val = expf(w + s) *exp_res * delta_ptr[b]; //res              // UND HIER
-                    if ( (y < 0) || (c == y) ){
                         T* dst_ptr = dst + off;
+                    if ( (y < 0) || (c == y) ){
                         if (d_dx) dst_ptr[b] = d_dy_val;
                         if (d_dw) temp_w_delta[threadIdx.x] += s_val * d_dy_val;
-                    }
+                    } else {
+                        if (d_dx) dst_ptr[b] = 0;
+                        if (d_dw) temp_w_delta[threadIdx.x] += 0;                    
                     //except for d_dy, since it does not depend on the label
+                    }
                     if (d_dy) Y_delta_ptr[c] += d_dy_val;                 
 
             }
@@ -2773,7 +2776,7 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(delta.shape(0) == 1);
         cuvAssert(delta.shape(1) ==  src.shape(1));
         cuvAssert(delta.shape(2) ==  src.shape(2));
-        cuvAssert(m_W.shape(0) ==  src.shape(0));
+        cuvAssert(m_W.shape(1) ==  src.shape(0));
         cuvAssert(Y.shape() ==  Y_delta.shape());
         cuvAssert(Y_delta.shape(1) > 1);
         cuvAssert(m_W.shape() ==  w_delta.shape());
