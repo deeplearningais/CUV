@@ -102,12 +102,24 @@ namespace cuv{ namespace libs{
          * 
          */
         template<class V, class M, class L>
-            void rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& sW, const float& learnrate, const float& delta, const float& decay = 0.0f, const float& sparsedecay=0.0f, const float& grad_avg=0.9f);
-		/**
-		 * @}
-		 * @}
-		 */
-	}
+            void rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& oldW, const float& learnrate, const float& delta, const float& decay = 0.0f, const float& sparsedecay=0.0f, const float& grad_avg=0.9f);
+
+        /**
+         * @brief Do a gradient update step using Nesterov accelerated RMSPROP.
+         *
+         * @param W 	Destination matrix
+         * @param dW	The gradient of W. This is a tensor of same shape as W.
+         * @param oldW	The weight-update of the privious learning-step for each component as W (therefore also same shape as W).
+         * @param sW	The sum of the squared gradients for each component as W (therefore also same shape as W).
+         * @param learnrates The per weight learningrates (therefore also same shape as W).
+         * @param learnrate Scalar learnreate
+         * @param momentum Scalar momentum-constant
+         * @param avg_grad time constant to average gradient squares with (0.9 means keep most of old average)
+         * @param step_adapt adaptable step rate constant
+         */
+        template<class V, class M, class L>
+            void na_rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& oldW, tensor<V,M,L>& sW, tensor<V,M,L>& learnrates, const float& learnrate, const float& momentum, const float& grad_avg, const float& step_adapt, const float& delta);
+    }
 } };
 
 #endif
