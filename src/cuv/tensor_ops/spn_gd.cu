@@ -68,7 +68,7 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                 
                 T delta;
                 if (hard_bp){            
-                    delta =  rate * (( p_dW_old - p_dW ) / p_W);
+                    delta =  rate * (( p_dW_old - p_dW ) / fabs(p_W));
                 } else {
                     delta =  rate * (p_dW_old - p_dW);
                 }
@@ -143,7 +143,7 @@ void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate
                     
                     T delta; 
                     if(hard_bp){
-                        delta = rate * (( p_dW_old - p_dW ) / p_W);
+                        delta = rate * (( p_dW_old - p_dW ) / fabs(p_W));
                     } else {
                         delta = rate * ( p_dW_old - p_dW ) ;    
                     }
