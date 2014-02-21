@@ -30,6 +30,7 @@
 
 
 #include <cuv/tensor_ops/spn_gd.hpp>
+#include <cuv/tensor_ops/functors.hpp>
 
 #ifdef __CDT_PARSER__
 #define __global__
@@ -55,6 +56,7 @@
 namespace cuv{
 template< class T>
 __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n, float rate, const float decay, bool rescale, bool hard_bp,  int  n_size, unsigned int n_sub_size, float thresh) {
+    bf_logaddexp<float> lae;     
     if ( (n_size > 0) && rescale) {
             extern __shared__ float tmp[];
             tmp[threadIdx.x] = 0;
@@ -77,7 +79,10 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                 p_W += delta;
                 
                 //rescale weights ( project to unit ball )
-                tmp[threadIdx.x] = expf(p_W);
+                float lae_val = expf(p_W);
+                if (! isfinite(lae_val)) lae_val = lae(0, p_W);
+                    
+                tmp[threadIdx.x] =  lae_val;
                 tmp[threadIdx.x] = tmp[threadIdx.x] * tmp[threadIdx.x];
                 
                 //logarithmic sum 
@@ -96,7 +101,7 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                 __syncthreads();
                 
                 if (over_thresh)
-                    W[idx] = logf( expf(p_W) / tmp[0]); 
+                    W[idx] = logf(lae_val / tmp[0]); 
                 else
                     W[idx] =  p_W;
                 
