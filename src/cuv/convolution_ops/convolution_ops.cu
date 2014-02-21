@@ -516,9 +516,6 @@ template<>
         unsigned int nOutPixX = target.shape(2);
         cuvAssert(target.shape(3) == nImg);
 
-        unsigned int poolSize = nImgPixY / nOutPixY;
-        /*cuvAssert(poolSize*nOutPixY == nImgPixY);*/
-
         NVMatrix nv_target NVView4D(target);
         NVMatrix nv_images NVView4D(images);
         
@@ -530,7 +527,7 @@ template<>
                 break;
             case PT_AVG:
                 convLocalPool(nv_images, nv_target, nFilt,
-                        subsX, startX, strideX, nOutPixX, AvgPooler(poolSize*poolSize));
+                        subsX, startX, strideX, nOutPixX, AvgPooler(subsX*subsX));
                 break;
             case PT_SUM:
             convLocalPool(nv_images, nv_target, nFilt,
@@ -1791,6 +1788,9 @@ template<class V,class M, class T>
         cuvAssert(dst.shape(0)==size);
         //check dimensions of dst
         cuvAssert(dst.shape(0)*stride == src.shape(0));
+        
+        cuvAssert(!cuv::has_nan(src));
+        cuvAssert(!cuv::has_nan(m_W));        
 
         unsigned int src_size = src.shape(0);
     
@@ -2435,6 +2435,13 @@ template<class V,class M, class T>
         assert(delta.shape(0) == src.shape(0)/stride);
         assert(subspace_size <= 256); // (data type char is used to store max_idx)
         cuvAssert(delta.shape().size() == 3 || delta.shape().size() == 4);
+        
+        cuvAssert(!cuv::has_nan(src));
+        cuvAssert(!cuv::has_nan(m_W)); 
+        cuvAssert(!cuv::has_nan(delta));
+        cuvAssert(!cuv::has_nan(m_W));
+        cuvAssert(!cuv::has_nan(S));
+        cuvAssert(!cuv::has_nan(r0)); 
     
         //initialize  w_delta and dst
         cuv::fill (dst, 0);
@@ -2677,15 +2684,11 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
                         unsigned int off = c * itb + xtb;
                         const T* src_ptr = src + off;
                         T s = src_ptr[b];
-                        T d_dy_val = expf(w + s) *exp_res * delta_ptr[b]; //res              // UND HIER
+                        T d_dy_val = expf(w + s )*exp_res;// * delta_ptr[b]; //res             
                         T* dst_ptr = dst + off;
                     if ( (y < 0) || (c == y) ){
                         if (d_dx) dst_ptr[b] = d_dy_val;
                         if (d_dw) temp_w_delta[threadIdx.x] += s_val * d_dy_val;
-                    } else {
-                        if (d_dx) dst_ptr[b] = 0;
-                        if (d_dw) temp_w_delta[threadIdx.x] += 0;                    
-                    //except for d_dy, since it does not depend on the label
                     }
                     if (d_dy) Y_delta_ptr[c] += d_dy_val;                 
 
@@ -2735,7 +2738,7 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
                     const T* lae_ptr = lae_res + xtb;
                     T s = src_ptr[b];
                     T w = m_W[c];
-                    T d_dy_val = ( expf(w+s)/expf(lae_ptr[b]) ) * delta_ptr[b];                    
+                    T d_dy_val = ( expf(w+s)/expf(lae_ptr[b]) );// * delta_ptr[b];                    
                     if ( (y < 0) || (c == y)){
                         if (d_dx) dst_ptr[b] = d_dy_val;
                         if (d_dw) w_delta[c] += s_val * d_dy_val;
@@ -2763,6 +2766,13 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
             batch = src.shape(3);
         }
  
+        cuvAssert(!cuv::has_nan(src));
+        cuvAssert(!cuv::has_nan(m_W));  
+        cuvAssert(!cuv::has_nan(Y));  
+        cuvAssert(!cuv::has_nan(S));  
+        cuvAssert(!cuv::has_nan(lae_res));  
+        
+        
         cuv::fill (dst, 0);
         cuv::fill (Y_delta, 0);
         cuv::fill (w_delta, 0);
