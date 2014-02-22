@@ -2537,9 +2537,7 @@ template<class V,class M, class T>
             cuvSafeCall(cudaThreadSynchronize());
         }
         cuvAssert(!cuv::has_nan(dst));        
-        cuvAssert(!cuv::has_nan(w_delta));  
-        std::cout << " spn  WTO done " << std::endl;
-        
+        cuvAssert(!cuv::has_nan(w_delta));         
     }  
   
 
@@ -2811,11 +2809,10 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(!cuv::has_nan(S));  
         cuvAssert(!cuv::has_nan(lae_res));  
         
-        std::cout << "min(S): " << cuv::minimum(S) << ", max(S): " << cuv::maximum(S) <<  ", mean(S): " << cuv::mean(S) <<std::endl;
-        std::cout << "min(W): " << cuv::minimum(m_W) << ", max(W): " << cuv::maximum(m_W)  <<  ", mean(W): " << cuv::mean(m_W) << std::endl;
-        std::cout << "min(lae_res): " << cuv::minimum(lae_res) << ", max(lae_res): " << cuv::maximum(lae_res)  <<  ", mean(lae_res): " << cuv::mean(lae_res) << std::endl;
-        std::cout << "eps: "  << eps << std::endl;
-        std::cout << "expf.. " << expf(-16979 -3) << ", .. " << expf(-16979 -3) / (expf(-16979) + eps) << std::endl;
+//        std::cout << "min(S): " << cuv::minimum(S) << ", max(S): " << cuv::maximum(S) <<  ", mean(S): " << cuv::mean(S) <<std::endl;
+//        std::cout << "min(W): " << cuv::minimum(m_W) << ", max(W): " << cuv::maximum(m_W)  <<  ", mean(W): " << cuv::mean(m_W) << std::endl;
+//        std::cout << "min(lae_res): " << cuv::minimum(lae_res) << ", max(lae_res): " << cuv::maximum(lae_res)  <<  ", mean(lae_res): " << cuv::mean(lae_res) << std::endl;
+//        std::cout << "eps: "  << eps << std::endl;
         
         cuv::fill (dst, 0);
         cuv::fill (Y_delta, 0);
@@ -2846,10 +2843,9 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
 
             cuvSafeCall(cudaThreadSynchronize());
         }
-//        cuvAssert(!cuv::has_nan(dst));    
+        cuvAssert(!cuv::has_nan(dst));    
         cuvAssert(!cuv::has_nan(w_delta));        
         cuvAssert(!cuv::has_nan(Y_delta));     
-        std::cout << " spn_out_op done " << std::endl;
     }
     
     
