@@ -50,6 +50,7 @@
 #include <cuv/convolution_ops/convolution_ops.hpp>
 #include <cuv/tensor_ops/functors.hpp>
 
+
 #define NVView1D(X)  \
         (const_cast<float*>(X.ptr()), 1, X.shape(0), X.shape(0), false)
 #define NVView3D(X)  \
@@ -1968,9 +1969,8 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
             //weight gradient in case SOFT_INFEERENCE 
             switch(to){
                case TO_LOGWADDEXP:
-                   S_val = 1/(S[itemy] +  eps);
                case TO_LOGWADDEXP_LOGSPACE:
-                   S_val = 1/(S[itemy] + eps);
+                   S_val = 1/(fabs(S[itemy]) + eps);
             }
             for(unsigned int itemx = threadIdx.x; itemx < dst_colsx; itemx += blockDim.x){
                 unsigned int item = itemy * dst_colsx + itemx;
@@ -1989,9 +1989,8 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
                     p  = d0[item];
                     break;
                case TO_LOGWADDEXP:
-                   p  = d0[item] * 1/expf(r0_ptr[item]);
                case TO_LOGWADDEXP_LOGSPACE:
-                   p  = d0[item] * 1/expf(r0_ptr[item]);
+                   p  = d0[item] * 1/(expf(r0_ptr[item]) + eps);
                    break;
             }
 
@@ -2143,9 +2142,8 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
                     p  = d0[item];
                     break;
                case TO_LOGWADDEXP:
-                   p  = d0[item] * 1/expf(r0_ptr[item]);
                case TO_LOGWADDEXP_LOGSPACE:
-                   p  = d0[item] * 1/expf(r0_ptr[item]);
+                   p  = d0[item] * 1/(expf(r0_ptr[item]) + eps );
                    break;
             }
 
@@ -2275,7 +2273,7 @@ void weighted_sub_tensor_op_grad_host(T* dst, T* w_delta, const T* src, const T*
                 switch(to){
                 case TO_LOGWADDEXP:
                 case TO_LOGWADDEXP_LOGSPACE:
-                    S_val = 1/(S[itemy]+ eps);
+                    S_val = 1/(fabs(S[itemy])+ eps);
                 }
                 for(unsigned int itemx = 0; itemx < dst_colsx; itemx ++){
                     unsigned int item = itemy * dst_colsx + itemx;
@@ -2295,7 +2293,7 @@ void weighted_sub_tensor_op_grad_host(T* dst, T* w_delta, const T* src, const T*
                         break;
                 case TO_LOGWADDEXP:
                 case TO_LOGWADDEXP_LOGSPACE:
-                    p  = d0[item] * 1/expf(r0_ptr[item]);
+                    p  = d0[item] * 1/(expf(r0_ptr[item]) + eps);
                     break;
                 }
 
@@ -2393,7 +2391,7 @@ void weighted_sub_tensor_op_grad_host(T* dst, T* w_delta, const T* src, const T*
                     break;
                case TO_LOGWADDEXP:
                case TO_LOGWADDEXP_LOGSPACE:
-                   p  = d0[item] * 1/expf(r0_ptr[item]);
+                   p  = d0[item] * 1/(expf(r0_ptr[item] + eps));
                    break;
             }
 
@@ -2539,7 +2537,9 @@ template<class V,class M, class T>
             cuvSafeCall(cudaThreadSynchronize());
         }
         cuvAssert(!cuv::has_nan(dst));        
-        cuvAssert(!cuv::has_nan(w_delta));                  
+        cuvAssert(!cuv::has_nan(w_delta));  
+        std::cout << " spn  WTO done " << std::endl;
+        
     }  
   
 
@@ -2714,17 +2714,17 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
             T* Y_delta_ptr = Y_delta + btl;
             //get correct label (or marginalization flag)
             y = int( Y_ptr[0] );
-            T s_val = 1/(S[b] + eps);
+            T s_val = 1/(fabs(S[b]) + eps);
             
             for ( unsigned int x = 0; x < items; x++){
                 unsigned int xtb = x * batch;
                 const T* lae_ptr = lae_res + xtb; //1 / exp(lae_res[b]);  
-                const T exp_res = 1 / expf(lae_ptr[b]);
                     //set derivative for d_dx, d_dw only if label != 0 (marginalization step, or correct label)   
                         unsigned int off = c * itb + xtb;
                         const T* src_ptr = src + off;
                         T s = src_ptr[b];
-                        T d_dy_val = expf(w + s )*exp_res; //res             
+                        T d_dy_val = expf(w + s ) / (expf(lae_ptr[b]) + eps); //res   
+//                        if ( ! isfinite(d_dy_val) ) 
                         T* dst_ptr = dst + off;
                     if ( (y < 0) || (c == y) ){
                         if (d_dx) dst_ptr[b] = d_dy_val;
@@ -2767,7 +2767,7 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
             const T* Y_ptr = Y + btl;
             y = int( Y_ptr[0] );
             T* Y_delta_ptr = Y_delta + b * btl;      
-            T s_val = 1/(S[b] + eps);
+            T s_val = 1/(fabs(S[b]) + eps);
             for ( unsigned int x = 0; x <items; x++){
                 for ( unsigned int c = 0; c < lines; c++){
                     unsigned int xtb = x * batch;
@@ -2777,7 +2777,7 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
                     const T* lae_ptr = lae_res + xtb;
                     T s = src_ptr[b];
                     T w = m_W[c];
-                    T d_dy_val = ( expf(w+s)/expf(lae_ptr[b]) );                    
+                    T d_dy_val =  expf(w+s)/(expf(lae_ptr[b]) + eps) ;                    
                     if ( (y < 0) || (c == y)){
                         if (d_dx) dst_ptr[b] = d_dy_val;
                         if (d_dw) w_delta[c] += s_val * d_dy_val;
@@ -2811,10 +2811,11 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(!cuv::has_nan(S));  
         cuvAssert(!cuv::has_nan(lae_res));  
         
-//        std::cout << "min(S): " << cuv::minimum(S) << ", max(S): " << cuv::maximum(S) <<  ", mean(S): " << cuv::mean(S) <<std::endl;
-//        std::cout << "min(W): " << cuv::minimum(m_W) << ", max(W): " << cuv::maximum(m_W)  <<  ", mean(W): " << cuv::mean(m_W) << std::endl;
-//        std::cout << "min(lae_res): " << cuv::minimum(lae_res) << ", max(lae_res): " << cuv::maximum(lae_res)  <<  ", mean(lae_res): " << cuv::mean(lae_res) << std::endl;
-       
+        std::cout << "min(S): " << cuv::minimum(S) << ", max(S): " << cuv::maximum(S) <<  ", mean(S): " << cuv::mean(S) <<std::endl;
+        std::cout << "min(W): " << cuv::minimum(m_W) << ", max(W): " << cuv::maximum(m_W)  <<  ", mean(W): " << cuv::mean(m_W) << std::endl;
+        std::cout << "min(lae_res): " << cuv::minimum(lae_res) << ", max(lae_res): " << cuv::maximum(lae_res)  <<  ", mean(lae_res): " << cuv::mean(lae_res) << std::endl;
+        std::cout << "eps: "  << eps << std::endl;
+        std::cout << "expf.. " << expf(-16979 -3) << ", .. " << expf(-16979 -3) / (expf(-16979) + eps) << std::endl;
         
         cuv::fill (dst, 0);
         cuv::fill (Y_delta, 0);
@@ -2845,9 +2846,10 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
 
             cuvSafeCall(cudaThreadSynchronize());
         }
-        cuvAssert(!cuv::has_nan(dst));        
+//        cuvAssert(!cuv::has_nan(dst));    
         cuvAssert(!cuv::has_nan(w_delta));        
-        cuvAssert(!cuv::has_nan(Y_delta));                
+        cuvAssert(!cuv::has_nan(Y_delta));     
+        std::cout << " spn_out_op done " << std::endl;
     }
     
     
