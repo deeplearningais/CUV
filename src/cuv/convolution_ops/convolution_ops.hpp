@@ -460,7 +460,7 @@ void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,
 * @param eps small numerical constant for numerical stability (for weighting term  1/(S[1,x|y]+eps))
 */
 template<class V, class M, class T>
-void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M,T>& w_delta, tensor<V,M,T>& Y_delta, const tensor<V,M,T>& m_W, const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& lae, const tensor<V,M,T>& delta, bool d_dx, bool d_dw, bool d_dy, float eps=0.00001f);
+void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M,T>& w_delta, tensor<V,M,T>& Y_delta, const tensor<V,M,T>& m_W, const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& lae, bool d_dx, bool d_dw, bool d_dy, float eps=0.00001f);
 
 
 }

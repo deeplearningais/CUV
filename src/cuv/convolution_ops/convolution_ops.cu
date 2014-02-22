@@ -1609,15 +1609,25 @@ void weighted_sub_tensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* 
                 squared_sum = 0.f;
                 end = item + diff;
                 wInd = 0;
-                
+                bool first = true;
                 for (unsigned int index = item; index < end; index += dst_cols, wInd++){            
                     T s = src_ptr[index];
                     switch(to){
                         case TO_LOGWADDEXP:
-                            squared_sum = lae(squared_sum, w[wInd]*s);
+                            if ( first){
+                                squared_sum = w[wInd]*s;
+                                first = false;
+                            }
+                            else
+                                squared_sum = lae(squared_sum, w[wInd]*s);
                             break;
                         case TO_LOGWADDEXP_LOGSPACE:
-                            squared_sum = lae(squared_sum, w[wInd] + s); 
+                            if ( first ){ 
+                                squared_sum = w[wInd] + s;
+                                first = false;
+                            }
+                            else
+                                squared_sum = lae(squared_sum, w[wInd] + s); 
                             break;
                         case TO_WADD:
                             squared_sum +=  w[wInd] * s;
@@ -1704,8 +1714,8 @@ template<weighted_sub_tensor_op_functor to, class T>
                     for(item = 0; item < items; item += buffer_size){
                             //reset buffer
                             //for ( unsigned int i = 0; i < buffer_size; i++) squared_sum[i] = 0.f;
-			    memset(squared_sum, 0, buffer_size * sizeof(float));
-                            
+                            memset(squared_sum, 0, buffer_size * sizeof(float));
+                            bool first = true;
                             end = item + diff;
                             wInd = 0;
                             
@@ -1717,10 +1727,16 @@ template<weighted_sub_tensor_op_functor to, class T>
                                 T s = src_ptr[index + buff];
                                 switch(to){
                                     case TO_LOGWADDEXP:
-                                        squared_sum[buff] = lae(squared_sum[buff], m_W_ptr[wInd]*s);
+                                        if ( first )
+                                            squared_sum[buff] = m_W_ptr[wInd]*s;
+                                        else
+                                            squared_sum[buff] = lae(squared_sum[buff], m_W_ptr[wInd]*s);
                                         break;
                                     case TO_LOGWADDEXP_LOGSPACE:
-                                        squared_sum[buff] = lae(squared_sum[buff], m_W_ptr[wInd] + s); 
+                                        if ( first )
+                                            squared_sum[buff] = m_W_ptr[wInd]+s;
+                                        else
+                                            squared_sum[buff] = lae(squared_sum[buff], m_W_ptr[wInd] + s); 
                                         break;
                                     case TO_WADD:
                                         squared_sum[buff] +=  m_W_ptr[wInd] * s;
@@ -1742,6 +1758,7 @@ template<weighted_sub_tensor_op_functor to, class T>
                                     }
                                     
                             }//enf of for buffer
+                            first = false;
                         }
                 //write whole buffer        
                 for ( unsigned int buff = 0; buff < buffer_size; buff ++){        
@@ -2521,6 +2538,8 @@ template<class V,class M, class T>
 
             cuvSafeCall(cudaThreadSynchronize());
         }
+        cuvAssert(!cuv::has_nan(dst));        
+        cuvAssert(!cuv::has_nan(w_delta));                  
     }  
   
 
@@ -2540,6 +2559,7 @@ __global__
 void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsigned int lines, unsigned int items, unsigned int batch){       
         //load weights into shared memory
         float result = 0;
+        bool first = true;
         unsigned int itb = items * batch;
         extern __shared__ float w[];
         const T* Y_ptr = Y + threadIdx.x * lines;
@@ -2560,12 +2580,22 @@ void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsign
                 if (y < 0){
                     for ( unsigned int c = 0; c < lines; c++){
                         const T* src_ptr = src + c * itb + xtb;
-                        result = lae(result, w[c] + src_ptr[b]);
+                        if ( first ){
+                            result = w[c] + src_ptr[b];
+                            first = false;
+                        }
+                        else
+                            result = lae(result, w[c] + src_ptr[b]);
                     }
                 } else {
                     // no marginalization step => all labels =! y were 0
                     const T* src_ptr = src + y * itb + xtb;
-                    result = lae(result, w[y] + src_ptr[b]);                  
+                    if ( first ) {
+                        result = w[y] + src_ptr[b];
+                        first = false;
+                    }
+                    else
+                        result = lae(result, w[y] + src_ptr[b]);                  
                 }
                 dst_ptr[b] = result;
                 result = 0;
@@ -2580,6 +2610,7 @@ template<class T>
         unsigned int itb = items * batch;
         bf_logaddexp<float> lae;
         for ( unsigned int b = 0; b < batch; b ++){
+            bool first = true;
             const T* Y_ptr = Y + b*lines;
             for ( unsigned int x = 0; x <items; x++){
                 unsigned int  xtb = x * batch;                
@@ -2588,11 +2619,21 @@ template<class T>
                 if ( y < 0){
                     for ( unsigned int c = 0; c < lines; c++){
                         const T* src_ptr = src + c * itb + xtb;
-                        dst_ptr[x] = lae(dst_ptr[x], m_W[c] + src_ptr[b]);       
+                        if ( first ){
+                            dst_ptr[x] = m_W[c] + src_ptr[b];
+                            first = false;
+                        }
+                        else
+                            dst_ptr[x] = lae(dst_ptr[x], m_W[c] + src_ptr[b]);       
                     }
                 } else {
                     const T* src_ptr = src + y * itb + xtb;
-                    dst_ptr[x] = lae(dst_ptr[x], m_W[y] + src_ptr[b]);       
+                    if ( first ){
+                         dst_ptr[x] = m_W[y] + src_ptr[b];
+                         first = false;
+                    }
+                    else
+                        dst_ptr[x] = lae(dst_ptr[x], m_W[y] + src_ptr[b]);       
                 }
             }
         }     
@@ -2654,7 +2695,7 @@ void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,
 // currently d_dy just works for case x = 1, 
 template<class T>
 __global__
-void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, const T* m_W,  const T* Y, const T* S, const T* lae_res, const T* delta,
+void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, const T* m_W,  const T* Y, const T* S, const T* lae_res,
                           unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, const bool d_dy, const bool d_dw, float eps){       
         extern __shared__ float temp_w_delta[];
         unsigned int itb = (items * batch);
@@ -2677,14 +2718,13 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
             
             for ( unsigned int x = 0; x < items; x++){
                 unsigned int xtb = x * batch;
-                const T* delta_ptr = delta + xtb;
                 const T* lae_ptr = lae_res + xtb; //1 / exp(lae_res[b]);  
                 const T exp_res = 1 / expf(lae_ptr[b]);
                     //set derivative for d_dx, d_dw only if label != 0 (marginalization step, or correct label)   
                         unsigned int off = c * itb + xtb;
                         const T* src_ptr = src + off;
                         T s = src_ptr[b];
-                        T d_dy_val = expf(w + s )*exp_res;// * delta_ptr[b]; //res             
+                        T d_dy_val = expf(w + s )*exp_res; //res             
                         T* dst_ptr = dst + off;
                     if ( (y < 0) || (c == y) ){
                         if (d_dx) dst_ptr[b] = d_dy_val;
@@ -2718,7 +2758,7 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
 
 
 template<class T>
-void spn_output_op_grad_host(T* dst, const T* src, T* w_delta, T* Y_delta, const T* m_W, const T* Y, const T* S, const T* lae_res, const T* delta,
+void spn_output_op_grad_host(T* dst, const T* src, T* w_delta, T* Y_delta, const T* m_W, const T* Y, const T* S, const T* lae_res,
 unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, const bool d_dy, const bool d_dw, float eps){
         unsigned int itb = (items * batch);
         int y;
@@ -2734,11 +2774,10 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
                     unsigned int off = c* itb + xtb;
                     const T* src_ptr = src + off;
                     T* dst_ptr = dst + off;
-                    const T* delta_ptr = delta + xtb;
                     const T* lae_ptr = lae_res + xtb;
                     T s = src_ptr[b];
                     T w = m_W[c];
-                    T d_dy_val = ( expf(w+s)/expf(lae_ptr[b]) );// * delta_ptr[b];                    
+                    T d_dy_val = ( expf(w+s)/expf(lae_ptr[b]) );                    
                     if ( (y < 0) || (c == y)){
                         if (d_dx) dst_ptr[b] = d_dy_val;
                         if (d_dw) w_delta[c] += s_val * d_dy_val;
@@ -2752,7 +2791,7 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
     
 template<class V, class M, class T>
 void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M,T>& w_delta, tensor<V,M,T>& Y_delta, const tensor<V,M,T>& m_W, 
-                        const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& lae_res, const tensor<V,M,T>& delta, const bool d_dx, const bool d_dw, const bool d_dy, float eps){
+                        const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& lae_res, const bool d_dx, const bool d_dw, const bool d_dy, float eps){
         
         cuvAssert((src.shape().size() == 3) || (src.shape().size() == 4));
         unsigned int lines = src.shape(0);
@@ -2772,6 +2811,10 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(!cuv::has_nan(S));  
         cuvAssert(!cuv::has_nan(lae_res));  
         
+//        std::cout << "min(S): " << cuv::minimum(S) << ", max(S): " << cuv::maximum(S) <<  ", mean(S): " << cuv::mean(S) <<std::endl;
+//        std::cout << "min(W): " << cuv::minimum(m_W) << ", max(W): " << cuv::maximum(m_W)  <<  ", mean(W): " << cuv::mean(m_W) << std::endl;
+//        std::cout << "min(lae_res): " << cuv::minimum(lae_res) << ", max(lae_res): " << cuv::maximum(lae_res)  <<  ", mean(lae_res): " << cuv::mean(lae_res) << std::endl;
+       
         
         cuv::fill (dst, 0);
         cuv::fill (Y_delta, 0);
@@ -2783,9 +2826,6 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(batch > 0);   
         cuvAssert(src.shape(0) ==  Y.shape(1));
         cuvAssert((src.shape(2) == Y.shape(0)) || (src.shape(3) == Y.shape(0)) );
-        cuvAssert(delta.shape(0) == 1);
-        cuvAssert(delta.shape(1) ==  src.shape(1));
-        cuvAssert(delta.shape(2) ==  src.shape(2));
         cuvAssert(m_W.shape(1) ==  src.shape(0));
         cuvAssert(Y.shape() ==  Y_delta.shape());
         cuvAssert(Y_delta.shape(1) > 1);
@@ -2794,17 +2834,20 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(src.shape() == dst.shape());
         
         if(IsSame<M,host_memory_space>::Result::value){
-               spn_output_op_grad_host(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), lae_res.ptr(), delta.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps);
+               spn_output_op_grad_host(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), lae_res.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps);
                 
         }else{
             // device: run kernel
             unsigned int num_blocks  = lines;
             unsigned int num_threads = min(MAX_THREADS, int(32 * ceil( batch / 32. )));
             unsigned int sharedMemory  =  num_threads * sizeof(float);
-            spn_output_op_grad_kernel<<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), lae_res.ptr(), delta.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps);
+            spn_output_op_grad_kernel<<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), lae_res.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps);
 
             cuvSafeCall(cudaThreadSynchronize());
         }
+        cuvAssert(!cuv::has_nan(dst));        
+        cuvAssert(!cuv::has_nan(w_delta));        
+        cuvAssert(!cuv::has_nan(Y_delta));                
     }
     
     
@@ -2814,7 +2857,7 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
 template void spn_output_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&); \
-template void spn_output_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, bool, bool, bool, float); \
+template void spn_output_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, bool, bool, bool, float); \
 template void weighted_sub_tensor_op<V,M,T>(TENS(V,M,T)&, TENS(unsigned char,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, unsigned int, weighted_sub_tensor_op_functor, float); \
 template void weighted_sub_tensor_op_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(unsigned char,M,T)&, bool, bool,  bool, unsigned int, unsigned int, unsigned int, weighted_sub_tensor_op_functor, float); \
 template void tuplewise_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor, float); \
