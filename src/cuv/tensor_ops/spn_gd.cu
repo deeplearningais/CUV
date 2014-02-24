@@ -38,21 +38,6 @@
 
 
 
-
-/*
-        cuv::apply_scalar_functor(ax, cuv::SF_SQRT); // ax[over_thresh] = sqrt(ax[over_thresh])
-        cuv::apply_scalar_functor(ax, cuv::SF_MULT, 1.f / thresh);      // ax[over_thresh] *= 1/thresh
-        over_thresh = !over_thresh;    // 
-        cuv::apply_scalar_functor(ax, cuv::SF_MULT, 0.f, &over_thresh); // ax[!over_thresh] = 0
-        cuv::apply_scalar_functor(ax, cuv::SF_ADD , 1.f, &over_thresh); // ax[!over_thresh] += 1
-        if(axis == 1)
-            cuv::matrix_divide_row(C, ax);
-        else if(axis == 0)
-            cuv::matrix_divide_col(C, ax);
-    }
-
- */
-
 namespace cuv{
 template< class T>
 __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n, float rate, const float decay, bool rescale, bool hard_bp,  int  n_size, unsigned int n_sub_size, float thresh) {
@@ -61,7 +46,6 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
             extern __shared__ float tmp[];
             tmp[threadIdx.x] = 0;
             unsigned int idx = blockIdx.x * n_sub_size + threadIdx.x;
-            __shared__ bool over_thresh;
 
             if ( threadIdx.x < n_sub_size ){
                 T p_W = W[idx];
@@ -78,37 +62,27 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                 if (decay > 0) delta -= rate*p_W*decay;
                 p_W += delta;
                 
-                //rescale weights ( project to unit ball )
-                float lae_val = expf(p_W);
-                if (! isfinite(lae_val)) lae_val = lae(0, p_W);
-                    
-                tmp[threadIdx.x] =  lae_val;
-                tmp[threadIdx.x] = tmp[threadIdx.x] * tmp[threadIdx.x];
+                //rescale weights ( project onto unit ball )                    
+                tmp[threadIdx.x] =  2 *p_W;
+                tmp[threadIdx.x] = tmp[threadIdx.x];
                 
                 //logarithmic sum 
                 for ( unsigned int j = blockDim.x/2; j > 0; j/=2){
                     __syncthreads();
                     if (threadIdx.x < j){
-                        tmp[threadIdx.x] += tmp[threadIdx.x + j];
+                        tmp[threadIdx.x] = lae(tmp[threadIdx.x], tmp[threadIdx.x + j]);
                     }
                 }
                 if (threadIdx.x == 0){
-                    over_thresh = (tmp[0] > thresh); 
-                    if (over_thresh){
-                        tmp[0] = sqrt(tmp[0]);
-                    }
+                    tmp[0] = 0.5 * tmp[0];
                 }
                 __syncthreads();
                 
-                if (over_thresh)
-                    W[idx] = logf(lae_val / tmp[0]); 
-                else
-                    W[idx] =  p_W;
+               W[idx] = p_W - tmp[0]; 
                 
                 //reset shared memory of this thread
                 tmp[threadIdx.x] = 0;
             }
-           
     } else {
         const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
         int off = blockDim.x * gridDim.x;
@@ -138,9 +112,11 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
 template< class T>
 void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate, const float& decay, bool & rescale, bool hard_bp, int & n_size, unsigned int & n_sub_size, float thresh){   
     if ( (n_size > 0) && rescale) { // rescaling weights is only possible for spn layer..
+        bf_logaddexp<float> lae;          
         for (unsigned int s = 0; s < n_size; s++){
               float sum = 0;
               for (unsigned int sub = 0; sub < n_sub_size; sub++){
+                    bool first = true;                  
                     unsigned int i =  s * n_sub_size + sub;
                     T p_W = W[i];
                     T p_dW_old = dW_old[i];
@@ -159,20 +135,20 @@ void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate
                     //sparse decay
                     W[i] += delta;
                     if (rescale && (n_sub_size > 0)){
-                        float tmp = expf(W[i]);
-                        tmp *= tmp;
-                        sum += tmp;
+                        if ( first ){
+                            sum = s * W[i];
+                            first = false;
+                        } else
+                            sum = lae(sum, 2 * W[i]);
                     }
                 }
                 //rescale weights such that they sum up to one
                 if (rescale && (n_sub_size > 0)){
-                    if (sum > thresh){
                     for (unsigned int sub = 0; sub < n_sub_size; sub++){
                         unsigned int i =  s * n_sub_size + sub; 
-                            sum = sqrt(sum);
-                            W[i] = expf(W[i]) / sum;
-                        }
-                    }
+                            sum = 0.5 * sum;
+                            W[i] -= sum;
+                        }  
                 }
             }
     } else {
