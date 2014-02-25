@@ -157,13 +157,12 @@ namespace cuv{ namespace libs{
          * @param momentum Scalar momentum-constant
          * @param avg_grad time constant to average gradient squares with (0.9 means keep most of old average)
          * @param step_adapt adaptable step rate constant
+         * @param lr_max upper bound for learningrates
+         * @param lr_min lower bound for learrningrates
          */
         template<class V, class M, class L>
-            void na_rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& oldW, tensor<V,M,L>& sW, tensor<V,M,L>& learnrates, const float& learnrate, const float& momentum, const float& grad_avg, const float& step_adapt, const float& delta);
-		/**
-		 * @} // defgroup opt Function Optimization
-		 * @} // defgroup libs
-		 */
+            void na_rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& oldW, tensor<V,M,L>& sW, tensor<V,M,L>& learnrates, const float& momentum, const float& grad_avg, const float& step_adapt, const float& delta, const float& lr_max, const float& lr_min);
+
     }
 } };
 

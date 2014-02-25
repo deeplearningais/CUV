@@ -229,42 +229,65 @@ namespace impl{
         }
 
     template<class T>
-        __global__ void na_rmsprop(T* Wptr, const T* dWptr, T* oldWptr, T* sWptr, T* learnrates, T learnrate, T momentum, T grad_avg, T step_adapt, T delta, unsigned int size) {
+        __global__ void na_rmsprop(T* Wptr, const T* dWptr, T* oldWptr, T* sWptr, T* lrptr, T momentum, T grad_avg, T step_adapt, T delta, T lr_max, T lr_min, unsigned int size) {
             const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
             unsigned int off = blockDim.x * gridDim.x;
             for (unsigned int i = idx; i < size; i += off){
                 sWptr[i] = grad_avg * sWptr[i] + (1.f-grad_avg) * dWptr[i] * dWptr[i];
-                float upd = learnrate * dWptr[i] / (sqrt(sWptr[i])+delta);
+                float upd = lrptr[i] * dWptr[i] / (sqrt(sWptr[i])+delta);
                 float tmp = Wptr[i] - upd;
                 float v = momentum*(tmp - oldWptr[i]);
                 float f = tmp + v;
                 Wptr[i] = sgn(f) * max(0.f, fabs(f) /*- learnrate * sparsedecay/lr*/);
                 oldWptr[i] = tmp;
+                float lr;
+                if(sgn(v) == sgn(v + upd))
+                    lr = lrptr[i] * (1 + step_adapt);
+                else
+                    lr = lrptr[i] * (1 - step_adapt);
+                if(lr > lr_max)
+                    lrptr[i] = lr_max;
+                else if(lr < lr_min)
+                    lrptr[i] = lr_min;
+                else
+                    lrptr[i] = lr;
             }
         }
     template<class V, class L>
-        void na_rmsprop(tensor<V,host_memory_space, L>& W, const tensor<V,host_memory_space, L>& dW, tensor<V,host_memory_space, L>& oldW, tensor<V,host_memory_space, L>& sW, tensor<V,host_memory_space, L>& learnrates, const float& learnrate, const float& momentum, const float& grad_avg, const float& step_adapt, const float& delta){
+        void na_rmsprop(tensor<V,host_memory_space, L>& W, const tensor<V,host_memory_space, L>& dW, tensor<V,host_memory_space, L>& oldW, tensor<V,host_memory_space, L>& sW, tensor<V,host_memory_space, L>& learnrates, const float& momentum, const float& grad_avg, const float& step_adapt, const float& delta, const float& lr_max, const float& lr_min){
             unsigned int size = W.size();
             V* Wptr = W.ptr();
             const V* dWptr = dW.ptr();
             V* oldWptr = oldW.ptr();
             V* sWptr = sW.ptr();
+            V* lrptr = learnrates.ptr();
             for(unsigned int i=0; i < size; i++){
                 sWptr[i] = grad_avg * sWptr[i] + (1.f-grad_avg) * dWptr[i] * dWptr[i];
-                float upd = learnrate * dWptr[i] / (sqrt(sWptr[i])+delta);
+                float upd = lrptr[i] * dWptr[i] / (sqrt(sWptr[i])+delta);
                 float tmp = Wptr[i] - upd;
                 float v = momentum*(tmp - oldWptr[i]);
                 float f = tmp + v;
                 Wptr[i] = sgn(f) * max(0.f, fabs(f) /*- learnrate * sparsedecay/lr*/);
                 oldWptr[i] = tmp;
+                float lr;
+                if(sgn(v) == sgn(v + upd))
+                    lr = lrptr[i] * (1 + step_adapt);
+                else
+                    lr = lrptr[i] * (1 - step_adapt);
+                if(lr > lr_max)
+                    lrptr[i] = lr_max;
+                else if(lr < lr_min)
+                    lrptr[i] = lr_min;
+                else
+                    lrptr[i] = lr;
             }
         }
     template<class V, class L>
-        void na_rmsprop(tensor<V,dev_memory_space,L>& W, const tensor<V,dev_memory_space,L>& dW, tensor<V,dev_memory_space,L>& oldW, tensor<V,dev_memory_space,L>& sW, tensor<V,dev_memory_space,L>& learnrates, const float& learnrate, const float& momentum, const float& grad_avg, const float& step_adapt, const float& delta){
+        void na_rmsprop(tensor<V,dev_memory_space,L>& W, const tensor<V,dev_memory_space,L>& dW, tensor<V,dev_memory_space,L>& oldW, tensor<V,dev_memory_space,L>& sW, tensor<V,dev_memory_space,L>& learnrates, const float& momentum, const float& grad_avg, const float& step_adapt, const float& delta, const float& lr_max, const float& lr_min){
             unsigned int size = dW.size();
             unsigned int num_threads = 512;
             unsigned int num_blocks  = min(512,(unsigned int)ceil((float)dW.size() / num_threads));
-            na_rmsprop<<< num_threads, num_blocks>>>(W.ptr(), dW.ptr(), oldW.ptr(), sW.ptr(), learnrates.ptr(), learnrate, momentum, grad_avg, step_adapt, delta, size);
+            na_rmsprop<<< num_threads, num_blocks>>>(W.ptr(), dW.ptr(), oldW.ptr(), sW.ptr(), learnrates.ptr(), momentum, grad_avg, step_adapt, delta, lr_max, lr_min, size);
             cuvSafeCall(cudaThreadSynchronize());
         }
 }
@@ -404,12 +427,12 @@ void softmax(cuv::tensor<V, M,L>& dst, const cuv::tensor<V, M,L>& src,unsigned i
 }
 
 template<class V, class M, class L>
-void na_rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& oldW, tensor<V,M,L>& sW, tensor<V,M,L>& learnrates, const float& learnrate, const float& momentum, const float& grad_avg, const float& step_adapt, const float& delta){
+void na_rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& oldW, tensor<V,M,L>& sW, tensor<V,M,L>& learnrates, const float& momentum, const float& grad_avg, const float& step_adapt, const float& delta, const float& lr_max, const float& lr_min){
     cuvAssert(equal_shape(W,dW));
     cuvAssert(equal_shape(W,oldW));
     cuvAssert(equal_shape(W,sW));
     cuvAssert(equal_shape(W,learnrates));
-    impl::na_rmsprop(W,dW,oldW,sW,learnrates,learnrate,momentum,grad_avg,step_adapt,delta);
+    impl::na_rmsprop(W,dW,oldW,sW,learnrates,momentum,grad_avg,step_adapt,delta,lr_max,lr_min);
 }
 
 #define TENSOR(V,M,L) cuv::tensor<V,M,L>
@@ -418,7 +441,7 @@ void na_rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& oldW, 
   template void softmax(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,unsigned int); \
   template void adagrad(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,TENSOR(V,M,L)&,const float&, const float&, const float&, const float&); \
   template void rmsprop(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,TENSOR(V,M,L)&,const float&, const float&, const float&, const float&, const float&); \
-  template void na_rmsprop(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,TENSOR(V,M,L)&,TENSOR(V,M,L)&,TENSOR(V,M,L)&,const float&, const float&, const float&, const float&, const float&); 
+  template void na_rmsprop(TENSOR(V,M,L)&,const TENSOR(V,M,L)&,TENSOR(V,M,L)&,TENSOR(V,M,L)&,TENSOR(V,M,L)&,const float&, const float&, const float&, const float&, const float&, const float&); 
 
 #define INSTANTIATE_MLL(V,V2,M,L) \
   template std::pair<float, float> multinomial_logistic_loss(TENSOR(V,M,L)&, const TENSOR(V,M,L)&, const TENSOR(V2,M,L)&, int pattern_axis, boost::shared_ptr<allocator>);\
