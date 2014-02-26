@@ -54,31 +54,29 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                 
                 T delta;
                 if (hard_bp){            
-                    delta =  rate * (( p_dW_old - p_dW ) / fabs(p_W));
+                    delta =  rate * ( p_dW_old - p_dW );
                 } else {
                     delta =  rate * (p_dW_old - p_dW);
                 }
                 //weight decay
                 if (decay > 0) delta -= rate*p_W*decay;
                 p_W += delta;
-                
-                //rescale weights ( project onto unit ball )                    
-                tmp[threadIdx.x] =  2 *p_W;
+                                
+                //rescale weights ( project onto unit ball )    //TODO ALS LOGADDEXP SCHREIBEN for more stability                
+                tmp[threadIdx.x] = expf(p_W); //p_W *2;
                 tmp[threadIdx.x] = tmp[threadIdx.x];
                 
                 //logarithmic sum 
                 for ( unsigned int j = blockDim.x/2; j > 0; j/=2){
                     __syncthreads();
                     if (threadIdx.x < j){
-                        tmp[threadIdx.x] = lae(tmp[threadIdx.x], tmp[threadIdx.x + j]);
+                        tmp[threadIdx.x] += tmp[threadIdx.x + j]; // lae(tmp[threadIdx.x], tmp[threadIdx.x + j]);
                     }
                 }
-                if (threadIdx.x == 0){
-                    tmp[0] = 0.5 * tmp[0];
-                }
+
                 __syncthreads();
                 
-               W[idx] = p_W - tmp[0]; 
+               W[idx] = p_W - logf(tmp[0]); 
                 
                 //reset shared memory of this thread
                 tmp[threadIdx.x] = 0;
@@ -94,7 +92,7 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                         
             T delta;
             if ( hard_bp) {
-                delta =  rate * (( p_dW_old - p_dW ) / p_W);
+                delta =  rate * ( p_dW_old - p_dW );
             } else {
                 delta =  rate * ( p_dW_old - p_dW );    
             }
@@ -139,14 +137,14 @@ void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate
                             sum = s * W[i];
                             first = false;
                         } else
-                            sum = lae(sum, 2 * W[i]);
+                            sum = lae(sum, W[i]); // W[i] * 2
                     }
                 }
                 //rescale weights such that they sum up to one
                 if (rescale && (n_sub_size > 0)){
                     for (unsigned int sub = 0; sub < n_sub_size; sub++){
                         unsigned int i =  s * n_sub_size + sub; 
-                            sum = 0.5 * sum;
+                            sum = sum;
                             W[i] -= sum;
                         }  
                 }
@@ -183,11 +181,7 @@ void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,
         cuvAssert(decay >= 0);
         cuvAssert(sparsedecay >= 0);
         
-/*        std::cout << "rescaling" << std::endl;
-        for ( unsigned int i = 0;  i < W.shape().size(); i++)
-            std::cout << "[" << W.shape(i) << "]";
-        std::cout << std::endl;
-*/        
+     
          int n_size;
          unsigned int n_sub_size;
          
@@ -198,6 +192,12 @@ void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,
             n_size = -1;
             n_sub_size = 0;
         }
+/*        
+        std::cout << "rescaling, n_size = " << n_size << ", n_sub_size = " << n_sub_size << std::endl;
+        for ( unsigned int i = 0;  i < W.shape().size(); i++)
+            std::cout << "[" << W.shape(i) << "]";
+        std::cout << std::endl;
+*/           
         
         if(IsSame<M, host_memory_space>::Result::value){
             spn_gd_host (W.ptr(), dW.ptr(), dW_old.ptr(), dW.size(), rate, decay, rescale, hard_inference, n_size, n_sub_size, thresh);         
@@ -209,7 +209,7 @@ void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,
                 num_threads =  min( 256, (unsigned int) std::pow(2, ceil(log2f( (float)n_sub_size))));                
             }
             unsigned int shared_mem = num_threads * sizeof(float);
-	   
+            
             spn_gd_kernel<<< num_blocks, num_threads, shared_mem>>>(W.ptr(), dW.ptr(), dW_old.ptr(), dW.size(), rate, decay, rescale, hard_inference, n_size, n_sub_size, thresh);         
             cuvSafeCall(cudaThreadSynchronize());
         }    

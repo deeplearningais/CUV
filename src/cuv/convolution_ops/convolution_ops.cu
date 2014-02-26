@@ -1970,7 +1970,7 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
             switch(to){
                case TO_LOGWADDEXP:
                case TO_LOGWADDEXP_LOGSPACE:
-                   S_val = 1/(fabs(S[itemy]) + eps);
+                   S_val = 1/(fabs(S[itemy]) + eps); // S[itemy]; 
             }
             for(unsigned int itemx = threadIdx.x; itemx < dst_colsx; itemx += blockDim.x){
                 unsigned int item = itemy * dst_colsx + itemx;
@@ -2016,12 +2016,12 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
                     case TO_LOGWADDEXP:
                         temp = expf(w_ptr[wInd] * src_val) * p;
                         if(d_dx) atomic_Add(&dst_ptr[index],  w_ptr[wInd] * temp);
-                        if(d_dw) res_w[threadIdx.x] =  S_val * src_val * temp;
+                        if(d_dw) res_w[threadIdx.x] =  src_val * temp;
                         break;
                     case TO_LOGWADDEXP_LOGSPACE:
                         temp = expf(src_val + w_ptr[wInd]) * p;
                         if(d_dx) atomic_Add(&dst_ptr[index],  temp);
-                        if(d_dw) res_w[threadIdx.x]  = S_val * temp;
+                        if(d_dw) res_w[threadIdx.x] = temp *S_val;//expf(logf(temp) - S_val - w_ptr[wInd]);
                         break;
                     case TO_WADD:
                         if(d_dx) atomic_Add(&dst_ptr[index], p*w_ptr[wInd]);
@@ -2553,13 +2553,12 @@ template<class V,class M, class T>
  *****************************************************************************************************************/
 
 
-
-
 template<class T>
 __global__
-void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsigned int lines, unsigned int items, unsigned int batch){       
+void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsigned int* m_idx, unsigned int lines, unsigned int items, unsigned int batch, bool hard_gd){       
         //load weights into shared memory
         float result = 0;
+        unsigned int max_idx = 0;
         bool first = true;
         unsigned int itb = items * batch;
         extern __shared__ float w[];
@@ -2581,13 +2580,30 @@ void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsign
                 if (y < 0){
                     for ( unsigned int c = 0; c < lines; c++){
                         const T* src_ptr = src + c * itb + xtb;
-                        if ( first ){
-                            result = w[c] + src_ptr[b]; 
-                            first = false;
+                        if(!hard_gd){
+                            if ( first ){
+                                result = w[c] + src_ptr[b]; 
+                                first = false;
+                            }
+                            else
+                                result = lae(result, w[c] + src_ptr[b]); 
                         }
-                        else
-                            result = lae(result, w[c] + src_ptr[b]); 
+                        else{
+                            if ( first ){
+                                result = w[c] + src_ptr[b]; 
+                                max_idx = c;
+                                first = false;
+                            }
+                            else{
+                                float wps = w[c] + src_ptr[b]; 
+                                if (wps > result){
+                                    result = wps;
+                                    max_idx = c;
+                                }
+                            }
+                        }
                     }
+                    if (hard_gd) m_idx[b] = max_idx;
                 } else {
                     // no marginalization step => all labels =! y were 0
                     const T* src_ptr = src + y * itb + xtb;
@@ -2596,7 +2612,10 @@ void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsign
                         first = false;
                     }
                     else
-                        result = lae(result, w[y] + src_ptr[b]);                 
+                        result = lae(result, w[y] + src_ptr[b]);   
+                    
+                    //save max_index for hard gd
+                    if (hard_gd)m_idx[b] = y;                    
                 }
                 dst_ptr[b] = result;
                 result = 0;
@@ -2607,9 +2626,10 @@ void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsign
 
 
 template<class T>
-    void spn_output_op_host(T* dst, const T* src, const T* m_W, const T* Y, unsigned int lines, unsigned int items, unsigned int batch){
+    void spn_output_op_host(T* dst, const T* src, const T* m_W, const T* Y, unsigned int* m_idx, unsigned int lines, unsigned int items, unsigned int batch, bool hard_gd){
         unsigned int itb = items * batch;
         bf_logaddexp<float> lae;
+        unsigned int max_idx = 0;
         for ( unsigned int b = 0; b < batch; b ++){
             bool first = true;
             const T* Y_ptr = Y + b*lines;
@@ -2622,15 +2642,27 @@ template<class T>
                         const T* src_ptr = src + c * itb + xtb;
                         if ( first ){
                             dst_ptr[x] = m_W[c] + src_ptr[b];
+                            max_idx = 0;
                             first = false;
                         }
-                        else
-                            dst_ptr[x] = lae(dst_ptr[x], m_W[c] + src_ptr[b]);       
+                        else{
+                            if (!hard_gd)
+                                dst_ptr[x] = lae(dst_ptr[x], m_W[c] + src_ptr[b]);      
+                            else{
+                                float v = m_W[c] + src_ptr[b];
+                                if (v > dst_ptr[x]){
+                                    dst_ptr[x] = v;
+                                    max_idx = c;
+                                }
+                            }
+                        } 
                     }
+                    m_idx[b] = max_idx;
                 } else {
                     const T* src_ptr = src + y * itb + xtb;
                     if ( first ){
                          dst_ptr[x] = m_W[y] + src_ptr[b];
+                          if (hard_gd) m_idx[b] = y;
                          first = false;
                     }
                     else
@@ -2642,7 +2674,7 @@ template<class T>
 
 
 template<class V, class M, class T>
-void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, const tensor<V,M,T>& Y){
+void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, const tensor<V,M,T>& Y, tensor<unsigned int,M,T>& max_idx, bool hard_gd){
         unsigned int lines = src.shape(0);
         unsigned int items;
         unsigned int batch;
@@ -2676,36 +2708,36 @@ void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,
         cuvAssert(m_W.shape(1) ==  src.shape(0));
         
         if(IsSame<M,host_memory_space>::Result::value){
-                spn_output_op_host(dst.ptr(), src.ptr(), m_W.ptr(), Y.ptr(), lines, items, batch);
+                spn_output_op_host(dst.ptr(), src.ptr(), m_W.ptr(), Y.ptr(), max_idx.ptr(), lines, items, batch, hard_gd);
         }else{
             // device: run kernel
             unsigned int num_blocks  = 1;
             unsigned int num_threads = min(MAX_THREADS, int(32 * ceil( batch / 32. )));
             unsigned int sharedMemory  = (lines)*sizeof(float);
                        
-            spn_output_op_kernel<<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), src.ptr(), m_W.ptr(), Y.ptr(), lines, items, batch);
+            spn_output_op_kernel<<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), src.ptr(), m_W.ptr(), Y.ptr(), max_idx.ptr(), lines, items, batch, hard_gd);
            
             cuvSafeCall(cudaThreadSynchronize());
         }
    }
     
-    //TODO ALLE ABLEITUNGEN NOCH MAL CHECKEN
     /*****************************************************************************************************************************
      * spn_output_op grad
      *******************************************************************************************************************************/
 // currently d_dy just works for case x = 1, 
 template<class T>
 __global__
-void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, const T* m_W,  const T* Y, const T* S, const T* lae_res,
-                          unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, const bool d_dy, const bool d_dw, float eps){       
-        extern __shared__ float temp_w_delta[];
-        unsigned int itb = (items * batch);
-        float s = 0;
+void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, const T* m_W,  const T* Y, const T* S, const T* lae_res,  const unsigned int* max_idx,
+                          unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, const bool d_dy, const bool d_dw, float eps, bool hard_gd){       
+        extern __shared__ float temp_w_delta[];   
+        
+        unsigned int itb = items * batch;
+        float sum = 0;
         int y;
         temp_w_delta[threadIdx.x] = 0;       
 
         //each block calculates derivatives for one class        
-        int c = blockIdx.x;
+        unsigned int c = blockIdx.x;
         
         //load weight into shared memory
         float w = m_W[c];
@@ -2715,84 +2747,110 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
             T* Y_delta_ptr = Y_delta + btl;
             //get correct label (or marginalization flag)
             y = int( Y_ptr[0] );
-            T s_val = 1/(fabs(S[b]) + eps);
+            T s_val;
+            if (!hard_gd)
+                s_val =  1/(fabs(S[b]) + eps); // S[b];
             
-            for ( unsigned int x = 0; x < items; x++){
-                unsigned int xtb = x * batch;
-                const T* lae_ptr = lae_res + xtb; //1 / exp(lae_res[b]);  
-                    //set derivative for d_dx, d_dw only if label != 0 (marginalization step, or correct label)   
-                        unsigned int off = c * itb + xtb;
-                        const T* src_ptr = src + off;
-                        T s = src_ptr[b];
-                        T d_dy_val = expf(w + s ) / (expf(lae_ptr[b]) + eps); 
-//                        if ( ! isfinite(d_dy_val) ) 
-                        T* dst_ptr = dst + off;
-                    if ( (y < 0) || (c == y) ){
-                        if (d_dx) dst_ptr[b] = d_dy_val;
-                        if (d_dw) temp_w_delta[threadIdx.x] += s_val * d_dy_val;
-                    }
-                    if (d_dy) Y_delta_ptr[c] += d_dy_val;                 
-
-            }
-            //logarithmic add of partial d_dw
-            if (d_dw){
-                    for ( unsigned int j = blockDim.x/2; j > 0; j/=2){
-                        __syncthreads();
-                                if (threadIdx.x < j){
-                                    temp_w_delta[threadIdx.x] += temp_w_delta[threadIdx.x + j];
+            if ( (!hard_gd) ||   ((y < 0) && (max_idx[b] == c))   ||  ((y >= 0) && (c == y)) ){
+                for ( unsigned int x = 0; x < items; x++){
+                    unsigned int xtb = x * batch;
+                        //set derivative for d_dx, d_dw only if label != 0 (marginalization step, or correct label)   
+                            unsigned int off = c * itb + xtb;
+                            const T* src_ptr = src + off;
+                            T s = src_ptr[b];
+                            if (!hard_gd){
+                                    const T* lae_ptr = lae_res + xtb;  
+                                    T d_dy_val = expf(w + s ) / (expf(lae_ptr[b]) + eps); 
+                                    T* dst_ptr = dst + off;
+                                if ( (y < 0) || (c == y) ){
+                                    if (d_dx) dst_ptr[b] = d_dy_val;
+                                    if (d_dw) temp_w_delta[threadIdx.x] += d_dy_val * s_val; //expf(logf(d_dy_val)  - s_val  w); // 
                                 }
-                    }
-                    __syncthreads();
-                        if (threadIdx.x == 0 ){
-                                s += temp_w_delta[0];
+                                if (d_dy) Y_delta_ptr[c] += d_dy_val;
+                            } else {
+                                    T d_dy_val = w + s; 
+                                    T* dst_ptr = dst + off;
+                                    if (d_dx) dst_ptr[b] = d_dy_val;
+                                    if (d_dw) temp_w_delta[threadIdx.x] += 1; 
+                     //               if (d_dw) atomic_Add(&w_delta[c], 1.0f);
+                                    
+                                    if (d_dy) Y_delta_ptr[c] += d_dy_val; 
                             }
-                    //reset shared memory of this thead
-                        temp_w_delta[threadIdx.x] = 0;
+
+                }
+                //logarithmic add of partial d_dw
+                
+                if (d_dw){
+                        for ( unsigned int j = blockDim.x/2; j > 0; j/=2){
+                            __syncthreads();
+                                    if (threadIdx.x < j){
+                                        temp_w_delta[threadIdx.x] += temp_w_delta[threadIdx.x + j];
+                                    }
+                        }
+                        __syncthreads();
+                            if (threadIdx.x == 0 ){
+                                    sum += temp_w_delta[0];
+                                }
+                        //reset shared memory of this thead
+                            temp_w_delta[threadIdx.x] = 0;
+                }
             }
         }
 
         //write result to global memory
         if (d_dw){
-            if (threadIdx.x == 0) w_delta[c] = s;
+            if (threadIdx.x == 0) w_delta[c] = sum;
         }       
 }
 
 
 template<class T>
-void spn_output_op_grad_host(T* dst, const T* src, T* w_delta, T* Y_delta, const T* m_W, const T* Y, const T* S, const T* lae_res,
-unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, const bool d_dy, const bool d_dw, float eps){
-        unsigned int itb = (items * batch);
+void spn_output_op_grad_host(T* dst, const T* src, T* w_delta, T* Y_delta, const T* m_W, const T* Y, const T* S, const T* lae_res, const  unsigned int* max_idx,
+unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, const bool d_dy, const bool d_dw, float eps, bool hard_gd){
+        unsigned int itb = items * batch;
         int y;
         for ( unsigned int b = 0; b < batch; b ++){
             unsigned int btl = b * lines;
             const T* Y_ptr = Y + btl;
             y = int( Y_ptr[0] );
             T* Y_delta_ptr = Y_delta + b * btl;      
-            T s_val = 1/(fabs(S[b]) + eps);
+            T s_val;
+            if ( !hard_gd) s_val = 1/(fabs(S[b]) + eps);
             for ( unsigned int x = 0; x <items; x++){
                 for ( unsigned int c = 0; c < lines; c++){
                     unsigned int xtb = x * batch;
                     unsigned int off = c* itb + xtb;
                     const T* src_ptr = src + off;
                     T* dst_ptr = dst + off;
-                    const T* lae_ptr = lae_res + xtb;
+
                     T s = src_ptr[b];
                     T w = m_W[c];
-                    T d_dy_val =  expf(w+s)/(expf(lae_ptr[b]) + eps) ;                    
-                    if ( (y < 0) || (c == y)){
-                        if (d_dx) dst_ptr[b] = d_dy_val;
-                        if (d_dw) w_delta[c] += s_val * d_dy_val;
+                    if (!hard_gd){
+                        const T* lae_ptr = lae_res + xtb;                        
+                        T d_dy_val =  expf(w+s)/(expf(lae_ptr[b]) + eps) ;                    
+                        if ( (y < 0) || (c == y)){
+                            if (d_dx) dst_ptr[b] = d_dy_val;
+                            if (d_dw) w_delta[c] += s_val * d_dy_val;
+                        }
+                        if (d_dy) Y_delta_ptr[c] +=  d_dy_val;
+                    } else {
+                        T d_dy_val =  w+s;                    
+                        if ( ((y >= 0) && (c == y)) || ((y < 0) && (max_idx[b] == c))){
+                            if (d_dx) dst_ptr[b] = d_dy_val;
+                            if (d_dw) w_delta[c]++;
+                            if (d_dy) Y_delta_ptr[c] +=  d_dy_val;                            
+                        }
                     }
-                    if (d_dy) Y_delta_ptr[c] +=  d_dy_val;
-
                 }
             }
         }
 }    
-    
+
+
 template<class V, class M, class T>
 void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M,T>& w_delta, tensor<V,M,T>& Y_delta, const tensor<V,M,T>& m_W, 
-                        const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& lae_res, const bool d_dx, const bool d_dw, const bool d_dy, float eps){
+                        const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& lae_res, const tensor<unsigned int,M,T>& max_idx, const bool d_dx, const bool d_dw, const bool d_dy, 
+                        float eps, bool hard_gd){
         
         cuvAssert((src.shape().size() == 3) || (src.shape().size() == 4));
         unsigned int lines = src.shape(0);
@@ -2810,7 +2868,6 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(!cuv::has_nan(m_W));  
         cuvAssert(!cuv::has_nan(Y));  
         cuvAssert(!cuv::has_nan(S));  
-        cuvAssert(!cuv::has_nan(lae_res));  
             
         cuv::fill (dst, 0);
         cuv::fill (Y_delta, 0);
@@ -2830,14 +2887,15 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(src.shape() == dst.shape());
         
         if(IsSame<M,host_memory_space>::Result::value){
-               spn_output_op_grad_host(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), lae_res.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps);
+               spn_output_op_grad_host(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), lae_res.ptr(),  max_idx.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps, hard_gd);
                 
         }else{
             // device: run kernel
             unsigned int num_blocks  = lines;
-            unsigned int num_threads = min(MAX_THREADS, int(32 * ceil( batch / 32. )));
+            unsigned int num_threads = min(MAX_THREADS, int(32. * ceil( batch / 32. )));
             unsigned int sharedMemory  =  num_threads * sizeof(float);
-            spn_output_op_grad_kernel<<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), lae_res.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps);
+            spn_output_op_grad_kernel<<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), 
+                                                                                lae_res.ptr(), max_idx.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps, hard_gd);
 
             cuvSafeCall(cudaThreadSynchronize());
         }
@@ -2847,11 +2905,11 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         if (spn_out_dst){
             std::cout << "min(S): " << cuv::minimum(S) << ", max(S): " << cuv::maximum(S) <<  ", mean(S): " << cuv::mean(S) <<std::endl;
             std::cout << "min(W): " << cuv::minimum(m_W) << ", max(W): " << cuv::maximum(m_W)  <<  ", mean(W): " << cuv::mean(m_W) << std::endl;
-            std::cout << "min(lae_res): " << cuv::minimum(lae_res) << ", max(lae_res): " << cuv::maximum(lae_res)  <<  ", mean(lae_res): " << cuv::mean(lae_res) << std::endl;
             std::cout << "eps: "  << eps << std::endl;
         }
+        bool spn_out_w_delta =cuv::has_nan(w_delta);
         cuvAssert(!spn_out_dst);    
-        cuvAssert(!cuv::has_nan(w_delta));        
+        cuvAssert(!spn_out_w_delta);        
         cuvAssert(!cuv::has_nan(Y_delta));     
 //        std::cout << "spn out done" << std::endl;
 }
@@ -2862,8 +2920,8 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
 #define  TENS(V,M,T)       tensor<V,M,T>
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
-template void spn_output_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&); \
-template void spn_output_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, bool, bool, bool, float); \
+template void spn_output_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, TENS(unsigned int,M,T)&, bool); \
+template void spn_output_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(unsigned int,M,T)&, bool, bool, bool, float, bool); \
 template void weighted_sub_tensor_op<V,M,T>(TENS(V,M,T)&, TENS(unsigned char,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, unsigned int, weighted_sub_tensor_op_functor, float); \
 template void weighted_sub_tensor_op_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(unsigned char,M,T)&, bool, bool,  bool, unsigned int, unsigned int, unsigned int, weighted_sub_tensor_op_functor, float); \
 template void tuplewise_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, tuplewise_op_functor, float); \
