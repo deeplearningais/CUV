@@ -1635,14 +1635,22 @@ void weighted_sub_tensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* 
                             break;
                         case TO_WMAX:
                             temp =  w[wInd] * s;
-                            if (temp > squared_sum){
+                            if (first){
+                                squared_sum = temp;
+                                max_idx = wInd;  
+                                first = false;
+                            } else  if (temp > squared_sum){
                                 squared_sum = temp;
                                 max_idx = wInd;
                                 }
                             break;
                         case TO_WMAX_LOGSPACE:
                             temp =  w[wInd] + s;
-                            if (temp > squared_sum){
+                            if (first){
+                                squared_sum = temp;
+                                max_idx = wInd;  
+                                first = false;
+                            } else  if (temp > squared_sum){
                                     squared_sum = temp;
                                     max_idx = wInd;
                                }
@@ -1744,14 +1752,21 @@ template<weighted_sub_tensor_op_functor to, class T>
                                         break;
                                     case TO_WMAX:
                                         temp =  m_W_ptr[wInd] * s;
-                                        if (temp > squared_sum[buff]){
+                                        if (first){
+                                            squared_sum[buff] = temp;
+                                            max_idx = wInd;  
+                                        } else  if (temp > squared_sum[buff]){
                                             squared_sum[buff] = temp;
                                             max_idx = wInd;
-                                            }
+                                        }
                                         break;
                                     case TO_WMAX_LOGSPACE:
                                         temp =  m_W_ptr[wInd] + s;
-                                        if (temp > squared_sum[buff]){
+                                        if (first){
+                                            squared_sum[buff] = temp;
+                                            max_idx = wInd;  
+                                        } else  
+                                            if (temp > squared_sum[buff]){
                                                 squared_sum[buff] = temp;
                                                 max_idx = wInd;
                                         }
@@ -2771,8 +2786,8 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
                                     T d_dy_val = w + s; 
                                     T* dst_ptr = dst + off;
                                     if (d_dx) dst_ptr[b] = d_dy_val;
-                                    if (d_dw) temp_w_delta[threadIdx.x] += 1; 
-                     //               if (d_dw) atomic_Add(&w_delta[c], 1.0f);
+                     //               if (d_dw) temp_w_delta[threadIdx.x] += 1; 
+                                    if (d_dw) atomic_Add(&w_delta[c], 1.0f);
                                     
                                     if (d_dy) Y_delta_ptr[c] += d_dy_val; 
                             }
@@ -2798,9 +2813,9 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
         }
 
         //write result to global memory
-        if (d_dw){
-            if (threadIdx.x == 0) w_delta[c] = sum;
-        }       
+       // if (d_dw)
+       //     if (threadIdx.x == 0) w_delta[c] = sum;
+               
 }
 
 
