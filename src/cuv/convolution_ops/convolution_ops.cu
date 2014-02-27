@@ -49,6 +49,7 @@
 /*#include <3rd_party/cudaconv2/include/convCPU.h>*/
 #include <cuv/convolution_ops/convolution_ops.hpp>
 #include <cuv/tensor_ops/functors.hpp>
+#include <cfloat>
 
 
 #define NVView1D(X)  \
@@ -2021,12 +2022,12 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
                     case TO_WMAX:
                         if (maxIdx == wInd){
                             if(d_dx) atomic_Add (&dst_ptr[index], p * w_ptr[wInd]);
-                            if(d_dw) res_w[threadIdx.x]  = 1;
+                            if(d_dw) res_w[threadIdx.x]  = p * src_val;         //AACHTUNG1
                         }break;
                     case TO_WMAX_LOGSPACE:
                         if (maxIdx == wInd){
                             if(d_dx) atomic_Add(&dst_ptr[index], p);
-                            if(d_dw) res_w[threadIdx.x]  = 1;
+                            if(d_dw) res_w[threadIdx.x]  = p;                   //AACHTUNG1
                         }break;
                     case TO_LOGWADDEXP:
                         temp = expf(w_ptr[wInd] * src_val) * p;
@@ -2767,6 +2768,7 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
                 s_val =  1/(fabs(S[b]) + eps); // S[b];
             
             if ( (!hard_gd) ||   ((y < 0) && (max_idx[b] == c))   ||  ((y >= 0) && (c == y)) ){
+//                Y_delta_ptr[c] = 0;
                 for ( unsigned int x = 0; x < items; x++){
                     unsigned int xtb = x * batch;
                         //set derivative for d_dx, d_dw only if label != 0 (marginalization step, or correct label)   
@@ -2781,21 +2783,21 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
                                     if (d_dx) dst_ptr[b] = d_dy_val;
                                     if (d_dw) temp_w_delta[threadIdx.x] += d_dy_val * s_val; //expf(logf(d_dy_val)  - s_val  w); // 
                                 }
-                                if (d_dy) Y_delta_ptr[c] += d_dy_val;
+                                if (d_dy) Y_delta_ptr[c] = d_dy_val;
                             } else {
                                     T d_dy_val = w + s; 
                                     T* dst_ptr = dst + off;
                                     if (d_dx) dst_ptr[b] = d_dy_val;
-                     //               if (d_dw) temp_w_delta[threadIdx.x] += 1; 
+//                                    if (d_dw) temp_w_delta[threadIdx.x] = d_dy_val; 
                                     if (d_dw) atomic_Add(&w_delta[c], 1.0f);
                                     
-                                    if (d_dy) Y_delta_ptr[c] += d_dy_val; 
+                                    if (d_dy) Y_delta_ptr[c] = d_dy_val; 
                             }
 
                 }
                 //logarithmic add of partial d_dw
                 
-                if (d_dw){
+                if (d_dw && !hard_gd){
                         for ( unsigned int j = blockDim.x/2; j > 0; j/=2){
                             __syncthreads();
                                     if (threadIdx.x < j){
@@ -2813,8 +2815,8 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
         }
 
         //write result to global memory
-       // if (d_dw)
-       //     if (threadIdx.x == 0) w_delta[c] = sum;
+        if (d_dw && !hard_gd)
+            if (threadIdx.x == 0) w_delta[c] = sum;
                
 }
 
@@ -2885,7 +2887,7 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(!cuv::has_nan(S));  
             
         cuv::fill (dst, 0);
-        cuv::fill (Y_delta, 0);
+        cuv::fill (Y_delta, -FLT_MAX );
         cuv::fill (w_delta, 0);
         
         //check dimensions of dst

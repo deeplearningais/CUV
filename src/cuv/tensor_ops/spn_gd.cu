@@ -76,7 +76,7 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
 
                 __syncthreads();
                 
-               W[idx] = p_W - logf(tmp[0]); 
+               W[idx] = p_W - logf(tmp[0]/5.0); 
                 
                 //reset shared memory of this thread
                 tmp[threadIdx.x] = 0;
@@ -173,7 +173,7 @@ void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate
    
 
 template<class V, class M>
-void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW_old, const tensor<V,M>& dW,  
+void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,  
                   bool hard_inference, bool rescale, float thresh, float rate,  const float & decay,  const float & sparsedecay){
         cuvAssert(dW.ptr());
         cuvAssert(dW_old.ptr());     
