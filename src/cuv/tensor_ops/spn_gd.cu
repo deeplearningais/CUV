@@ -122,7 +122,7 @@ void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate
                     
                     T delta; 
                     if(hard_bp){
-                        delta = rate * (( p_dW_old - p_dW ) / fabs(p_W));
+                        delta = rate * ( p_dW_old - p_dW );
                     } else {
                         delta = rate * ( p_dW_old - p_dW ) ;    
                     }
@@ -157,7 +157,7 @@ void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate
                     
                     T delta; 
                     if(hard_bp){
-                        delta = rate * (( p_dW_old - p_dW ) / p_W);
+                        delta = rate * ( p_dW_old - p_dW );
                     } else {
                         delta = rate * ( p_dW_old - p_dW ) ;    
                     }
@@ -173,7 +173,7 @@ void  spn_gd_host(T* W, const T* dW, const T* dW_old, unsigned int n, float rate
    
 
 template<class V, class M>
-void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,  
+void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW_old, const tensor<V,M>& dW,  
                   bool hard_inference, bool rescale, float thresh, float rate,  const float & decay,  const float & sparsedecay){
         cuvAssert(dW.ptr());
         cuvAssert(dW_old.ptr());     
