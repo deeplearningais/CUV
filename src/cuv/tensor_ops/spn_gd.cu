@@ -31,6 +31,7 @@
 
 #include <cuv/tensor_ops/spn_gd.hpp>
 #include <cuv/tensor_ops/functors.hpp>
+#include <cuv/convolution_ops/convolution_ops.hpp>
 
 #ifdef __CDT_PARSER__
 #define __global__
@@ -75,13 +76,15 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                 }
 
                 __syncthreads();
-                
-               W[idx] = p_W - logf(tmp[0]/5.0); 
-                
+               
+               if(hard_bp)
+                   W[idx] = p_W - logf(tmp[0]/5.0); 
+               else 
+                   W[idx] = p_W - logf(tmp[0]);                    
                 //reset shared memory of this thread
                 tmp[threadIdx.x] = 0;
             }
-    } else {
+      } else {
         const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
         int off = blockDim.x * gridDim.x;
         for (unsigned int i = idx; i < n; i += off){
@@ -209,8 +212,10 @@ void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,
                 num_threads =  min( 256, (unsigned int) std::pow(2, ceil(log2f( (float)n_sub_size))));                
             }
             unsigned int shared_mem = num_threads * sizeof(float);
-            
             spn_gd_kernel<<< num_blocks, num_threads, shared_mem>>>(W.ptr(), dW.ptr(), dW_old.ptr(), dW.size(), rate, decay, rescale, hard_inference, n_size, n_sub_size, thresh);         
+            if(n_size < 0)
+                cuv::alex_conv::project_to_ball(W, 5.0f); //must be conv layer
+
             cuvSafeCall(cudaThreadSynchronize());
         }    
     }
