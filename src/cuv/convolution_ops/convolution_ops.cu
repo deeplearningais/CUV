@@ -2022,12 +2022,12 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
                     case TO_WMAX:
                         if (maxIdx == wInd){
                             if(d_dx) atomic_Add (&dst_ptr[index], p * w_ptr[wInd]);
-                            if(d_dw) res_w[threadIdx.x]  = p * src_val;         //AACHTUNG1
+                            if(d_dw) res_w[threadIdx.x]  = 1.f;         //AACHTUNG1
                         }break;
                     case TO_WMAX_LOGSPACE:
                         if (maxIdx == wInd){
                             if(d_dx) atomic_Add(&dst_ptr[index], p);
-                            if(d_dw) res_w[threadIdx.x]  = p;                   //AACHTUNG1
+                            if(d_dw) res_w[threadIdx.x]  = 1;                   //AACHTUNG1
                         }break;
                     case TO_LOGWADDEXP:
                         temp = expf(w_ptr[wInd] * src_val) * p;
