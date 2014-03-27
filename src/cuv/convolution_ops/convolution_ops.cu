@@ -1666,10 +1666,10 @@ void weighted_sub_tensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* 
               dst_max_idx0[item] = max_idx;
               break;
           case TO_LOGWADDEXP:
-              dst0[item] = squared_sum + eps;
+              dst0[item] = squared_sum ;
               break;
           case TO_LOGWADDEXP_LOGSPACE:
-              dst0[item] = squared_sum + eps;
+              dst0[item] = squared_sum ;
               break;
           case TO_WADD:
               dst0[item] = squared_sum;
@@ -1979,15 +1979,15 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
 
         T* dw_ptr     = w_delta +  line_t_sub;
         T p;
-        T S_val;
+       // T S_val;
         
         for(unsigned int itemy = threadIdx.y; itemy < dst_colsy; itemy += blockDim.y){
             //weight gradient in case SOFT_INFEERENCE 
-            switch(to){
+       /*     switch(to){
                case TO_LOGWADDEXP:
                case TO_LOGWADDEXP_LOGSPACE:
-                   S_val = 1/(fabs(S[itemy]) + eps); // S[itemy]; 
-            }
+                   S_val = S[itemy] ; // S[itemy]; 
+            }*/
             for(unsigned int itemx = threadIdx.x; itemx < dst_colsx; itemx += blockDim.x){
                 unsigned int item = itemy * dst_colsx + itemx;
                 unsigned char maxIdx;
@@ -2022,12 +2022,12 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
                     case TO_WMAX:
                         if (maxIdx == wInd){
                             if(d_dx) atomic_Add (&dst_ptr[index], p * w_ptr[wInd]);
-                            if(d_dw) res_w[threadIdx.x]  = 1.f;         //AACHTUNG1
+                            if(d_dw) res_w[threadIdx.x]  = 1.f;         
                         }break;
                     case TO_WMAX_LOGSPACE:
                         if (maxIdx == wInd){
                             if(d_dx) atomic_Add(&dst_ptr[index], p);
-                            if(d_dw) res_w[threadIdx.x]  = 1;                   //AACHTUNG1
+                            if(d_dw) res_w[threadIdx.x]  = 1.f;         
                         }break;
                     case TO_LOGWADDEXP:
                         temp = expf(w_ptr[wInd] * src_val) * p;
@@ -2037,7 +2037,7 @@ void weighted_sub_tensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const 
                     case TO_LOGWADDEXP_LOGSPACE:
                         temp = expf(src_val + w_ptr[wInd]) * p;
                         if(d_dx) atomic_Add(&dst_ptr[index],  temp);
-                        if(d_dw) res_w[threadIdx.x] = temp *S_val;//expf(logf(temp) - S_val - w_ptr[wInd]);
+                        if(d_dw) res_w[threadIdx.x] = temp;// /S_val;//expf(logf(temp) - S_val - w_ptr[wInd]);
                         break;
                     case TO_WADD:
                         if(d_dx) atomic_Add(&dst_ptr[index], p*w_ptr[wInd]);
@@ -2283,14 +2283,14 @@ void weighted_sub_tensor_op_grad_host(T* dst, T* w_delta, const T* src, const T*
 
             T* dw_ptr     = w_delta +  line_t_sub;
             T p;
-            T S_val;
+           // T S_val;
             for(unsigned int itemy = 0; itemy < dst_colsy; itemy ++){
                 //weight gradient in case SOFT_INFEERENCE 
-                switch(to){
+             /*   switch(to){
                 case TO_LOGWADDEXP:
                 case TO_LOGWADDEXP_LOGSPACE:
-                    S_val = 1/(fabs(S[itemy])+ eps);
-                }
+                    S_val = S[itemy];
+                }*/
                 for(unsigned int itemx = 0; itemx < dst_colsx; itemx ++){
                     unsigned int item = itemy * dst_colsx + itemx;
                     unsigned char maxIdx;
@@ -2339,7 +2339,7 @@ void weighted_sub_tensor_op_grad_host(T* dst, T* w_delta, const T* src, const T*
                         case TO_LOGWADDEXP_LOGSPACE:
                             temp = expf(src_val + m_W_ptr[wInd] ) * p;
                             if(d_dx) dst_ptr[index] +=temp;
-                            if(d_dw) dw_ptr[wInd]  += S_val * temp;
+                            if(d_dw) dw_ptr[wInd]  +=  temp;// - S_val ;
                             break;
                         case TO_WADD:
                             if(d_dx) dst_ptr[index] += p*m_W_ptr[wInd];
@@ -2764,8 +2764,9 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
             //get correct label (or marginalization flag)
             y = int( Y_ptr[0] );
             T s_val;
-            if (!hard_gd)
-                s_val =  1/(fabs(S[b]) + eps); // S[b];
+           /* if (!hard_gd){
+                s_val = S[b] ;
+	    }*/ // S[b];
             
             if ( (!hard_gd) ||   ((y < 0) && (max_idx[b] == c))   ||  ((y >= 0) && (c == y)) ){
 //                Y_delta_ptr[c] = 0;
@@ -2777,20 +2778,18 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
                             T s = src_ptr[b];
                             if (!hard_gd){
                                     const T* lae_ptr = lae_res + xtb;  
-                                    T d_dy_val = expf(w + s ) / (expf(lae_ptr[b]) + eps); 
+                                    T d_dy_val =  expf(w + s ) / expf(lae_ptr[b] ); 
                                     T* dst_ptr = dst + off;
                                 if ( (y < 0) || (c == y) ){
                                     if (d_dx) dst_ptr[b] = d_dy_val;
-                                    if (d_dw) temp_w_delta[threadIdx.x] += d_dy_val * s_val; //expf(logf(d_dy_val)  - s_val  w); // 
+                                    if (d_dw) temp_w_delta[threadIdx.x] += d_dy_val;// / s_val; //expf(logf(d_dy_val)  - s_val  w); // 
                                 }
                                 if (d_dy) Y_delta_ptr[c] = d_dy_val;
                             } else {
                                     T d_dy_val = w + s; 
                                     T* dst_ptr = dst + off;
                                     if (d_dx) dst_ptr[b] = d_dy_val;
-//                                    if (d_dw) temp_w_delta[threadIdx.x] = d_dy_val; 
                                     if (d_dw) atomic_Add(&w_delta[c], 1.0f);
-                                    
                                     if (d_dy) Y_delta_ptr[c] = d_dy_val; 
                             }
 
@@ -2832,7 +2831,7 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
             y = int( Y_ptr[0] );
             T* Y_delta_ptr = Y_delta + b * btl;      
             T s_val;
-            if ( !hard_gd) s_val = 1/(fabs(S[b]) + eps);
+           // if ( !hard_gd) s_val = S[b];
             for ( unsigned int x = 0; x <items; x++){
                 for ( unsigned int c = 0; c < lines; c++){
                     unsigned int xtb = x * batch;
@@ -2847,7 +2846,7 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
                         T d_dy_val =  expf(w+s)/(expf(lae_ptr[b]) + eps) ;                    
                         if ( (y < 0) || (c == y)){
                             if (d_dx) dst_ptr[b] = d_dy_val;
-                            if (d_dw) w_delta[c] += s_val * d_dy_val;
+                            if (d_dw) w_delta[c] += d_dy_val;
                         }
                         if (d_dy) Y_delta_ptr[c] +=  d_dy_val;
                     } else {
@@ -2917,7 +2916,7 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
             cuvSafeCall(cudaThreadSynchronize());
         }
 //        std::cout << "spn out" << std::endl;
-        bool spn_out_dst =cuv::has_nan(dst);
+/*        bool spn_out_dst =cuv::has_nan(dst);
         
         if (spn_out_dst){
             std::cout << "min(S): " << cuv::minimum(S) << ", max(S): " << cuv::maximum(S) <<  ", mean(S): " << cuv::mean(S) <<std::endl;
@@ -2929,6 +2928,7 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
         cuvAssert(!spn_out_w_delta);        
         cuvAssert(!cuv::has_nan(Y_delta));     
 //        std::cout << "spn out done" << std::endl;
+*/
 }
     
     

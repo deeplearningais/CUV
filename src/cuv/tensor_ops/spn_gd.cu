@@ -57,11 +57,15 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                 if (hard_bp){            
                     delta =  rate * ( p_dW_old - p_dW );
                 } else {
-                    delta =  rate * (p_dW_old - p_dW);
+                   // delta =  logf( expf(p_W) + rate/expf(p_W) * (p_dW_old - p_dW));
+                    delta =  rate *  (p_dW_old - p_dW);
                 }
                 //weight decay
                 if (decay > 0) delta -= rate*p_W*decay;
-                p_W += delta;
+	        if (hard_bp)
+		    p_W += delta;
+		else
+		   p_W = logf( expf(p_W) + delta); 
                                 
                 //rescale weights ( project onto unit ball )    //TODO ALS LOGADDEXP SCHREIBEN for more stability                
                 tmp[threadIdx.x] = expf(p_W); //p_W *2;
