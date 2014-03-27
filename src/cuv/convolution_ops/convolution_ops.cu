@@ -2334,7 +2334,7 @@ void weighted_sub_tensor_op_grad_host(T* dst, T* w_delta, const T* src, const T*
                         case TO_LOGWADDEXP:
                             temp = expf(m_W_ptr[wInd] * src_val) * p;
                             if(d_dx) dst_ptr[index]+=  m_W_ptr[wInd] * temp;
-                            if(d_dw) dw_ptr[wInd] +=  S_val * src_val * temp;
+                            if(d_dw) dw_ptr[wInd] +=   src_val * temp;
                             break;
                         case TO_LOGWADDEXP_LOGSPACE:
                             temp = expf(src_val + m_W_ptr[wInd] ) * p;
@@ -2763,8 +2763,8 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
             T* Y_delta_ptr = Y_delta + btl;
             //get correct label (or marginalization flag)
             y = int( Y_ptr[0] );
-            T s_val;
-           /* if (!hard_gd){
+          /*  T s_val;
+            if (!hard_gd){
                 s_val = S[b] ;
 	    }*/ // S[b];
             
@@ -2830,7 +2830,6 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
             const T* Y_ptr = Y + btl;
             y = int( Y_ptr[0] );
             T* Y_delta_ptr = Y_delta + b * btl;      
-            T s_val;
            // if ( !hard_gd) s_val = S[b];
             for ( unsigned int x = 0; x <items; x++){
                 for ( unsigned int c = 0; c < lines; c++){
