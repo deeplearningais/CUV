@@ -45,7 +45,7 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
     bf_logaddexp<float> lae;     
     if ( (n_size > 0) && rescale) {
             extern __shared__ float tmp[];
-            tmp[threadIdx.x] = -1E+37;
+            tmp[threadIdx.x] = 0;
             unsigned int idx = blockIdx.x * n_sub_size + threadIdx.x;
 
             if ( threadIdx.x < n_sub_size ){
@@ -67,18 +67,9 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
 		else
 		   p_W = logf( expf(p_W) + delta); 
                                 
-                tmp[threadIdx.x] = p_W; //p_W *2;
-                
-                //logarithmic sum 
-                for ( unsigned int j = blockDim.x/2; j > 0; j/=2){
-                    __syncthreads();
-                    if (threadIdx.x < j){
-                        tmp[threadIdx.x] = lae(tmp[threadIdx.x], tmp[threadIdx.x + j]); // lae(tmp[threadIdx.x], tmp[threadIdx.x + j]);
-                    }
-                }
-
                 //rescale weights ( project onto unit ball )    //TODO ALS LOGADDEXP SCHREIBEN for more stability                
-         /*       tmp[threadIdx.x] = expf(p_W); //p_W *2;
+                tmp[threadIdx.x] = expf(p_W); //p_W *2;
+                tmp[threadIdx.x] = tmp[threadIdx.x];
                 
                 //logarithmic sum 
                 for ( unsigned int j = blockDim.x/2; j > 0; j/=2){
@@ -87,16 +78,15 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                         tmp[threadIdx.x] += tmp[threadIdx.x + j]; // lae(tmp[threadIdx.x], tmp[threadIdx.x + j]);
                     }
                 }
-	*/
 
                 __syncthreads();
                
                if(hard_bp)
-                   W[idx] = logf(expf(p_W) / expf(tmp[0])/5.0); 
+                   W[idx] = p_W - logf(tmp[0]/5.0); 
                else 
-                   W[idx] = logf(expf(p_W) / tmp[0]);                    
+                   W[idx] = p_W - logf(tmp[0]);                    
                 //reset shared memory of this thread
-                tmp[threadIdx.x] = -1E+37;
+                tmp[threadIdx.x] = 0;
             }
       } else {
         const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
