@@ -1823,8 +1823,8 @@ template<class V,class M, class T>
         //check dimensions of dst
         cuvAssert(dst.shape(0)*stride == src.shape(0));
         
-        cuvAssert(!cuv::has_nan(src));
-        cuvAssert(!cuv::has_nan(m_W));        
+       // cuvAssert(!cuv::has_nan(src));
+       // cuvAssert(!cuv::has_nan(m_W));        
 
         unsigned int src_size = src.shape(0);
     
@@ -2467,12 +2467,12 @@ template<class V,class M, class T>
         assert(subspace_size <= 256); // (data type char is used to store max_idx)
         cuvAssert(delta.shape().size() == 3 || delta.shape().size() == 4);
         
-        cuvAssert(!cuv::has_nan(src));
-        cuvAssert(!cuv::has_nan(m_W)); 
+        //cuvAssert(!cuv::has_nan(src));
+        //cuvAssert(!cuv::has_nan(m_W)); 
         cuvAssert(!cuv::has_nan(delta));
-        cuvAssert(!cuv::has_nan(m_W));
-        cuvAssert(!cuv::has_nan(S));
-        cuvAssert(!cuv::has_nan(r0)); 
+       // cuvAssert(!cuv::has_nan(m_W));
+       // cuvAssert(!cuv::has_nan(S));
+       // cuvAssert(!cuv::has_nan(r0)); 
     
         //initialize  w_delta and dst
         cuv::fill (dst, 0);
@@ -2553,9 +2553,9 @@ template<class V,class M, class T>
             cuvSafeCall(cudaThreadSynchronize());
         }
 //        std::cout << "WTO out" << std::endl;
-        bool wto_dst = cuv::has_nan(dst);
-        cuvAssert(!wto_dst);        
-        cuvAssert(!cuv::has_nan(w_delta));         
+        //bool wto_dst = cuv::has_nan(dst);
+        //cuvAssert(!wto_dst);        
+        //cuvAssert(!cuv::has_nan(w_delta));         
 //        std::cout << "WTO done" << std::endl;
 }  
   
@@ -2704,9 +2704,9 @@ void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,
         }
                 
         //check every param for nans
-        cuvAssert(!cuv::has_nan(src));
-        cuvAssert(!cuv::has_nan(m_W));
-        cuvAssert(!cuv::has_nan(Y));
+        //cuvAssert(!cuv::has_nan(src));
+        //cuvAssert(!cuv::has_nan(m_W));
+        //cuvAssert(!cuv::has_nan(Y));
         
         cuvAssert(m_W.ndim() == 2);
         cuvAssert((src.ndim() == 3) || src.ndim() == 4);
@@ -2763,10 +2763,6 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
             T* Y_delta_ptr = Y_delta + btl;
             //get correct label (or marginalization flag)
             y = int( Y_ptr[0] );
-          /*  T s_val;
-            if (!hard_gd){
-                s_val = S[b] ;
-	    }*/ // S[b];
             
             if ( (!hard_gd) ||   ((y < 0) && (max_idx[b] == c))   ||  ((y >= 0) && (c == y)) ){
 //                Y_delta_ptr[c] = 0;
@@ -2778,7 +2774,7 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
                             T s = src_ptr[b];
                             if (!hard_gd){
                                     const T* lae_ptr = lae_res + xtb;  
-                                    T d_dy_val =  expf(w + s ) / expf(lae_ptr[b] ); 
+                                    T d_dy_val =  expf(w + s ) / (expf(lae_ptr[b]) + eps); 
                                     T* dst_ptr = dst + off;
                                 if ( (y < 0) || (c == y) ){
                                     if (d_dx) dst_ptr[b] = d_dy_val;
@@ -2879,10 +2875,10 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
             batch = src.shape(3);
         }
  
-        cuvAssert(!cuv::has_nan(src));
-        cuvAssert(!cuv::has_nan(m_W));  
-        cuvAssert(!cuv::has_nan(Y));  
-        cuvAssert(!cuv::has_nan(S));  
+        //cuvAssert(!cuv::has_nan(src));
+       // cuvAssert(!cuv::has_nan(m_W));  
+       // cuvAssert(!cuv::has_nan(Y));  
+       // cuvAssert(!cuv::has_nan(S));  
             
         cuv::fill (dst, 0);
         cuv::fill (Y_delta, -FLT_MAX );
@@ -2918,16 +2914,19 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
 /*        bool spn_out_dst =cuv::has_nan(dst);
         
         if (spn_out_dst){
-            std::cout << "min(S): " << cuv::minimum(S) << ", max(S): " << cuv::maximum(S) <<  ", mean(S): " << cuv::mean(S) <<std::endl;
+            std::cout << "\nmin(lae_res): " << cuv::minimum(lae_res) << ", max(lae_res): " << cuv::maximum(lae_res) <<  ", mean(la_res): " << cuv::mean(lae_res) <<std::endl;
             std::cout << "min(W): " << cuv::minimum(m_W) << ", max(W): " << cuv::maximum(m_W)  <<  ", mean(W): " << cuv::mean(m_W) << std::endl;
+            std::cout << "min(src): " << cuv::minimum(src) << ", max(src): " << cuv::maximum(src)  <<  ", mean(src): " << cuv::mean(src) << std::endl;
             std::cout << "eps: "  << eps << std::endl;
         }
+        cuvAssert(!spn_out_dst);    
+	
         bool spn_out_w_delta =cuv::has_nan(w_delta);
         cuvAssert(!spn_out_dst);    
         cuvAssert(!spn_out_w_delta);        
-        cuvAssert(!cuv::has_nan(Y_delta));     
 //        std::cout << "spn out done" << std::endl;
 */
+        cuvAssert(!cuv::has_nan(Y_delta));     
 }
     
     
