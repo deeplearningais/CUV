@@ -45,7 +45,8 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
     bf_logaddexp<float> lae;     
     if ( (n_size > 0) && rescale) {
             extern __shared__ float tmp[];
-            tmp[threadIdx.x] = 0;
+            tmp[threadIdx.x] = -1E+30;
+
             unsigned int idx = blockIdx.x * n_sub_size + threadIdx.x;
 
             if ( threadIdx.x < n_sub_size ){
@@ -57,36 +58,43 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                 if (hard_bp){            
                     delta =  rate * ( p_dW_old - p_dW );
                 } else {
-                   // delta =  logf( expf(p_W) + rate/expf(p_W) * (p_dW_old - p_dW));
                     delta =  rate *  (p_dW_old - p_dW);
                 }
                 //weight decay
-                if (decay > 0) delta -= rate*p_W*decay;
-	        if (hard_bp)
+	        if (hard_bp){
+                    if (decay > 0){ 
+			    delta -= rate*p_W*decay;
+		    }
 		    p_W += delta;
-		else
-		   p_W = logf( expf(p_W) + delta); 
-                                
-                //rescale weights ( project onto unit ball )    //TODO ALS LOGADDEXP SCHREIBEN for more stability                
-                tmp[threadIdx.x] = expf(p_W); //p_W *2;
-                tmp[threadIdx.x] = tmp[threadIdx.x];
+		} else{
+                    if (decay > 0){ 
+			    delta -= rate*expf(p_W)*decay;
+		    }
+	           float tmp = expf(p_W) + delta;
+		   if (tmp <= 0)
+		       p_W = -1E+30;
+		   else
+		       p_W = logf( expf(p_W) + delta); 
+		}           
+                //rescale weights ( project onto unit ball )                   
+                tmp[threadIdx.x] = p_W; 
                 
                 //logarithmic sum 
                 for ( unsigned int j = blockDim.x/2; j > 0; j/=2){
                     __syncthreads();
                     if (threadIdx.x < j){
-                        tmp[threadIdx.x] += tmp[threadIdx.x + j]; // lae(tmp[threadIdx.x], tmp[threadIdx.x + j]);
+                        tmp[threadIdx.x] = lae(tmp[threadIdx.x], tmp[threadIdx.x + j]);
                     }
                 }
 
                 __syncthreads();
                
                if(hard_bp)
-                   W[idx] = p_W - logf(tmp[0]/5.0); 
+                   W[idx] = p_W - (tmp[0]/5.0); 
                else 
-                   W[idx] = p_W - logf(tmp[0]);                    
+                   W[idx] = p_W - (tmp[0]/5.0);                    
                 //reset shared memory of this thread
-                tmp[threadIdx.x] = 0;
+                tmp[threadIdx.x] = -1E+30;
             }
       } else {
         const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -107,7 +115,18 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
             if (decay > 0) delta -= rate*p_W*decay;
             
             //sparse decay
-            W[i] += delta;
+            if (n_size > 0){ 
+	        if (hard_bp)
+		    p_W += delta;
+		else{
+	           float tmp = expf(p_W) + delta;
+		   if (tmp <= 0)
+		       p_W = -1E+30;
+		   else
+		       p_W = logf( expf(p_W) + delta); 
+		}           
+	    } else //convolutional layer is not in logspace
+                W[i] += delta;
         }
     }  
 }
@@ -192,7 +211,7 @@ void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,
          int n_size;
          unsigned int n_sub_size;
          
-         if ((W.shape().size() == 2) && rescale){ // weights of any sum_layer
+         if ((W.shape().size() == 2) ){ // weights of any sum_layer
             n_size = W.shape(0);
             n_sub_size = W.shape(1);
         } else {
@@ -217,8 +236,8 @@ void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,
             }
             unsigned int shared_mem = num_threads * sizeof(float);
             spn_gd_kernel<<< num_blocks, num_threads, shared_mem>>>(W.ptr(), dW.ptr(), dW_old.ptr(), dW.size(), rate, decay, rescale, hard_inference, n_size, n_sub_size, thresh);         
-            if(n_size < 0)
-                cuv::alex_conv::project_to_ball(W, 5.0f); //must be conv layer
+         //   if((n_size < 0) && rescale)
+         //       cuv::alex_conv::project_to_ball(W, 5.0f); //must be conv layer
 
             cuvSafeCall(cudaThreadSynchronize());
         }    
