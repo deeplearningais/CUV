@@ -524,16 +524,16 @@ template<>
 
         switch(pooler){
             case PT_MAX:
-                convLocalPool(nv_images, nv_target, nFilt,
-                        subsX, startX, strideX, nOutPixX, MaxPooler());
+                convLocalPool (nv_images, nv_target, nFilt,
+                        subsX, startX, strideX, nOutPixX, MaxPooler(), false);
                 break;
             case PT_AVG:
                 convLocalPool(nv_images, nv_target, nFilt,
-                        subsX, startX, strideX, nOutPixX, AvgPooler(subsX*subsX));
+                        subsX, startX, strideX, nOutPixX, AvgPooler(subsX*subsX), true);
                 break;
             case PT_SUM:
-            convLocalPool(nv_images, nv_target, nFilt,
-                    subsX, startX, strideX, nOutPixX, SumPooler());
+            convLocalPool (nv_images, nv_target, nFilt,
+                    subsX, startX, strideX, nOutPixX, SumPooler(), false);
                 break;
         }
     }
@@ -718,7 +718,7 @@ void contrast_normalization(tensor<V,M,T>& target, tensor<V,M,T>& denoms, const 
     NVMatrix nv_images NVView4D(images);
 
     // from layer.cu
-    convLocalPool(nv_images, nv_meandiffs, images.shape(0), patchSize, -patchSize/2, 1, images.shape(1), AvgPooler(patchSize*patchSize));
+    convLocalPool(nv_images, nv_meandiffs, images.shape(0), patchSize, -patchSize/2, 1, images.shape(1), AvgPooler(patchSize*patchSize), true);
     nv_meandiffs.add(nv_images, -1, 1);
     convContrastNorm(nv_images,nv_meandiffs, nv_denoms,nv_target, target.shape(0), patchSize, addScale, powScale);
 }
@@ -2826,7 +2826,6 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
             const T* Y_ptr = Y + btl;
             y = int( Y_ptr[0] );
             T* Y_delta_ptr = Y_delta + b * btl;      
-           // if ( !hard_gd) s_val = S[b];
             for ( unsigned int x = 0; x <items; x++){
                 for ( unsigned int c = 0; c < lines; c++){
                     unsigned int xtb = x * batch;

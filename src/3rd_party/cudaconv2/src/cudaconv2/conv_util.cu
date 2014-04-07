@@ -1521,11 +1521,13 @@ __global__ void kLocalAvgUndo(float* avgGrads, float* target, const int imgSize,
     target += ((blockFilterIdx + threadIdx.y) * imgPixels + blockPx) * numImages + imgIdx;
     
     float prod[filtersPerThread][imgsPerThread];
+    unsigned int counter[filtersPerThread][imgsPerThread];  
     #pragma unroll
     for (int f = 0; f < filtersPerThread; f++) {
         #pragma unroll
         for (int i = 0; i < imgsPerThread; i++) {
             prod[f][i] = 0;
+	    counter[f][i] = 0;
         }
     }
     
@@ -1541,6 +1543,7 @@ __global__ void kLocalAvgUndo(float* avgGrads, float* target, const int imgSize,
                         #pragma unroll
                         for (int f = 0; f < filtersPerThread; f++) {
                             prod[f][i] += avgGrads[(f * B_Y * numOutputs + outputIdx) * numImages + i * B_X];
+	                    counter[f][i]++;
                         }
                     }
                 }
@@ -1554,7 +1557,7 @@ __global__ void kLocalAvgUndo(float* avgGrads, float* target, const int imgSize,
             if (!checkCaseBounds || imgIdx + i * B_X < numImages) {
                 #pragma unroll
                 for (int f = 0; f < filtersPerThread; f++) {
-                    target[f * B_Y * imgPixels * numImages + i * B_X] = prod[f][i] / (subsX * subsX);
+                    target[f * B_Y * imgPixels * numImages + i * B_X] = prod[f][i] / float(counter[f][i]);
                 }
             }
         }
@@ -1564,7 +1567,7 @@ __global__ void kLocalAvgUndo(float* avgGrads, float* target, const int imgSize,
             if (!checkCaseBounds || imgIdx + i * B_X < numImages) {
                 #pragma unroll
                 for (int f = 0; f < filtersPerThread; f++) {
-                    target[f * B_Y * imgPixels * numImages + i * B_X] = scaleTargets * target[f * B_Y * imgPixels * numImages + i * B_X] + scaleOutputs * prod[f][i] / (subsX * subsX);
+                    target[f * B_Y * imgPixels * numImages + i * B_X] = scaleTargets * target[f * B_Y * imgPixels * numImages + i * B_X] + scaleOutputs * prod[f][i] / float(counter[f][i]);
                 }
             }
         }
