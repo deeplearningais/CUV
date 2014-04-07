@@ -45,7 +45,7 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
     bf_logaddexp<float> lae;     
     if ( (n_size > 0) && rescale) {
             extern __shared__ float tmp[];
-            tmp[threadIdx.x] = -1E+30;
+            tmp[threadIdx.x] = -1E+38;
 
             unsigned int idx = blockIdx.x * n_sub_size + threadIdx.x;
 
@@ -72,9 +72,9 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
 		    }
 	           float tmp = expf(p_W) + delta;
 		   if (tmp <= 0)
-		       p_W = -1E+30;
+		       p_W = -1E+38;
 		   else
-		       p_W = logf( expf(p_W) + delta); 
+		       p_W = logf( tmp ); 
 		}           
                 //rescale weights ( project onto unit ball )                   
                 tmp[threadIdx.x] = p_W; 
@@ -84,6 +84,7 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                     __syncthreads();
                     if (threadIdx.x < j){
                         tmp[threadIdx.x] = lae(tmp[threadIdx.x], tmp[threadIdx.x + j]);
+                 //       tmp[threadIdx.x] = max(tmp[threadIdx.x], tmp[threadIdx.x + j]);
                     }
                 }
 
@@ -91,10 +92,11 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                
                if(hard_bp)
                    W[idx] = p_W - (tmp[0]/5.0); 
-               else 
-                   W[idx] = p_W - (tmp[0]/5.0);                    
+               else{ 
+                   W[idx] = p_W - (tmp[0]);
+	       }		   
                 //reset shared memory of this thread
-                tmp[threadIdx.x] = -1E+30;
+                tmp[threadIdx.x] = -1E+38;
             }
       } else {
         const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -117,13 +119,13 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
             //sparse decay
             if (n_size > 0){ 
 	        if (hard_bp)
-		    p_W += delta;
+		    W[i] += delta;
 		else{
 	           float tmp = expf(p_W) + delta;
 		   if (tmp <= 0)
-		       p_W = -1E+30;
+		       p_W = -1E+38;
 		   else
-		       p_W = logf( expf(p_W) + delta); 
+		       W[i] = logf( tmp ); 
 		}           
 	    } else //convolutional layer is not in logspace
                 W[i] += delta;
@@ -232,12 +234,11 @@ void spn_gd(tensor<V,M>& W, const tensor<V,M>& dW, const tensor<V,M>& dW_old,
             int num_blocks  = (int)ceil((float)dW.size() / num_threads);
             if ( n_size > 0){ 
                 num_blocks = n_size;
-                num_threads =  min( 256, (unsigned int) std::pow(2, ceil(log2f( (float)n_sub_size))));                
+                //num_threads =  min( 256, (unsigned int) std::pow(2, ceil(log2f( (float)n_sub_size))));                
+                num_threads =  min( 256, n_sub_size);                
             }
             unsigned int shared_mem = num_threads * sizeof(float);
             spn_gd_kernel<<< num_blocks, num_threads, shared_mem>>>(W.ptr(), dW.ptr(), dW_old.ptr(), dW.size(), rate, decay, rescale, hard_inference, n_size, n_sub_size, thresh);         
-         //   if((n_size < 0) && rescale)
-         //       cuv::alex_conv::project_to_ball(W, 5.0f); //must be conv layer
 
             cuvSafeCall(cudaThreadSynchronize());
         }    
