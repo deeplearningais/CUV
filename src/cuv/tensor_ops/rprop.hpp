@@ -62,7 +62,7 @@ namespace cuv{
 	 *
 	 */
         template<class __value_type, class __memory_space_type, class S>
-	void rprop(tensor<__value_type,__memory_space_type>& W, tensor<__value_type,__memory_space_type>& dW, tensor<S,__memory_space_type>& dW_old, tensor<__value_type,__memory_space_type>& rate, const float& decay = 0.0f, const float& sparsedecay=0.0f);
+	void rprop(tensor<__value_type,__memory_space_type>& W, tensor<__value_type,__memory_space_type>& dW, tensor<S,__memory_space_type>& dW_old, tensor<__value_type,__memory_space_type>& rate, const float& decay = 0.0f, const float& sparsedecay=0.0f, const float& eta_p=1.2f, const float& eta_m=0.5f);
 
         /**
          * @overload
@@ -70,10 +70,10 @@ namespace cuv{
          * casting column major to row major since working on linear memory anyway.
          */
         template<class __value_type, class __memory_space_type, class S>
-	void rprop(tensor<__value_type,__memory_space_type, column_major>& W, tensor<__value_type,__memory_space_type, column_major>& dW, tensor<S,__memory_space_type, column_major>& dW_old, tensor<__value_type,__memory_space_type, column_major>& rate, const float& decay = 0.0f, const float& sparsedecay=0.0f){
+	void rprop(tensor<__value_type,__memory_space_type, column_major>& W, tensor<__value_type,__memory_space_type, column_major>& dW, tensor<S,__memory_space_type, column_major>& dW_old, tensor<__value_type,__memory_space_type, column_major>& rate, const float& decay = 0.0f, const float& sparsedecay=0.0f, const float& eta_p=1.2f, const float& eta_m=0.5f){
             typedef tensor<__value_type, __memory_space_type> rm_tensor;
             typedef tensor<S, __memory_space_type> rm_tensor_S;
-            rprop(*reinterpret_cast<rm_tensor*>(&W),*reinterpret_cast<rm_tensor*>(&dW),*reinterpret_cast<rm_tensor_S*>(&dW_old),*reinterpret_cast<rm_tensor*>(&rate),decay,sparsedecay);
+            rprop(*reinterpret_cast<rm_tensor*>(&W),*reinterpret_cast<rm_tensor*>(&dW),*reinterpret_cast<rm_tensor_S*>(&dW_old),*reinterpret_cast<rm_tensor*>(&rate),decay,sparsedecay,eta_p,eta_m);
         }
 	/** 
 	 * @brief Do a step of gradient descent with optional weight decay.

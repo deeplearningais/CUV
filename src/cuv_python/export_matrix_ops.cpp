@@ -321,8 +321,8 @@ void export_learn_step(){
 
     def("learn_step_weight_decay",(void (*)(M&, const M&, const float&, const float&,const float&)) learn_step_weight_decay<typename M::value_type, typename M::memory_space_type>, (arg("W"),arg("dW"),arg("learnrate"),arg("l2decay")=0,arg("l1decay")=0));
 
-    def("rprop", (void (*)(M&, M&, M&,  M&, const float&,const float&))rprop<V1,M1,V1>, (arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("l2cost")=0, arg("l1cost")=0));
-    def("rprop", (void (*)(M&, M&, USM&,M&, const float&,const float&))rprop<V1,M1,signed char>, (arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("l2cost")=0),arg("l1cost")=0);
+    def("rprop", (void (*)(M&, M&, M&,  M&, const float&,const float&,const float&,const float&))rprop<V1,M1,V1>, (arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("l2cost")=0, arg("l1cost")=0, arg("eta_p")=1.2f, arg("eta_m")=0.5f));
+    def("rprop", (void (*)(M&, M&, USM&,M&, const float&,const float&,const float&,const float&))rprop<V1,M1,signed char>, (arg ("W"), arg ("dW"), arg ("dW_old"), arg ("learnrate") ,arg("l2cost")=0,arg("l1cost")=0, arg("eta_p")=1.2f, arg("eta_m")=0.5f));
 }
 
 template<class T>
