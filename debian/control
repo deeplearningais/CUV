@@ -5,8 +5,8 @@ Maintainer: Hannes Schulz <schulz@ais.uni-bonn.de>
 Build-Depends: debhelper (>= 9), cmake (>= 2.8), libboost-python-dev, libboost-serialization-dev, 
     libboost-date-time-dev, libboost-test-dev, libblas-dev, gfortran, libjpeg-dev, libpng12-dev,
     python-numpy, python-numpy-abi9, cimg-dev, 
-    nvidia-settings, nvidia-current-dev, nvidia-modprobe,
-    cuda
+    nvidia-settings, nvidia-modprobe,
+    cuda-6-0, cuda-core-libs-6-0
 Standards-Version: 3.9.3
 Homepage: https://github.com/deeplearningais/CUV
 Vcs-Git: http://github.com/deeplearningais/CUV.git
@@ -17,8 +17,8 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends},
     cmake, libboost-python-dev, libboost-serialization-dev, 
     libboost-date-time-dev, libboost-test-dev, libblas-dev, gfortran, libjpeg-dev, libpng12-dev, cimg-dev, 
-    nvidia-settings, nvidia-current-dev, nvidia-modprobe,
-    cuda
+    nvidia-settings, nvidia-modprobe,
+    cuda-6-0, cuda-core-libs-6-0
 Conflicts: cuv
 Description: N-dimensional arrays for CPU and GPU computing
  Aims at providing a high-level datastructure on GPU,
