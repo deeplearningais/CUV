@@ -859,6 +859,9 @@ void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned i
 
         for(; item < dst_cols; item += blockDim.x){
             T squared_sum = 0.f;
+            if(to == TO_MAX){
+                squared_sum = src_ptr[item];
+            }
             unsigned int end = item + subspace_size * dst_cols;
             for (unsigned int index = item; index <  end; index+=dst_cols){
                 T s = src_ptr[index];
@@ -893,9 +896,12 @@ void tuplewise_op_kernel(T* dst, const T* src, unsigned int dst_rows, unsigned i
         const T* src_ptr = src + (subspace_size*dst_rows * item);
 
         for(; line < dst_rows; line += blockDim.x){
-            T squared_sum =  0.f;
             unsigned int end =  subspace_size*(line+1);
             unsigned int begin = subspace_size*line;
+            T squared_sum =  0.f;
+            if(to == TO_MAX){
+                squared_sum = src_ptr[begin];
+            }
             for (unsigned int index = begin; index < end; index++){
                 T s = src_ptr[index];
                 switch(to){
@@ -940,6 +946,10 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
             // calculates squared sum
             float squared_sum = 0.f; 
             unsigned int max_index = 0;
+            if(to == TO_MAX){
+                squared_sum = src_ptr[item];
+                max_index = item;
+            }
             unsigned int end = item + subspace_size * dst_cols;
             for (unsigned int index = item; index < end; index += dst_cols){
                 T s = src_ptr[index];
@@ -1012,9 +1022,14 @@ void tuplewise_op_grad_kernel(T* dst, const T* src, const T* delta, unsigned int
         T p;
 
         for(; line < dst_rows; line += blockDim.x){
-            float squared_sum = 0.f;
             unsigned int max_index = 0;
             unsigned int end = subspace_size*(line+1);
+
+            float squared_sum = 0.f;
+            if(to == TO_MAX){
+                squared_sum = src_ptr[subspace_size*line];
+                max_index = subspace_size*line;
+            }
 
             for (unsigned int index = subspace_size*line; index < end; index++){
                 T s = src_ptr[index];
@@ -1093,6 +1108,9 @@ template<bool FirstDim, tuplewise_op_functor to, class T>
 
                 for(unsigned int i=0; i < items; i++){
                     float squared_sum = 0.f;
+                    if(to == TO_MAX){
+                        squared_sum = src_ptr[i];
+                    }
                     for (unsigned int index = i; index < i + subspace_size * items; index += items){
                         switch(to){
                             case TO_NORM:
@@ -1127,6 +1145,9 @@ template<bool FirstDim, tuplewise_op_functor to, class T>
                 const T* src_ptr = src + (item * subspace_size * lines);
                 for(unsigned int i = 0; i < lines; i++){
                     float squared_sum = 0.f;
+                    if(to == TO_MAX){
+                        squared_sum = src_ptr[subspace_size*i];
+                    }
                     for (unsigned int index = subspace_size*i; index < subspace_size*(i+1); index++){
                         switch(to){
                             case TO_NORM:
@@ -1281,6 +1302,10 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
             for(unsigned int i=0; i < items; i++){
                 float squared_sum = 0;
                 unsigned int max_index = 0;
+                if(to == TO_MAX){
+                    squared_sum = src_ptr[i];
+                    max_index = i;
+                }
                 // calculates squared sum
                 for (unsigned int index = i; index < i + subspace_size * items; index+= items){
                     switch(to){
@@ -1354,6 +1379,10 @@ void tuplewise_op_grad_host(T* dst, const T* src, const T* delta, unsigned int l
                 float squared_sum = 0.f;
                 unsigned int max_index = 0;
                 unsigned int end = subspace_size*(i+1);
+                if(to == TO_MAX){
+                    squared_sum = src_ptr[subspace_size*i];
+                    max_index = subspace_size*i;
+                }
                 for (unsigned int index = subspace_size*i; index < end; index++){
                     switch(to){
                         case TO_NORM:
