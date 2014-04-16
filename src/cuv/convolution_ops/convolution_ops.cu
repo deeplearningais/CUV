@@ -2633,7 +2633,10 @@ void spn_output_op_kernel(T* dst, const T* src, const T* m_W, const T* Y, unsign
                     //save max_index for hard gd
                     if (hard_gd)m_idx[b] = y;                    
                 }
-                dst_ptr[b] = result;
+                if (hard_gd)
+			dst_ptr[b] = result;
+		else
+			dst_ptr[b] = result+ 0.00000000001;
                 result = 0;
             }
         }
@@ -2774,10 +2777,10 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
                             T s = src_ptr[b];
                             if (!hard_gd){
                                     const T* lae_ptr = lae_res + xtb;  
-                                    T d_dy_val =  expf(w + s ) / (expf(lae_ptr[b]) + eps); 
+                                    T d_dy_val =  expf(w + s ) / (expf(lae_ptr[b]) + 0.00000000001); 
                                     T* dst_ptr = dst + off;
                                 if ( (y < 0) || (c == y) ){
-                                    if (d_dx) dst_ptr[b] = d_dy_val;
+				    if (d_dx) dst_ptr[b] = d_dy_val;
                                     if (d_dw) temp_w_delta[threadIdx.x] += d_dy_val;// / s_val; //expf(logf(d_dy_val)  - s_val  w); // 
                                 }
                                 if (d_dy) Y_delta_ptr[c] = d_dy_val;
@@ -2848,7 +2851,7 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
                         if ( ((y >= 0) && (c == y)) || ((y < 0) && (max_idx[b] == c))){
                             if (d_dx) dst_ptr[b] = d_dy_val;
                             if (d_dw) w_delta[c]++;
-                            if (d_dy) Y_delta_ptr[c] +=  d_dy_val;                            
+                            if (d_dy) Y_delta_ptr[c] =  d_dy_val;                            
                         }
                     }
                 }
