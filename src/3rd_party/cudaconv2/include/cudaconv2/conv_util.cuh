@@ -96,7 +96,7 @@ class AvgPooler {
 private:
     float _num;
 public:
-    AvgPooler(float num) : _num(0) {
+    AvgPooler(float num) : _num(num) {
     }
     __device__ inline float operator()(const float a, const float b) const  {
         return a + b;
@@ -105,7 +105,7 @@ public:
         return 0;
     }
     __device__ inline float output(const float a) const {
-        return  a;
+        return  a/_num;
     }
 };
 
@@ -592,7 +592,7 @@ void convLocalPool(NVMatrix& images, NVMatrix& target, int numFilters,
     int outputs = outputsX * outputsX;
     target.resize(numFilters*outputs, numImages);
 
-    if (avgFlag){
+    if (false){
     if (strideX == 1 && subsX >= 6) {
         int imgsPerThread = numImages % 128 == 0 ? 8 : 4;
         int filtersPerThread = numFilters % 4 == 0 ? 4 : numFilters % 3 == 0 ? 3 : numFilters % 2 == 0 ? 2 : 1;
