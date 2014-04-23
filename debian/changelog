@@ -21,7 +21,7 @@ cuv (0.97.44) raring; urgency=low
   * RelWithDebInfo did not include NDEBUG. *ugh*.
   * UNRELEASED
 
- -- Hannes Schulz <schulz@ais.uni-bonn.de>  Mon, 25 Nov 2013 17:05:41 +0100
+ -- Jenkins CI <jenkins@ais.uni-bonn.de>  Wed, 23 Apr 2014 22:56:03 +0200
 
 cuv (0.97.2-1ubuntu1~quantal2ubuntu1~5.gbpde2935) quantal; urgency=low
 
