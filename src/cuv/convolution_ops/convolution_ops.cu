@@ -473,7 +473,7 @@ template<class V, class M, class L>
         NVMatrix nv_input NVView4D(input);
 /*void convWeightActsSparse(NVMatrix& images, NVMatrix& hidActs, NVMatrix& targets, int* dColorIndices,*/
 /*                        int imgSizeY, int numModulesY, int numModulesX, int filterSize, int paddingStart, int moduleStride, int numImgColors, int numFilterColors,*/
-/*                        int numGroups, int partialSum, float scaleTargets, float scaleOutput) {*/
+/*                        int numGroups, int partialSum, float scaleTargets, float scaleOutput) */
         convWeightActsSparse(       nv_input,          nv_delta,            nv_dst, const_cast<int*>(indices.ptr()),
                               nImgPixY,       nModulesY,       nModulesX,       filtSize,     paddingStart,     moduleStride,         nImgChan, nFiltChan,
                               nGroups,       partialSum, 
