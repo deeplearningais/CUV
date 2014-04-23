@@ -42,6 +42,47 @@ namespace cuv{ namespace libs{
 		 * @{
 		 */
 
+        /**
+         * @brief Multinomial Logistic Loss function.
+         *
+         * This is a two-in-one function, if you want: it calculates the
+         * softmax of X and compares it to the labels in Y using the
+         * multinomial logistic loss.
+         *
+         * @param[out] softmaxX the probabilities (=softmax)
+         * @param X the un-normalized predictor, a matrix of dimension (n_patterns x n_labels) or its transpose
+         * @param Y the labels, a vector of dimension (n_patterns)
+         * @param pattern_axis the dimension in which patterns are stored
+         *
+         * @return a pair containing the log-loss and the
+         * classification loss. The latter can be
+         * non-integer if multiple outputs have the same
+         * (maximal) value.
+         */
+        template<class V, class V2, class M, class L>
+        std::pair<float, float> multinomial_logistic_loss(
+                cuv::tensor<V, M, L>& softmaxX, 
+                const cuv::tensor<V, M, L>& X, 
+                const cuv::tensor<V2, M, L>& Y, 
+                int pattern_axis,
+                boost::shared_ptr<allocator> alloc = boost::make_shared<default_allocator>());
+
+        /**
+         * @brief Gradient of multinomial logistic loss function
+         *
+         * @param[out] dmll_dX  this is where the gradient is stored
+         * @param X the un-normalized predictor, a matrix of dimension (n_patterns x n_labels)
+         * @param Y the labels, a vector of dimension (n_patterns)
+         * @param pattern_axis the dimension in which patterns are stored
+         * @param add whether to add to the values present in dmll_dX
+         */
+        template<class V, class V2, class M, class L>
+        void multinomial_logistic_loss_grad(
+                cuv::tensor<V, M, L>& dmll_dX, 
+                const cuv::tensor<V, M, L>& X, 
+                const cuv::tensor<V2, M, L>& Y,
+                int pattern_axis, bool add);
+
 		/**
 		 * calculate derivative of softmax.
          *
@@ -119,6 +160,10 @@ namespace cuv{ namespace libs{
          */
         template<class V, class M, class L>
             void na_rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& oldW, tensor<V,M,L>& sW, tensor<V,M,L>& learnrates, const float& learnrate, const float& momentum, const float& grad_avg, const float& step_adapt, const float& delta);
+		/**
+		 * @} // defgroup opt Function Optimization
+		 * @} // defgroup libs
+		 */
     }
 } };
 

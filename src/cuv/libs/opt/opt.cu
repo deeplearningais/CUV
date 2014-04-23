@@ -1,12 +1,118 @@
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include "opt.hpp"
 #define sgn(a) ((a==(typeof(a))0) ? 0.f : copysign(1.f,a))
+#define DIVUP(X, Y) (((X)%(Y)!=0) ? X/Y+1 : X/Y)
 
 namespace cuv { namespace libs { namespace opt {
 
+#define LOGREG_THREADS 128
+#define LOGREG_GRAD_THREADS_X 128
+#define LOGREG_GRAD_THREADS_Y 4
 
 
 namespace impl{
+    /**
+      This is for patterns in the second dimension, and is more efficient.
+      */
+    template<class V, class V2>
+    __global__ 
+        void multinomial_logistic_loss_kernel(
+                V* true_label_log_probs, V* correct_probs,
+            const unsigned int n_patterns, const unsigned int n_labels,
+            const V* probs, const V2* labels, const V* maxprobs){
+            const int tidx = blockIdx.x * LOGREG_THREADS + threadIdx.x;
+            if(tidx < n_patterns){
+                const unsigned int label = labels[tidx];
+                const float maxp = maxprobs[tidx];
+
+                const float labelp = probs[label * n_patterns + tidx]; 
+
+                true_label_log_probs[tidx] = __logf(labelp);
+                if(labelp != maxp){
+                    correct_probs[tidx] = 0;
+                }else{
+                    unsigned int n_max = 0;
+                    for(unsigned int i=0; i<n_labels; i++){
+                        n_max += probs[i * n_patterns + tidx] == maxp;
+                    }
+                    correct_probs[tidx] = 1.f / (float) n_max;
+                }
+            }
+    }
+
+    /**
+      this is for patterns in the first dimension, and is inefficient.
+      */
+    template<class V, class V2>
+    __global__ 
+        void multinomial_logistic_loss_kernel_t(
+                V* true_label_log_probs, V* correct_probs,
+            const unsigned int n_patterns, const unsigned int n_labels,
+            const V* probs, const V2* labels, const V* maxprobs){
+            const int tidx = blockIdx.x * LOGREG_THREADS + threadIdx.x;
+            if(tidx < n_patterns){
+                const unsigned int label = labels[tidx];
+                const float maxp = maxprobs[tidx];
+
+                // TODO this is not coalesced!
+                const float labelp = probs[tidx * n_labels + label]; 
+
+                true_label_log_probs[tidx] = __logf(labelp);
+                if(labelp != maxp){
+                    correct_probs[tidx] = 0;
+                }else{
+                    unsigned int n_max = 0;
+                    for(unsigned int i=0; i<n_labels; i++){
+                        n_max += probs[tidx * n_labels + i] == maxp;
+                    }
+                    correct_probs[tidx] = 1.f / (float) n_max;
+                }
+            }
+    }
+
+    template<bool add, class V, class V2>
+    __global__ 
+        void multinomial_logistic_loss_grad_kernel(
+                V* grads, const V* probs, const V2* labels, unsigned int n_patterns, unsigned int n_labels, float fact)
+        {
+            const unsigned int tx = blockIdx.x * LOGREG_GRAD_THREADS_X + threadIdx.x;
+            const unsigned int ty = blockIdx.y * LOGREG_GRAD_THREADS_Y + threadIdx.y;
+            const unsigned int tidx = ty * n_patterns + tx;
+
+            if(ty < n_labels && tx < n_patterns){
+                const unsigned int label = labels[tx];
+                float v = fact * ((label == ty) - probs[tidx]);
+                if(add) 
+                    grads[tidx] += v;
+                else
+                    grads[tidx] = v;
+            }
+        }
+
+    /**
+      transposed version.
+      */
+    template<bool add, class V, class V2>
+    __global__ 
+        void multinomial_logistic_loss_grad_kernel_t(
+                V* grads, const V* probs, const V2* labels, 
+                unsigned int n_patterns, unsigned int n_labels, float fact)
+        {
+            // note: X, Y swapped for transposed version
+            const unsigned int tx = blockIdx.x * LOGREG_GRAD_THREADS_Y + threadIdx.x;
+            const unsigned int ty = blockIdx.y * LOGREG_GRAD_THREADS_X + threadIdx.y;
+            const unsigned int tidx = ty * n_labels + tx;
+
+            if(ty < n_patterns && tx < n_labels){
+                const unsigned int label = (unsigned int) (labels[ty] + 0.000001f);
+                float v = fact * ((label == tx) - probs[tidx]);
+                if(add) 
+                    grads[tidx] += v;
+                else
+                    grads[tidx] = v;
+            }
+        }
+
         template<class V, class M, class L>
             void softmax_derivative(cuv::tensor<V, M, L>& dst, const cuv::tensor<V, M, L>& softmax_act, const cuv::tensor<V,M,L>& residual,  unsigned int vardim){
                 typedef typename cuv::tensor<V, host_memory_space>::index_type index_type;
@@ -162,6 +268,111 @@ namespace impl{
             cuvSafeCall(cudaThreadSynchronize());
         }
 }
+
+template<class V, class V2, class M, class L>
+std::pair<float, float> multinomial_logistic_loss(
+        cuv::tensor<V, M, L>& softmaxX, 
+        const cuv::tensor<V, M, L>& X, 
+        const cuv::tensor<V2, M, L>& Y, 
+        int pattern_axis,
+        boost::shared_ptr<allocator> alloc){
+
+    int n_patterns = X.shape(pattern_axis);
+    int n_labels = X.size() / n_patterns;
+
+    cuvAssert(Y.ndim() == 1);
+    cuvAssert(Y.shape(0) == n_patterns);
+
+    // find maximum over columns
+    tensor<V, M, L> red(cuv::extents[n_patterns], alloc);
+
+    // determine softmax of X
+    if(pattern_axis == 0)
+        reduce_to_col(red, X, RF_MAX, -1.f, 0.f);
+    else if(pattern_axis == X.ndim() - 1)
+        reduce_to_row(red, X, RF_MAX, -1.f, 0.f);
+    else{
+        cuvAssert(false /* illegal dimension in multinomial_logistic_loss */);
+    }
+    matrix_op_vec(softmaxX, X, red, pattern_axis, BF_ADD);
+    apply_scalar_functor(softmaxX, SF_EXP);
+    if(pattern_axis == 0){
+        reduce_to_col(red, softmaxX, RF_ADD);
+    }else{
+        reduce_to_row(red, softmaxX, RF_ADD);
+    }
+    matrix_op_vec(softmaxX, softmaxX, red, pattern_axis, BF_DIV);
+
+    tensor<V, M, L> true_label_log_probs(n_patterns, alloc);
+    tensor<V, M, L> correct_probs(n_patterns, alloc);
+
+    if(pattern_axis == 0){
+        reduce_to_col(red, softmaxX, RF_MAX);
+    }else{
+        reduce_to_row(red, softmaxX, RF_MAX);
+    }
+    dim3 threads(LOGREG_THREADS, 1);
+    dim3 blocks(DIVUP(n_patterns, LOGREG_THREADS), 1);
+    using namespace impl;
+    if(pattern_axis == 0){
+        // TODO this kernel is suboptimal!
+        multinomial_logistic_loss_kernel_t<<<blocks, threads>>>(
+                true_label_log_probs.ptr(), correct_probs.ptr(), 
+                n_patterns, n_labels,
+                softmaxX.ptr(), Y.ptr(), red.ptr()
+                );
+    }else{
+        multinomial_logistic_loss_kernel<<<blocks, threads>>>(
+                true_label_log_probs.ptr(), correct_probs.ptr(), 
+                n_patterns, n_labels,
+                softmaxX.ptr(), Y.ptr(), red.ptr()
+                );
+    }
+    cuvSafeCall(cudaThreadSynchronize());
+
+    std::pair<float, float> retval;
+    retval.first = -cuv::mean(true_label_log_probs);
+    retval.second = 1.f - cuv::mean(correct_probs);
+    return retval;
+}
+template<class V, class V2, class M, class L>
+void multinomial_logistic_loss_grad(
+        cuv::tensor<V, M, L>& dmll_dX, 
+        const cuv::tensor<V, M, L>& X, 
+        const cuv::tensor<V2, M, L>& Y, 
+        int pattern_axis, bool add
+        ){
+    int n_patterns = X.shape(pattern_axis);
+    int n_labels = X.size() / n_patterns;
+    cuvAssert(X.shape() == dmll_dX.shape());
+    cuvAssert(Y.ndim() == 1);
+    cuvAssert(Y.shape(0) == n_patterns);
+
+    using namespace impl;
+    if(pattern_axis == 0){
+        // swapped X, Y for ``transposed'' kernel
+        dim3 threads(LOGREG_GRAD_THREADS_Y, LOGREG_GRAD_THREADS_X);
+        dim3 blocks(DIVUP(n_labels,   LOGREG_GRAD_THREADS_Y), 
+                    DIVUP(n_patterns, LOGREG_GRAD_THREADS_X));
+        if(!add){
+            multinomial_logistic_loss_grad_kernel_t<false><<<blocks, threads>>>(dmll_dX.ptr(),
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f);
+        }else{
+            multinomial_logistic_loss_grad_kernel_t<true><<<blocks, threads>>>(dmll_dX.ptr(),
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f);
+        }
+    }else{
+        dim3 threads(LOGREG_GRAD_THREADS_X, LOGREG_GRAD_THREADS_Y);
+        dim3 blocks(DIVUP(n_patterns, LOGREG_GRAD_THREADS_X), 
+                    DIVUP(n_labels,   LOGREG_GRAD_THREADS_Y));
+        if(!add)
+            multinomial_logistic_loss_grad_kernel<false><<<blocks, threads>>>(dmll_dX.ptr(),
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f);
+        else
+            multinomial_logistic_loss_grad_kernel<true><<<blocks, threads>>>(dmll_dX.ptr(),
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f);
+    }
+}
     
 template<class V, class M, class L>
 void adagrad(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& sW, const float& learnrate, const float& delta, const float& decay, const float& sparsedecay){
@@ -209,8 +420,15 @@ void na_rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& oldW, 
   template void rmsprop(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,TENSOR(V,M,L)&,const float&, const float&, const float&, const float&, const float&); \
   template void na_rmsprop(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,TENSOR(V,M,L)&,TENSOR(V,M,L)&,TENSOR(V,M,L)&,const float&, const float&, const float&, const float&, const float&); 
 
+#define INSTANTIATE_MLL(V,V2,M,L) \
+  template std::pair<float, float> multinomial_logistic_loss(TENSOR(V,M,L)&, const TENSOR(V,M,L)&, const TENSOR(V2,M,L)&, int pattern_axis, boost::shared_ptr<allocator>);\
+  template void multinomial_logistic_loss_grad(TENSOR(V,M,L)&, const TENSOR(V,M,L)&, const TENSOR(V2,M,L)&, int pattern_axis, bool add);\
+
 INSTANTIATE(float,host_memory_space,row_major);
 INSTANTIATE(float,host_memory_space,column_major);
 INSTANTIATE(float,dev_memory_space,row_major);
+
+INSTANTIATE_MLL(float,float,dev_memory_space,row_major);
+INSTANTIATE_MLL(float,unsigned int,dev_memory_space,row_major);
             
 } } }
