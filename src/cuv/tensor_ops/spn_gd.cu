@@ -114,7 +114,13 @@ __global__ void spn_gd_kernel(T*W, const T* dW, const T* dW_old, unsigned int n,
                 delta =  rate * ( p_dW_old - p_dW );    
             }
             //weight decay
-            if (decay > 0) delta -= rate*p_W*decay;
+            if (decay > 0)
+	    {
+                if (n_size > 0)	
+	    		delta -= rate*expf(p_W)*decay* 0;
+		else
+	    		delta -= rate*p_W*decay;
+	    }
             
             //sparse decay
             if (n_size > 0){ 
