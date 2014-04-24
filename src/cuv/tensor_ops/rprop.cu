@@ -85,8 +85,10 @@ __global__ void rprop_kernel(T*W, T* dW, S* dW_old, T* rate, int n, T decay, T s
 		rate[i]   = step;
 		dW_old[i] = sdW;
 		T newW    = oldW+delta;
-		W[i] = (newW*oldW<(T)0) ? (T)0 : newW;
-			
+		if (sparsedecay == 0.0f)
+			W[i] = newW;
+		else
+			W[i] = (newW*oldW<(T)0) ? (T)0 : newW;
 	}
 } 
 
@@ -225,8 +227,10 @@ namespace cuv{
 			rate[i]   = step;
 			dW_old[i] = sdW;
 			T newW    = oldW+delta;
-			W[i] = (newW*oldW<(T)0) ? (T)0 : newW;
-				
+			if (sparsedecay == 0.0f)
+				W[i] = newW;
+			else
+				W[i] = (newW*oldW<(T)0) ? (T)0 : newW;
 		}
 	}
 
