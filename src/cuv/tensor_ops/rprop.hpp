@@ -54,6 +54,8 @@ namespace cuv{
 	 * @param rate	 Vector of same size as W containing separate learnrates for each entry. 
 	 * @param decay  Scalar L2 weight decay (cost) parameter
 	 * @param sparsedecay  Scalar L1 weight decay (cost) parameter
+	 * @param eta_p increase-parameter for the learningrates
+     * @param eta_m decrease-parameter for the learningrates
 	 *
 	 * 	Updates W according to the "RPROP" algorithm.
 	 * 	Calculates W = (1-decay*rate)*W + rate * W
@@ -75,6 +77,42 @@ namespace cuv{
             typedef tensor<S, __memory_space_type> rm_tensor_S;
             rprop(*reinterpret_cast<rm_tensor*>(&W),*reinterpret_cast<rm_tensor*>(&dW),*reinterpret_cast<rm_tensor_S*>(&dW_old),*reinterpret_cast<rm_tensor*>(&rate),decay,sparsedecay,eta_p,eta_m);
         }
+
+	/** 
+	 * @brief Does a gradient descent step using the "RRPROP" algorithm.
+	 * 
+	 * @param W 	 Destination tensor
+	 * @param dW	 Direction of gradient descent. Vector of same size as W. 
+	 * @param dW_old Direction of gradient descent in privious step. Vector of same size as W. 
+	 * @param rate	 Vector of same size as W containing separate learnrates for each entry. 
+	 * @param sW	 The sum of the squared gradients for each component as W (therefore also same shape as W).
+	 * @param avg_grad time constant to average gradient squares with (0.9 means keep most of old average)
+	 * @param delta	 added in denominator of rmsprop
+	 * @param decay  Scalar L2 weight decay (cost) parameter
+	 * @param sparsedecay  Scalar L1 weight decay (cost) parameter
+	 * @param eta_p  increase-parameter for the learningrates
+     * @param eta_m  decrease-parameter for the learningrates
+	 * @param delta_max upper bound for learningrates
+     * @param delta_min lower bound for learningrates
+	 *
+	 * this rmsprop-version is derived from rprop
+	 */
+	     template<class __value_type, class __memory_space_type, class S>
+	void rrmsprop(tensor<__value_type,__memory_space_type>& W, tensor<__value_type,__memory_space_type>& dW, tensor<S,__memory_space_type>& dW_old, tensor<__value_type,__memory_space_type>& rate, tensor<__value_type,__memory_space_type>& sW, const float& avg_grad = 0.9f, const float& delta=0.1f, const float& decay = 0.0f, const float& sparsedecay=0.0f, const float& eta_p=1.2f, const float& eta_m=0.5f, const float& delta_max = 5.0f, const float& delta_min = 1.0e-8f);
+	     
+	     /**
+         * @overload
+         *
+         * casting column major to row major since working on linear memory anyway.
+         */
+       template<class __value_type, class __memory_space_type, class S>
+	void rrmsprop(tensor<__value_type,__memory_space_type, column_major>& W, tensor<__value_type,__memory_space_type, column_major>& dW, tensor<S,__memory_space_type, column_major>& dW_old, tensor<__value_type,__memory_space_type, column_major>& rate, tensor<__value_type,__memory_space_type, column_major>& sW, const float& avg_grad = 0.9f, const float& delta=0.1f, const float& decay = 0.0f, const float& sparsedecay=0.0f, const float& eta_p=1.2f, const float& eta_m=0.5f, const float& delta_max = 5.0f, const float& delta_min = 1.0e-8f){
+            typedef tensor<__value_type, __memory_space_type> rm_tensor;
+            typedef tensor<S, __memory_space_type> rm_tensor_S;
+            rrmsprop(*reinterpret_cast<rm_tensor*>(&W),*reinterpret_cast<rm_tensor*>(&dW),*reinterpret_cast<rm_tensor_S*>(&dW_old),*reinterpret_cast<rm_tensor*>(&rate),*reinterpret_cast<rm_tensor*>(&sW),avg_grad,delta,decay,sparsedecay,eta_p,eta_m,delta_max,delta_min);
+        }
+	
+        
 	/** 
 	 * @brief Do a step of gradient descent with optional weight decay.
 	 * 
