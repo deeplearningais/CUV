@@ -478,9 +478,11 @@ template<class V, class M, class L>
         NVMatrix nv_dst   NVView3D((partialSum > 0 ? *dst : dst_));
         NVMatrix nv_delta NVView4D(delta);
         NVMatrix nv_input NVView4D(input);
+
+
 /*void convWeightActsSparse(NVMatrix& images, NVMatrix& hidActs, NVMatrix& targets, int* dColorIndices,*/
 /*                        int imgSizeY, int numModulesY, int numModulesX, int filterSize, int paddingStart, int moduleStride, int numImgColors, int numFilterColors,*/
-/*                        int numGroups, int partialSum, float scaleTargets, float scaleOutput) {*/
+/*                        int numGroups, int partialSum, float scaleTargets, float scaleOutput) */
         convWeightActsSparse(       nv_input,          nv_delta,            nv_dst, const_cast<int*>(indices.ptr()),
                               nImgPixY,       nModulesY,       nModulesX,       filtSize,     paddingStart,     moduleStride,         nImgChan, nFiltChan,
                               nGroups,       partialSum, 
@@ -2697,14 +2699,17 @@ void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,
         unsigned int lines = src.shape(0);
         unsigned int items;
         unsigned int batch;
-        cuvAssert((dst.shape().size() == 3) || (dst.shape().size() == 4));
-        if ( dst.shape().size() > 3 ){ 
-            items = src.shape(1) * src.shape(2);
-            batch = src.shape(3);
-        } else {
+        cuvAssert((dst.shape().size() == 3) || (dst.shape().size() == 4)|| (dst.shape().size() == 2));
+        if (src.shape().size() == 3) { 
             items = src.shape(1);
             batch = src.shape(2);
-        }
+	} else if (src.shape().size() == 4) { 
+            items = src.shape(1) * src.shape(2);
+            batch = src.shape(3);
+        } else{	
+            items = 1;
+            batch = src.shape(1);
+	}
                 
         //check every param for nans
         //cuvAssert(!cuv::has_nan(src));
@@ -2712,17 +2717,16 @@ void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,
         //cuvAssert(!cuv::has_nan(Y));
         
         cuvAssert(m_W.ndim() == 2);
-        cuvAssert((src.ndim() == 3) || src.ndim() == 4);
+        cuvAssert((src.ndim() == 3) || src.ndim() == 4||src.ndim() == 2);
         cuvAssert(Y.ndim() == 2);
         
         cuvAssert(lines > 1);
         cuvAssert(items > 0);
         cuvAssert(batch > 0);        
         cuvAssert(src.shape(0) ==  Y.shape(1));
-        cuvAssert( (src.shape(2) == Y.shape(0)) || (src.shape(3) == Y.shape(0)));
+        cuvAssert( (src.shape(2) == Y.shape(0)) || (src.shape(3) == Y.shape(0))|| (src.shape(1) == Y.shape(0)));
         cuvAssert(dst.shape(0) == 1);
         cuvAssert(dst.shape(1) ==  src.shape(1));
-        cuvAssert(dst.shape(2) ==  src.shape(2));
         if ( dst.shape().size() > 3 ) cuvAssert(dst.shape(3) ==  src.shape(3));
         cuvAssert(m_W.shape(1) ==  src.shape(0));
         
@@ -2744,6 +2748,8 @@ void spn_output_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, const tensor<V,
      * spn_output_op grad
      *******************************************************************************************************************************/
 // currently d_dy just works for case x = 1, 
+
+
 template<class T>
 __global__
 void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, const T* m_W,  const T* Y, const T* S, const T* lae_res,  const unsigned int* max_idx,
@@ -2777,7 +2783,7 @@ void spn_output_op_grad_kernel(T* dst, const T* src,  T* w_delta, T* Y_delta, co
                             T s = src_ptr[b];
                             if (!hard_gd){
                                     const T* lae_ptr = lae_res + xtb;  
-                                    T d_dy_val =  expf(w + s ) / (expf(lae_ptr[b]) + 0.00000000001); 
+                                    T d_dy_val =  expf(w + s - lae_ptr[b]) ; 
                                     T* dst_ptr = dst + off;
                                 if ( (y < 0) || (c == y) ){
 				    if (d_dx) dst_ptr[b] = d_dy_val;
@@ -2862,81 +2868,453 @@ unsigned int lines, unsigned int items, unsigned int batch, const bool d_dx, con
 
 template<class V, class M, class T>
 void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M,T>& w_delta, tensor<V,M,T>& Y_delta, const tensor<V,M,T>& m_W, 
-                        const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& lae_res, const tensor<unsigned int,M,T>& max_idx, const bool d_dx, const bool d_dw, const bool d_dy, 
-                        float eps, bool hard_gd){
-        
-        cuvAssert((src.shape().size() == 3) || (src.shape().size() == 4));
-        unsigned int lines = src.shape(0);
-        unsigned int items;
-        unsigned int batch;
-        if (src.shape().size() == 3) { 
-            items = src.shape(1);
-            batch = src.shape(2);
-        } else { 
-            items = src.shape(1) * src.shape(2);
-            batch = src.shape(3);
-        }
- 
-        //cuvAssert(!cuv::has_nan(src));
-       // cuvAssert(!cuv::has_nan(m_W));  
-       // cuvAssert(!cuv::has_nan(Y));  
-       // cuvAssert(!cuv::has_nan(S));  
-            
-        cuv::fill (dst, 0);
-        cuv::fill (Y_delta, -FLT_MAX );
-        cuv::fill (w_delta, 0);
-        
-        //check dimensions of dst
-        cuvAssert(lines > 1);
-        cuvAssert(items > 0);
-        cuvAssert(batch > 0);   
-        cuvAssert(src.shape(0) ==  Y.shape(1));
-        cuvAssert((src.shape(2) == Y.shape(0)) || (src.shape(3) == Y.shape(0)) );
-        cuvAssert(m_W.shape(1) ==  src.shape(0));
-        cuvAssert(Y.shape() ==  Y_delta.shape());
-        cuvAssert(Y_delta.shape(1) > 1);
-        cuvAssert(m_W.shape() ==  w_delta.shape());
-        cuvAssert( (S.shape(0) ==  src.shape(2)) || (S.shape(0) ==  src.shape(3)));
-        cuvAssert(src.shape() == dst.shape());
-        
-        if(IsSame<M,host_memory_space>::Result::value){
-               spn_output_op_grad_host(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), lae_res.ptr(),  max_idx.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps, hard_gd);
-                
-        }else{
-            // device: run kernel
-            unsigned int num_blocks  = lines;
-            unsigned int num_threads = min(MAX_THREADS, int(32. * ceil( batch / 32. )));
-            unsigned int sharedMemory  =  num_threads * sizeof(float);
-            spn_output_op_grad_kernel<<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), 
-                                                                                lae_res.ptr(), max_idx.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps, hard_gd);
+		const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& lae_res, const tensor<unsigned int,M,T>& max_idx, const bool d_dx, const bool d_dw, const bool d_dy, 
+		float eps, bool hard_gd){
 
-            cuvSafeCall(cudaThreadSynchronize());
-        }
-//        std::cout << "spn out" << std::endl;
-/*        bool spn_out_dst =cuv::has_nan(dst);
-        
-        if (spn_out_dst){
-            std::cout << "\nmin(lae_res): " << cuv::minimum(lae_res) << ", max(lae_res): " << cuv::maximum(lae_res) <<  ", mean(la_res): " << cuv::mean(lae_res) <<std::endl;
-            std::cout << "min(W): " << cuv::minimum(m_W) << ", max(W): " << cuv::maximum(m_W)  <<  ", mean(W): " << cuv::mean(m_W) << std::endl;
-            std::cout << "min(src): " << cuv::minimum(src) << ", max(src): " << cuv::maximum(src)  <<  ", mean(src): " << cuv::mean(src) << std::endl;
-            std::cout << "eps: "  << eps << std::endl;
-        }
-        cuvAssert(!spn_out_dst);    
-	
-        bool spn_out_w_delta =cuv::has_nan(w_delta);
-        cuvAssert(!spn_out_dst);    
-        cuvAssert(!spn_out_w_delta);        
-//        std::cout << "spn out done" << std::endl;
-*/
-        cuvAssert(!cuv::has_nan(Y_delta));     
+	cuvAssert( (src.shape().size() == 2) ||(src.shape().size() == 3) || (src.shape().size() == 4));
+	unsigned int lines = src.shape(0);
+	unsigned int items;
+	unsigned int batch;
+	if (src.shape().size() == 3) { 
+		items = src.shape(1);
+		batch = src.shape(2);
+	} else if (src.shape().size() == 4) { 
+		items = src.shape(1) * src.shape(2);
+		batch = src.shape(3);
+	} else{	
+		items = 1;
+		batch = src.shape(1);
+	}
+
+//	cuvAssert(!cuv::has_nan(src));
+//	cuvAssert(!cuv::has_nan(m_W));  
+//	cuvAssert(!cuv::has_nan(Y));  
+	// cuvAssert(!cuv::has_nan(S));  
+
+	cuv::fill (dst, 0);
+	cuv::fill (Y_delta, -FLT_MAX );
+	cuv::fill (w_delta, 0);
+
+	//check dimensions of dst
+	cuvAssert(lines > 1);
+	cuvAssert(items > 0);
+	cuvAssert(batch > 0);   
+	cuvAssert(src.shape(0) ==  Y.shape(1));
+	cuvAssert((src.shape(2) == Y.shape(0)) || (src.shape(3) == Y.shape(0)) || (src.shape(1) == Y.shape(0)) );
+	cuvAssert(m_W.shape(1) ==  src.shape(0));
+	cuvAssert(Y.shape() ==  Y_delta.shape());
+	cuvAssert(Y_delta.shape(1) > 1);
+	cuvAssert(m_W.shape() ==  w_delta.shape());
+	cuvAssert(src.shape() == dst.shape());
+
+	if(IsSame<M,host_memory_space>::Result::value){
+		spn_output_op_grad_host(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), lae_res.ptr(),  max_idx.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps, hard_gd);
+
+	}else{
+		// device: run kernel
+		unsigned int num_blocks  = lines;
+		unsigned int num_threads = min(MAX_THREADS, int(32. * ceil( batch / 32. )));
+		unsigned int sharedMemory  =  num_threads * sizeof(float);
+		spn_output_op_grad_kernel<<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), src.ptr(), w_delta.ptr(), Y_delta.ptr(), m_W.ptr(), Y.ptr(), S.ptr(), 
+				lae_res.ptr(), max_idx.ptr(), lines, items, batch, d_dx, d_dy, d_dw, eps, hard_gd);
+
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+	//        std::cout << "spn out" << std::endl;
+	if ( false ){
+		bool spn_out_dst =cuv::has_nan(dst);
+		if (spn_out_dst){
+			std::cout << "\nmin(lae_res): " << cuv::minimum(lae_res) << ", max(lae_res): " << cuv::maximum(lae_res) <<  ", mean(la_res): " << cuv::mean(lae_res) <<std::endl;
+			std::cout << "min(W): " << cuv::minimum(m_W) << ", max(W): " << cuv::maximum(m_W)  <<  ", mean(W): " << cuv::mean(m_W) << std::endl;
+			std::cout << "min(src): " << cuv::minimum(src) << ", max(src): " << cuv::maximum(src)  <<  ", mean(src): " << cuv::mean(src) << std::endl;
+			std::cout << "eps: "  << eps << std::endl;
+		}
+		cuvAssert(!spn_out_dst);    
+
+		bool spn_out_w_delta =cuv::has_nan(w_delta);
+		if (spn_out_w_delta){
+			std::cout << "\nmin(wdelta): " << cuv::minimum(w_delta) << ", max(wdelta): " << cuv::maximum(w_delta) <<  ", mean(wdelta): " << cuv::mean(w_delta) <<std::endl;
+			std::cout << "\nmin(lae_res): " << cuv::minimum(lae_res) << ", max(lae_res): " << cuv::maximum(lae_res) <<  ", mean(la_res): " << cuv::mean(lae_res) <<std::endl;
+			std::cout << "min(Y): " << cuv::minimum(Y) << ", max(Y): " << cuv::maximum(Y)  <<  ", mean(Y): " << cuv::mean(Y) << std::endl;
+			std::cout << "min(S): " << cuv::minimum(S) << ", max(S): " << cuv::maximum(S)  <<  ", mean(S): " << cuv::mean(Y) << std::endl;
+			std::cout << "min(W): " << cuv::minimum(m_W) << ", max(W): " << cuv::maximum(m_W)  <<  ", mean(W): " << cuv::mean(m_W) << std::endl;
+			std::cout << "min(src): " << cuv::minimum(src) << ", max(src): " << cuv::maximum(src)  <<  ", mean(src): " << cuv::mean(src) << std::endl;
+			std::cout << "eps: "  << eps << std::endl;
+			cuvAssert(!spn_out_w_delta);        
+		}
+		//        std::cout << "spn out done" << std::endl;
+
+		cuvAssert(!cuv::has_nan(Y_delta));     
+	}
 }
-    
-    
+
+
+/** multiply two matrices on GPU
+ * (this is NOT elementwise multiplication!)
+ *
+ * dst = src1 * src2
+ *
+ * @param dst   the target matrix
+ * @param src1  the source matrix A
+ * @param src2  the source matrix B
+ * @param hDst  the height of the destination matrix
+ * @param wDst  the width of the destination matrix
+ * @param wSrc1 the width of A
+ */
+template<class T>
+__global__ void prod_kernel3( T* c, const T* a, const T* b,  unsigned int hDst, unsigned int wDst, unsigned int wSrc1){
+	const	int BLOCK_SIZE=16;
+	int blockRow = blockIdx.y;
+	int blockCol = blockIdx.x;
+
+	T Cvalue = -FLT_MAX;
+
+        bf_logaddexp<float> lae;
+	int row = threadIdx.y;
+	int col = threadIdx.x;
+	int i;
+	if(wSrc1%BLOCK_SIZE==0)
+		i=wSrc1/BLOCK_SIZE;
+	else
+		i=wSrc1/BLOCK_SIZE+1;
+
+
+	for (int m = 0; m <i; ++m) {
+
+		__shared__ T As[BLOCK_SIZE][BLOCK_SIZE];
+		__shared__ T Bs[BLOCK_SIZE][BLOCK_SIZE];
+		if( m*BLOCK_SIZE+col<wSrc1)
+			As[row][col] = a[ blockRow*BLOCK_SIZE+row+hDst*(col+(m*BLOCK_SIZE))];
+
+		else
+			As[row][col]=(T)-FLT_MAX;
+
+		if(m*BLOCK_SIZE+row<wSrc1)
+			Bs[row][col] = b[ (blockCol*BLOCK_SIZE+col)*wSrc1+(row+m*BLOCK_SIZE)];
+		else
+			Bs[row][col]=(T)-FLT_MAX;
+
+		__syncthreads();
+
+		for (int e = 0; e < BLOCK_SIZE; ++e)
+			Cvalue = lae( Cvalue,As[row][e] + Bs[e][col]);
+
+		__syncthreads();
+
+	}
+	if(blockRow*BLOCK_SIZE+row<hDst && blockCol*BLOCK_SIZE+col<wDst)
+		c[(col+blockCol*BLOCK_SIZE)* hDst + row+blockRow*BLOCK_SIZE] = Cvalue;
+}
+
+/** multiply two matrices on GPU (1st argument transposed!)
+ * (this is NOT elementwise multiplication!)
+ *
+ * dst = src1' * src2
+ *
+ * @param dst   the target matrix
+ * @param src1  the source matrix A
+ * @param src2  the source matrix B
+ * @param hDst  the height of the destination matrix
+ * @param wDst  the width of the destination matrix
+ * @param hSrc1 the height of A
+ */
+template<class T>
+__global__ void prod_kernel4( T* c, const T* a, const T* b, const T* src, const T* c_orig,  unsigned int hDst, unsigned int wDst, unsigned int hSrc1){
+	const int BLOCK_SIZE=16;
+	int blockRow = blockIdx.y;
+	int blockCol = blockIdx.x;
+
+	T Cvalue = 0;
+
+	__shared__ T As[BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ T srcs[BLOCK_SIZE+1][BLOCK_SIZE];
+
+	__shared__ T c_origs[BLOCK_SIZE+1][BLOCK_SIZE];               
+	__shared__ T Bs[BLOCK_SIZE+1][BLOCK_SIZE];
+
+	int row = threadIdx.y;
+	int col = threadIdx.x;
+	int i;
+
+	//load src
+	if(blockRow*BLOCK_SIZE+row<hDst && blockCol*BLOCK_SIZE+col<wDst){
+		srcs[row][col]  = src[(col+blockCol*BLOCK_SIZE)* hDst + row+blockRow*BLOCK_SIZE];
+	} else {
+		srcs[row][col] =(T)0;
+	}
+
+	if(hSrc1%BLOCK_SIZE==0)
+		i=hSrc1/BLOCK_SIZE;
+	else
+		i=hSrc1/BLOCK_SIZE+1;
+
+	for (int m = 0; m <i; ++m) {
+
+		if( row+m*BLOCK_SIZE <hSrc1  ){
+			As[row][col]      = a[ (blockRow*BLOCK_SIZE+col)*hSrc1+(row+m*BLOCK_SIZE)];
+		} else {
+			As[row][col] =(T)0;
+		}
+
+		if(m*BLOCK_SIZE+row<hSrc1 ){
+			Bs     [row][col] =      b[ (blockCol*BLOCK_SIZE+col)*hSrc1+(row+m*BLOCK_SIZE)];
+			c_origs[row][col] = c_orig[ (blockCol*BLOCK_SIZE+col)*hSrc1+(row+m*BLOCK_SIZE)];
+                        
+		} else{
+			Bs     [row][col] =(T)0;
+			c_origs[row][col] =(T)0;                        
+		}
+		__syncthreads();
+
+
+		for (int e = 0; e < BLOCK_SIZE; ++e){
+			Cvalue += Bs[e][col]  * expf(As[e][row] + srcs[row][col] - c_origs[e][col] );
+		}
+		__syncthreads();
+	}
+	if(blockRow*BLOCK_SIZE+row<hDst && blockCol*BLOCK_SIZE+col<wDst)
+		c[(col+blockCol*BLOCK_SIZE)* hDst + row+blockRow*BLOCK_SIZE] = Cvalue;
+}
+
+
+
+
+/** multiply two matrices on GPU
+ * (this is NOT elementwise multiplication!)
+ *
+ * dst = src1 * src2
+ *
+ * @param dst   the target matrix
+ * @param src1  the source matrix A
+ * @param src2  the source matrix B
+ * @param hDst  the height of the destination matrix
+ * @param wDst  the width of the destination matrix
+ * @param wSrc1 the width of A
+ */
+template<class T>
+__global__ void prod_w_delta( T* c, const T* a, const T* b, const T* W, const T* c_orig, unsigned int hDst, unsigned int wDst, unsigned int wSrc1){
+	const	int BLOCK_SIZE=16;
+	int blockRow = blockIdx.y;
+	int blockCol = blockIdx.x;
+
+	T Cvalue = 0;
+
+	int row = threadIdx.y;
+	int col = threadIdx.x;
+	int i;
+	if(wSrc1%BLOCK_SIZE==0)
+		i=wSrc1/BLOCK_SIZE;
+	else
+		i=wSrc1/BLOCK_SIZE+1;
+
+
+
+	__shared__ T Ws[BLOCK_SIZE][BLOCK_SIZE];
+	if(blockRow*BLOCK_SIZE+row<hDst && blockCol*BLOCK_SIZE+col<wDst){
+	 	Ws[row][col]  = W[(col+blockCol*BLOCK_SIZE)* hDst + row+blockRow*BLOCK_SIZE];
+	} else {
+	    Ws[row][col] = (T)0;
+	}
+
+	for (int m = 0; m <i; ++m) {
+
+		__shared__ T As[BLOCK_SIZE][BLOCK_SIZE];
+		__shared__ T Bs[BLOCK_SIZE][BLOCK_SIZE];
+		__shared__ T c_origs[BLOCK_SIZE][BLOCK_SIZE];
+		if( m*BLOCK_SIZE+col<wSrc1){
+			As[row][col] = a[ blockRow*BLOCK_SIZE+row+hDst*(col+(m*BLOCK_SIZE))];
+			c_origs[row][col] = c_orig[ blockRow*BLOCK_SIZE+row+hDst*(col+(m*BLOCK_SIZE))];
+		}
+		else{
+			As[row][col]=(T)0;
+			c_origs[row][col]=(T)0;
+		}
+
+
+		if(m*BLOCK_SIZE+row<wSrc1)
+			Bs[row][col] = b[ (blockCol*BLOCK_SIZE+col)*wSrc1+(row+m*BLOCK_SIZE)];
+		else
+			Bs[row][col]=(T)0;
+
+		__syncthreads();
+
+		for (int e = 0; e < BLOCK_SIZE; ++e){
+			Cvalue += As[row][e] * expf( Bs[e][col] + Ws[row][col] - c_origs[row][e] );
+		}
+		__syncthreads();
+
+	}
+	if(blockRow*BLOCK_SIZE+row<hDst && blockCol*BLOCK_SIZE+col<wDst)
+		c[(col+blockCol*BLOCK_SIZE)* hDst + row+blockRow*BLOCK_SIZE] = Cvalue;
+}
+
+
+
+/** 
+ * multiply two matrices on device
+ *
+ * @param dst     destination, where result is stored
+ * @param src1    first source matrix A
+ * @param src2    second source matrix B
+ *
+ */
+
+template<class V, class M, class T>
+void spn_prod( tensor<V,M,T>& dst, const tensor<V,M,T>& src1, const tensor<V,M,T>& src2){
+	dim3 dimBlock(16,16);
+
+	unsigned int src1h = src1.shape(0);
+	unsigned int src1w = src1.shape(1);
+	unsigned int src2h = src2.shape(0);
+	unsigned int src2w = src2.shape(1);
+
+        //cuvAssert(!cuv::has_nan(src1));
+        //cuvAssert(!cuv::has_nan(src2));
+
+
+	if(src1w!=src2h)
+		cuvAssert(false);
+	int i,j;
+	if(src2w%dimBlock.x==0)
+		i=src2w/dimBlock.x;
+	else
+		i=(src2w/dimBlock.x)+1;
+
+	if(src1h%dimBlock.y==0)
+		j=src1h/dimBlock.y;
+	else
+		j=(src1h/dimBlock.y)+1;
+	dim3 dimGrid(i, j);
+	prod_kernel3<<<dimGrid, dimBlock>>>(dst.ptr(),src1.ptr(),src2.ptr(), src1h, src2w, src2h);
+        
+//	bool spn_prodNan = cuv::has_nan(dst);
+//	cuvAssert(!spn_prodNan);
+	cuvSafeCall(cudaThreadSynchronize());
+}
+
+
+/** 
+ * multiply two matrices on device
+ *
+ * @param dst     destination, where result is stored
+ * @param src1    first source matrix A
+ * @param src2    second source matrix B
+ *
+ */
+
+template<class V, class M, class T>
+void spn_prod_grad(tensor<V,M,T>& dst, const tensor<V,M,T>&  src1, const tensor<V,M,T>&  src2, const tensor<V,M,T>&  delta, const tensor<V,M,T>&  c_orig ){
+	dim3 dimBlock(16,16);
+
+	unsigned int src1h = src1.shape(0);
+	unsigned int src1w = src1.shape(1);
+	unsigned int src2h = src2.shape(0);
+	unsigned int src2w = src2.shape(1);
+
+	if (false){
+		std::cout << "dst shape: ";
+		for (unsigned int s = 0; s < dst.shape().size(); s++){
+			std::cout << "["<< dst.shape(s)<<"]";
+		}
+		std::cout << std::endl;
+
+		std::cout << "A shape: ";
+		for (unsigned int s = 0; s < src1.shape().size(); s++){
+			std::cout << "["<< src1.shape(s)<<"]";
+		}
+		std::cout << std::endl;
+		std::cout << "B shape: ";
+		for (unsigned int s = 0; s < src2.shape().size(); s++){
+			std::cout << "["<< src2.shape(s)<<"]";
+		}
+		std::cout << std::endl;
+
+		std::cout << "src shape: ";
+		for (unsigned int s = 0; s < delta.shape().size(); s++){
+			std::cout << "["<< delta.shape(s)<<"]";
+		}
+		std::cout << std::endl;
+
+		std::cout << "c_orig shape: ";
+		for (unsigned int s = 0; s < c_orig.shape().size(); s++){
+			std::cout << "["<< c_orig.shape(s)<<"]";
+		}
+		std::cout << std::endl;
+	}
+
+	if(src1h!=src2h)
+		cuvAssert(false);
+	int i,j;
+	if(src2w%dimBlock.x==0)
+		i=src2w/dimBlock.x;
+	else
+		i=(src2w/dimBlock.x)+1;
+
+	if(src1w%dimBlock.y==0)
+		j=src1w/dimBlock.y;
+	else
+		j=(src1w/dimBlock.y)+1;
+	dim3 dimGrid(i, j);
+	prod_kernel4<<<dimGrid, dimBlock>>>(dst.ptr(),src1.ptr(),src2.ptr(), delta.ptr(), c_orig.ptr(),  src1w, src2w, src1h);
+	cuvSafeCall(cudaThreadSynchronize());
+	}
+
+
+/** 
+ * multiply two matrices on device
+ *
+ * @param dst     destination, where result is stored
+ * @param src1    first source matrix A
+ * @param src2    second source matrix B
+ *
+ */
+
+template<class V, class M, class T>
+void spn_prod_w_grad( tensor<V,M,T>& dst, const tensor<V,M,T>& src1, const tensor<V,M,T>& src2, const tensor<V,M,T>& W, const tensor<V,M,T>& c_orig ){
+	dim3 dimBlock(16,16);
+
+	unsigned int src1h = src1.shape(0);
+	unsigned int src1w = src1.shape(1);
+	unsigned int src2h = src2.shape(0);
+	unsigned int src2w = src2.shape(1);
+
+        cuvAssert(!cuv::has_nan(src1));
+        cuvAssert(!cuv::has_nan(src2));
+
+
+	if(src1w!=src2h)
+		cuvAssert(false);
+	int i,j;
+	if(src2w%dimBlock.x==0)
+		i=src2w/dimBlock.x;
+	else
+		i=(src2w/dimBlock.x)+1;
+
+	if(src1h%dimBlock.y==0)
+		j=src1h/dimBlock.y;
+	else
+		j=(src1h/dimBlock.y)+1;
+	dim3 dimGrid(i, j);
+	prod_w_delta<<<dimGrid, dimBlock>>>(dst.ptr(),src1.ptr(),src2.ptr(), W.ptr(), c_orig.ptr(), src1h, src2w, src2h);
+        
+	if (false){
+		bool spn_prodNan = cuv::has_nan(dst);
+		cuvAssert(!spn_prodNan);
+		cuvSafeCall(cudaThreadSynchronize());
+	}
+}
+
+
+
+
 
 // instantiate
 #define  TENS(V,M,T)       tensor<V,M,T>
 #define CTENS(V,M,T) const TENS(V,M,T)
 #define INST(V,M,T) \
+template void spn_prod<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&); \
+template void spn_prod_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&); \
+template void spn_prod_w_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&); \
 template void spn_output_op<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, TENS(unsigned int,M,T)&, bool); \
 template void spn_output_op_grad<V,M,T>(TENS(V,M,T)&, CTENS(V,M,T)&, TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(unsigned int,M,T)&, bool, bool, bool, float, bool); \
 template void weighted_sub_tensor_op<V,M,T>(TENS(V,M,T)&, TENS(unsigned char,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, unsigned int, weighted_sub_tensor_op_functor, float); \

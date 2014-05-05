@@ -464,6 +464,17 @@ void spn_output_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, tensor<V,M
                         const tensor<V,M,T>& Y, const tensor<V,M,T>& S, const tensor<V,M,T>& lae, const tensor<unsigned int,M,T>& max_idx, bool d_dx, bool d_dw, bool d_dy, float eps, bool hard_gd);
 
 
+template<class V, class M, class T>
+void spn_prod(tensor<V,M,T>& dst, const tensor<V,M,T>& src1, const tensor<V,M,T>& src2);
+
+
+template<class V, class M, class T>
+void spn_prod_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src1, const tensor<V,M,T>& src2, const tensor<V,M,T>& delta, const tensor<V,M,T>& c_orig);
+
+
+template<class V, class M, class T>
+void spn_prod_w_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& src1, const tensor<V,M,T>& src2, const tensor<V,M,T>& W, const tensor<V,M,T>& c_orig);
+
 }
 /** @} */ //end group convolution_ops
 }
