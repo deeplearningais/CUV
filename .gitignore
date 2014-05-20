@@ -14,3 +14,4 @@ src/types_py.vim
 *.swp
 # src/cuv/tensor_ops/instantiations
 *.pyc
+*~

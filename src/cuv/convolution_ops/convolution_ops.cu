@@ -1561,6 +1561,19 @@ template<class V,class M, class T>
     }
 
 
+/*
+   It starts here
+
+ */
+
+
+
+
+
+/*It ends here
+
+ */
+
 
 // instantiate
 #define  TENS(V,M,T)       tensor<V,M,T>
@@ -1590,5 +1603,183 @@ template void d_conv2d_dfilt(TENS(V,M,T)& dst_, CTENS(V,M,T)& delta, CTENS(V,M,T
 template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, CTENS(int,M,T)&, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld);
 INST(float,host_memory_space,row_major);
 INST(float,dev_memory_space,row_major);
-}}
+}
+
+
+// other convolution operators
+namespace misc_conv{
+/*
+ * - one block -> szChunk x szChunk
+ * - no restrictions on dimensions
+ * - szChunk must be chosen such that 32*szChunk^2 <= number of thread per block
+ */
+//
+template<int szChunk, int imgsPerThread>
+__global__ void kUpscale(float* dest_imgs, float* src_imgs, int channels,
+		int height, int width, int nr_images, int factor) {
+
+	// number of chunks in the src images
+	const int nChunksX = DIVUP(height , szChunk);
+	const int nChunksY = DIVUP(width , szChunk);
+
+	const int nChunks = nChunksX * nChunksY;
+
+	// blockIdx.y -> chunk and channel (numChannels*numChunks)
+	const int channelIdx = blockIdx.y / nChunks;
+	const int chunkIdx = blockIdx.y % nChunks;
+
+	// coord of the chunk
+	const int chunkIdxX = chunkIdx % nChunksX;
+	const int chunkIdxY = chunkIdx / nChunksX;
+
+	// pixel coordinates based on threadIdx.y and the corresponding chunk (threadIdx.y 0..szChunk^2-1  )
+	const int pxX = szChunk * chunkIdxX + threadIdx.y % szChunk;
+	const int pxY = szChunk * chunkIdxY + threadIdx.y / szChunk;
+
+	// where to start the series of imgs PerThread
+	const int caseIdx = blockIdx.x * 32 * imgsPerThread + threadIdx.x;
+
+	// point inside image
+	if (pxX < height && pxY < width) {
+		const int pxIndexSrc = pxX * width + pxY;
+
+		int srcBias = channelIdx * height * width * nr_images
+				+ pxIndexSrc * nr_images + caseIdx;
+
+		int destBias = channelIdx * height * width * factor * factor * nr_images
+				+ caseIdx; // x,y not fixed
+
+		for (int c = 0; c < imgsPerThread; ++c) {
+			if (caseIdx + c * 32 < nr_images) {
+				for (int x = 0; x < factor; ++x)
+					for (int y = 0; y < factor; ++y) {
+						const int npxX = pxX * factor + x;
+						const int npxY = pxY * factor + y;
+
+						dest_imgs[destBias
+								+ (npxX * width * factor + npxY) * nr_images] =
+								src_imgs[srcBias];
+
+					}
+				srcBias += 32;
+				destBias += 32;
+			}
+		}
+	}
+}
+
+/*
+ * - one block -> szChunk x szChunk
+ * - no restrictions on dimensions
+ * - szChunk must be chosen such that 32*szChunk^2 <= number of thread per block
+ */
+template<int szChunk, int imgsPerThread>
+__global__ void kUpscaleGrad(float* dest_grad, float* src_grad, int channels,
+		int height, int width, int nr_images, int factor) {
+
+	// number of chunks in the src images
+	const int nChunksX = DIVUP(height , szChunk); // DIVUP
+	const int nChunksY = DIVUP(width , szChunk); // DIVUP
+
+	const int nChunks = nChunksX * nChunksY;
+
+	// blockIdx.y -> chunk and channel (numChannels*numChunks)
+	const int channelIdx = blockIdx.y / nChunks;
+	const int chunkIdx = blockIdx.y % nChunks;
+
+	// coord of the chunk
+	const int chunkIdxX = chunkIdx % nChunksX;
+	const int chunkIdxY = chunkIdx / nChunksX;
+
+	// pixel coordinates based on threadIdx.y and the corresponding chunk (threadIdx.y 0..szChunk^2-1  )
+	const int pxX = szChunk * chunkIdxX + threadIdx.y % szChunk;
+	const int pxY = szChunk * chunkIdxY + threadIdx.y / szChunk;
+
+	// where to start the series of imgs PerThread
+	const int caseIdx = blockIdx.x * 32 * imgsPerThread + threadIdx.x;
+
+	// inside image
+	if (pxX < height && pxY < width) {
+		const int pxIndexDest = pxX * width + pxY;
+
+		int destBias = channelIdx * height * width * nr_images
+				+ pxIndexDest * nr_images + caseIdx;
+
+		int srcBias = channelIdx * height * width * factor * factor * nr_images
+				+ caseIdx; // position not fixed
+
+		for (int c = 0; c < imgsPerThread; ++c) {
+			if (caseIdx + c * 32 < nr_images) {
+				dest_grad[destBias] = 0;
+				for (int x = 0; x < factor; ++x)
+					for (int y = 0; y < factor; ++y) {
+						const int npxX = pxX * factor + x;
+						const int npxY = pxY * factor + y;
+						dest_grad[destBias] += src_grad[srcBias
+								+ (npxX * width * factor + npxY) * nr_images];
+
+					}
+				srcBias += 32;
+				destBias += 32;
+			
+            }
+		}
+	}
+}
+
+template<class V, class M, class T>
+void upscaleOp(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor) {
+
+  const int channels = src.shape(0);
+  const int height = src.shape(1);
+  const int width = src.shape(2);
+  const int nr_images = src.shape(3);
+
+
+	const int chunkSize = 4;
+	dim3 threads(32, chunkSize*chunkSize); // 16 WARPS?
+
+
+	const int imgsPerThread = 8; // one warp works on imgsPerThread*32 images
+
+	int numChunks = DIVUP(height , chunkSize) * DIVUP(width , chunkSize);
+	dim3 blocks(DIVUP(nr_images,32*imgsPerThread), channels * numChunks);
+
+	kUpscale<chunkSize, imgsPerThread> <<<blocks, threads>>>( const_cast<float*>(dst.ptr()),
+			const_cast<float*>(src.ptr()), channels, height, width, nr_images, factor);
+	cudaDeviceSynchronize();
+}
+
+
+template<class V, class M, class T>
+void upscaleGrad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor) {
+  
+  const int channels = dst.shape(0);
+  const int height = dst.shape(1);
+  const int width = dst.shape(2);
+  const int nr_images = dst.shape(3);
+
+
+	const int chunkSize = 4;
+	dim3 threads(32, chunkSize*chunkSize); // 16 WARPS?
+
+
+	const int imgsPerThread = 8; // one warp works on imgsPerThread*32 images
+
+	int numChunks = DIVUP(height , chunkSize) * DIVUP(width , chunkSize);
+	dim3 blocks(DIVUP(nr_images,32*imgsPerThread), channels * numChunks);
+
+	kUpscaleGrad<chunkSize, imgsPerThread> <<<blocks, threads>>>(const_cast<float*>(dst.ptr()),
+			const_cast<float*>(src.ptr()), channels, height, width, nr_images, factor);
+	cudaDeviceSynchronize();
+}
+
+#define INSTOUT(V,M,T) \
+template void upscaleGrad(TENS(V,M,T)& dst, CTENS(V,M,T)& src, int factor);\
+template void upscaleOp(TENS(V,M,T)& dst, CTENS(V,M,T)& src, int factor);
+INSTOUT(float,host_memory_space,row_major);
+INSTOUT(float,dev_memory_space,row_major);
+
+}
+}
 

@@ -367,7 +367,20 @@ void tuplewise_op(tensor<V,M,T>& dst, const tensor<V,M,T>& src, unsigned int dim
 template<class V, class M, class T>
 void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int subspace_size = 2, tuplewise_op_functor to = TO_NORM, float eps = 0.f);
 
+
+
+
 }
+
+// other convolution operators
+
+
+namespace misc_conv{
 /** @} */ //end group convolution_ops
+template<class V, class M, class T>
+void upscaleOp(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor);
+template<class V, class M, class T>
+void upscaleGrad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor);
+}
 }
 #endif /* __CONVOLUTION_OPS_HPP__ */
