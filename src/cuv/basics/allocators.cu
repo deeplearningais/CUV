@@ -5,7 +5,9 @@
 #include <cuda_runtime_api.h>
 #include <sstream>
 #include <stdexcept>
+#include <limits>
 #include <thrust/device_ptr.h>
+#include <thrust/fill.h>
 #include <vector>
 
 #include <cuv/tools/cuv_general.hpp>
@@ -395,6 +397,25 @@ void pooled_cuda_allocator::alloc2d(void** ptr, size_t& pitch, size_t height, si
         dev_memory_space m) {
     // not yet pooled
     default_alloc.alloc2d(ptr, pitch, height, width, valueSize, m);
+}
+
+void nan_pooled_cuda_allocator::alloc(void** ptr, size_t memsize, size_t valueSize, dev_memory_space m) {
+    pooled_cuda_allocator::alloc(ptr, memsize, valueSize, m);
+
+    if(valueSize == sizeof(float)){
+        // set everything to NaN
+        thrust::device_ptr<float> begin((float*)*ptr);
+        thrust::device_ptr<float> end(((float*)*ptr) + memsize);
+        thrust::fill(begin, end, std::numeric_limits<float>::quiet_NaN());
+    }
+}
+void nan_pooled_cuda_allocator::alloc(void** ptr, size_t memsize, size_t valueSize, host_memory_space m) {
+    pooled_cuda_allocator::alloc(ptr, memsize, valueSize, m);
+
+    if(valueSize == sizeof(float)){
+        // set everything to NaN
+        thrust::fill((float*)*ptr, ((float*)*ptr) + memsize, std::numeric_limits<float>::quiet_NaN());
+    }
 }
 
 }

@@ -203,6 +203,13 @@ public:
 
 };
 
+class nan_pooled_cuda_allocator : public pooled_cuda_allocator {
+    public:
+        virtual void alloc(void** ptr, size_t memsize, size_t valueSize, host_memory_space);
+        virtual void alloc(void** ptr, size_t memsize, size_t valueSize, dev_memory_space);
+};
+
+
 }
 
 #endif
