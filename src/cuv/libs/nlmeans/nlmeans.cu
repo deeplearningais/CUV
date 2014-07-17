@@ -169,13 +169,13 @@ namespace nlmeans{
 				kernel(i+filter_radius) = (float) exp(-i*i);
 			kernel /= (float)cuv::sum(kernel);
 			kernel = 1.f/kernel.size();
-			setConvolutionKernel_horizontal(kernel);
-			setConvolutionKernel_vertical(kernel);
-			setConvolutionKernel_depth(kernel);
+			/*setConvolutionKernel_horizontal(kernel);*/
+			/*setConvolutionKernel_vertical(kernel);*/
+			/*setConvolutionKernel_depth(kernel);*/
 			cuv::tensor<float,dev_memory_space> tmp1(constsrc.shape());
 			cuv::tensor<float,dev_memory_space> cpy(constsrc);
 			/*convolutionRows   (dst,cpy,filter_radius);*/
-			convolutionColumns(dst,cpy,filter_radius);
+			convolutionColumns(dst,cpy,kernel);
 			/*convolutionDepth  (dst,cpy,filter_radius);*/
 			return;
 		}
@@ -200,9 +200,9 @@ namespace nlmeans{
 		cuv::tensor<float,host_memory_space> kernel(2*filter_radius+1);
 		if(filter_radius!=0){
 			kernel = 1.f/kernel.size();
-			setConvolutionKernel_horizontal(kernel);
-			setConvolutionKernel_vertical(kernel);
-			setConvolutionKernel_depth(kernel);
+			/*setConvolutionKernel_horizontal(kernel);*/
+			/*setConvolutionKernel_vertical(kernel);*/
+			/*setConvolutionKernel_depth(kernel);*/
 		}
 
 		dst     = (T)0.f;
@@ -220,9 +220,9 @@ namespace nlmeans{
 						if(filter_radius==0){
 							tmp1 = diffs;
 						}else{
-							convolutionRows   (tmp1,diffs,filter_radius);
-							convolutionColumns(diffs,tmp1,filter_radius);
-							convolutionDepth  (tmp1,diffs,filter_radius);
+							convolutionRows   (tmp1,diffs,kernel);
+							convolutionColumns(diffs,tmp1,kernel);
+							convolutionDepth  (tmp1,diffs,kernel);
 						}
 						tmp1 /= -sigma*sigma;
 						if(dist_sigma>0.f)
@@ -247,8 +247,8 @@ namespace nlmeans{
 				for(step_type j=-search_radius;j<=search_radius;j+=step_size){
 					get_sqdiff2d<<<blocks,threads>>>(diffs.ptr(),src.ptr(),k,j,(step_type)0,w,h,d,(unsigned int)src.stride(0));
 					if(filter_radius!=0){
-						convolutionRows(tmp1,diffs,filter_radius);
-						convolutionColumns(diffs,tmp1,filter_radius);
+						convolutionRows(tmp1,diffs,kernel);
+						convolutionColumns(diffs,tmp1,kernel);
 					}
 					diffs /= -sigma*sigma;
 					if(dist_sigma>0.f)

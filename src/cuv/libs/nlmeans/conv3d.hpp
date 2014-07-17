@@ -17,7 +17,7 @@ namespace cuv{
 			
             /// fix a kernel for horizontal convolution in constant memory
             /// @param src the kernel to be loaded in constant memory
-			void setConvolutionKernel_horizontal(const cuv::tensor<float,dev_memory_space>&src);
+			void setConvolutionKernel(const cuv::tensor<float,dev_memory_space>&src);
 
 
             /** convolve along 1st axis of a 3D array

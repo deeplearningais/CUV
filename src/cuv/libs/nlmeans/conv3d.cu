@@ -67,7 +67,7 @@ namespace cuv{
 			////////////////////////////////////////////////////////////////////////////////
 			__constant__ float c_Kernel_h[MAX_KERNEL_W];
 
-			void setConvolutionKernel_horizontal(const cuv::tensor<float,dev_memory_space>&src){
+			void setConvolutionKernel(const cuv::tensor<float,dev_memory_space>&src){
 				cuvSafeCall(cudaMemcpyToSymbol(c_Kernel_h, const_cast<float*>(src.ptr()), src.size() * sizeof(float), 0,  cudaMemcpyDeviceToDevice));
 			}
 
@@ -136,7 +136,7 @@ namespace cuv{
 					){
 
                 unsigned int kernel_radius = (kernel.size()-1) / 2;
-                setConvolutionKernel_horizontal(kernel);
+                setConvolutionKernel(kernel);
 
 				cuvAssert(equal_shape(dst,src));
 				cuvAssert(kernel_radius <= MAX_KERNEL_RADIUS);
@@ -215,7 +215,7 @@ namespace cuv{
 					){
 
                 unsigned int kernel_radius = (kernel.size()-1) / 2;
-                setConvolutionKernel_horizontal(kernel);
+                setConvolutionKernel(kernel);
 
 				int imageW = d_Src.shape()[2];
 				int imageH = d_Src.shape()[1];
@@ -296,7 +296,7 @@ namespace cuv{
 					const cuv::tensor<float,dev_memory_space> &kernel
 					){
                 unsigned int kernel_radius = (kernel.size()-1) / 2;
-                setConvolutionKernel_horizontal(kernel);
+                setConvolutionKernel(kernel);
 
 				int dw = src.shape(2)*src.shape(1);
 				int dh = src.shape(0);

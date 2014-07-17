@@ -89,6 +89,7 @@ void dim_shuffle(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tenso
     dim_shuffle2(dst,src, new_dims, D);
 }
 
+void flip_dims2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, bool *pattern);
 /**
  *  flips the 2nd and 3rd dimension of the tensor
  *
@@ -110,7 +111,6 @@ void flip_dims(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<
 
 
 
-void flip_dims2(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, bool *pattern);
 void flip_dims_vec(cuv::tensor<float,cuv::dev_memory_space>& dst, const cuv::tensor<float,cuv::dev_memory_space>& src, std::vector<bool> pattern);
     
 

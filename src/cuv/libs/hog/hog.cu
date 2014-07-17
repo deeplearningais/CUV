@@ -180,11 +180,11 @@ namespace cuv{ namespace libs{ namespace hog{
 					diff[0] = -0.5f;
 					diff[1] =  0.f;
 					diff[2] =  0.5f;
-					cuv::libs::nlmeans::setConvolutionKernel_horizontal(diff);
-					cuv::libs::nlmeans::setConvolutionKernel_vertical(diff);
+					/*cuv::libs::nlmeans::setConvolutionKernel(diff);*/
+					/*cuv::libs::nlmeans::setConvolutionKernel(diff);*/
 
-					cuv::libs::nlmeans::convolutionRows(grady,src,1);
-					cuv::libs::nlmeans::convolutionColumns(gradx,src,1);
+					cuv::libs::nlmeans::convolutionRows(grady,src,diff);
+					cuv::libs::nlmeans::convolutionColumns(gradx,src,diff);
 
 					// calculate the gradient norms and directions
 					atan2_abs_and_norm(allangles,allmagnitudes, gradx,grady);
@@ -215,12 +215,12 @@ namespace cuv{ namespace libs{ namespace hog{
 						sum       += val;
 					}
 					kernel /= sum;
-					cuv::libs::nlmeans::setConvolutionKernel_horizontal(kernel);
-					cuv::libs::nlmeans::setConvolutionKernel_vertical(kernel);
+					cuv::libs::nlmeans::setConvolutionKernel(kernel);
+					cuv::libs::nlmeans::setConvolutionKernel(kernel);
 
 					tens_t intermed(bins.shape());
-					cuv::libs::nlmeans::convolutionRows(intermed,bins,spatialpool);
-					cuv::libs::nlmeans::convolutionColumns(bins,intermed,spatialpool);
+					cuv::libs::nlmeans::convolutionRows(intermed,bins,kernel);
+					cuv::libs::nlmeans::convolutionColumns(bins,intermed,kernel);
 				}
 
 				// normalization

@@ -147,6 +147,7 @@
  * $ ccmake .          # adjust paths to your system (cuda, thrust, pyublas, ...)!
  *                     # turn on/off optional libraries (CImg, ...)
  * $ make -j
+ * $ make -j buildtests
  * $ ctest             # run tests to see if it went well
  * $ sudo make install
  * $ export PYTHONPATH=`pwd`/src      # only if you want python bindings

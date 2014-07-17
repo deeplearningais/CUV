@@ -22,13 +22,13 @@ set(CUV_SRC
     image_ops/move.cu
     image_ops/image_pyramid.cu
     tensor_ops/rprop.cu
-    #libs/hog/hog.cu
+    libs/hog/hog.cu
     libs/kernels/kernels.cu
     libs/separable_conv/separable_convolution.cu
     libs/opt/opt.cu
     libs/integral_image/integral_image.cu
     libs/nlmeans/conv3d.cu
-    #libs/nlmeans/nlmeans.cu
+    libs/nlmeans/nlmeans.cu
     libs/rbm/rbm.cu
     libs/kmeans/kmeans.cu
     convert/convert.cu

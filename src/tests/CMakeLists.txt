@@ -1,3 +1,4 @@
+include (CMakeParseArguments)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/basics )
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src/convert )
@@ -13,36 +14,37 @@ SET (TEST_LINK_LIBS ${BLAS_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${Boost_LIBRARIES
 SET (CUDA_TEST_DEVICE "0" CACHE STRING "Which CUDA device should the tests be run on, if multiple devices are present.")
 add_definitions(-DCUDA_TEST_DEVICE=${CUDA_TEST_DEVICE})
 
-ADD_EXECUTABLE( test_tensor tensor.cpp )
-TARGET_LINK_LIBRARIES( test_tensor ${TEST_LINK_LIBS})
+SET(CUV_TESTS "")
+SET(CUV_SPEED_TESTS "")
+FUNCTION(cuv_add_test)
+    set(options SPEEDTEST)
+    set(oneValueArgs NAME)
+    set(multiValueArgs SOURCES)
+    cmake_parse_arguments(CT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+    #MESSAGE(STATUS "cuv_add_test: ${CT_NAME} <-- ${CT_SOURCES} (${TEST_LINK_LIBS})")
 
-ADD_EXECUTABLE( test_alloc alloc.cpp )
-TARGET_LINK_LIBRARIES( test_alloc ${TEST_LINK_LIBS})
+    ADD_EXECUTABLE(${CT_NAME} ${CT_SOURCES})
+    TARGET_LINK_LIBRARIES( ${CT_NAME} ${TEST_LINK_LIBS})
+    IF(CT_SPEEDTEST)
+        # Speed tests tend to run forever, so they should not be included in
+        # ctest runs.
+        SET(CUV_SPEED_TESTS ${CUV_SPEED_TESTS} ${CT_NAME} PARENT_SCOPE)
+    ELSE()
+        SET(CUV_TESTS ${CUV_TESTS} ${CT_NAME} PARENT_SCOPE)
+        ADD_TEST(${CT_NAME}  "${CMAKE_CURRENT_BINARY_DIR}/${CT_NAME}")
+    ENDIF()
+ENDFUNCTION(cuv_add_test)
 
-ADD_EXECUTABLE( test_tensor_serialization tensor_serialization.cpp )
-TARGET_LINK_LIBRARIES( test_tensor_serialization ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_basic basic.cpp )
-TARGET_LINK_LIBRARIES( test_basic ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_convert convert.cpp )
-TARGET_LINK_LIBRARIES( test_convert ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_tensor_op tensor_op.cpp )
-TARGET_LINK_LIBRARIES( test_tensor_op ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_theano_ops lib_theano_ops.cpp )
-TARGET_LINK_LIBRARIES( test_theano_ops ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_tensor_op_speed tensor_op_speed.cpp )
-TARGET_LINK_LIBRARIES( test_tensor_op_speed ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_optimize optimize.cpp )
-TARGET_LINK_LIBRARIES( test_optimize ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_mat_op matrix_op.cpp )
-#TARGET_LINK_LIBRARIES( test_mat_op cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_random ${CUDA_CUBLAS_LIBRARIES} )
-TARGET_LINK_LIBRARIES( test_mat_op ${TEST_LINK_LIBS})
+cuv_add_test( NAME tensor SOURCES tensor.cpp)
+cuv_add_test( NAME alloc SOURCES alloc.cpp )
+cuv_add_test( NAME tensor_serialization SOURCES tensor_serialization.cpp )
+cuv_add_test( NAME basic SOURCES basic.cpp )
+cuv_add_test( NAME convert SOURCES convert.cpp )
+cuv_add_test( NAME tensor_op SOURCES tensor_op.cpp )
+cuv_add_test( NAME theano_ops SOURCES lib_theano_ops.cpp )
+cuv_add_test( NAME tensor_op_speed SOURCES tensor_op_speed.cpp  SPEEDTEST )
+cuv_add_test( NAME optimize SOURCES optimize.cpp )
+cuv_add_test( NAME mat_op SOURCES matrix_op.cpp )
 
 #ADD_EXECUTABLE( test_dia_mat dia_mat.cpp )
 #TARGET_LINK_LIBRARIES( test_dia_mat ${TEST_LINK_LIBS})
@@ -59,83 +61,31 @@ TARGET_LINK_LIBRARIES( test_mat_op ${TEST_LINK_LIBS})
 #ADD_EXECUTABLE( test_densedense_to_dia_speed densedense_to_dia_speed.cpp )
 #TARGET_LINK_LIBRARIES( test_densedense_to_dia_speed     ${TEST_LINK_LIBS})
 
-ADD_EXECUTABLE( test_mat_op_speed matrix_op_speed.cpp )
-TARGET_LINK_LIBRARIES( test_mat_op_speed ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_conv_op conv_op.cpp )
-TARGET_LINK_LIBRARIES( test_conv_op ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_conv_op_speed conv_op_speed.cpp )
-TARGET_LINK_LIBRARIES( test_conv_op_speed ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_random random.cpp )
-TARGET_LINK_LIBRARIES( test_random ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_random_speed random_speed.cpp )
-TARGET_LINK_LIBRARIES( test_random_speed ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_memory memory.cpp )
-TARGET_LINK_LIBRARIES( test_memory ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_lib_rbm lib_rbm.cpp )
-TARGET_LINK_LIBRARIES( test_lib_rbm ${TEST_LINK_LIBS})
-
-ADD_EXECUTABLE( test_lib_kmeans lib_kmeans.cpp )
-#TARGET_LINK_LIBRARIES( test_lib_kmeans cuv_basics cuv_tools cuv_convert cuv_tensor_ops cuv_matrix_ops cuv_kmeans ${CUDA_CUBLAS_LIBRARIES} )
-TARGET_LINK_LIBRARIES( test_lib_kmeans ${TEST_LINK_LIBS})
+cuv_add_test( NAME mat_op_speed SOURCES matrix_op_speed.cpp  SPEEDTEST )
+cuv_add_test( NAME conv_op SOURCES conv_op.cpp )
+cuv_add_test( NAME conv_op_speed SOURCES conv_op_speed.cpp SPEEDTEST)
+cuv_add_test( NAME random SOURCES random.cpp )
+cuv_add_test( NAME random_speed SOURCES random_speed.cpp SPEEDTEST)
+cuv_add_test( NAME memory SOURCES memory.cpp )
+cuv_add_test( NAME lib_rbm SOURCES lib_rbm.cpp )
+cuv_add_test( NAME lib_kmeans SOURCES lib_kmeans.cpp )
 
 IF(CUV_CIMG_BINDINGS)
 	FIND_PACKAGE( PNG REQUIRED)
-	ADD_EXECUTABLE( test_lib_cimg cimg.cpp )
     SET(TEST_LINK_LIBS ${TEST_LINK_LIBS} X11 pthread ${PNG_LIBRARIES})
-    TARGET_LINK_LIBRARIES( test_lib_cimg ${TEST_LINK_LIBS})
 
-	ADD_EXECUTABLE( test_lib_sep_conv lib_sep_conv.cpp )
-    TARGET_LINK_LIBRARIES( test_lib_sep_conv ${TEST_LINK_LIBS})
-
-	ADD_EXECUTABLE( test_lib_intimg lib_intimg.cpp )
-    TARGET_LINK_LIBRARIES( test_lib_intimg ${TEST_LINK_LIBS})
-
-	ADD_EXECUTABLE( test_nlmeans lib_nlmean.cpp )
-    TARGET_LINK_LIBRARIES( test_nlmeans ${TEST_LINK_LIBS})
-
-	ADD_EXECUTABLE( test_hog lib_hog.cpp )
-    TARGET_LINK_LIBRARIES( test_hog ${TEST_LINK_LIBS})
-
-        FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
+    cuv_add_test( NAME lib_cimg SOURCES cimg.cpp )
+    cuv_add_test( NAME lib_sep_conv SOURCES lib_sep_conv.cpp )
+    cuv_add_test( NAME lib_intimg SOURCES lib_intimg.cpp )
+    cuv_add_test( NAME nlmeans SOURCES lib_nlmean.cpp )
+    cuv_add_test( NAME hog SOURCES lib_hog.cpp )
+    FILE(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 ENDIF(CUV_CIMG_BINDINGS)
 
 
 if (PYTHONLIBS_FOUND )
-TARGET_LINK_LIBRARIES(test_theano_ops ${CUV_LIBRARIES})
+    TARGET_LINK_LIBRARIES(test_theano_ops ${CUV_LIBRARIES} ${PYTHON_LIBS})
 endif(PYTHONLIBS_FOUND )
-
-ADD_TEST( tensor_serialization  "${CMAKE_BINARY_DIR}/src/tests/test_tensor_serialization" )
-ADD_TEST( basics  "${CMAKE_BINARY_DIR}/src/tests/test_basic" )
-ADD_TEST( convert "${CMAKE_BINARY_DIR}/src/tests/test_convert" )
-ADD_TEST( tensor_op "${CMAKE_BINARY_DIR}/src/tests/test_tensor_op" )
-ADD_TEST( optimize "${CMAKE_BINARY_DIR}/src/tests/test_optimize" )
-ADD_TEST( matrix_op "${CMAKE_BINARY_DIR}/src/tests/test_mat_op" )
-#ADD_TEST( dia_mat "${CMAKE_BINARY_DIR}/src/tests/test_dia_mat" )
-#ADD_TEST( spmv "${CMAKE_BINARY_DIR}/src/tests/test_spmv" )
-#ADD_TEST( densedense_to_dia "${CMAKE_BINARY_DIR}/src/tests/test_densedense_to_dia" )
-ADD_TEST( random "${CMAKE_BINARY_DIR}/src/tests/test_random" )
-ADD_TEST( lib_rbm "${CMAKE_BINARY_DIR}/src/tests/test_lib_rbm" )
-ADD_TEST( lib_kmeans "${CMAKE_BINARY_DIR}/src/tests/test_lib_kmeans" )
-ADD_TEST( conv_op "${CMAKE_BINARY_DIR}/src/tests/test_conv_op" )
-ADD_TEST( theano_ops "${CMAKE_BINARY_DIR}/src/tests/test_theano_ops" )
-
-# test for memory leak. takes to long and bug was fixed
-#ADD_TEST( memory  "${CMAKE_BINARY_DIR}/src/tests/test_memory" )
-
-# speed tests just take too long.
-#ADD_TEST( tensor_op_speed "${CMAKE_BINARY_DIR}/tests/test_tensor_op_speed" )
-#ADD_TEST( mat_op_speed "${CMAKE_BINARY_DIR}/tests/test_mat_op_speed" )
-#ADD_TEST( spmv_speed "${CMAKE_BINARY_DIR}/tests/test_spmv_speed" )
-#ADD_TEST( densedense_to_dia_speed "${CMAKE_BINARY_DIR}/tests/test_densedense_to_dia_speed" )
-#ADD_TEST( conv_ops_speed "${CMAKE_BINARY_DIR}/tests/test_conv_op_speed" )
-#ADD_TEST( random_speed "${CMAKE_BINARY_DIR}/tests/test_random_speed" )
 
 IF(CUV_PYTHON_BINDINGS)
 	SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
@@ -149,4 +99,11 @@ IF(CUV_PYTHON_BINDINGS)
 	ENDIF(NOSETEST_EXECUTABLE)
 ENDIF(CUV_PYTHON_BINDINGS)
 
+ADD_CUSTOM_TARGET(buildtests DEPENDS ${CUV_TESTS})
+ADD_CUSTOM_TARGET(buildspeedtests DEPENDS ${CUV_SPEED_TESTS})
+ADD_CUSTOM_TARGET(runtests 
+    DEPENDS buildtests 
+    POST_BUILD_COMMAND ctest ARGS --output-on-failure
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
 
