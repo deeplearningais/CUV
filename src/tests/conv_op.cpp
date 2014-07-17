@@ -1232,3 +1232,70 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_CASE( test_upscale )    
+{
+   const int FACTOR    = 4;
+   const int CHANNELS  = 4;
+   const int HEIGHT    = 10;
+   const int WIDTH     = 10;
+   const int NR_IMAGES = 3;
+   // forward test
+   tensor<float,host_memory_space,row_major> testSetImages_h(cuv::extents[CHANNELS][HEIGHT][WIDTH][NR_IMAGES]);
+   tensor<float,dev_memory_space,row_major>  testSetImages_d(cuv::extents[CHANNELS][HEIGHT][WIDTH][NR_IMAGES]);
+
+   tensor<float,host_memory_space,row_major>   upscaledImages_h(cuv::extents[CHANNELS][HEIGHT*FACTOR][WIDTH*FACTOR][NR_IMAGES]);
+   tensor<float,dev_memory_space,row_major> upscaledImages_d(cuv::extents[CHANNELS][HEIGHT*FACTOR][WIDTH*FACTOR][NR_IMAGES]);
+
+   // generate a dummy set of images
+	for (int i = 0; i < CHANNELS; i++)
+		for (int x = 0; x < HEIGHT; x++)
+			for (int y = 0; y < WIDTH; y++)
+				for (int k = 0; k < NR_IMAGES; k++)
+            {
+					testSetImages_h(i,x,y,k) = rand() % 500;
+					testSetImages_d(i,x,y,k) = testSetImages_h(i,x,y,k);
+            }
+
+   MEASURE_TIME(upscaleOp_dev, cuv::misc_conv::upscaleOp(upscaledImages_d, testSetImages_d, FACTOR), 100);
+
+   MEASURE_TIME(upscaleOp_host,cuv::misc_conv::upscaleOp(upscaledImages_h, testSetImages_h, FACTOR), 100);
+
+
+   // check if they are the same
+   for (int i = 0; i < CHANNELS; i++)
+		   for (int x = 0; x < HEIGHT*FACTOR; x++)
+			   for (int y = 0; y < WIDTH*FACTOR; y++)
+				   for (int k = 0; k < NR_IMAGES; k++)
+               {
+                  float v1 = upscaledImages_h(i,x,y,k);
+                  float v2 = upscaledImages_d(i,x,y,k);
+					   BOOST_CHECK_CLOSE(v1 , v2 , 0.0001f); 
+               }
+   // backward test
+
+   // generate a dummy set of gradients
+	for (int i = 0; i < CHANNELS; i++)
+		for (int x = 0; x < HEIGHT*FACTOR; x++)
+			for (int y = 0; y < WIDTH*FACTOR; y++)
+				for (int k = 0; k < NR_IMAGES; k++)
+            {
+					upscaledImages_h(i,x,y,k) = rand() % 500;
+					upscaledImages_d(i,x,y,k) = upscaledImages_h(i,x,y,k);
+            }
+
+   MEASURE_TIME(upscaleGrad_dev, cuv::misc_conv::upscaleGrad(testSetImages_d, upscaledImages_d, FACTOR), 100);
+   MEASURE_TIME(upscaleGrad_host,cuv::misc_conv::upscaleGrad(testSetImages_h, upscaledImages_h, FACTOR), 100);
+
+
+   // check if they are the same
+   for (int i = 0; i < CHANNELS; i++)
+		   for (int x = 0; x < HEIGHT; x++)
+			   for (int y = 0; y < WIDTH; y++)
+				   for (int k = 0; k < NR_IMAGES; k++)
+               {
+                  float v1 = testSetImages_h(i,x,y,k);
+                  float v2 = testSetImages_d(i,x,y,k);
+					   BOOST_CHECK_CLOSE(v1 , v2 , 0.0001f );
+               }
+
+}

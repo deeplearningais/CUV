@@ -1555,24 +1555,10 @@ template<class V,class M, class T>
                     }
                     break;
             }
-
             cuvSafeCall(cudaThreadSynchronize());
         }
     }
 
-
-/*
-   It starts here
-
- */
-
-
-
-
-
-/*It ends here
-
- */
 
 
 // instantiate
@@ -1608,12 +1594,38 @@ INST(float,dev_memory_space,row_major);
 
 // other convolution operators
 namespace misc_conv{
+template<class V, class M, class T>
+void kUpscaleGrad_host(tensor<V,M,T>& dst_grad, const tensor<V,M,T>& src_grad, int channels,
+		int height, int width, int nr_images, int factor) {
+	for (int i = 0; i < channels; i++)
+		for (int x = 0; x < height; x++)
+			for (int y = 0; y < width; y++)
+				for (int k = 0; k < nr_images; k++) {
+					dst_grad(i,x,y,k) = 0;
+					for (int kx = 0; kx < factor; kx++)
+						for (int ky = 0; ky < factor; ky++) 
+							dst_grad(i,x,y,k) += src_grad(i,x * factor + kx,y * factor + ky,k);
+				}
+}
+
+template<class V, class M, class T>
+void kUpscale_host(tensor<V,M,T>& dest_imgs, const tensor<V,M,T>& src_imgs, int channels,
+		int height, int width, int nr_images, int factor) {
+for (int i = 0; i < channels; i++)
+		for (int x = 0; x < height*factor; x++)
+			for (int y = 0; y < width*factor; y++)
+				for (int k = 0; k < nr_images; k++)
+					dest_imgs(i,x,y,k) = src_imgs(i, x/factor, y/factor, k);
+}
+
+
 /*
  * - one block -> szChunk x szChunk
  * - no restrictions on dimensions
  * - szChunk must be chosen such that 32*szChunk^2 <= number of thread per block
  */
 //
+
 template<int szChunk, int imgsPerThread>
 __global__ void kUpscale(float* dest_imgs, float* src_imgs, int channels,
 		int height, int width, int nr_images, int factor) {
@@ -1730,30 +1742,34 @@ __global__ void kUpscaleGrad(float* dest_grad, float* src_grad, int channels,
 template<class V, class M, class T>
 void upscaleOp(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor) {
 
-  const int channels = src.shape(0);
-  const int height = src.shape(1);
-  const int width = src.shape(2);
+  const int channels  = src.shape(0);
+  const int height    = src.shape(1);
+  const int width     = src.shape(2);
   const int nr_images = src.shape(3);
 
 
 	const int chunkSize = 4;
-	dim3 threads(32, chunkSize*chunkSize); // 16 WARPS?
+	dim3 threads(32, chunkSize*chunkSize); // 4x4 WARPS
 
 
 	const int imgsPerThread = 8; // one warp works on imgsPerThread*32 images
 
 	int numChunks = DIVUP(height , chunkSize) * DIVUP(width , chunkSize);
 	dim3 blocks(DIVUP(nr_images,32*imgsPerThread), channels * numChunks);
-
+   
+   if(IsSame<M,host_memory_space>::Result::value)
+	kUpscale_host<V,M,T>( dst,
+			src, channels, height, width, nr_images, factor);
+   else
 	kUpscale<chunkSize, imgsPerThread> <<<blocks, threads>>>( const_cast<float*>(dst.ptr()),
 			const_cast<float*>(src.ptr()), channels, height, width, nr_images, factor);
-	cudaDeviceSynchronize();
+
+    cuvSafeCall(cudaDeviceSynchronize());
 }
 
 
 template<class V, class M, class T>
 void upscaleGrad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor) {
-  
   const int channels = dst.shape(0);
   const int height = dst.shape(1);
   const int width = dst.shape(2);
@@ -1761,7 +1777,7 @@ void upscaleGrad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor) {
 
 
 	const int chunkSize = 4;
-	dim3 threads(32, chunkSize*chunkSize); // 16 WARPS?
+	dim3 threads(32, chunkSize*chunkSize); // 4x4 WARPS
 
 
 	const int imgsPerThread = 8; // one warp works on imgsPerThread*32 images
@@ -1769,9 +1785,14 @@ void upscaleGrad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor) {
 	int numChunks = DIVUP(height , chunkSize) * DIVUP(width , chunkSize);
 	dim3 blocks(DIVUP(nr_images,32*imgsPerThread), channels * numChunks);
 
+   if(IsSame<M,host_memory_space>::Result::value)
+	kUpscaleGrad_host<V,M,T>(dst,
+			src, channels, height, width, nr_images, factor);
+   else
 	kUpscaleGrad<chunkSize, imgsPerThread> <<<blocks, threads>>>(const_cast<float*>(dst.ptr()),
 			const_cast<float*>(src.ptr()), channels, height, width, nr_images, factor);
-	cudaDeviceSynchronize();
+
+   cuvSafeCall(cudaDeviceSynchronize());
 }
 
 #define INSTOUT(V,M,T) \
