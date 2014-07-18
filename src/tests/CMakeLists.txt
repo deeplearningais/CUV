@@ -66,7 +66,7 @@ cuv_add_test( NAME conv_op SOURCES conv_op.cpp )
 cuv_add_test( NAME conv_op_speed SOURCES conv_op_speed.cpp SPEEDTEST)
 cuv_add_test( NAME random SOURCES random.cpp )
 cuv_add_test( NAME random_speed SOURCES random_speed.cpp SPEEDTEST)
-cuv_add_test( NAME memory SOURCES memory.cpp )
+#cuv_add_test( NAME memory SOURCES memory.cpp )  # runs forever.
 cuv_add_test( NAME lib_rbm SOURCES lib_rbm.cpp )
 cuv_add_test( NAME lib_kmeans SOURCES lib_kmeans.cpp )
 
