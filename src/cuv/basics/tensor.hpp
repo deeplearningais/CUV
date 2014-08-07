@@ -377,7 +377,7 @@ public:
 #ifndef NDEBUG
         cuvAssert(is_c_contiguous());
 #endif
-        size_t size = std::accumulate(m_info.host_shape[0].ptr, m_info.host_shape[0].ptr + m_info.host_shape.size(), 1,
+        size_t size = std::accumulate(m_info.host_shape[0].ptr, m_info.host_shape[0].ptr + m_info.host_shape.size(), (size_t)sizeof(value_type),
                 std::multiplies<size_type>());
 
         check_size_limit(size);
