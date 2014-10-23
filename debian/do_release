@@ -24,7 +24,7 @@ export DEBEMAIL="jenkins@ais.uni-bonn.de"
 # we need to tag the debian release with the new version string, or git-dch
 # will be confused what to do 
 git tag -f debian/$NEWVERSION
-EDITOR=echo VISUAL=echo git-dch --new-version $NEWVERSION --debian-branch $BRANCH master
+EDITOR=echo VISUAL=echo git-dch -a --new-version $NEWVERSION --debian-branch $BRANCH master
 
 # tell dch which distribution this is for. 
 # -r '' tells it not to open an editor (why, oh why?)
