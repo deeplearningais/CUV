@@ -637,6 +637,8 @@ template<class V, class V2, class M, class L>
                 case BF_DIV:
                     matrix_op_col_impl::matrix_op_row(Dst, Src,v, thrust::divides<V>(), factNew, factOld);
                     break;
+                default:
+                    throw std::runtime_error("matrix_op_row: binary functor not implemented.");
             }
         else if(axis == 0)
             switch(bf){
@@ -655,6 +657,8 @@ template<class V, class V2, class M, class L>
                 case BF_DIV:
                     matrix_op_col_impl::matrix_op_col(Dst, Src,v, thrust::divides<V>(), factNew, factOld);
                     break;
+                default:
+                    throw std::runtime_error("matrix_op_row: binary functor not implemented.");
             }
         else {
             switch(bf){
@@ -673,6 +677,8 @@ template<class V, class V2, class M, class L>
                 case BF_DIV:
                     matrix_op_col_impl::matrix_op_middle(Dst, Src,v,axis, thrust::divides<V>(), factNew, factOld);
                     break;
+                default:
+                    throw std::runtime_error("matrix_op_row: binary functor not implemented.");
             }
         }
     }

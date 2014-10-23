@@ -1,3 +1,4 @@
+#include <boost/scoped_ptr.hpp>
 #include <cuv/matrix_ops/matrix_ops.hpp>
 #include "opt.hpp"
 #define sgn(a) ((a==(typeof(a))0) ? 0.f : copysign(1.f,a))
@@ -114,28 +115,34 @@ namespace impl{
         }
 
         template<class V, class M, class L>
-            void softmax_derivative(cuv::tensor<V, M, L>& dst, const cuv::tensor<V, M, L>& softmax_act, const cuv::tensor<V,M,L>& residual,  unsigned int vardim){
+            void softmax_derivative(cuv::tensor<V, M, L>& dst, const cuv::tensor<V, M, L>& softmax_act, const cuv::tensor<V,M,L>& residual,  unsigned int vardim, float fact_old){
                 typedef typename cuv::tensor<V, host_memory_space>::index_type index_type;
 
                 const index_type n_variables = dst.shape(vardim);
                 const index_type n_vals      = dst.shape(!vardim);
-
-                if(dst.ptr()!=residual.ptr()){
-                    dst += residual;
+                
+                boost::scoped_ptr<cuv::tensor<V,M,L> > tmp;
+                if(fact_old != 0.f){
+                    // remember previous value for end
+                    tmp.reset(new cuv::tensor<V,M,L>(dst.copy()));
+                    dst = 0.f;
                 }
-                cuv::tensor<V,M>   red  (n_variables);
-                cuv::tensor<V,M,L> prod (softmax_act.shape());
+                cuv::tensor<V,M>   red  (n_variables, dst.m_allocator);
+                cuv::tensor<V,M,L> prod (softmax_act.shape(), dst.m_allocator);
                 cuv::apply_binary_functor(prod,softmax_act,residual,BF_MULT);
                 if(vardim==1){
                     cuv::reduce_to_row  (red, prod,RF_ADD,  -1.f);
-                    cuv::matrix_plus_row(dst, red);
+                    cuv::matrix_op_vec(dst, dst, red, dst.ndim()-1, BF_ADD);
                 }
                 else{
                     cuv::reduce_to_col(red, prod,RF_ADD, -1.f);
-                    cuv::matrix_plus_col(dst, red);
+                    cuv::matrix_op_vec(dst, dst, red, 0, BF_ADD);
                 }
 
                 dst *= softmax_act;
+
+                if(tmp)
+                    cuv::apply_binary_functor(dst, *tmp, BF_XPBY, fact_old);
             }
 
     template<class V, class M, class L>
@@ -412,11 +419,11 @@ void rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& sW, const
 }
 
 template<class V, class M,class L>
-void softmax_derivative(cuv::tensor<V, M,L>& dst, const cuv::tensor<V, M,L>& softmax_act, const cuv::tensor<V,M,L>& residual,unsigned int vardim){
+void softmax_derivative(cuv::tensor<V, M,L>& dst, const cuv::tensor<V, M,L>& softmax_act, const cuv::tensor<V,M,L>& residual,unsigned int vardim, float fact_old){
     cuvAssert(equal_shape(dst,softmax_act));
     cuvAssert(equal_shape(dst,residual));
     cuvAssert(vardim == 0 || vardim==1);
-    impl::softmax_derivative(dst,softmax_act,residual,vardim);
+    impl::softmax_derivative(dst,softmax_act,residual,vardim, fact_old);
 }
 
 template<class V, class M, class L>
@@ -437,7 +444,7 @@ void na_rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& oldW, 
 
 #define TENSOR(V,M,L) cuv::tensor<V,M,L>
 #define INSTANTIATE(V,M,L) \
-  template void softmax_derivative(TENSOR(V,M,L)&, const TENSOR(V,M,L)&, const TENSOR(V,M,L)&,unsigned int);\
+  template void softmax_derivative(TENSOR(V,M,L)&, const TENSOR(V,M,L)&, const TENSOR(V,M,L)&,unsigned int,float);\
   template void softmax(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,unsigned int); \
   template void adagrad(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,TENSOR(V,M,L)&,const float&, const float&, const float&, const float&); \
   template void rmsprop(TENSOR(V,M,L)&, const TENSOR(V,M,L)&,TENSOR(V,M,L)&,const float&, const float&, const float&, const float&, const float&); \

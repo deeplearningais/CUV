@@ -110,9 +110,10 @@ namespace cuv{ namespace libs{
 		 * @param softmax_act the value of \f$ S(\vec x) \f$ of size \f$ n\times m\f$
          * @param residual    the residual of size \f$ S(\vec x) \f$, also size \f$ n\times m\f$
          * @param vardim      the dimension in which the variables are stored
+         * @param fact_old    if non-zero, keep old value in dst and just add to it.
 		 */
 		template<class V, class M, class L>
-		void softmax_derivative(cuv::tensor<V, M,L>& dst, const cuv::tensor<V, M,L>& softmax_act, const cuv::tensor<V,M,L>& residual, unsigned int vardim=1);
+		void softmax_derivative(cuv::tensor<V, M,L>& dst, const cuv::tensor<V, M,L>& softmax_act, const cuv::tensor<V,M,L>& residual, unsigned int vardim=1, float fact_old=0.f);
 
         /**
          * @brief Do a gradient update step using AdaGrad.

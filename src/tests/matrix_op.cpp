@@ -488,6 +488,25 @@ BOOST_AUTO_TEST_CASE( mat_op_vec )
         BOOST_CHECK_CLOSE(1.f,1.f + cuv::norm1(temp4_h - dst4_h), 0.01);
     }
 }
+BOOST_AUTO_TEST_CASE( mat_op_mat_bf2nd )
+{
+        sequence(v); sequence(w);
+        sequence(x); sequence(z);
+        tensor<float,dev_memory_space>   v_vec(n); sequence(v_vec);
+        tensor<float,host_memory_space>  x_vec(n); sequence(x_vec);
+        matrix_op_vec(v, v,v_vec,1,BF_2ND);
+        matrix_op_vec(x, x,x_vec,1,BF_2ND);
+
+        // v = 2 v + 1.5 (v + v_vec)
+
+        for(int i=0;i<n;i++){
+            for(int j=0;j<n;j++){
+                BOOST_CHECK_CLOSE((float)v(i,j), (float)x(i,j), 0.01);
+                BOOST_CHECK_CLOSE((float)v(i,j), (float)v_vec[j], 0.01);
+                BOOST_CHECK_CLOSE((float)x(i,j), (float)x_vec[j], 0.01);
+            }
+        }
+}
 
 BOOST_AUTO_TEST_CASE( mat_op_mat_plus_row_fact )
 {

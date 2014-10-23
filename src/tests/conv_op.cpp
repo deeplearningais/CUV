@@ -535,8 +535,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
+     fill_rnd_uniform(res_h);
+     res = res_h;
      tuplewise_op(res,inp, 0, sub_size);
      tuplewise_op(res_h,inp_h, 0, sub_size);
 
@@ -569,8 +569,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
    fill_rnd_uniform(inp_h);
    inp = inp_h;
 
-   res = 0.f;
-   res_h = 0.f;
+   fill_rnd_uniform(res_h);
+   res = res_h;
    tuplewise_op(res,inp,3, sub_size);
    tuplewise_op(res_h,inp_h,3,sub_size);
 
@@ -608,8 +608,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
+     fill_rnd_uniform(res_h);
+     res = res_h;
      tuplewise_op(res,inp, 0, sub_size);
      tuplewise_op(res_h,inp_h, 0, sub_size);
 
@@ -638,8 +638,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
        fill_rnd_uniform(inp_h);
        inp = inp_h;
 
-       res = 0.f;
-       res_h = 0.f;
+       fill_rnd_uniform(res_h);
+       res = res_h;
        tuplewise_op(res,inp,1, sub_size);
        tuplewise_op(res_h,inp_h,1, sub_size);
 
@@ -673,8 +673,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
+     fill_rnd_uniform(res_h);
+     res = res_h;
      tuplewise_op(res,inp, 0, sub_size, TO_MAX);
      tuplewise_op(res_h,inp_h, 0, sub_size, TO_MAX);
 
@@ -710,8 +710,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
        fill_rnd_uniform(inp_h);
        inp = inp_h;
 
-       res = 0.f;
-       res_h = 0.f;
+       fill_rnd_uniform(res_h);
+       res = res_h;
        tuplewise_op(res,inp, 3, sub_size, TO_MAX);
        tuplewise_op(res_h,inp_h, 3, sub_size, TO_MAX);
 
@@ -748,8 +748,9 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
        fill_rnd_uniform(inp_h);
        inp = inp_h;
 
-       res = 0.f;
-       res_h = 0.f;
+       fill_rnd_uniform(res_h);
+       res = res_h;
+
        tuplewise_op(res,inp, 1, sub_size, TO_MAX);
        tuplewise_op(res_h,inp_h, 1, sub_size, TO_MAX);
 
@@ -785,8 +786,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
+     fill_rnd_uniform(res_h);
+     res = res_h;
      tuplewise_op(res,inp, 0, sub_size, TO_ADD_SQUARED);
      tuplewise_op(res_h,inp_h, 0, sub_size, TO_ADD_SQUARED);
 
@@ -822,8 +823,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
+     fill_rnd_uniform(res_h);
+     res = res_h;
      tuplewise_op(res,inp, 0, sub_size, TO_SUBSAMPLE);
      tuplewise_op(res_h,inp_h, 0, sub_size, TO_SUBSAMPLE);
 
@@ -852,8 +853,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
+     fill_rnd_uniform(res_h);
+     res = res_h;
      tuplewise_op(res,inp, 0, sub_size, TO_MEAN);
      tuplewise_op(res_h,inp_h, 0, sub_size, TO_MEAN);
 
@@ -880,6 +881,7 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
 {
    float eps = 0.0001f;
    {
+       std::cout << "in gradient norm" << std::endl;
      using namespace cuv::alex_conv;
      unsigned int sub_size = 2;
      unsigned int nImg = 4;
@@ -898,9 +900,11 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
      fill_rnd_uniform(delta_h);
+     fill_rnd_uniform(res_h); // should be overwritten
+     res = res_h; // copy to device
+     fill_rnd_uniform(inp_grad_h); // should be overwritten
+     inp_grad = inp_grad_h; // copy to device
      delta = delta_h;
      tuplewise_op(res,inp, 0, sub_size, TO_NORM, eps);
      tuplewise_op(res_h,inp_h, 0, sub_size,TO_NORM,eps);
@@ -924,9 +928,11 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
 
                  }
              }
+       std::cout << "in gradient norm finished"<< std::endl;
    }
 
    {
+       std::cout << "in gradient norm (2)"<< std::endl;
     using namespace cuv::alex_conv;
     unsigned int sub_size = 3;
     unsigned int nImg = 4;
@@ -945,8 +951,10 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
     fill_rnd_uniform(inp_h);
     inp = inp_h;
 
-    res = 0.f;
-    res_h = 0.f;
+    fill_rnd_uniform(res_h); // should be overwritten
+    res = res_h; // copy to device
+    fill_rnd_uniform(inp_grad_h); // should be overwritten
+    inp_grad = inp_grad_h; // copy to device
     fill_rnd_uniform(delta_h);
     delta = delta_h;
     tuplewise_op(res,inp, 3, sub_size,TO_NORM,eps);
@@ -971,8 +979,10 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
 
                 }
             }
+       std::cout << "test gradient norm(2) finished" << std::endl;
    }
    {
+       std::cout << "in gradient max" << std::endl;
      using namespace cuv::alex_conv;
      unsigned int sub_size = 4;
      unsigned int nImg = 4;
@@ -991,8 +1001,12 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
+     fill_rnd_uniform(res_h); // should be overwritten
+     res = res_h; // copy to device
+     res += 1.f;
+     fill_rnd_uniform(inp_grad_h); // should be overwritten
+     inp_grad = inp_grad_h; // copy to device
+     inp_grad += 1.f;
      fill_rnd_uniform(delta_h);
      delta = delta_h;
      tuplewise_op(res,inp, 0, sub_size, TO_MAX);
@@ -1027,9 +1041,63 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
 
                  }
              }
+       std::cout << "test gradient max finished" << std::endl;
+   }
+   {
+       std::cout << "in gradient max(2)" << std::endl;
+     using namespace cuv::alex_conv;
+     unsigned int sub_size = 3;
+     unsigned int nImg = 2 * sub_size;
+     unsigned int nPix = 2;
+     unsigned int nChan = 2;
+     tensor<float,dev_memory_space,row_major> inp_grad(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> inp(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,dev_memory_space,row_major> res(cuv::extents[nChan][nPix][nPix][nImg/sub_size]);
+     tensor<float,dev_memory_space,row_major> delta(cuv::extents[nChan][nPix][nPix][nImg/sub_size]);
+
+     tensor<float,host_memory_space,row_major> inp_grad_h(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> inp_h(cuv::extents[nChan][nPix][nPix][nImg]);
+     tensor<float,host_memory_space,row_major> res_h(cuv::extents[nChan][nPix][nPix][nImg/sub_size]);
+     tensor<float,host_memory_space,row_major> delta_h(cuv::extents[nChan][nPix][nPix][nImg/sub_size]);
+
+     fill_rnd_uniform(inp_h);
+     inp = inp_h;
+
+     fill_rnd_uniform(delta_h);
+     fill_rnd_uniform(res_h); // should be overwritten
+     res = res_h; // copy to device
+     res += 1.f;
+     fill_rnd_uniform(inp_grad_h); // should be overwritten
+     inp_grad = inp_grad_h; // copy to device
+     inp_grad += 1.f;
+     delta = delta_h;
+     tuplewise_op(res,inp, 3, sub_size, TO_MAX, eps);
+     tuplewise_op(res_h,inp_h, 3, sub_size,TO_MAX,eps);
+
+     tuplewise_op_grad(inp_grad,inp,delta, 3, sub_size,TO_MAX, eps);
+     tuplewise_op_grad(inp_grad_h,inp_h,delta_h, 3, sub_size,TO_MAX, eps);
+
+     for(unsigned int i=0;i<nChan;i++)
+         for(unsigned int j=0;j<nPix;j++)
+             for(unsigned int k=0;k<nPix;k++){
+                 for(unsigned int l=0;l<nImg/sub_size;l++){
+                     for (unsigned int sub_idx = 0; sub_idx < sub_size; sub_idx++){
+                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad(i,j,k,sub_size*l+sub_idx) - inp_grad_h(i,j,k,sub_size*l+sub_idx), 0.001);
+
+                         float s0 = inp_h(i,j,k,sub_size*l+sub_idx);
+                         float r  = res_h(  i  ,j,k,l);
+                         float d  = delta(  i  ,j,k,l);
+                         float f0 = r == s0 ? d : 0.f;
+                         BOOST_CHECK_CLOSE(1.f, 1.f + inp_grad_h(i,j,k,sub_size*l+sub_idx) - f0, 0.01f);
+                     }
+
+                 }
+             }
+       std::cout << "in gradient max(2) finished"<< std::endl;
    }
    // test for square norm
    {
+     std::cout << "in sqr norm grad" << std::endl;/* cursor */
      using namespace cuv::alex_conv;
      unsigned int sub_size = 3;
      unsigned int nImg = 5;
@@ -1048,8 +1116,11 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
+     fill_rnd_uniform(res_h); // should be overwritten
+     res = res_h; // copy to device
+     fill_rnd_uniform(inp_grad_h); // should be overwritten
+     inp_grad = inp_grad_h; // copy to device
+
      fill_rnd_uniform(delta_h);
      delta = delta_h;
      tuplewise_op(res,inp, 0, sub_size, TO_ADD_SQUARED, eps);
@@ -1097,10 +1168,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
-     fill_rnd_uniform(delta_h);
-     delta = delta_h;
+     fill_rnd_uniform(res_h);
+     res = res_h;
      tuplewise_op(res,inp, 0, sub_size, TO_SUBSAMPLE, eps);
      tuplewise_op(res_h,inp_h, 0, sub_size, TO_SUBSAMPLE, eps);
 
@@ -1150,8 +1219,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
+     fill_rnd_uniform(res_h);
+     res = res_h;
      fill_rnd_uniform(delta_h);
      delta = delta_h;
      tuplewise_op(res,inp, 0, sub_size, TO_MEAN, eps);
@@ -1200,8 +1269,8 @@ BOOST_AUTO_TEST_CASE( test_tuplewise_op_grad )
      fill_rnd_uniform(inp_h);
      inp = inp_h;
 
-     res = 0.f;
-     res_h = 0.f;
+     fill_rnd_uniform(res_h);
+     res = res_h;
      fill_rnd_uniform(delta_h);
      delta = delta_h;
      tuplewise_op(res,inp, 3, sub_size, TO_MEAN, eps);
