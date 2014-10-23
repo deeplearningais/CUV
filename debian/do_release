@@ -43,4 +43,4 @@ else
 fi
 
 #DEB_BUILD_OPTIONS=parallel=12 git-buildpackage --git-force-create --git-debian-branch=debian --git-upstream-branch=master --git-dist=$DIST --git-upstream-tree=HEAD --git-cleaner=true --git-ignore-new
-DEB_BUILD_OPTIONS=parallel=12 git-buildpackage --git-debian-branch=$BRANCH --git-upstream-branch=master --git-dist=$DIST --git-upstream-tree=HEAD --git-cleaner=true --git-ignore-new
+yes | DEB_BUILD_OPTIONS=parallel=12 git-buildpackage --git-debian-branch=$BRANCH --git-upstream-branch=master --git-dist=$DIST --git-upstream-tree=HEAD --git-cleaner=true --git-ignore-new
