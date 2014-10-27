@@ -49,6 +49,7 @@
 #include <3rd_party/cudaconv2/include/nvmatrix/nvmatrix.cuh>
 /*#include <3rd_party/cudaconv2/include/convCPU.h>*/
 #include <cuv/convolution_ops/convolution_ops.hpp>
+#include <cuv/tensor_ops/functors.hpp>
 
 #define NVView1D(X)  \
         (const_cast<float*>(X.ptr()), 1, X.shape(0), X.shape(0), false)
@@ -1559,7 +1560,1008 @@ template<class V,class M, class T>
         }
     }
 
+/********************************************************************************************************
+ * overlapping weighted sub tensor op start
+ *****************************************************************************************************************/
+/// logarithm of the sum of exponentiations of the inputs in a numerically stable way. log(exp(x)+exp(y))
 
+template<weighted_subtensor_functor to, class T>
+__global__
+void weighted_subtensor_op_kernel(T* dst, unsigned char* dst_max_idx, const T* src, const T* m_W,
+        unsigned int dst_rows, unsigned int dst_cols,  unsigned int dst_colsx, unsigned int dst_colsy, unsigned int src_size,
+        unsigned int stride, unsigned int subspace_size, float eps){
+        unsigned int line =  blockIdx.x;
+        T* dst0 = dst  + line * dst_cols;
+        unsigned char * dst_max_idx0;
+        unsigned int shift = stride * line;
+        unsigned int last_idx = shift + subspace_size;
+        unsigned int diff;     
+        //check boundaries
+        extern __shared__ float w[] ;
+
+        const T* m_W_ptr = m_W + line * subspace_size; 
+        for (unsigned int i = threadIdx.x; i < subspace_size; i += blockDim.x)
+              w[i] = m_W_ptr[i];
+        
+        if (last_idx > src_size){
+             diff = (subspace_size - (last_idx - src_size))* dst_cols;
+        } else {
+            diff = subspace_size * dst_cols;
+        }
+        __syncthreads();
+
+        switch(to){
+            case WST_WMAX:
+            case WST_WMAX_LOGSPACE:
+                dst_max_idx0 = dst_max_idx   + line * dst_cols;
+                break;
+        }
+
+        const T* src_ptr = src + shift * dst_cols; 
+
+        T squared_sum;
+        T temp;
+        unsigned int end ;
+        unsigned int wInd ;
+        unsigned char max_idx;
+        bf_logaddexp<float> lae;
+        for(unsigned int item = threadIdx.x; item < dst_cols; item += blockDim.x){
+                squared_sum = 0.f;
+                end = item + diff;
+                wInd = 0;
+                bool first = true;
+                for (unsigned int index = item; index < end; index += dst_cols, wInd++){            
+                    T s = src_ptr[index];
+                    switch(to){
+                        case WST_LOGWADDEXP:
+                            if ( first){
+                                squared_sum = w[wInd]*s;
+                                first = false;
+                            }
+                            else
+                                squared_sum = lae(squared_sum, w[wInd]*s);
+                            break;
+                        case WST_LOGWADDEXP_LOGSPACE:
+                            if ( first ){ 
+                                squared_sum = w[wInd] + s;
+                                first = false;
+                            }
+                            else
+                                squared_sum = lae(squared_sum, w[wInd] + s); 
+                            break;
+                        case WST_WADD:
+                            squared_sum +=  w[wInd] * s;
+                            break;
+                        case WST_WMAX:
+                            temp =  w[wInd] * s;
+                            if (first){
+                                squared_sum = temp;
+                                max_idx = wInd;  
+                                first = false;
+                            } else  if (temp > squared_sum){
+                                squared_sum = temp;
+                                max_idx = wInd;
+                                }
+                            break;
+                        case WST_WMAX_LOGSPACE:
+                            temp =  w[wInd] + s;
+                            if (first){
+                                squared_sum = temp;
+                                max_idx = wInd;  
+                                first = false;
+                            } else  if (temp > squared_sum){
+                                    squared_sum = temp;
+                                    max_idx = wInd;
+                               }
+                            break;
+                        }
+            }
+            __syncthreads();
+       switch(to){
+          case WST_WMAX:
+          case WST_WMAX_LOGSPACE:
+              dst0[item] = squared_sum;
+              dst_max_idx0[item] = max_idx;
+              break;
+          case WST_LOGWADDEXP:
+              dst0[item] = squared_sum ;
+              break;
+          case WST_LOGWADDEXP_LOGSPACE:
+              dst0[item] = squared_sum ;
+              break;
+          case WST_WADD:
+              dst0[item] = squared_sum;
+              break;
+            }
+        }
+}
+
+
+template<weighted_subtensor_functor to, class T>
+    void weighted_subtensor_op_host(T* dst, unsigned char* dst_max_idx, const T* src, const T* m_W,
+                    unsigned int lines, unsigned int items, unsigned int src_size,
+                    unsigned int stride, unsigned int subspace_size, float eps){
+                    
+            unsigned char * dst_max_idx0;
+            unsigned int diff;
+            
+            unsigned int global_buffer_size = 32;
+            float squared_sum[global_buffer_size];
+            
+            for(unsigned int line = 0; line < lines; line++){
+                    T* dst0 = dst  + line * items;
+                    unsigned int buffer_size = global_buffer_size;
+
+                    unsigned int shift = stride * line;
+                    unsigned int last_idx = shift + subspace_size;
+     
+                    //check boundaries
+
+                    const T* m_W_ptr = m_W + line * subspace_size;       
+                    if (last_idx > src_size){
+                        diff = (subspace_size - (last_idx - src_size))* items;
+                    } else {
+                        diff = subspace_size * items;
+                    }
+
+                    switch(to){
+                        case WST_WMAX:
+                        case WST_WMAX_LOGSPACE:
+                            dst_max_idx0 = dst_max_idx   + line * items;
+                            break;
+                    }
+
+                    const T* src_ptr = src + shift * items; 
+
+                    T temp;
+                    unsigned int end ;
+                    unsigned int wInd ;
+                    unsigned char max_idx;
+                    bf_logaddexp<float> lae;
+                    unsigned int item;
+                    for(item = 0; item < items; item += buffer_size){
+                            //reset buffer
+                            //for ( unsigned int i = 0; i < buffer_size; i++) squared_sum[i] = 0.f;
+                            memset(squared_sum, 0, buffer_size * sizeof(float));
+                            bool first = true;
+                            end = item + diff;
+                            wInd = 0;
+                            
+                            //check if we can use the whole buffer
+                            if ((item + buffer_size) > items) buffer_size = items - item; 
+                            
+                            for (unsigned int index = item; index < end; index += items, wInd++){   
+                                for ( unsigned int buff = 0; buff < buffer_size; buff ++){
+                                T s = src_ptr[index + buff];
+                                switch(to){
+                                    case WST_LOGWADDEXP:
+                                        if ( first )
+                                            squared_sum[buff] = m_W_ptr[wInd]*s;
+                                        else
+                                            squared_sum[buff] = lae(squared_sum[buff], m_W_ptr[wInd]*s);
+                                        break;
+                                    case WST_LOGWADDEXP_LOGSPACE:
+                                        if ( first )
+                                            squared_sum[buff] = m_W_ptr[wInd]+s;
+                                        else
+                                            squared_sum[buff] = lae(squared_sum[buff], m_W_ptr[wInd] + s); 
+                                        break;
+                                    case WST_WADD:
+                                        squared_sum[buff] +=  m_W_ptr[wInd] * s;
+                                        break;
+                                    case WST_WMAX:
+                                        temp =  m_W_ptr[wInd] * s;
+                                        if (first){
+                                            squared_sum[buff] = temp;
+                                            max_idx = wInd;  
+                                        } else  if (temp > squared_sum[buff]){
+                                            squared_sum[buff] = temp;
+                                            max_idx = wInd;
+                                        }
+                                        break;
+                                    case WST_WMAX_LOGSPACE:
+                                        temp =  m_W_ptr[wInd] + s;
+                                        if (first){
+                                            squared_sum[buff] = temp;
+                                            max_idx = wInd;  
+                                        } else  
+                                            if (temp > squared_sum[buff]){
+                                                squared_sum[buff] = temp;
+                                                max_idx = wInd;
+                                        }
+                                        break;
+                                    }
+                                    
+                            }//enf of for buffer
+                            first = false;
+                        }
+                //write whole buffer        
+                for ( unsigned int buff = 0; buff < buffer_size; buff ++){        
+                    switch(to){
+                        case WST_WMAX:
+                        case WST_WMAX_LOGSPACE:
+                            dst0[item + buff] = squared_sum[buff];
+                            dst_max_idx0[item + buff] = max_idx;
+                            break;
+                        case WST_LOGWADDEXP:
+                            dst0[item + buff] = squared_sum[buff] + eps;
+                            break;
+                        case WST_LOGWADDEXP_LOGSPACE:
+                            dst0[item + buff] = squared_sum[buff] + eps;
+                            break;
+                        case WST_WADD:
+                            dst0[item + buff] = squared_sum[buff];
+                            break;
+                            }
+                        }
+                    }           
+            }
+}
+
+
+template<class V,class M, class T>
+    void weighted_subtensor_op(tensor<V,M,T>& dst, tensor<unsigned char,M,T>& dst_max_idx, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int size, unsigned int stride, unsigned int subspace_size, weighted_subtensor_functor to, float eps){
+        
+        unsigned int itemx;
+        unsigned int itemy;
+        cuvAssert(src.shape().size() == 3 || src.shape().size() == 4);
+        //calculate number of items, based on dimension of image
+        if (dst.shape().size() == 4){
+            itemx = dst.shape(1) * dst.shape(2);
+            itemy = dst.shape(3);
+        } else {
+            itemx = dst.shape(1);
+            itemy = dst.shape(2);            
+        }
+            unsigned int lines = dst.shape(0);
+            unsigned int items = src.size() / src.shape(0);
+
+        cuvAssert(subspace_size <= 256);
+        cuvAssert(dst.shape(0)==size);
+        //check dimensions of dst
+        cuvAssert(dst.shape(0)*stride == src.shape(0));
+        
+       // cuvAssert(!cuv::has_nan(src));
+       // cuvAssert(!cuv::has_nan(m_W));        
+
+        unsigned int src_size = src.shape(0);
+    
+        if(IsSame<M,host_memory_space>::Result::value){
+            switch(to){
+                case WST_WMAX:
+                        weighted_subtensor_op_host<WST_WMAX>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, src_size, stride, subspace_size, eps);
+                    break;
+                case WST_WMAX_LOGSPACE:
+                        weighted_subtensor_op_host<WST_WMAX_LOGSPACE>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, src_size, stride, subspace_size, eps);
+                    break;
+                case WST_LOGWADDEXP:
+                        weighted_subtensor_op_host<WST_LOGWADDEXP>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, src_size, stride, subspace_size, eps);
+                    break;
+                case WST_LOGWADDEXP_LOGSPACE:
+                        weighted_subtensor_op_host<WST_LOGWADDEXP_LOGSPACE>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, src_size, stride, subspace_size, eps);
+                    break;
+                case WST_WADD:
+                        weighted_subtensor_op_host<WST_WADD>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, src_size, stride, subspace_size, eps);
+                    break;
+        }
+        }else{
+            // device: run kernel
+            unsigned int num_blocks  = lines;
+            // in order to stay sync, each block must calculate at least one batch
+            unsigned int MAX_THREADS = 512;
+            unsigned int num_threads = min(MAX_THREADS, int(32 * ceil( items / 32. )));
+            unsigned int sharedMemory  = (subspace_size)*sizeof(V);
+
+            switch(to){
+                case WST_WMAX:
+                        weighted_subtensor_op_kernel<WST_WMAX><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, itemx, itemy, src_size,  stride, subspace_size, eps);
+                    break;
+                case WST_WMAX_LOGSPACE:
+                        weighted_subtensor_op_kernel<WST_WMAX_LOGSPACE><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items,  itemx, itemy, src_size,  stride, subspace_size, eps);
+                    break;
+                case WST_LOGWADDEXP:
+                        weighted_subtensor_op_kernel<WST_LOGWADDEXP><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items,  itemx, itemy, src_size, stride, subspace_size, eps);
+                    break;
+                case WST_LOGWADDEXP_LOGSPACE:
+                        weighted_subtensor_op_kernel<WST_LOGWADDEXP_LOGSPACE><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, itemx, itemy, src_size, stride, subspace_size, eps);
+                    break;          
+                case WST_WADD:
+                        weighted_subtensor_op_kernel<WST_WADD><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), dst_max_idx.ptr(), src.ptr(), m_W.ptr(), lines, items, itemx, itemy, src_size, stride, subspace_size, eps);
+                    break;
+
+            }
+            cuvSafeCall(cudaThreadSynchronize());
+        }
+    }
+
+
+/***************************************************************
+*  weighted_subTensor_op grad implementation
+* 
+ ****************************************************************/
+
+/************************************
+ * helper functions to be able to calculate atomic add float in test mode with old GPU
+ * 
+ * code from https://www.sharcnet.ca/help/index.php/CUDA_tips_and_tricks
+ * 
+ * Atomic ops may block concurrent threads, however all atomic ops will be performed.
+ * This is not a problem here, because there are no reads on dst.
+ * Further the conflicting write operations, which are solved using atomics, 
+ * are very few compared to the complete work of a thread.
+ * 
+ * sources for atomics
+ * http://www.nvidia.de/content/PDF/fermi_white_papers/NVIDIA_Fermi_Compute_Architecture_Whitepaper.pdf
+ * atomic ops kepler ( since GTX Titan and gtx 680 have the same chip..
+ * http://www.geforce.com/Active/en_US/en_US/pdf/GeForce-GTX-680-Whitepaper-FINAL.pdf
+ * http://www.nvidia.de/content/PDF/kepler/NVIDIA-Kepler-GK110-Architecture-Whitepaper.pdf
+ *******************************/
+ __device__ inline void atomic_Add(float* address, float value)
+    {
+
+   #if __CUDA_ARCH__ >= 200
+      atomicAdd(address,value);
+   #else
+   int oldval, newval, readback;
+
+   oldval = __float_as_int(*address);
+   newval = __float_as_int(__int_as_float(oldval) + value);
+   while ((readback=atomicCAS((int *)address, oldval, newval)) != oldval)
+     {
+      oldval = readback;
+      newval = __float_as_int(__int_as_float(oldval) + value);
+     }
+   #endif
+   }
+   
+
+
+ 
+template<bool spn, weighted_subtensor_functor to, class T>
+__global__
+void weighted_subtensor_op_grad_kernel(T* dst, T* w_delta, const T* src, const T* delta, const T* m_W, const T* r0, const T* S, const unsigned char* max_idx, const bool d_dx, const bool d_dw,
+        unsigned int dst_rows, unsigned int dst_colsx, unsigned int dst_colsy, unsigned int src_size,
+        unsigned int size, unsigned int stride, unsigned int subspace_size, float eps){
+    if(spn){
+        unsigned int line = blockIdx.x;
+        unsigned int shift = stride * line;
+        
+        // shared array to store intermediate results for weight derivative
+        extern __shared__ T rw[];
+        T* res_w = &rw[0] + threadIdx.y * blockDim.x + subspace_size;
+
+        //init shared memory of this thead
+        res_w[threadIdx.x] = 0;
+
+        extern __shared__ float w[];
+        const T* m_W_ptr = m_W + line * subspace_size;
+        float* w_ptr = &w[0] + subspace_size + blockDim.x * blockDim.y;
+ 
+        for (unsigned int i = threadIdx.x; i < subspace_size; i += blockDim.x)
+              w_ptr[i] = m_W_ptr[i];
+
+        extern __shared__ T sum[];
+ 	    for (unsigned int s = threadIdx.y * blockDim.x + threadIdx.x; s < subspace_size; s += blockDim.x * blockDim.y) sum[s] = 0;	
+        __syncthreads();
+    
+        unsigned int dst_cols = dst_colsx *dst_colsy;
+        unsigned int shift_t_d = shift * dst_cols;
+        unsigned int line_t_sub = line * subspace_size;
+        unsigned int line_t_d = line * dst_cols;
+        unsigned int last_idx = shift + subspace_size;
+
+        unsigned int diff;     
+        //check boundaries
+        if (last_idx > src_size){
+             diff = (subspace_size - (last_idx - src_size))* dst_cols;
+        } else {
+            diff = subspace_size * dst_cols;
+        }
+
+        const T* src_ptr = src + shift_t_d;
+        T* dst_ptr       = dst + shift_t_d;
+
+        const T* r0_ptr;
+        const T* d0  =     delta     + line_t_d; // für alle elemente
+        const unsigned char* max_idx_ptr;
+
+        switch(to){
+           case WST_WMAX:
+           case WST_WMAX_LOGSPACE:
+                max_idx_ptr =     max_idx    + line_t_d;
+                break;
+           case WST_LOGWADDEXP:
+           case WST_LOGWADDEXP_LOGSPACE:
+               r0_ptr = r0 + line_t_d;
+               break;
+        }
+
+        T* dw_ptr     = w_delta +  line_t_sub;
+        T p;
+       // T S_val;
+        
+        for(unsigned int itemy = threadIdx.y; itemy < dst_colsy; itemy += blockDim.y){
+            //weight gradient in case SOFT_INFEERENCE 
+       /*     switch(to){
+               case WST_LOGWADDEXP:
+               case WST_LOGWADDEXP_LOGSPACE:
+                   S_val = S[itemy] ; // S[itemy]; 
+            }*/
+            for(unsigned int itemx = threadIdx.x; itemx < dst_colsx; itemx += blockDim.x){
+                unsigned int item = itemy * dst_colsx + itemx;
+                unsigned char maxIdx;
+                switch(to){
+                    case WST_WMAX:
+                    case WST_WMAX_LOGSPACE:
+                        maxIdx = max_idx_ptr[item];
+                }
+ 
+            switch(to){
+               case WST_WMAX:
+               case WST_WADD:
+               case WST_WMAX_LOGSPACE:
+                    //get derivative from parent node..
+                    p  = d0[item];
+                    break;
+               case WST_LOGWADDEXP:
+               case WST_LOGWADDEXP_LOGSPACE:
+                   p  = d0[item] * 1/(expf(r0_ptr[item]) + eps);
+                   break;
+            }
+
+            unsigned int end = item + diff;
+            unsigned int wInd = 0;
+
+            // updates dst for each feature in subspace
+            __syncthreads();
+            for (unsigned int index = item; index < end; index+= dst_cols, wInd++){
+                float temp = 0;
+                T src_val = src_ptr[index];
+                switch(to){
+                    case WST_WMAX:
+                        if (maxIdx == wInd){
+                            if(d_dx) atomic_Add (&dst_ptr[index], p * w_ptr[wInd]);
+                            if(d_dw) res_w[threadIdx.x]  = 1.f;         
+                        }break;
+                    case WST_WMAX_LOGSPACE:
+                        if (maxIdx == wInd){
+                            if(d_dx) atomic_Add(&dst_ptr[index], p);
+                            if(d_dw) res_w[threadIdx.x]  = 1.f;         
+                        }break;
+                    case WST_LOGWADDEXP:
+                        temp = expf(w_ptr[wInd] * src_val) * p;
+                        if(d_dx) atomic_Add(&dst_ptr[index],  w_ptr[wInd] * temp);
+                        if(d_dw) res_w[threadIdx.x] =  src_val * temp;
+                        break;
+                    case WST_LOGWADDEXP_LOGSPACE:
+                        temp = expf(src_val + w_ptr[wInd]) * p;
+                        if(d_dx) atomic_Add(&dst_ptr[index],  temp);
+                        if(d_dw) res_w[threadIdx.x] = temp;// /S_val;//expf(logf(temp) - S_val - w_ptr[wInd]);
+                        break;
+                    case WST_WADD:
+                        if(d_dx) atomic_Add(&dst_ptr[index], p*w_ptr[wInd]);
+                        if(d_dw) res_w[threadIdx.x]  = p*src_val;
+                        break;
+                }
+
+                if (d_dw){
+                    //reduction for threadIdx.x
+                    for ( unsigned int i = blockDim.x/2; i > 0; i/=2){
+                            __syncthreads();
+                            if (threadIdx.x < i ){
+                                res_w[threadIdx.x] += res_w[threadIdx.x + i];
+                            }
+                        }
+
+                    //now there it should be reduced to a line
+                    if (threadIdx.x == 0)
+                        for ( unsigned int j = blockDim.y/2; j > 0; j/=2){
+                            __syncthreads();
+                                    if (threadIdx.y < j){
+                                            res_w[threadIdx.x] += rw [subspace_size + (threadIdx.y + j) * blockDim.x];
+                                    }
+                        }
+
+                       __syncthreads();
+                            if ((threadIdx.x == 0) && (threadIdx.y == 0)){
+                                	    sum[wInd]  += res_w[threadIdx.x];
+                            }
+		        	//init shared memory of this thead
+      				res_w[threadIdx.x] = 0;
+                }
+            }
+            }
+        }
+            //write result to global memory
+            if (d_dw){
+                __syncthreads();
+                for (unsigned int update_idx = threadIdx.y * blockDim.x + threadIdx.x; update_idx < subspace_size; update_idx += blockDim.x*blockDim.y){
+                 dw_ptr[update_idx] += sum[update_idx];
+                }
+            }
+    }else{
+        unsigned int line = blockIdx.x;
+        unsigned int shift = stride * line;
+        
+        extern __shared__ T rw[];
+        T* res_w = &rw[0] + threadIdx.y * blockDim.x + subspace_size;
+
+        //init shared memory of this thead
+        res_w[threadIdx.x] = 0;
+
+        extern __shared__ float w[];
+        const T* m_W_ptr = m_W + line * subspace_size;
+        float* w_ptr = &w[0] + subspace_size + blockDim.x * blockDim.y;
+ 
+        for (unsigned int i = threadIdx.x; i < subspace_size; i += blockDim.x)
+              w_ptr[i] = m_W_ptr[i];
+
+        extern __shared__ T sum[];
+            for (unsigned int s = threadIdx.y * blockDim.x + threadIdx.x; s < subspace_size; s += blockDim.x * blockDim.y) sum[s] = 0;
+        __syncthreads();
+
+
+        unsigned int dst_cols = dst_colsx *dst_colsy;
+        unsigned int shift_t_d = shift * dst_cols;
+        unsigned int line_t_sub = line * subspace_size;
+        unsigned int line_t_d = line * dst_cols;
+        unsigned int last_idx = shift + subspace_size;
+
+        unsigned int diff;
+        
+        //check boundaries
+        if (last_idx > src_size){
+             diff = (subspace_size - (last_idx - src_size))* dst_cols;
+        } else {
+            diff = subspace_size * dst_cols;
+        }
+
+        const T* src_ptr = src + shift_t_d;
+        T* dst_ptr       = dst + shift_t_d;
+
+        const T* r0_ptr;
+        const T* d0  =     delta     + line_t_d; // für alle elemente
+        const unsigned char* max_idx_ptr;
+
+        switch(to){
+           case WST_WMAX:
+           case WST_WMAX_LOGSPACE:
+                max_idx_ptr =     max_idx    + line_t_d;
+                break;
+           case WST_LOGWADDEXP:
+           case WST_LOGWADDEXP_LOGSPACE:
+               r0_ptr = r0 + line_t_d;
+               break;
+        }
+
+        T* dw_ptr     = w_delta +  line_t_sub;
+        T p;
+
+
+        for(unsigned int itemy = threadIdx.y; itemy < dst_colsy; itemy += blockDim.y){
+            for(unsigned int itemx = threadIdx.x; itemx < dst_colsx; itemx += blockDim.x){
+                unsigned int item = itemy * dst_colsx + itemx;
+                unsigned char maxIdx;
+                switch(to){
+                    case WST_WMAX:
+                    case WST_WMAX_LOGSPACE:
+                        maxIdx = max_idx_ptr[item];
+                }
+
+
+            switch(to){
+               case WST_WMAX:
+               case WST_WADD:
+               case WST_WMAX_LOGSPACE:
+                    //get derivative from parent node..
+                    p  = d0[item];
+                    break;
+               case WST_LOGWADDEXP:
+               case WST_LOGWADDEXP_LOGSPACE:
+                   p  = d0[item] * 1/(expf(r0_ptr[item]) + eps );
+                   break;
+            }
+
+            unsigned int end = item + diff;
+            unsigned int wInd = 0;
+
+            //check boundaries
+            __syncthreads();
+            // updates dst for each feature in subspace
+            for (unsigned int index = item; index < end; index+= dst_cols, wInd++){
+                float temp = 0;
+                T s = src_ptr[index];
+                switch(to){
+                    case WST_WMAX:
+                        if (maxIdx == wInd){
+                            if(d_dx) atomic_Add (&dst_ptr[index], p * w_ptr[wInd]);
+                            if(d_dw) res_w[threadIdx.x]  = p * s;
+                        }break;
+                    case WST_WMAX_LOGSPACE:
+                        if (maxIdx == wInd){
+                            if(d_dx) atomic_Add(&dst_ptr[index], p);
+                            if(d_dw) res_w[threadIdx.x]  = p;
+                        }break;
+                    case WST_LOGWADDEXP:
+                        temp = expf( w_ptr[wInd] * s) * p;
+                        if(d_dx) atomic_Add(&dst_ptr[index],  w_ptr[wInd] * temp);
+                        if(d_dw) res_w[threadIdx.x] =  s * temp;
+                        break;
+                    case WST_LOGWADDEXP_LOGSPACE:
+                        temp = expf( s + w_ptr[wInd] ) * p;
+                        if(d_dx) atomic_Add(&dst_ptr[index],temp);
+                        if(d_dw) res_w[threadIdx.x]  = temp;
+                        break;
+                    case WST_WADD:
+                        if(d_dx) atomic_Add(&dst_ptr[index], p*w_ptr[wInd]);
+                        if(d_dw) res_w[threadIdx.x]  = p*s;
+                        break;
+                }
+
+                if (d_dw){
+                    //reduction for threadIdx.x
+                    for ( unsigned int i = blockDim.x/2; i > 0; i/=2){
+                            __syncthreads();
+                            if (threadIdx.x < i ){
+                                res_w[threadIdx.x] += res_w[threadIdx.x + i];
+                            }
+                        }
+
+                    //now there it should be reduced to a line
+                    if (threadIdx.x == 0)
+                        for ( unsigned int j = blockDim.y/2; j > 0; j/=2){
+                            __syncthreads();
+                                    if (threadIdx.y < j){
+                                            res_w[threadIdx.x] += rw [subspace_size + (threadIdx.y + j) * blockDim.x];
+                                    }
+                        }
+
+                            if ((threadIdx.x == 0) && (threadIdx.y == 0)){
+                                            sum[wInd]  += res_w[threadIdx.x];
+                            }
+
+                       __syncthreads();
+                       //init shared memory of this thead
+                        res_w[threadIdx.x] = 0;
+                }
+            }
+            }
+        }
+
+            //write result to global memory
+            if (d_dw){
+                __syncthreads();
+                for (unsigned int update_idx = threadIdx.y * blockDim.x + threadIdx.x; update_idx < subspace_size; update_idx += blockDim.x*blockDim.y){
+                 dw_ptr[update_idx] += sum[update_idx];
+                }
+            }
+    }
+}
+
+
+template<bool spn, weighted_subtensor_functor to, class T>
+void weighted_subtensor_op_grad_host(T* dst, T* w_delta, const T* src, const T* delta, const T* m_W, const T* r0, const T* S, const unsigned char* max_idx, const bool d_dx, const bool d_dw,
+                     unsigned int lines, unsigned int dst_colsx, unsigned int dst_colsy, unsigned int src_size, unsigned int size, unsigned int stride, unsigned int subspace_size, float eps){
+       if(spn){
+        unsigned int dst_cols = dst_colsx *dst_colsy;
+        unsigned int diff;     
+ 
+        for ( unsigned int line = 0; line < lines; line ++){
+            unsigned int shift = stride * line;
+
+            const T* m_W_ptr = m_W + line * subspace_size;
+    
+            unsigned int shift_t_d = shift * dst_cols;
+            unsigned int line_t_sub = line * subspace_size;
+            unsigned int line_t_d = line * dst_cols;
+            unsigned int last_idx = shift + subspace_size;
+            //check boundaries
+            if (last_idx > src_size){
+                diff = (subspace_size - (last_idx - src_size))* dst_cols;
+            } else {
+                diff = subspace_size * dst_cols;
+            }
+
+            const T* src_ptr = src + shift_t_d;
+            T* dst_ptr       = dst + shift_t_d;
+
+            const T* r0_ptr;
+            const T* d0  =     delta     + line_t_d; // für alle elemente
+            const unsigned char* max_idx_ptr;
+
+            switch(to){
+            case WST_WMAX:
+            case WST_WMAX_LOGSPACE:
+                    max_idx_ptr =     max_idx    + line_t_d;
+                    break;
+            case WST_LOGWADDEXP:
+            case WST_LOGWADDEXP_LOGSPACE:
+                r0_ptr = r0 + line_t_d;
+                break;
+            }
+
+            T* dw_ptr     = w_delta +  line_t_sub;
+            T p;
+           // T S_val;
+            for(unsigned int itemy = 0; itemy < dst_colsy; itemy ++){
+                //weight gradient in case SOFT_INFEERENCE 
+             /*   switch(to){
+                case WST_LOGWADDEXP:
+                case WST_LOGWADDEXP_LOGSPACE:
+                    S_val = S[itemy];
+                }*/
+                for(unsigned int itemx = 0; itemx < dst_colsx; itemx ++){
+                    unsigned int item = itemy * dst_colsx + itemx;
+                    unsigned char maxIdx;
+                    switch(to){
+                        case WST_WMAX:
+                        case WST_WMAX_LOGSPACE:
+                            maxIdx = max_idx_ptr[item];
+                    }
+    
+                switch(to){
+                case WST_WMAX:
+                case WST_WADD:
+                case WST_WMAX_LOGSPACE:
+                        //get derivative from parent node..
+                        p  = d0[item];
+                        break;
+                case WST_LOGWADDEXP:
+                case WST_LOGWADDEXP_LOGSPACE:
+                    p  = d0[item] * 1/(expf(r0_ptr[item]) + eps);
+                    break;
+                }
+
+                unsigned int end = item + diff;
+                unsigned int wInd = 0;
+
+                // updates dst for each feature in subspace
+                for (unsigned int index = item; index < end; index+= dst_cols, wInd++){
+                    float temp = 0;
+                    T src_val = src_ptr[index];
+                    switch(to){
+                        case WST_WMAX:
+                            if (maxIdx == wInd){
+                                if(d_dx) dst_ptr[index]+= p * m_W_ptr[wInd];
+                                if(d_dw) dw_ptr[wInd]  += 1;
+                            }break;
+                        case WST_WMAX_LOGSPACE:
+                            if (maxIdx == wInd){
+                                if(d_dx) dst_ptr[index]+= p;
+                                if(d_dw) dw_ptr[wInd]  += 1;
+                            }break;
+                        case WST_LOGWADDEXP:
+                            temp = expf(m_W_ptr[wInd] * src_val) * p;
+                            if(d_dx) dst_ptr[index]+=  m_W_ptr[wInd] * temp;
+                            if(d_dw) dw_ptr[wInd] +=   src_val * temp;
+                            break;
+                        case WST_LOGWADDEXP_LOGSPACE:
+                            temp = expf(src_val + m_W_ptr[wInd] ) * p;
+                            if(d_dx) dst_ptr[index] +=temp;
+                            if(d_dw) dw_ptr[wInd]  +=  temp;// - S_val ;
+                            break;
+                        case WST_WADD:
+                            if(d_dx) dst_ptr[index] += p*m_W_ptr[wInd];
+                            if(d_dw) dw_ptr[wInd]  += p*src_val;
+                            break;
+                    }
+                }
+                }
+            }
+        }
+       }else {
+        unsigned int dst_cols = dst_colsx *dst_colsy;
+        unsigned int diff;     
+ 
+        for ( unsigned int line = 0; line < lines; line ++){
+        unsigned int shift = stride * line;
+
+        const T* m_W_ptr = m_W + line * subspace_size;
+   
+        unsigned int shift_t_d = shift * dst_cols;
+        unsigned int line_t_sub = line * subspace_size;
+        unsigned int line_t_d = line * dst_cols;
+        unsigned int last_idx = shift + subspace_size;
+        //check boundaries
+        if (last_idx > src_size){
+             diff = (subspace_size - (last_idx - src_size))* dst_cols;
+        } else {
+            diff = subspace_size * dst_cols;
+        }
+
+        const T* src_ptr = src + shift_t_d;
+        T* dst_ptr       = dst + shift_t_d;
+
+        const T* r0_ptr;
+        const T* d0  =     delta     + line_t_d; // für alle elemente
+        const unsigned char* max_idx_ptr;
+
+        switch(to){
+           case WST_WMAX:
+           case WST_WMAX_LOGSPACE:
+                max_idx_ptr =     max_idx    + line_t_d;
+                break;
+           case WST_LOGWADDEXP:
+           case WST_LOGWADDEXP_LOGSPACE:
+               r0_ptr = r0 + line_t_d;
+               break;
+        }
+
+        T* dw_ptr     = w_delta +  line_t_sub;
+        T p;
+        for(unsigned int item = 0; item < dst_cols; item ++){
+                unsigned char maxIdx;
+                switch(to){
+                    case WST_WMAX:
+                    case WST_WMAX_LOGSPACE:
+                        maxIdx = max_idx_ptr[item];
+                }
+ 
+            switch(to){
+               case WST_WMAX:
+               case WST_WADD:
+               case WST_WMAX_LOGSPACE:
+                    //get derivative from parent node..
+                    p  = d0[item];
+                    break;
+               case WST_LOGWADDEXP:
+               case WST_LOGWADDEXP_LOGSPACE:
+                   p  = d0[item] * 1/(expf(r0_ptr[item] + eps));
+                   break;
+            }
+
+            unsigned int end = item + diff;
+            unsigned int wInd = 0;
+
+            // updates dst for each feature in subspace
+            for (unsigned int index = item; index < end; index+= dst_cols, wInd++){
+                float temp = 0;
+                T src_val = src_ptr[index];
+                switch(to){
+                    case WST_WMAX:
+                        if (maxIdx == wInd){
+                            if(d_dx) dst_ptr[index]+= p * m_W_ptr[wInd];
+                            if(d_dw) dw_ptr[wInd]  += p * src_val;
+                        }break;
+                    case WST_WMAX_LOGSPACE:
+                        if (maxIdx == wInd){
+                            if(d_dx) dst_ptr[index]+= p;
+                            if(d_dw) dw_ptr[wInd]  += p;
+                        }break;
+                    case WST_LOGWADDEXP:
+                        temp = expf(m_W_ptr[wInd] * src_val) * p;
+                        if(d_dx) dst_ptr[index]+=  m_W_ptr[wInd] * temp;
+                        if(d_dw) dw_ptr[wInd] +=   src_val * temp;
+                        break;
+                    case WST_LOGWADDEXP_LOGSPACE:
+                        temp = expf(src_val + m_W_ptr[wInd]) * p;
+                        if(d_dx) dst_ptr[index] += temp;
+                        if(d_dw) dw_ptr[wInd]   += temp;
+                        break;
+                    case WST_WADD:
+                        if(d_dx) dst_ptr[index] += p*m_W_ptr[wInd];
+                        if(d_dw) dw_ptr[wInd]  += p*src_val;
+                        break;
+                }
+            }
+        }
+      }
+    }
+}
+
+
+
+
+template<class V,class M, class T>
+    void weighted_subtensor_op_grad(tensor<V,M,T>& dst, tensor<V,M,T>& w_delta, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, const tensor<V,M,T>& m_W, const tensor<V,M,T>& r0, 
+                                     const tensor<V,M,T>& S, const tensor< unsigned char,M,T>& max_idx, const bool spn, const bool d_dx, const bool d_dw, unsigned int size, unsigned int stride, 
+                                     unsigned int subspace_size, weighted_subtensor_functor to, float eps){
+        assert(dst.shape()==src.shape());
+        assert(w_delta.shape()==m_W.shape());
+        assert(w_delta.shape(0) == delta.shape(0));
+        assert(m_W.shape(0) == delta.shape(0));
+        assert(m_W.shape(1)==subspace_size);
+        assert(w_delta.shape(1)==subspace_size);    
+        assert(delta.shape(0) == src.shape(0)/stride);
+        assert(subspace_size <= 256); // (data type char is used to store max_idx)
+        cuvAssert(delta.shape().size() == 3 || delta.shape().size() == 4);
+        
+        //cuvAssert(!cuv::has_nan(src));
+        //cuvAssert(!cuv::has_nan(m_W)); 
+        cuvAssert(!cuv::has_nan(delta));
+       // cuvAssert(!cuv::has_nan(m_W));
+       // cuvAssert(!cuv::has_nan(S));
+       // cuvAssert(!cuv::has_nan(r0)); 
+    
+        //initialize  w_delta and dst
+        cuv::fill (dst, 0);
+        cuv::fill (w_delta, 0);
+
+        unsigned int src_size = src.shape(0);        
+        unsigned int lines = delta.shape(0);
+        unsigned int itemx;
+        unsigned int itemy;
+        //calculate number of items, based on dimension of image
+        if (delta.shape().size() == 4){
+            itemx = delta.shape(1) * delta.shape(2);
+            itemy = delta.shape(3);
+        } else {
+            itemx = delta.shape(1);
+            itemy = delta.shape(2);            
+        }
+        
+        if(IsSame<M,host_memory_space>::Result::value){
+            switch(to){
+                case WST_WMAX:
+                    if (spn) weighted_subtensor_op_grad_host<true,  WST_WMAX>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    else     weighted_subtensor_op_grad_host<false, WST_WMAX>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    break;
+                case WST_WMAX_LOGSPACE:
+                    if (spn) weighted_subtensor_op_grad_host<true,  WST_WMAX_LOGSPACE>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    else     weighted_subtensor_op_grad_host<false, WST_WMAX_LOGSPACE>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    break;
+                case WST_LOGWADDEXP:
+                    if (spn) weighted_subtensor_op_grad_host<true,  WST_LOGWADDEXP>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    else     weighted_subtensor_op_grad_host<false, WST_LOGWADDEXP>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    break;
+                case WST_LOGWADDEXP_LOGSPACE:
+                    if (spn) weighted_subtensor_op_grad_host<true,  WST_LOGWADDEXP_LOGSPACE>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    else     weighted_subtensor_op_grad_host<false, WST_LOGWADDEXP_LOGSPACE>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    break;          
+                case WST_WADD:
+                    if (spn) weighted_subtensor_op_grad_host<true,  WST_WADD>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    else     weighted_subtensor_op_grad_host<false, WST_WADD>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    break;
+            }
+    }else{
+            // device: run kernel        
+            //define size of the block
+            unsigned int block_size = 16;
+            dim3 num_threads;
+
+            num_threads.x = block_size;
+            num_threads.y = block_size;
+    
+            unsigned int num_blocks  = lines;
+            unsigned int sharedMemory  = (2*subspace_size + (block_size * block_size))*sizeof(V);
+
+            switch(to){
+                case WST_WMAX:
+                        if(spn) weighted_subtensor_op_grad_kernel<true , WST_WMAX><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                        else    weighted_subtensor_op_grad_kernel<false, WST_WMAX><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                        break;
+                case WST_WMAX_LOGSPACE:
+                        if(spn) weighted_subtensor_op_grad_kernel<true , WST_WMAX_LOGSPACE><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                        else    weighted_subtensor_op_grad_kernel<false, WST_WMAX_LOGSPACE><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    break;
+
+                case WST_LOGWADDEXP:
+                        if(spn) weighted_subtensor_op_grad_kernel<true , WST_LOGWADDEXP><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                        else    weighted_subtensor_op_grad_kernel<false, WST_LOGWADDEXP><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    break;
+                case WST_LOGWADDEXP_LOGSPACE:
+                        if(spn) weighted_subtensor_op_grad_kernel<true , WST_LOGWADDEXP_LOGSPACE><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                        else    weighted_subtensor_op_grad_kernel<false, WST_LOGWADDEXP_LOGSPACE><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    break;
+                case WST_WADD:
+                        if(spn) weighted_subtensor_op_grad_kernel<true , WST_WADD><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                        else    weighted_subtensor_op_grad_kernel<false, WST_WADD><<<num_blocks,num_threads, sharedMemory>>>(dst.ptr(), w_delta.ptr(), src.ptr(), delta.ptr(), m_W.ptr(), r0.ptr(), S.ptr(), max_idx.ptr(), d_dx, d_dw, lines, itemx, itemy, src_size, size, stride, subspace_size, eps);
+                    break;
+            }
+
+            cuvSafeCall(cudaThreadSynchronize());
+        }
+//        std::cout << "WTO out" << std::endl;
+        //bool wto_dst = cuv::has_nan(dst);
+        //cuvAssert(!wto_dst);        
+        //cuvAssert(!cuv::has_nan(w_delta));         
+//        std::cout << "WTO done" << std::endl;
+}  
+  
+
+/*****************************************************************************************************************
+ * overlapping tuplewise op end
+ *****************************************************************************************************************/
 
 // instantiate
 #define  TENS(V,M,T)       tensor<V,M,T>
@@ -1586,7 +2588,10 @@ template void d_conv2d_dfilt(TENS(V,M,T)& dst_, CTENS(V,M,T)& delta, CTENS(V,M,T
 template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld); \
 template void convolve2d(TENS(V,M,T)& dst,CTENS(V,M,T)& img,CTENS(V,M,T)& filter, CTENS(int,M,T)&, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew, float factOld); \
 template void d_conv2d_dfilt(TENS(V,M,T)& dst_, CTENS(V,M,T)& delta, CTENS(V,M,T)&   input, CTENS(int,M,T)&, int paddingStart, unsigned int moduleStride, unsigned int nGroups, unsigned int partialSum, float factNew, float factOld);\
-template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, CTENS(int,M,T)&, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld);
+template void d_conv2d_dimg(TENS(V,M,T)& dst, CTENS(V,M,T)&   delta, CTENS(V,M,T)&   filter, CTENS(int,M,T)&, int paddingStart, unsigned int moduleStride, unsigned int nGroups, float factNew,float factOld); \
+template void weighted_subtensor_op<V,M,T>(TENS(V,M,T)&, TENS(unsigned char,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, unsigned int, unsigned int, unsigned int, weighted_subtensor_functor, float); \
+template void weighted_subtensor_op_grad<V,M,T>(TENS(V,M,T)&, TENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(V,M,T)&, CTENS(unsigned char,M,T)&, bool, bool,  bool, unsigned int, unsigned int, unsigned int, weighted_subtensor_functor, float);
+
 INST(float,host_memory_space,row_major);
 INST(float,dev_memory_space,row_major);
 }

@@ -368,19 +368,68 @@ template<class V, class M, class T>
 void tuplewise_op_grad(tensor<V,M,T>& dst, const tensor<V,M,T>& X, const tensor<V,M,T>& D, unsigned int dim, unsigned int subspace_size = 2, tuplewise_op_functor to = TO_NORM, float eps = 0.f);
 
 
+/**
+ * @brief Determines which weighted overlapping tuplewise operator to use.
+ * @li WST_ADD calculates sum(wx)
+ * @li WST_MAX calculates the log (max(wx)),  if (spn==true) the derivative calculates just the number of times w_i was max (needed for grad of SPN)
+ * @li WST_MAX_LOGSPACE calculates the log (max(w + x), if (spn==true) the derivative calculates just the number of times w_i was max (needed for grad of SPN)
+ * @li WST_LOGADDEXP calculates the  log (sum(exp(w * x))), if (spn==true) the derivative is weighted with 1/(S[1,y|X]+eps)
+ * @li WST_LOGADDEXP_LOGSPACE calculates the log (sum(exp(w+x))) (thus it weights x with w in logspace), if (spn==true) the derivative is weighted with 1/(S[1,y|X]+eps)
+ */
+enum weighted_subtensor_functor{
+    WST_WADD,
+    WST_WMAX,
+    WST_WMAX_LOGSPACE,
+    WST_LOGWADDEXP,
+    WST_LOGWADDEXP_LOGSPACE
+};
 
+
+/**
+ * same as tuplewise op, but the input maps are weighted and the regions may overlap
+ *
+ * @param dst where to write result
+ * @param dst_max_idx destintion to store max indices to
+ * @param src  the original input to the weighted_subtensor_op
+ * @param m_W weights (param 2) for weighted_subtensor_op
+ * @param subspace_size  the number of elements for which we calculate the norm
+ * @param tuplewise_op_functor to the parameter determining wheater to calculate squared norm, norm or max out
+ * @param size, size of dst tensor
+ * @param eps small constant value which is added to fprop for consistency
+ */
+template<class V, class M, class T>
+void weighted_subtensor_op(tensor<V,M,T>& dst, tensor<unsigned char,M,T>& dst_max_idx, const tensor<V,M,T>& src, const tensor<V,M,T>& m_W, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subtensor_functor = WST_LOGWADDEXP, float eps = 0.00001f);
+
+/**
+ * calculates the gradient of weighted_subtensor_op.
+ *
+ *
+ * @param dst where to write result
+ * @param w_delta dst to write delta for weights (param[1])
+ * @param X  the original input to the weighted_subtensor_op
+ * @param D  the backpropagated delta
+ * @param m_W the original weights given to weighted_subtensor_op
+ * @param r0 result of weighted_subtensor_op fprop
+ * @param S result of SPN ( only used in case bool spn=true
+ * @param max_idx tensor where the max indices from fprop are stored
+ * @param spn boolean which determines wheater normal op, or spn version is used
+ * @param subspace_size  the number of elements for which we calculate the norm
+ * @param tuplewise_op_functor to the parameter determining wheater to calculate squared norm, norm or max out
+ * @param size, size of dst tensor* 
+ * @param eps small constant value which is added to division 1/(sum exp(xw) + eps) for numerical stability
+ * 
+ */
+template<class V, class M, class T>
+void weighted_subtensor_op_grad(tensor<V,M,T>& dst, tensor<V,M,T>& w_delta, const tensor<V,M,T>& src, const tensor<V,M,T>& delta, const tensor<V,M,T>& m_W, const tensor<V,M,T>& r0, const tensor<V,M,T>& S, const tensor<unsigned char,M,T>& max_idx, const bool spn, const bool d_der, const bool w_der, unsigned int size, unsigned int stride, unsigned int subspace_size = 2, weighted_subtensor_functor to = WST_LOGWADDEXP, float eps = 0.00001f);
 
 }
-
-// other convolution operators
-
 
 namespace misc_conv{
-/** @} */ //end group convolution_ops
-template<class V, class M, class T>
-void upscaleOp(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor);
-template<class V, class M, class T>
-void upscaleGrad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor);
+	template<class V, class M, class T>
+	void upscaleOp(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor);
+	template<class V, class M, class T>
+	void upscaleGrad(tensor<V,M,T>& dst, const tensor<V,M,T>& src, int factor);
 }
+/** @} */ //end group convolution_ops
 }
 #endif /* __CONVOLUTION_OPS_HPP__ */
