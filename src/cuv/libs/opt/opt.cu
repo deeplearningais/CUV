@@ -132,11 +132,11 @@ namespace impl{
                 cuv::apply_binary_functor(prod,softmax_act,residual,BF_MULT);
                 if(vardim==1){
                     cuv::reduce_to_row  (red, prod,RF_ADD,  -1.f);
-                    cuv::matrix_op_vec(dst, dst, red, dst.ndim()-1, BF_ADD);
+                    cuv::matrix_op_vec(dst, residual, red, dst.ndim()-1, BF_ADD);
                 }
                 else{
                     cuv::reduce_to_col(red, prod,RF_ADD, -1.f);
-                    cuv::matrix_op_vec(dst, dst, red, 0, BF_ADD);
+                    cuv::matrix_op_vec(dst, residual, red, 0, BF_ADD);
                 }
 
                 dst *= softmax_act;
