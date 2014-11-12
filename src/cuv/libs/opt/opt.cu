@@ -125,7 +125,6 @@ namespace impl{
                 if(fact_old != 0.f){
                     // remember previous value for end
                     tmp.reset(new cuv::tensor<V,M,L>(dst.copy()));
-                    dst = 0.f;
                 }
                 cuv::tensor<V,M>   red  (n_variables, dst.m_allocator);
                 cuv::tensor<V,M,L> prod (softmax_act.shape(), dst.m_allocator);
