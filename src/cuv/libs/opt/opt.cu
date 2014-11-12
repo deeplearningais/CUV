@@ -369,7 +369,7 @@ void multinomial_logistic_loss_grad(
         cuv::tensor<V, M, L>& dmll_dX, 
         const cuv::tensor<V, M, L>& X, 
         const cuv::tensor<V2, M, L>& Y, 
-        int pattern_axis, bool add
+        int pattern_axis, float fact_new, bool add
         ){
     int n_patterns = X.shape(pattern_axis);
     int n_labels = X.size() / n_patterns;
@@ -385,10 +385,10 @@ void multinomial_logistic_loss_grad(
                     DIVUP(n_patterns, LOGREG_GRAD_THREADS_X));
         if(!add){
             multinomial_logistic_loss_grad_kernel_t<false><<<blocks, threads>>>(dmll_dX.ptr(),
-                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f);
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f/n_patterns * fact_new);
         }else{
             multinomial_logistic_loss_grad_kernel_t<true><<<blocks, threads>>>(dmll_dX.ptr(),
-                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f);
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f/n_patterns * fact_new);
         }
     }else{
         dim3 threads(LOGREG_GRAD_THREADS_X, LOGREG_GRAD_THREADS_Y);
@@ -396,10 +396,10 @@ void multinomial_logistic_loss_grad(
                     DIVUP(n_labels,   LOGREG_GRAD_THREADS_Y));
         if(!add)
             multinomial_logistic_loss_grad_kernel<false><<<blocks, threads>>>(dmll_dX.ptr(),
-                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f);
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f/n_patterns * fact_new);
         else
             multinomial_logistic_loss_grad_kernel<true><<<blocks, threads>>>(dmll_dX.ptr(),
-                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f);
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f/n_patterns * fact_new);
     }
 }
     
@@ -451,7 +451,7 @@ void na_rmsprop(tensor<V,M,L>& W, const tensor<V,M,L>& dW, tensor<V,M,L>& oldW, 
 
 #define INSTANTIATE_MLL(V,V2,M,L) \
   template std::pair<float, float> multinomial_logistic_loss(TENSOR(V,M,L)&, const TENSOR(V,M,L)&, const TENSOR(V2,M,L)&, int pattern_axis, boost::shared_ptr<allocator>);\
-  template void multinomial_logistic_loss_grad(TENSOR(V,M,L)&, const TENSOR(V,M,L)&, const TENSOR(V2,M,L)&, int pattern_axis, bool add);\
+  template void multinomial_logistic_loss_grad(TENSOR(V,M,L)&, const TENSOR(V,M,L)&, const TENSOR(V2,M,L)&, int pattern_axis, float, bool add);\
 
 INSTANTIATE(float,host_memory_space,row_major);
 INSTANTIATE(float,host_memory_space,column_major);

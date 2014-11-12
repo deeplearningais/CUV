@@ -74,14 +74,15 @@ namespace cuv{ namespace libs{
          * @param X the un-normalized predictor, a matrix of dimension (n_patterns x n_labels)
          * @param Y the labels, a vector of dimension (n_patterns)
          * @param pattern_axis the dimension in which patterns are stored
-         * @param add whether to add to the values present in dmll_dX
+         * @param fact_new multiply the result of the gradient computation by this value
+         * @param add if true, add to previous value of dmll_dX
          */
         template<class V, class V2, class M, class L>
         void multinomial_logistic_loss_grad(
                 cuv::tensor<V, M, L>& dmll_dX, 
                 const cuv::tensor<V, M, L>& X, 
                 const cuv::tensor<V2, M, L>& Y,
-                int pattern_axis, bool add);
+                int pattern_axis, float fact_new, bool add);
 
 		/**
 		 * calculate derivative of softmax.
