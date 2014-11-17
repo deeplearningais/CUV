@@ -89,7 +89,7 @@ endif(PYTHONLIBS_FOUND )
 
 IF(CUV_PYTHON_BINDINGS)
 	SET(ENV{PYTHONPATH} ${CMAKE_BINARY_DIR}/python_bindings )
-	ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/src python -c 'import cuv_python as cp'" )
+	ADD_TEST( load_py sh -c "PYTHONPATH=${CMAKE_BINARY_DIR}/src ${PYTHON_EXECUTABLE} -c 'import cuv_python as cp'" )
 
 	FIND_PROGRAM(NOSETEST_EXECUTABLE nosetests)
 	IF(NOSETEST_EXECUTABLE)
