@@ -89,7 +89,7 @@ endif()
 SET(PYTHON_VERSION_MAJOR_MINOR ${PYTHON_VERSION_MAJOR_MINOR} CACHE STRING "Python version used")
 SET(_PYTHON_PACKAGES_PATH ${_PYTHON_PACKAGES_PATH} CACHE PATH "Where to install python module to")
 
-#execute_process ( COMMAND python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+#execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
 install(TARGETS cuv_python  DESTINATION ${_PYTHON_PACKAGES_PATH}/cuv_python${LIB_SUFFIX})
 install(FILES   __init__.py DESTINATION ${_PYTHON_PACKAGES_PATH}/cuv_python${LIB_SUFFIX})
 
