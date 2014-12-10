@@ -360,7 +360,7 @@ std::pair<float, float> multinomial_logistic_loss(
     cuvSafeCall(cudaThreadSynchronize());
 
     std::pair<float, float> retval;
-    retval.first = -cuv::mean(true_label_log_probs);
+    retval.first = -cuv::sum(true_label_log_probs);
     retval.second = 1.f - cuv::mean(correct_probs);
     return retval;
 }
@@ -385,10 +385,10 @@ void multinomial_logistic_loss_grad(
                     DIVUP(n_patterns, LOGREG_GRAD_THREADS_X));
         if(!add){
             multinomial_logistic_loss_grad_kernel_t<false><<<blocks, threads>>>(dmll_dX.ptr(),
-                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f/n_patterns * fact_new);
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f * fact_new);
         }else{
             multinomial_logistic_loss_grad_kernel_t<true><<<blocks, threads>>>(dmll_dX.ptr(),
-                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f/n_patterns * fact_new);
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f * fact_new);
         }
     }else{
         dim3 threads(LOGREG_GRAD_THREADS_X, LOGREG_GRAD_THREADS_Y);
@@ -396,10 +396,10 @@ void multinomial_logistic_loss_grad(
                     DIVUP(n_labels,   LOGREG_GRAD_THREADS_Y));
         if(!add)
             multinomial_logistic_loss_grad_kernel<false><<<blocks, threads>>>(dmll_dX.ptr(),
-                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f/n_patterns * fact_new);
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f * fact_new);
         else
             multinomial_logistic_loss_grad_kernel<true><<<blocks, threads>>>(dmll_dX.ptr(),
-                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f/n_patterns * fact_new);
+                    X.ptr(), Y.ptr(), n_patterns, n_labels, -1.f * fact_new);
     }
 }
     
