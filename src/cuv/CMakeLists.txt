@@ -31,6 +31,7 @@ set(CUV_SRC
     libs/nlmeans/nlmeans.cu
     libs/rbm/rbm.cu
     libs/kmeans/kmeans.cu
+    libs/caffe/caffe.cu
     convert/convert.cu
     basics/cuda_array.cu
     basics/reference.cu
