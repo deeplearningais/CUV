@@ -1,3 +1,5 @@
+//  Licensed under the BSD 2-Clause license.
+//  CUV/src/cuv/libs/caffe/LICENSE
 
 #include "caffe.hpp"
 
