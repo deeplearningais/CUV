@@ -170,7 +170,8 @@ void local_response_normalization_across_maps(const float* in, float* denom,
 	const int n_threads = num * height * width;
 	const float alpha_over_size = alpha / size;
 
-	local_response_normalization_across_maps_kernel<<<GET_BLOCKS(n_threads), CUDA_NUM_THREADS>>>(
+	int nblocks = GET_BLOCKS(n_threads);
+    local_response_normalization_across_maps_kernel<<<nblocks, CUDA_NUM_THREADS>>>(
 	n_threads, in, denom, num, channels, height, width, size,
 	alpha_over_size, -beta, out);
 
@@ -182,10 +183,12 @@ void local_response_normalization_across_maps_grad(const float* in_data, const f
 {
 	 int n_threads = num * height * width;
 
-	 local_response_normalization_across_maps_grad_kernel<<<GET_BLOCKS(n_threads), CUDA_NUM_THREADS>>>(
+
+     int nblocks = GET_BLOCKS(n_threads);
+	 local_response_normalization_across_maps_grad_kernel<<<nblocks, CUDA_NUM_THREADS>>>(
 	n_threads, in_data, out_data,
 	scale, out_diff, num, channels, height, width,
-	size, -beta, float(2. * alpha * beta/ size),
+	size, -beta, (float)(2. * alpha * beta/ size),
 	in_diff, factNew, factOld);
 
 }

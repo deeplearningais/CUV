@@ -41,6 +41,7 @@
 #include <thrust/generate.h>
 #include <thrust/logical.h>
 #include <thrust/count.h>
+#include <thrust/extrema.h>
 
 #include <cuv/tools/cuv_general.hpp>
 
