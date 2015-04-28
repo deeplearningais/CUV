@@ -51,8 +51,8 @@ void destroy_cuda_stream(cudaStream_t &stream)
 };
 
 
-__global__ void local_response_normalization_across_maps_kernel(const int nthreads, const float* in, float* scale, const int num, const int channels, const int height,
-	const int width, const int size, const float alpha_over_size, const float negative_beta, float* out) {
+__global__ void lrn_across_maps_fill_scale_kernel(const int nthreads, const float* in, float* scale, const int num, const int channels, const int height,
+	const int width, const int size, const float alpha_over_size, const float negative_beta) {
 
 	CUDA_KERNEL_LOOP(index, nthreads) {
 	// find out the local offset
@@ -63,7 +63,6 @@ __global__ void local_response_normalization_across_maps_kernel(const int nthrea
 		int step = height * width;
 		in += offset;
 		scale += offset;
-		out += offset;
 		int head = 0;
 		int pre_pad = (size - 1) / 2;
 		int post_pad = size - pre_pad - 1;
@@ -79,8 +78,6 @@ __global__ void local_response_normalization_across_maps_kernel(const int nthrea
 		while (head < size) {
 			accum_scale += in[head * step] * in[head * step];
 			scale[(head - post_pad) * step] = 1. + accum_scale * alpha_over_size;
-			//scale = 1. + accum_scale * alpha_over_size;
-			out[(head - post_pad) * step] = in[(head - post_pad) * step] * pow(scale[(head - post_pad) * step], negative_beta);
 
 			++head;
 		}
@@ -89,16 +86,12 @@ __global__ void local_response_normalization_across_maps_kernel(const int nthrea
 			accum_scale += in[head * step] * in[head * step];
 			accum_scale -= in[(head - size) * step] * in[(head - size) * step];
 			scale[(head - post_pad) * step] = 1. + accum_scale * alpha_over_size;
-			//scale = 1. + accum_scale * alpha_over_size;
-			out[(head - post_pad) * step] = in[(head - post_pad) * step] * pow(scale[(head - post_pad) * step], negative_beta);
 			++head;
 		}
 		// subtract only
 		while (head < channels + post_pad) {
 			accum_scale -= in[(head - size) * step] * in[(head - size) * step];
 			scale[(head - post_pad) * step] = 1. + accum_scale * alpha_over_size;
-			//scale = 1. + accum_scale * alpha_over_size;
-			out[(head - post_pad) * step] = in[(head - post_pad) * step] * pow(scale[(head - post_pad) * step], negative_beta);
 			++head;
 		}
 	}
@@ -162,18 +155,27 @@ float factNew, float factOld) {
 	}
 }
 
-void local_response_normalization_across_maps(const float* in, float* denom,
+__global__ void lrn_across_maps_compute_output_kernel(const int nthreads, const float* in,
+		const float* scale, const float negative_beta, float* out) {
+	CUDA_KERNEL_LOOP(index, nthreads)
+	{
+		out[index] = in[index] * pow(scale[index], negative_beta);
+	}
+}
+
+void local_response_normalization_across_maps(const float* in, float* scale,
 		const int num, const int channels, const int height,
 		const int width, const int size, const float alpha, const float beta,
 		float* out)
 {
-	const int n_threads = num * height * width;
+	int n_threads = num * height * width;
 	const float alpha_over_size = alpha / size;
 
 	int nblocks = GET_BLOCKS(n_threads);
-    local_response_normalization_across_maps_kernel<<<nblocks, CUDA_NUM_THREADS>>>(
-	n_threads, in, denom, num, channels, height, width, size,
-	alpha_over_size, -beta, out);
+    lrn_across_maps_fill_scale_kernel<<<nblocks, CUDA_NUM_THREADS>>>(n_threads, in, scale, num, channels, height, width, size,
+	    alpha_over_size, -beta);
+    n_threads = num * channels * height * width;
+    lrn_across_maps_compute_output_kernel<<<nblocks, CUDA_NUM_THREADS>>>(n_threads, in, scale, -beta, out);
 
 }
 
