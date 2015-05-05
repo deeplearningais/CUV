@@ -168,14 +168,17 @@ void local_response_normalization_across_maps(const float* in, float* scale,
 		const int width, const int size, const float alpha, const float beta,
 		float* out)
 {
+	assert(size<=channels);
+        // if size can be larger, then this fix: https://github.com/BVLC/caffe/pull/1922 should be implemented.
+
 	int n_threads = num * height * width;
 	const float alpha_over_size = alpha / size;
 
 	int nblocks = GET_BLOCKS(n_threads);
-    lrn_across_maps_fill_scale_kernel<<<nblocks, CUDA_NUM_THREADS>>>(n_threads, in, scale, num, channels, height, width, size,
+    	lrn_across_maps_fill_scale_kernel<<<nblocks, CUDA_NUM_THREADS>>>(n_threads, in, scale, num, channels, height, width, size,
 	    alpha_over_size, -beta);
-    n_threads = num * channels * height * width;
-    lrn_across_maps_compute_output_kernel<<<nblocks, CUDA_NUM_THREADS>>>(n_threads, in, scale, -beta, out);
+    	n_threads = num * channels * height * width;
+    	lrn_across_maps_compute_output_kernel<<<nblocks, CUDA_NUM_THREADS>>>(n_threads, in, scale, -beta, out);
 
 }
 
