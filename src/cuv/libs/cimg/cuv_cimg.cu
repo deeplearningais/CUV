@@ -26,11 +26,13 @@ namespace cuv{
 			CImg<V> img(name.c_str());
 			if(img.spectrum()>1){
 				tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.spectrum())][index_range(0,img.height())][index_range(0,img.width())],(V*) img.data());
-				m = m2;
+                                m.resize(m2.shape());
+				m[cuv::indices[cuv::index_range()]] = m2;
 			}
 			else{
 				tensor<V,host_memory_space,row_major> m2(indices[index_range(0,img.height())][index_range(0,img.width())],(V*) img.data());
-				m = m2;
+                                m.resize(m2.shape());
+				m[cuv::indices[cuv::index_range()]] = m2;
 			}
 		}
 		template<class V,class M>
